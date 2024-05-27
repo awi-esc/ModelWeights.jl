@@ -1,0 +1,1414 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<prov:document xmlns:software="https://www.esmvaltool.org/software" xmlns:file="https://www.esmvaltool.org/file" xmlns:author="https://www.esmvaltool.org/author" xmlns:preprocessor="https://www.esmvaltool.org/preprocessor" xmlns:attribute="https://www.esmvaltool.org/attribute" xmlns:task="https://www.esmvaltool.org/task" xmlns:project="https://www.esmvaltool.org/project" xmlns:recipe="https://www.esmvaltool.org/recipe" xmlns:prov="http://www.w3.org/ns/prov#" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/fx/atmos/fx/r0i0p0/v20130312/sftlf_fx_CCSM4_historical_r0i0p0.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:agent prov:id="author:Kalverla, Peter">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-5025-7862</attribute:orcid>
+  </prov:agent>
+  <prov:wasStartedBy>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+    <prov:trigger prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:starter prov:ref="software:esmvaltool==2.10.0"/>
+  </prov:wasStartedBy>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2013_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2002_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2012_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasStartedBy>
+    <prov:activity prov:ref="task:calculate_weights_climwip/climwip"/>
+    <prov:trigger prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:starter prov:ref="software:esmvaltool==2.10.0"/>
+  </prov:wasStartedBy>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc">
+    <attribute:alias>native6</attribute:alias>
+    <attribute:dataset>ERA5</attribute:dataset>
+    <attribute:diagnostic>calculate_weights_climwip</attribute:diagnostic>
+    <attribute:end_year>2014</attribute:end_year>
+    <attribute:filename>/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc</attribute:filename>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:long_name>Sea Level Pressure</attribute:long_name>
+    <attribute:mip>Amon</attribute:mip>
+    <attribute:modeling_realm>['atmos']</attribute:modeling_realm>
+    <attribute:original_short_name>psl</attribute:original_short_name>
+    <attribute:preprocessor>climatological_mean</attribute:preprocessor>
+    <attribute:project>native6</attribute:project>
+    <attribute:recipe_dataset_index>7</attribute:recipe_dataset_index>
+    <attribute:short_name>psl</attribute:short_name>
+    <attribute:standard_name>air_pressure_at_mean_sea_level</attribute:standard_name>
+    <attribute:start_year>1995</attribute:start_year>
+    <attribute:tier>3</attribute:tier>
+    <attribute:timerange>1995/2014</attribute:timerange>
+    <attribute:type>reanaly</attribute:type>
+    <attribute:units>Pa</attribute:units>
+    <attribute:variable_group>psl_CLIM</attribute:variable_group>
+    <attribute:version>v1</attribute:version>
+    <preprocessor:climate_statistics>{'operator': 'mean'}</preprocessor:climate_statistics>
+    <preprocessor:extract_region>{'start_longitude': -10.0, 'end_longitude': 39.0, 'start_latitude': 30.0, 'end_latitude': 76.25}</preprocessor:extract_region>
+    <preprocessor:mask_landsea>{'mask_out': 'sea'}</preprocessor:mask_landsea>
+    <preprocessor:regrid>{'target_grid': '2.5x2.5', 'scheme': 'linear'}</preprocessor:regrid>
+    <preprocessor:remove_supplementary_variables>{}</preprocessor:remove_supplementary_variables>
+    <preprocessor:save>{'compress': False, 'filename': PosixPath('/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc')}</preprocessor:save>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-3/historical/mon/atmos/Amon/r1i1p1/v20130325/psl_Amon_ACCESS1-3_historical_r1i1p1_185001-200512.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:branch_time>90945.0</attribute:branch_time>
+    <attribute:cmor_version>2.8.0</attribute:cmor_version>
+    <attribute:contact>The ACCESS wiki: http://wiki.csiro.au/confluence/display/ACCESS/Home. Contact Tony.Hirst@csiro.au regarding the ACCESS coupled climate model. Contact Peter.Uhe@csiro.au regarding ACCESS coupled climate model CMIP5 datasets.</attribute:contact>
+    <attribute:creation_date>2012-02-08T05:57:06Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>GHG, Oz, SA, Sl, Vl, BC, OC, (GHG = CO2, N2O, CH4, CFC11, CFC12, CFC113, HCFC22, HFC125, HFC134a)</attribute:forcing>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>CMIP5 compliant file produced from raw ACCESS model output using the ACCESS Post-Processor and CMOR2. 2012-02-08T05:57:06Z CMOR rewrote data to comply with CF standards and CMIP5 requirements. Fri Apr 13 09:55:32 2012: forcing attribute modified to correct value Fri Apr 13 12:13:11 2012: updated version number to v20120413. Fri Apr 13 12:29:33 2012: corrected model_id from ACCESS1-3 to ACCESS1.3</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>CSIRO-BOM</attribute:institute_id>
+    <attribute:institution>CSIRO (Commonwealth Scientific and Industrial Research Organisation, Australia), and BOM (Bureau of Meteorology, Australia)</attribute:institution>
+    <attribute:model_id>ACCESS1.3</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>pre-industrial control</attribute:parent_experiment>
+    <attribute:parent_experiment_id>piControl</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>1</attribute:realization>
+    <attribute:references>See http://wiki.csiro.au/confluence/display/ACCESS/ACCESS+Publications</attribute:references>
+    <attribute:source>ACCESS1-3 2011. Atmosphere: AGCM v1.0 (N96 grid-point, 1.875 degrees EW x approx 1.25 degree NS, 38 levels); ocean: NOAA/GFDL MOM4p1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S, 50 levels); sea ice: CICE4.1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S); land: CABLE1.0 (1.875 degree EW x 1.25 degree NS, 6 levels</attribute:source>
+    <attribute:table_id>Table Amon (27 April 2011) 9c851218e3842df9a62ef38b1e2575bb</attribute:table_id>
+    <attribute:title>ACCESS1-3 model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>8aecfd46-06c2-4f2a-9bc6-838de4412a9a</attribute:tracking_id>
+    <attribute:version_number>v20120413</attribute:version_number>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r4i1p1/v20160829/psl_Amon_CCSM4_rcp85_r4i1p1_200501-210012.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Smeets, Stef"/>
+  </prov:wasAttributedTo>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1995_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:35 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 1995, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:21:18 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data6/adaptor.mars.internal-1714990877.9389374-19315-15-4bda90d6-3583-4f8b-a251-3026b2b86e86.nc /cache/tmp/4bda90d6-3583-4f8b-a251-3026b2b86e86-adaptor.mars.internal-1714990867.4095783-19315-7-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:usedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/climwip"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/fx/atmos/fx/r0i0p0/v20130312/sftlf_fx_CCSM4_historical_r0i0p0.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2004_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Camphuijsen, Jaro"/>
+  </prov:wasAttributedTo>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/mon/atmos/Amon/r3i1p1/v20160829/psl_Amon_CCSM4_historical_r3i1p1_185001-200512.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy. NCAR is sponsored by the National Science Foundation. Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL), sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>863.0</attribute:branch_time>
+    <attribute:cesm_casename>b40.20th.track1.1deg.005</attribute:cesm_casename>
+    <attribute:cesm_compset>B20TRTR1CN</attribute:cesm_compset>
+    <attribute:cesm_repotag>ccsm4_0_beta38</attribute:cesm_repotag>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-10-21T16:38:48Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SD BC MD OC Oz AA LU</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-10-21T16:38:48Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>pre-industrial control</attribute:parent_experiment>
+    <attribute:parent_experiment_id>piControl</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:processed_by>strandwg on mirage0 at 20111021</attribute:processed_by>
+    <attribute:processing_code_information>Last Changed Rev: 428 Last Changed Date: 2011-10-21 10:32:02 -0600 (Fri, 21 Oct 2011) Repository UUID: d2181dbe-5796-6825-dc7f-cbd98591f93d</attribute:processing_code_information>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>3</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>86e14b35-dce8-4161-b39e-a0112d576ee3</attribute:tracking_id>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-0/historical/mon/atmos/Amon/r1i1p1/v20120727/psl_Amon_ACCESS1-0_historical_r1i1p1_185001-200512.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:branch_time>109207.0</attribute:branch_time>
+    <attribute:cmor_version>2.8.0</attribute:cmor_version>
+    <attribute:contact>The ACCESS wiki: http://wiki.csiro.au/confluence/display/ACCESS/Home. Contact Tony.Hirst@csiro.au regarding the ACCESS coupled climate model. Contact Peter.Uhe@csiro.au regarding ACCESS coupled climate model CMIP5 datasets.</attribute:contact>
+    <attribute:creation_date>2012-01-17T05:24:51Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>GHG, Oz, SA, Sl, Vl, BC, OC, (GHG = CO2, N2O, CH4, CFC11, CFC12, CFC113, HCFC22, HFC125, HFC134a)</attribute:forcing>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>CMIP5 compliant file produced from raw ACCESS model output using the ACCESS Post-Processor and CMOR2. 2012-01-17T05:24:51Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>CSIRO-BOM</attribute:institute_id>
+    <attribute:institution>CSIRO (Commonwealth Scientific and Industrial Research Organisation, Australia), and BOM (Bureau of Meteorology, Australia)</attribute:institution>
+    <attribute:model_id>ACCESS1-0</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>pre-industrial control</attribute:parent_experiment>
+    <attribute:parent_experiment_id>piControl</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>1</attribute:realization>
+    <attribute:references>See http://wiki.csiro.au/confluence/display/ACCESS/ACCESS+Publications</attribute:references>
+    <attribute:source>ACCESS1-0 2011. Atmosphere: AGCM v1.0 (N96 grid-point, 1.875 degrees EW x approx 1.25 degree NS, 38 levels); ocean: NOAA/GFDL MOM4p1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S, 50 levels); sea ice: CICE4.1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S); land: MOSES2 (1.875 degree EW x 1.25 degree NS, 4 levels</attribute:source>
+    <attribute:table_id>Table Amon (27 April 2011) 9c851218e3842df9a62ef38b1e2575bb</attribute:table_id>
+    <attribute:title>ACCESS1-0 model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>8c336982-b5df-476a-80bb-f0d6a9614c1c</attribute:tracking_id>
+    <attribute:version_number>v20120115</attribute:version_number>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1999_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2000_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:agent prov:id="author:Brunner, Lukas">
+    <attribute:institute>ETH Zurich, Switzerland</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0001-5760-4524</attribute:orcid>
+  </prov:agent>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc">
+    <attribute:alias>CMIP5_ACCESS1-3</attribute:alias>
+    <attribute:dataset>ACCESS1-3</attribute:dataset>
+    <attribute:diagnostic>calculate_weights_climwip</attribute:diagnostic>
+    <attribute:end_year>2014</attribute:end_year>
+    <attribute:ensemble>r1i1p1</attribute:ensemble>
+    <attribute:exp>['historical', 'rcp85']</attribute:exp>
+    <attribute:filename>/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc</attribute:filename>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:institute>['CSIRO-BOM']</attribute:institute>
+    <attribute:long_name>Sea Level Pressure</attribute:long_name>
+    <attribute:mip>Amon</attribute:mip>
+    <attribute:modeling_realm>['atmos']</attribute:modeling_realm>
+    <attribute:original_short_name>psl</attribute:original_short_name>
+    <attribute:preprocessor>climatological_mean</attribute:preprocessor>
+    <attribute:product>['output1', 'output2']</attribute:product>
+    <attribute:project>CMIP5</attribute:project>
+    <attribute:recipe_dataset_index>1</attribute:recipe_dataset_index>
+    <attribute:short_name>psl</attribute:short_name>
+    <attribute:standard_name>air_pressure_at_sea_level</attribute:standard_name>
+    <attribute:start_year>1995</attribute:start_year>
+    <attribute:timerange>1995/2014</attribute:timerange>
+    <attribute:units>Pa</attribute:units>
+    <attribute:variable_group>psl_CLIM</attribute:variable_group>
+    <attribute:version>['v20120413', 'v20130325']</attribute:version>
+    <preprocessor:climate_statistics>{'operator': 'mean'}</preprocessor:climate_statistics>
+    <preprocessor:extract_region>{'start_longitude': -10.0, 'end_longitude': 39.0, 'start_latitude': 30.0, 'end_latitude': 76.25}</preprocessor:extract_region>
+    <preprocessor:mask_landsea>{'mask_out': 'sea'}</preprocessor:mask_landsea>
+    <preprocessor:regrid>{'target_grid': '2.5x2.5', 'scheme': 'linear'}</preprocessor:regrid>
+    <preprocessor:remove_supplementary_variables>{}</preprocessor:remove_supplementary_variables>
+    <preprocessor:save>{'compress': False, 'filename': PosixPath('/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc')}</preprocessor:save>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r3i1p1/v20160829/psl_Amon_CCSM4_rcp85_r3i1p1_200601-210012.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r1i1p1/v20160829/psl_Amon_CCSM4_rcp85_r1i1p1_200601-210012.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/mon/atmos/Amon/r1i1p1/v20160829/psl_Amon_CCSM4_historical_r1i1p1_185001-200512.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2005_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-3/historical/fx/atmos/fx/r0i0p0/v20120413/sftlf_fx_ACCESS1-3_historical_r0i0p0.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/fx/atmos/fx/r0i0p0/v20130312/sftlf_fx_CCSM4_historical_r0i0p0.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy. NCAR is sponsored by the National Science Foundation. Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL), sponsored by the National Science Foundation and other agencies.This research used resources of the National Energy Research Scientific Computing Center, which is supported by the Office</attribute:acknowledgements>
+    <attribute:branch_time>0.0</attribute:branch_time>
+    <attribute:cesm_casename>not applicable</attribute:cesm_casename>
+    <attribute:cesm_compset>not applicable</attribute:cesm_compset>
+    <attribute:cesm_repotag>not applicable</attribute:cesm_repotag>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2012-02-02T17:48:32Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>N/A</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>fx</attribute:frequency>
+    <attribute:history>2012-02-02T17:48:32Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>0</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>N/A</attribute:parent_experiment>
+    <attribute:parent_experiment_id>N/A</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>N/A</attribute:parent_experiment_rip>
+    <attribute:physics_version>0</attribute:physics_version>
+    <attribute:processed_by>strandwg on silver.cgd.ucar.edu at 20120202  -104832.398</attribute:processed_by>
+    <attribute:processing_code_information>Last Changed Rev: 510 Last Changed Date: 2012-02-02 08:29:31 -0700 (Thu, 02 Feb 2012) Repository UUID: d2181dbe-5796-6825-dc7f-cbd98591f93d</attribute:processing_code_information>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>0</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4</attribute:source>
+    <attribute:table_id>Table fx (12 January 2012) 3b84a801563e38720652872982814a17</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>fb073ab2-0d48-41cc-b327-769c2c62a5f3</attribute:tracking_id>
+  </prov:entity>
+  <prov:activity prov:id="task:calculate_weights_climwip/psl_CLIM"/>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1999_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:19:32 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 1999, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:17 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data7/adaptor.mars.internal-1714990756.919888-7713-14-0bc463dc-7815-4dc3-b8ec-998ba6ebbd2a.nc /cache/tmp/0bc463dc-7815-4dc3-b8ec-998ba6ebbd2a-adaptor.mars.internal-1714990753.2149906-7713-14-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1998_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:18:56 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 1998, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:18:53 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data1/adaptor.mars.internal-1714990732.61386-14832-10-8ccb8c7f-bffb-468a-afdf-e245f7e101e3.nc /cache/tmp/8ccb8c7f-bffb-468a-afdf-e245f7e101e3-adaptor.mars.internal-1714990727.4763265-14832-6-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/BNU/BNU-ESM/historical/fx/atmos/fx/r0i0p0/v20140307/sftlf_fx_BNU-ESM_historical_r0i0p0.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:usedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/climwip"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:usedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/climwip"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1998_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/BNU/BNU-ESM/historical/mon/atmos/Amon/r1i1p1/v20120510/psl_Amon_BNU-ESM_historical_r1i1p1_185001-200512.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2010_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-3/historical/mon/atmos/Amon/r1i1p1/v20130325/psl_Amon_ACCESS1-3_historical_r1i1p1_185001-200512.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2014_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:37 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2014, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:57 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data0/adaptor.mars.internal-1714990796.7181602-3053-4-cb442e9d-1095-416f-a367-a1619b9edd94.nc /cache/tmp/cb442e9d-1095-416f-a367-a1619b9edd94-adaptor.mars.internal-1714990785.4243588-3053-3-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/mon/atmos/Amon/r3i1p1/v20160829/psl_Amon_CCSM4_historical_r3i1p1_185001-200512.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2011_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/BNU/BNU-ESM/historical/fx/atmos/fx/r0i0p0/v20140307/sftlf_fx_BNU-ESM_historical_r0i0p0.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:branch_time>0.0</attribute:branch_time>
+    <attribute:cmor_version>2.8.1</attribute:cmor_version>
+    <attribute:contact>Ji Duoying (duoyingji@bnu.edu.cn)</attribute:contact>
+    <attribute:creation_date>2014-03-05T08:00:09Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>Nat,Ant</attribute:forcing>
+    <attribute:frequency>fx</attribute:frequency>
+    <attribute:history>2014-03-05T08:00:09Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>0</attribute:initialization_method>
+    <attribute:institute_id>BNU</attribute:institute_id>
+    <attribute:institution>GCESS,BNU,Beijing,China</attribute:institution>
+    <attribute:model_id>BNU-ESM</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>pre-industrial control</attribute:parent_experiment>
+    <attribute:parent_experiment_id>piControl</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>0</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>0</attribute:realization>
+    <attribute:source>BNU-ESM</attribute:source>
+    <attribute:table_id>Table fx (26 July 2011) 491518982c8d8b607a58ba740689ea09</attribute:table_id>
+    <attribute:title>BNU-ESM model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>2da826b0-4f8a-41a3-b712-c83dbb4e355a</attribute:tracking_id>
+  </prov:entity>
+  <prov:agent prov:id="author:Smeets, Stef">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-5413-9038</attribute:orcid>
+  </prov:agent>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r2i1p1/v20160829/psl_Amon_CCSM4_rcp85_r2i1p1_200601-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy. NCAR is sponsored by the National Science Foundation. Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL), sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>2005.0</attribute:branch_time>
+    <attribute:cesm_casename>b40.rcp8_5.1deg.002</attribute:cesm_casename>
+    <attribute:cesm_compset>BRCP85CN</attribute:cesm_compset>
+    <attribute:cesm_repotag>ccsm4_0_beta46</attribute:cesm_repotag>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-10-21T23:24:24Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SA BC MD OC Oz AA</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-10-21T23:24:24Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r2i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:processed_by>strandwg on mirage0 at 20111021</attribute:processed_by>
+    <attribute:processing_code_information>Last Changed Rev: 428 Last Changed Date: 2011-10-21 10:32:02 -0600 (Fri, 21 Oct 2011) Repository UUID: d2181dbe-5796-6825-dc7f-cbd98591f93d</attribute:processing_code_information>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>2</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>c4f76db6-4fff-4386-b420-653b0b3ceedc</attribute:tracking_id>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1997_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:activity prov:id="task:calculate_weights_climwip/climwip"/>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2001_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:usedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/climwip"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:usedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/climwip"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:agent prov:ref="author:Smeets, Stef"/>
+  </prov:wasAttributedTo>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:usedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/climwip"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-3/rcp85/mon/atmos/Amon/r1i1p1/v20120413/psl_Amon_ACCESS1-3_rcp85_r1i1p1_200601-210012.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1997_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:03 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 1997, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:33 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data5/adaptor.mars.internal-1714990772.8980043-19816-8-00474954-9381-4339-ab4c-f5c5fa8e99a3.nc /cache/tmp/00474954-9381-4339-ab4c-f5c5fa8e99a3-adaptor.mars.internal-1714990763.58235-19816-7-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1996_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:36 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 1996, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:18 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data3/adaptor.mars.internal-1714990817.705953-14539-12-9bcc356b-21be-4243-b653-36906c49adf4.nc /cache/tmp/9bcc356b-21be-4243-b653-36906c49adf4-adaptor.mars.internal-1714990811.4813364-14539-8-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="project:EU H2020 European Climate prediction"/>
+  </prov:wasAttributedTo>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:usedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/climwip"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r4i1p1/v20160829/psl_Amon_CCSM4_rcp85_r4i1p1_200501-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy.
+NCAR is sponsored by the National Science Foundation.
+Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL),
+sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>2005.0</attribute:branch_time>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-07-22T02:13:27Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SA BC MD OC Oz AA</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at
+http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-07-22T02:13:27Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r4i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>4</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4 (repository tag: ccsm4_0_beta47 compset: BRCP85CN)</attribute:source>
+    <attribute:table_id>Table Amon (27 April 2011) a5a1c518f52ae340313ba0aada03f862</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>29746afa-e9f3-407f-98a5-a5e28256ffbc</attribute:tracking_id>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1996_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2007_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:19:32 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2007, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:22 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data2/adaptor.mars.internal-1714990762.588775-1544-15-c8faf1a8-3086-4d31-97cc-4208f252fd9e.nc /cache/tmp/c8faf1a8-3086-4d31-97cc-4208f252fd9e-adaptor.mars.internal-1714990757.9941623-1544-10-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r2i1p1/v20160829/psl_Amon_CCSM4_rcp85_r2i1p1_200501-210012.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:usedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/climwip"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc">
+    <attribute:alias>CMIP5_BNU-ESM</attribute:alias>
+    <attribute:dataset>BNU-ESM</attribute:dataset>
+    <attribute:diagnostic>calculate_weights_climwip</attribute:diagnostic>
+    <attribute:end_year>2014</attribute:end_year>
+    <attribute:ensemble>r1i1p1</attribute:ensemble>
+    <attribute:exp>['historical', 'rcp85']</attribute:exp>
+    <attribute:filename>/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc</attribute:filename>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:institute>['BNU']</attribute:institute>
+    <attribute:long_name>Sea Level Pressure</attribute:long_name>
+    <attribute:mip>Amon</attribute:mip>
+    <attribute:modeling_realm>['atmos']</attribute:modeling_realm>
+    <attribute:original_short_name>psl</attribute:original_short_name>
+    <attribute:preprocessor>climatological_mean</attribute:preprocessor>
+    <attribute:product>['output1', 'output2']</attribute:product>
+    <attribute:project>CMIP5</attribute:project>
+    <attribute:recipe_dataset_index>6</attribute:recipe_dataset_index>
+    <attribute:short_name>psl</attribute:short_name>
+    <attribute:standard_name>air_pressure_at_sea_level</attribute:standard_name>
+    <attribute:start_year>1995</attribute:start_year>
+    <attribute:timerange>1995/2014</attribute:timerange>
+    <attribute:units>Pa</attribute:units>
+    <attribute:variable_group>psl_CLIM</attribute:variable_group>
+    <attribute:version>v20120510</attribute:version>
+    <preprocessor:climate_statistics>{'operator': 'mean'}</preprocessor:climate_statistics>
+    <preprocessor:extract_region>{'start_longitude': -10.0, 'end_longitude': 39.0, 'start_latitude': 30.0, 'end_latitude': 76.25}</preprocessor:extract_region>
+    <preprocessor:mask_landsea>{'mask_out': 'sea'}</preprocessor:mask_landsea>
+    <preprocessor:regrid>{'target_grid': '2.5x2.5', 'scheme': 'linear'}</preprocessor:regrid>
+    <preprocessor:remove_supplementary_variables>{}</preprocessor:remove_supplementary_variables>
+    <preprocessor:save>{'compress': False, 'filename': PosixPath('/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc')}</preprocessor:save>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc">
+    <attribute:alias>CMIP5_CCSM4_r2i1p1</attribute:alias>
+    <attribute:dataset>CCSM4</attribute:dataset>
+    <attribute:diagnostic>calculate_weights_climwip</attribute:diagnostic>
+    <attribute:end_year>2014</attribute:end_year>
+    <attribute:ensemble>r2i1p1</attribute:ensemble>
+    <attribute:exp>['historical', 'rcp85']</attribute:exp>
+    <attribute:filename>/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc</attribute:filename>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:institute>['NCAR']</attribute:institute>
+    <attribute:long_name>Sea Level Pressure</attribute:long_name>
+    <attribute:mip>Amon</attribute:mip>
+    <attribute:modeling_realm>['atmos']</attribute:modeling_realm>
+    <attribute:original_short_name>psl</attribute:original_short_name>
+    <attribute:preprocessor>climatological_mean</attribute:preprocessor>
+    <attribute:product>['output1', 'output2']</attribute:product>
+    <attribute:project>CMIP5</attribute:project>
+    <attribute:recipe_dataset_index>3</attribute:recipe_dataset_index>
+    <attribute:short_name>psl</attribute:short_name>
+    <attribute:standard_name>air_pressure_at_sea_level</attribute:standard_name>
+    <attribute:start_year>1995</attribute:start_year>
+    <attribute:timerange>1995/2014</attribute:timerange>
+    <attribute:units>Pa</attribute:units>
+    <attribute:variable_group>psl_CLIM</attribute:variable_group>
+    <attribute:version>v20160829</attribute:version>
+    <preprocessor:climate_statistics>{'operator': 'mean'}</preprocessor:climate_statistics>
+    <preprocessor:extract_region>{'start_longitude': -10.0, 'end_longitude': 39.0, 'start_latitude': 30.0, 'end_latitude': 76.25}</preprocessor:extract_region>
+    <preprocessor:mask_landsea>{'mask_out': 'sea'}</preprocessor:mask_landsea>
+    <preprocessor:regrid>{'target_grid': '2.5x2.5', 'scheme': 'linear'}</preprocessor:regrid>
+    <preprocessor:remove_supplementary_variables>{}</preprocessor:remove_supplementary_variables>
+    <preprocessor:save>{'compress': False, 'filename': PosixPath('/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc')}</preprocessor:save>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r3i1p1/v20160829/psl_Amon_CCSM4_rcp85_r3i1p1_200501-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy.
+NCAR is sponsored by the National Science Foundation.
+Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL),
+sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>2005.0</attribute:branch_time>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-07-22T02:07:35Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SA BC MD OC Oz AA</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at
+http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-07-22T02:07:35Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r3i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>3</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4 (repository tag: ccsm4_0_beta47 compset: BRCP85CN)</attribute:source>
+    <attribute:table_id>Table Amon (27 April 2011) a5a1c518f52ae340313ba0aada03f862</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>cf7cde53-bc8b-45b3-a6b6-32d43fa3f62d</attribute:tracking_id>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2004_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:37 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2004, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:01 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data3/adaptor.mars.internal-1714990800.9996061-18500-12-05f29d87-b1aa-4279-a58e-d5e28e598704.nc /cache/tmp/05f29d87-b1aa-4279-a58e-d5e28e598704-adaptor.mars.internal-1714990797.8000271-18500-8-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2007_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:activity prov:id="software:esmvaltool==2.10.0"/>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/fx/atmos/fx/r0i0p0/v20130312/sftlf_fx_CCSM4_historical_r0i0p0.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2008_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="recipe:recipe_climwip_test_basic.yml">
+    <attribute:description>EUCP ClimWIP</attribute:description>
+    <attribute:references>['brunner2019', 'lorenz2018', 'knutti2017']</attribute:references>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2013_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:36 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2013, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:10 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data6/adaptor.mars.internal-1714990810.4063394-17131-1-537a6d9f-f778-4bd2-85e0-45de07908864.nc /cache/tmp/537a6d9f-f778-4bd2-85e0-45de07908864-adaptor.mars.internal-1714990807.0147192-17131-1-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-3/rcp85/mon/atmos/Amon/r1i1p1/v20120413/psl_Amon_ACCESS1-3_rcp85_r1i1p1_200601-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:branch_time>732311.0</attribute:branch_time>
+    <attribute:cmor_version>2.8.0</attribute:cmor_version>
+    <attribute:contact>The ACCESS wiki: http://wiki.csiro.au/confluence/display/ACCESS/Home. Contact Tony.Hirst@csiro.au regarding the ACCESS coupled climate model. Contact Peter.Uhe@csiro.au regarding ACCESS coupled climate model CMIP5 datasets.</attribute:contact>
+    <attribute:creation_date>2012-03-14T04:14:42Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>GHG, Oz, SA, Sl, Vl, BC, OC, (GHG = CO2, N2O, CH4, CFC11, CFC12, CFC113, HCFC22, HFC125, HFC134a)</attribute:forcing>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>CMIP5 compliant file produced from raw ACCESS model output using the ACCESS Post-Processor and CMOR2. 2012-03-14T04:14:42Z CMOR rewrote data to comply with CF standards and CMIP5 requirements. Fri Apr 13 12:32:01 2012: corrected model_id from ACCESS1-3 to ACCESS1.3 Fri Apr 13 14:07:50 2012: forcing attribute modified to correct value Wed May  2 13:38:59 2012: updated version number to v20120413.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>CSIRO-BOM</attribute:institute_id>
+    <attribute:institution>CSIRO (Commonwealth Scientific and Industrial Research Organisation, Australia), and BOM (Bureau of Meteorology, Australia)</attribute:institution>
+    <attribute:model_id>ACCESS1.3</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>1</attribute:realization>
+    <attribute:references>See http://wiki.csiro.au/confluence/display/ACCESS/ACCESS+Publications</attribute:references>
+    <attribute:source>ACCESS1-3 2011. Atmosphere: AGCM v1.0 (N96 grid-point, 1.875 degrees EW x approx 1.25 degree NS, 38 levels); ocean: NOAA/GFDL MOM4p1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S, 50 levels); sea ice: CICE4.1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S); land: CABLE1.0 (1.875 degree EW x 1.25 degree NS, 6 levels</attribute:source>
+    <attribute:table_id>Table Amon (01 February 2012) 01388cb4507c2f05326b711b09604e7e</attribute:table_id>
+    <attribute:title>ACCESS1-3 model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>7b536456-8df1-4ec0-a225-72d17802ab62</attribute:tracking_id>
+    <attribute:version_number>v20120413</attribute:version_number>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2009_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:34 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2009, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:21:02 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data1/adaptor.mars.internal-1714990862.0053885-2968-16-625bdd79-e9cb-4db8-bfd9-7fc0cfcff754.nc /cache/tmp/625bdd79-e9cb-4db8-bfd9-7fc0cfcff754-adaptor.mars.internal-1714990857.9786217-2968-11-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-0/rcp85/mon/atmos/Amon/r1i1p1/v20120727/psl_Amon_ACCESS1-0_rcp85_r1i1p1_200601-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:branch_time>732311.0</attribute:branch_time>
+    <attribute:cmor_version>2.8.0</attribute:cmor_version>
+    <attribute:contact>The ACCESS wiki: http://wiki.csiro.au/confluence/display/ACCESS/Home. Contact Tony.Hirst@csiro.au regarding the ACCESS coupled climate model. Contact Peter.Uhe@csiro.au regarding ACCESS coupled climate model CMIP5 datasets.</attribute:contact>
+    <attribute:creation_date>2012-01-31T23:03:33Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>GHG, Oz, SA, Sl, Vl, BC, OC, (GHG = CO2, N2O, CH4, CFC11, CFC12, CFC113, HCFC22, HFC125, HFC134a)</attribute:forcing>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>CMIP5 compliant file produced from raw ACCESS model output using the ACCESS Post-Processor and CMOR2. 2012-01-31T23:03:33Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>CSIRO-BOM</attribute:institute_id>
+    <attribute:institution>CSIRO (Commonwealth Scientific and Industrial Research Organisation, Australia), and BOM (Bureau of Meteorology, Australia)</attribute:institution>
+    <attribute:model_id>ACCESS1-0</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>1</attribute:realization>
+    <attribute:references>See http://wiki.csiro.au/confluence/display/ACCESS/ACCESS+Publications</attribute:references>
+    <attribute:source>ACCESS1-0 2011. Atmosphere: AGCM v1.0 (N96 grid-point, 1.875 degrees EW x approx 1.25 degree NS, 38 levels); ocean: NOAA/GFDL MOM4p1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S, 50 levels); sea ice: CICE4.1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S); land: MOSES2 (1.875 degree EW x 1.25 degree NS, 4 levels</attribute:source>
+    <attribute:table_id>Table Amon (27 April 2011) 9c851218e3842df9a62ef38b1e2575bb</attribute:table_id>
+    <attribute:title>ACCESS1-0 model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>1f978874-310f-4d0b-9a2b-20afde309c7f</attribute:tracking_id>
+    <attribute:version_number>v20120115</attribute:version_number>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r2i1p1/v20160829/psl_Amon_CCSM4_rcp85_r2i1p1_200501-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy.
+NCAR is sponsored by the National Science Foundation.
+Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL),
+sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>2005.0</attribute:branch_time>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-07-22T02:01:43Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SA BC MD OC Oz AA</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at
+http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-07-22T02:01:43Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r2i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>2</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4 (repository tag: ccsm4_0_beta46 compset: BRCP85CN)</attribute:source>
+    <attribute:table_id>Table Amon (27 April 2011) a5a1c518f52ae340313ba0aada03f862</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>f92de571-274b-4b50-82ff-cc71be257622</attribute:tracking_id>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/mon/atmos/Amon/r4i1p1/v20160829/psl_Amon_CCSM4_historical_r4i1p1_185001-200512.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/mon/atmos/Amon/r2i1p1/v20160829/psl_Amon_CCSM4_historical_r2i1p1_185001-200512.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Lorenz, Ruth"/>
+  </prov:wasAttributedTo>
+  <prov:agent prov:id="author:Lorenz, Ruth">
+    <attribute:github>ruthlorenz</attribute:github>
+    <attribute:institute>ETH Zurich, Switzerland</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-3986-1268</attribute:orcid>
+  </prov:agent>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r4i1p1/v20160829/psl_Amon_CCSM4_rcp85_r4i1p1_200601-210012.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/BNU/BNU-ESM/historical/mon/atmos/Amon/r1i1p1/v20120510/psl_Amon_BNU-ESM_historical_r1i1p1_185001-200512.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:branch_time>0.0</attribute:branch_time>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>Ji Duoying (duoyingji@bnu.edu.cn)</attribute:contact>
+    <attribute:creation_date>2012-03-12T06:39:29Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>Nat,Ant</attribute:forcing>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2012-03-12T06:39:29Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>BNU</attribute:institute_id>
+    <attribute:institution>GCESS,BNU,Beijing,China</attribute:institution>
+    <attribute:model_id>BNU-ESM</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>pre-industrial control</attribute:parent_experiment>
+    <attribute:parent_experiment_id>piControl</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>1</attribute:realization>
+    <attribute:source>BNU-ESM</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>BNU-ESM model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>7a82b98b-b709-41b0-89c6-b6575119bc20</attribute:tracking_id>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1995_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:agent prov:ref="author:Brunner, Lukas"/>
+  </prov:wasAttributedTo>
+  <prov:agent prov:id="project:EU H2020 European Climate prediction"/>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2003_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:19:57 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2003, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:44 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data6/adaptor.mars.internal-1714990784.3298683-17033-1-6b2b5732-4d38-4aa3-8faf-a7d94ff57d20.nc /cache/tmp/6b2b5732-4d38-4aa3-8faf-a7d94ff57d20-adaptor.mars.internal-1714990774.3141842-17033-1-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/BNU/BNU-ESM/rcp85/mon/atmos/Amon/r1i1p1/v20120510/psl_Amon_BNU-ESM_rcp85_r1i1p1_200601-210012.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2001_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:36 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2001, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:21:06 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data1/adaptor.mars.internal-1714990866.4568198-16108-13-340c6f32-95b4-49e1-887e-a9ba9a65e767.nc /cache/tmp/340c6f32-95b4-49e1-887e-a9ba9a65e767-adaptor.mars.internal-1714990863.230716-16108-8-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:agent prov:ref="author:Camphuijsen, Jaro"/>
+  </prov:wasAttributedTo>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2005_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:34 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2005, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:48 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data8/adaptor.mars.internal-1714990847.8651505-8539-13-7d5dc685-869e-4451-bc55-984b139c393f.nc /cache/tmp/7d5dc685-869e-4451-bc55-984b139c393f-adaptor.mars.internal-1714990840.6758058-8539-9-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc">
+    <attribute:alias>CMIP5_CCSM4_r3i1p1</attribute:alias>
+    <attribute:dataset>CCSM4</attribute:dataset>
+    <attribute:diagnostic>calculate_weights_climwip</attribute:diagnostic>
+    <attribute:end_year>2014</attribute:end_year>
+    <attribute:ensemble>r3i1p1</attribute:ensemble>
+    <attribute:exp>['historical', 'rcp85']</attribute:exp>
+    <attribute:filename>/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc</attribute:filename>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:institute>['NCAR']</attribute:institute>
+    <attribute:long_name>Sea Level Pressure</attribute:long_name>
+    <attribute:mip>Amon</attribute:mip>
+    <attribute:modeling_realm>['atmos']</attribute:modeling_realm>
+    <attribute:original_short_name>psl</attribute:original_short_name>
+    <attribute:preprocessor>climatological_mean</attribute:preprocessor>
+    <attribute:product>['output1', 'output2']</attribute:product>
+    <attribute:project>CMIP5</attribute:project>
+    <attribute:recipe_dataset_index>4</attribute:recipe_dataset_index>
+    <attribute:short_name>psl</attribute:short_name>
+    <attribute:standard_name>air_pressure_at_sea_level</attribute:standard_name>
+    <attribute:start_year>1995</attribute:start_year>
+    <attribute:timerange>1995/2014</attribute:timerange>
+    <attribute:units>Pa</attribute:units>
+    <attribute:variable_group>psl_CLIM</attribute:variable_group>
+    <attribute:version>v20160829</attribute:version>
+    <preprocessor:climate_statistics>{'operator': 'mean'}</preprocessor:climate_statistics>
+    <preprocessor:extract_region>{'start_longitude': -10.0, 'end_longitude': 39.0, 'start_latitude': 30.0, 'end_latitude': 76.25}</preprocessor:extract_region>
+    <preprocessor:mask_landsea>{'mask_out': 'sea'}</preprocessor:mask_landsea>
+    <preprocessor:regrid>{'target_grid': '2.5x2.5', 'scheme': 'linear'}</preprocessor:regrid>
+    <preprocessor:remove_supplementary_variables>{}</preprocessor:remove_supplementary_variables>
+    <preprocessor:save>{'compress': False, 'filename': PosixPath('/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc')}</preprocessor:save>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-3/historical/fx/atmos/fx/r0i0p0/v20120413/sftlf_fx_ACCESS1-3_historical_r0i0p0.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:branch_time>90945.0</attribute:branch_time>
+    <attribute:cmor_version>2.8.0</attribute:cmor_version>
+    <attribute:contact>The ACCESS wiki: http://wiki.csiro.au/confluence/display/ACCESS/Home. Contact Tony.Hirst@csiro.au regarding the ACCESS coupled climate model. Contact Peter.Uhe@csiro.au regarding ACCESS coupled climate model CMIP5 datasets.</attribute:contact>
+    <attribute:creation_date>2012-02-15T06:14:44Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>GHG, Oz, SA, Sl, Vl, BC, OC, (GHG = CO2, N2O, CH4, CFC11, CFC12, CFC113, HCFC22, HFC125, HFC134a)</attribute:forcing>
+    <attribute:frequency>fx</attribute:frequency>
+    <attribute:history>CMIP5 compliant file produced from raw ACCESS model output using the ACCESS Post-Processor and CMOR2. 2012-02-15T06:14:44Z CMOR rewrote data to comply with CF standards and CMIP5 requirements. Fri Apr 13 09:55:42 2012: forcing attribute modified to correct value Fri Apr 13 12:30:31 2012: corrected model_id from ACCESS1-3 to ACCESS1.3 Thu May  3 09:37:07 2012: updated version number to v20120413.</attribute:history>
+    <attribute:initialization_method>0</attribute:initialization_method>
+    <attribute:institute_id>CSIRO-BOM</attribute:institute_id>
+    <attribute:institution>CSIRO (Commonwealth Scientific and Industrial Research Organisation, Australia), and BOM (Bureau of Meteorology, Australia)</attribute:institution>
+    <attribute:model_id>ACCESS1.3</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>pre-industrial control</attribute:parent_experiment>
+    <attribute:parent_experiment_id>piControl</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>0</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>0</attribute:realization>
+    <attribute:references>See http://wiki.csiro.au/confluence/display/ACCESS/ACCESS+Publications</attribute:references>
+    <attribute:source>ACCESS1-3 2011. Atmosphere: AGCM v1.0 (N96 grid-point, 1.875 degrees EW x approx 1.25 degree NS, 38 levels); ocean: NOAA/GFDL MOM4p1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S, 50 levels); sea ice: CICE4.1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S); land: CABLE1.0 (1.875 degree EW x 1.25 degree NS, 6 levels</attribute:source>
+    <attribute:table_id>Table fx (01 February 2012) 4a159bff0ec5e3f2ffff0b0475e89009</attribute:table_id>
+    <attribute:title>ACCESS1-3 model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>50a2eb82-3b87-43df-bcb9-2fe82590a424</attribute:tracking_id>
+    <attribute:version_number>v20120413</attribute:version_number>
+  </prov:entity>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png"/>
+    <prov:agent prov:ref="author:Kalverla, Peter"/>
+  </prov:wasAttributedTo>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc">
+    <attribute:alias>CMIP5_ACCESS1-0</attribute:alias>
+    <attribute:dataset>ACCESS1-0</attribute:dataset>
+    <attribute:diagnostic>calculate_weights_climwip</attribute:diagnostic>
+    <attribute:end_year>2014</attribute:end_year>
+    <attribute:ensemble>r1i1p1</attribute:ensemble>
+    <attribute:exp>['historical', 'rcp85']</attribute:exp>
+    <attribute:filename>/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc</attribute:filename>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:institute>['CSIRO-BOM']</attribute:institute>
+    <attribute:long_name>Sea Level Pressure</attribute:long_name>
+    <attribute:mip>Amon</attribute:mip>
+    <attribute:modeling_realm>['atmos']</attribute:modeling_realm>
+    <attribute:original_short_name>psl</attribute:original_short_name>
+    <attribute:preprocessor>climatological_mean</attribute:preprocessor>
+    <attribute:product>['output1', 'output2']</attribute:product>
+    <attribute:project>CMIP5</attribute:project>
+    <attribute:recipe_dataset_index>0</attribute:recipe_dataset_index>
+    <attribute:short_name>psl</attribute:short_name>
+    <attribute:standard_name>air_pressure_at_sea_level</attribute:standard_name>
+    <attribute:start_year>1995</attribute:start_year>
+    <attribute:timerange>1995/2014</attribute:timerange>
+    <attribute:units>Pa</attribute:units>
+    <attribute:variable_group>psl_CLIM</attribute:variable_group>
+    <attribute:version>v20120727</attribute:version>
+    <preprocessor:climate_statistics>{'operator': 'mean'}</preprocessor:climate_statistics>
+    <preprocessor:extract_region>{'start_longitude': -10.0, 'end_longitude': 39.0, 'start_latitude': 30.0, 'end_latitude': 76.25}</preprocessor:extract_region>
+    <preprocessor:mask_landsea>{'mask_out': 'sea'}</preprocessor:mask_landsea>
+    <preprocessor:regrid>{'target_grid': '2.5x2.5', 'scheme': 'linear'}</preprocessor:regrid>
+    <preprocessor:remove_supplementary_variables>{}</preprocessor:remove_supplementary_variables>
+    <preprocessor:save>{'compress': False, 'filename': PosixPath('/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc')}</preprocessor:save>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2008_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:18:52 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2008, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:18:46 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data9/adaptor.mars.internal-1714990726.414695-16057-3-406c490e-4495-4aa6-8e32-31b66d9a488c.nc /cache/tmp/406c490e-4495-4aa6-8e32-31b66d9a488c-adaptor.mars.internal-1714990722.231522-16057-3-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png">
+    <attribute:caption>Performance metric RMS error for variable group psl_CLIM</attribute:caption>
+    <attribute:combine_ensemble_members>True</attribute:combine_ensemble_members>
+    <attribute:domains>('regional',)</attribute:domains>
+    <attribute:independence_contributions>{'tas_CLIM': 0.5, 'pr_CLIM': 0.25, 'psl_CLIM': 0}</attribute:independence_contributions>
+    <attribute:independence_sigma>0.5</attribute:independence_sigma>
+    <attribute:obs_data>native6</attribute:obs_data>
+    <attribute:performance_contributions>{'tas_CLIM': 1, 'pr_CLIM': 2, 'psl_CLIM': 1}</attribute:performance_contributions>
+    <attribute:performance_sigma>0.5</attribute:performance_sigma>
+    <attribute:references>['brunner2019', 'lorenz2018', 'knutti2017']</attribute:references>
+    <attribute:script>climwip</attribute:script>
+    <attribute:script_file>weighting/climwip/main.py</attribute:script_file>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2012_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:35 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2012, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:21:30 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data9/adaptor.mars.internal-1714990889.7384164-18956-11-86995792-c7e6-4b03-b07e-3ccc22feec80.nc /cache/tmp/86995792-c7e6-4b03-b07e-3ccc22feec80-adaptor.mars.internal-1714990878.8962493-18956-6-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:agent prov:id="author:Camphuijsen, Jaro">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-8928-7831</attribute:orcid>
+  </prov:agent>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2006_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:35 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2006, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:57 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data5/adaptor.mars.internal-1714990856.7974858-22595-2-47b782d0-a505-4784-aa56-cda3917570ad.nc /cache/tmp/47b782d0-a505-4784-aa56-cda3917570ad-adaptor.mars.internal-1714990848.9355881-22595-2-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r1i1p1/v20160829/psl_Amon_CCSM4_rcp85_r1i1p1_200601-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy. NCAR is sponsored by the National Science Foundation. Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL), sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>2005.0</attribute:branch_time>
+    <attribute:cesm_casename>b40.rcp8_5.1deg.001</attribute:cesm_casename>
+    <attribute:cesm_compset>BRCP85CN</attribute:cesm_compset>
+    <attribute:cesm_repotag>ccsm4_0_beta45</attribute:cesm_repotag>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-10-21T23:17:01Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SA BC MD OC Oz AA</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-10-21T23:17:01Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:processed_by>strandwg on mirage0 at 20111021</attribute:processed_by>
+    <attribute:processing_code_information>Last Changed Rev: 428 Last Changed Date: 2011-10-21 10:32:02 -0600 (Fri, 21 Oct 2011) Repository UUID: d2181dbe-5796-6825-dc7f-cbd98591f93d</attribute:processing_code_information>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>1</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>2df394d1-e572-4b4e-8937-02c361f774a2</attribute:tracking_id>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/mon/atmos/Amon/r1i1p1/v20160829/psl_Amon_CCSM4_historical_r1i1p1_185001-200512.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy. NCAR is sponsored by the National Science Foundation. Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL), sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>937.0</attribute:branch_time>
+    <attribute:cesm_casename>b40.20th.track1.1deg.008</attribute:cesm_casename>
+    <attribute:cesm_compset>B20TRCN</attribute:cesm_compset>
+    <attribute:cesm_repotag>ccsm4_0_beta43</attribute:cesm_repotag>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-10-21T17:20:52Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SD BC MD OC Oz AA LU</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-10-21T17:20:52Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>pre-industrial control</attribute:parent_experiment>
+    <attribute:parent_experiment_id>piControl</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:processed_by>strandwg on mirage0 at 20111021</attribute:processed_by>
+    <attribute:processing_code_information>Last Changed Rev: 428 Last Changed Date: 2011-10-21 10:32:02 -0600 (Fri, 21 Oct 2011) Repository UUID: d2181dbe-5796-6825-dc7f-cbd98591f93d</attribute:processing_code_information>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>1</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>0eab1086-10fe-4143-96d8-6030af298833</attribute:tracking_id>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2010_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:37 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2010, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:06 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data0/adaptor.mars.internal-1714990805.9279778-5382-8-284e5ba0-9179-4fb3-bf0f-d3920bf4b74b.nc /cache/tmp/284e5ba0-9179-4fb3-bf0f-d3920bf4b74b-adaptor.mars.internal-1714990802.1727517-5382-7-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r4i1p1/v20160829/psl_Amon_CCSM4_rcp85_r4i1p1_200601-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy. NCAR is sponsored by the National Science Foundation. Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL), sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>2005.0</attribute:branch_time>
+    <attribute:cesm_casename>b40.rcp8_5.1deg.004</attribute:cesm_casename>
+    <attribute:cesm_compset>BRCP85CN</attribute:cesm_compset>
+    <attribute:cesm_repotag>ccsm4_0_beta47</attribute:cesm_repotag>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-10-21T23:32:35Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SA BC MD OC Oz AA</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-10-21T23:32:35Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r4i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:processed_by>strandwg on mirage0 at 20111021</attribute:processed_by>
+    <attribute:processing_code_information>Last Changed Rev: 428 Last Changed Date: 2011-10-21 10:32:02 -0600 (Fri, 21 Oct 2011) Repository UUID: d2181dbe-5796-6825-dc7f-cbd98591f93d</attribute:processing_code_information>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>4</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>b9c8e962-5ebf-4603-83a7-a472aa53631e</attribute:tracking_id>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/fx/atmos/fx/r0i0p0/v20130312/sftlf_fx_CCSM4_historical_r0i0p0.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-0/historical/fx/atmos/fx/r0i0p0/v20120115/sftlf_fx_ACCESS1-0_historical_r0i0p0.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/mon/atmos/Amon/r2i1p1/v20160829/psl_Amon_CCSM4_historical_r2i1p1_185001-200512.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy. NCAR is sponsored by the National Science Foundation. Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL), sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>1031.0</attribute:branch_time>
+    <attribute:cesm_casename>b40.20th.track1.1deg.009</attribute:cesm_casename>
+    <attribute:cesm_compset>B20TRCN</attribute:cesm_compset>
+    <attribute:cesm_repotag>ccsm4_0_beta43</attribute:cesm_repotag>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-10-21T17:34:59Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SD BC MD OC Oz AA LU</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-10-21T17:34:59Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>pre-industrial control</attribute:parent_experiment>
+    <attribute:parent_experiment_id>piControl</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:processed_by>strandwg on mirage0 at 20111021</attribute:processed_by>
+    <attribute:processing_code_information>Last Changed Rev: 428 Last Changed Date: 2011-10-21 10:32:02 -0600 (Fri, 21 Oct 2011) Repository UUID: d2181dbe-5796-6825-dc7f-cbd98591f93d</attribute:processing_code_information>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>2</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>34b7ae28-5b79-4b7e-9362-add357287436</attribute:tracking_id>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2002_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:19:15 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2002, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:12 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data4/adaptor.mars.internal-1714990752.151901-17693-16-ec3961c7-b148-4713-8543-2973aa0cdae1.nc /cache/tmp/ec3961c7-b148-4713-8543-2973aa0cdae1-adaptor.mars.internal-1714990733.700535-17693-12-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-0/rcp85/mon/atmos/Amon/r1i1p1/v20120727/psl_Amon_ACCESS1-0_rcp85_r1i1p1_200601-210012.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-0/historical/fx/atmos/fx/r0i0p0/v20120115/sftlf_fx_ACCESS1-0_historical_r0i0p0.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:branch_time>109207.0</attribute:branch_time>
+    <attribute:cmor_version>2.8.0</attribute:cmor_version>
+    <attribute:contact>The ACCESS wiki: http://wiki.csiro.au/confluence/display/ACCESS/Home. Contact Tony.Hirst@csiro.au regarding the ACCESS coupled climate model. Contact Peter.Uhe@csiro.au regarding ACCESS coupled climate model CMIP5 datasets.</attribute:contact>
+    <attribute:creation_date>2012-02-15T06:14:49Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>GHG, Oz, SA, Sl, Vl, BC, OC, (GHG = CO2, N2O, CH4, CFC11, CFC12, CFC113, HCFC22, HFC125, HFC134a)</attribute:forcing>
+    <attribute:frequency>fx</attribute:frequency>
+    <attribute:history>CMIP5 compliant file produced from raw ACCESS model output using the ACCESS Post-Processor and CMOR2. 2012-02-15T06:14:49Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>0</attribute:initialization_method>
+    <attribute:institute_id>CSIRO-BOM</attribute:institute_id>
+    <attribute:institution>CSIRO (Commonwealth Scientific and Industrial Research Organisation, Australia), and BOM (Bureau of Meteorology, Australia)</attribute:institution>
+    <attribute:model_id>ACCESS1-0</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>pre-industrial control</attribute:parent_experiment>
+    <attribute:parent_experiment_id>piControl</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>0</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>0</attribute:realization>
+    <attribute:references>See http://wiki.csiro.au/confluence/display/ACCESS/ACCESS+Publications</attribute:references>
+    <attribute:source>ACCESS1-0 2011. Atmosphere: AGCM v1.0 (N96 grid-point, 1.875 degrees EW x approx 1.25 degree NS, 38 levels); ocean: NOAA/GFDL MOM4p1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S, 50 levels); sea ice: CICE4.1 (nominal 1.0 degree EW x 1.0 degrees NS, tripolar north of 65N, equatorial refinement to 1/3 degree from 10S to 10 N, cosine dependent NS south of 25S); land: MOSES2 (1.875 degree EW x 1.25 degree NS, 4 levels</attribute:source>
+    <attribute:table_id>Table fx (01 February 2012) 4a159bff0ec5e3f2ffff0b0475e89009</attribute:table_id>
+    <attribute:title>ACCESS1-0 model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>cd4a50f7-0a82-47df-aa5f-b4d472344d75</attribute:tracking_id>
+    <attribute:version_number>v20120115</attribute:version_number>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2000_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:36 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2000, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:35 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data8/adaptor.mars.internal-1714990834.9980805-1544-19-d722ccb7-fee7-4f11-bf98-c11f126e22de.nc /cache/tmp/d722ccb7-fee7-4f11-bf98-c11f126e22de-adaptor.mars.internal-1714990818.633965-1544-13-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2014_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Kalverla, Peter"/>
+  </prov:wasAttributedTo>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r3i1p1/v20160829/psl_Amon_CCSM4_rcp85_r3i1p1_200601-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy. NCAR is sponsored by the National Science Foundation. Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL), sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>2005.0</attribute:branch_time>
+    <attribute:cesm_casename>b40.rcp8_5.1deg.003</attribute:cesm_casename>
+    <attribute:cesm_compset>BRCP85CN</attribute:cesm_compset>
+    <attribute:cesm_repotag>ccsm4_0_beta47</attribute:cesm_repotag>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-10-22T15:03:30Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SA BC MD OC Oz AA</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-10-22T15:03:30Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r3i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:processed_by>strandwg on mirage2 at 20111022</attribute:processed_by>
+    <attribute:processing_code_information>Last Changed Rev: 428 Last Changed Date: 2011-10-21 10:32:02 -0600 (Fri, 21 Oct 2011) Repository UUID: d2181dbe-5796-6825-dc7f-cbd98591f93d</attribute:processing_code_information>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>3</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>c54e85a7-a7c9-4d38-96a4-9c4747869c71</attribute:tracking_id>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/CSIRO-BOM/ACCESS1-0/historical/mon/atmos/Amon/r1i1p1/v20120727/psl_Amon_ACCESS1-0_historical_r1i1p1_185001-200512.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc">
+    <attribute:alias>CMIP5_CCSM4_r1i1p1</attribute:alias>
+    <attribute:dataset>CCSM4</attribute:dataset>
+    <attribute:diagnostic>calculate_weights_climwip</attribute:diagnostic>
+    <attribute:end_year>2014</attribute:end_year>
+    <attribute:ensemble>r1i1p1</attribute:ensemble>
+    <attribute:exp>['historical', 'rcp85']</attribute:exp>
+    <attribute:filename>/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc</attribute:filename>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:institute>['NCAR']</attribute:institute>
+    <attribute:long_name>Sea Level Pressure</attribute:long_name>
+    <attribute:mip>Amon</attribute:mip>
+    <attribute:modeling_realm>['atmos']</attribute:modeling_realm>
+    <attribute:original_short_name>psl</attribute:original_short_name>
+    <attribute:preprocessor>climatological_mean</attribute:preprocessor>
+    <attribute:product>['output1', 'output2']</attribute:product>
+    <attribute:project>CMIP5</attribute:project>
+    <attribute:recipe_dataset_index>2</attribute:recipe_dataset_index>
+    <attribute:short_name>psl</attribute:short_name>
+    <attribute:standard_name>air_pressure_at_sea_level</attribute:standard_name>
+    <attribute:start_year>1995</attribute:start_year>
+    <attribute:timerange>1995/2014</attribute:timerange>
+    <attribute:units>Pa</attribute:units>
+    <attribute:variable_group>psl_CLIM</attribute:variable_group>
+    <attribute:version>v20160829</attribute:version>
+    <preprocessor:climate_statistics>{'operator': 'mean'}</preprocessor:climate_statistics>
+    <preprocessor:extract_region>{'start_longitude': -10.0, 'end_longitude': 39.0, 'start_latitude': 30.0, 'end_latitude': 76.25}</preprocessor:extract_region>
+    <preprocessor:mask_landsea>{'mask_out': 'sea'}</preprocessor:mask_landsea>
+    <preprocessor:regrid>{'target_grid': '2.5x2.5', 'scheme': 'linear'}</preprocessor:regrid>
+    <preprocessor:remove_supplementary_variables>{}</preprocessor:remove_supplementary_variables>
+    <preprocessor:save>{'compress': False, 'filename': PosixPath('/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc')}</preprocessor:save>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2006_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Brunner, Lukas"/>
+  </prov:wasAttributedTo>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/mon/atmos/Amon/r4i1p1/v20160829/psl_Amon_CCSM4_historical_r4i1p1_185001-200512.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy. NCAR is sponsored by the National Science Foundation. Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL), sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>893.0</attribute:branch_time>
+    <attribute:cesm_casename>b40.20th.track1.1deg.006</attribute:cesm_casename>
+    <attribute:cesm_compset>B20TRTR1CN</attribute:cesm_compset>
+    <attribute:cesm_repotag>ccsm4_0_beta38</attribute:cesm_repotag>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-10-21T16:54:18Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SD BC MD OC Oz AA LU</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-10-21T16:54:18Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>pre-industrial control</attribute:parent_experiment>
+    <attribute:parent_experiment_id>piControl</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:processed_by>strandwg on mirage0 at 20111021</attribute:processed_by>
+    <attribute:processing_code_information>Last Changed Rev: 428 Last Changed Date: 2011-10-21 10:32:02 -0600 (Fri, 21 Oct 2011) Repository UUID: d2181dbe-5796-6825-dc7f-cbd98591f93d</attribute:processing_code_information>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>4</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>b37fb218-ff9d-4656-8ebd-02bcadc38801</attribute:tracking_id>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2009_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2011_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:35 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2011, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:40 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data3/adaptor.mars.internal-1714990839.634511-19948-2-eb0215c5-3848-41ba-afe3-b5dc325e2dcc.nc /cache/tmp/eb0215c5-3848-41ba-afe3-b5dc325e2dcc-adaptor.mars.internal-1714990835.9514134-19948-2-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2003_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r2i1p1/v20160829/psl_Amon_CCSM4_rcp85_r2i1p1_200601-210012.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/BNU/BNU-ESM/rcp85/mon/atmos/Amon/r1i1p1/v20120510/psl_Amon_BNU-ESM_rcp85_r1i1p1_200601-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:branch_time>0.0</attribute:branch_time>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>Ji Duoying (duoyingji@bnu.edu.cn)</attribute:contact>
+    <attribute:creation_date>2012-03-23T08:59:58Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>Nat,Ant</attribute:forcing>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2012-03-23T08:59:58Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>BNU</attribute:institute_id>
+    <attribute:institution>GCESS,BNU,Beijing,China</attribute:institution>
+    <attribute:model_id>BNU-ESM</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>1</attribute:realization>
+    <attribute:source>BNU-ESM</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>BNU-ESM model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>69f81495-758d-4dfe-a396-4ec2d27ea3f4</attribute:tracking_id>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r3i1p1/v20160829/psl_Amon_CCSM4_rcp85_r3i1p1_200501-210012.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc">
+    <attribute:alias>CMIP5_CCSM4_r4i1p1</attribute:alias>
+    <attribute:dataset>CCSM4</attribute:dataset>
+    <attribute:diagnostic>calculate_weights_climwip</attribute:diagnostic>
+    <attribute:end_year>2014</attribute:end_year>
+    <attribute:ensemble>r4i1p1</attribute:ensemble>
+    <attribute:exp>['historical', 'rcp85']</attribute:exp>
+    <attribute:filename>/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc</attribute:filename>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:institute>['NCAR']</attribute:institute>
+    <attribute:long_name>Sea Level Pressure</attribute:long_name>
+    <attribute:mip>Amon</attribute:mip>
+    <attribute:modeling_realm>['atmos']</attribute:modeling_realm>
+    <attribute:original_short_name>psl</attribute:original_short_name>
+    <attribute:preprocessor>climatological_mean</attribute:preprocessor>
+    <attribute:product>['output1', 'output2']</attribute:product>
+    <attribute:project>CMIP5</attribute:project>
+    <attribute:recipe_dataset_index>5</attribute:recipe_dataset_index>
+    <attribute:short_name>psl</attribute:short_name>
+    <attribute:standard_name>air_pressure_at_sea_level</attribute:standard_name>
+    <attribute:start_year>1995</attribute:start_year>
+    <attribute:timerange>1995/2014</attribute:timerange>
+    <attribute:units>Pa</attribute:units>
+    <attribute:variable_group>psl_CLIM</attribute:variable_group>
+    <attribute:version>v20160829</attribute:version>
+    <preprocessor:climate_statistics>{'operator': 'mean'}</preprocessor:climate_statistics>
+    <preprocessor:extract_region>{'start_longitude': -10.0, 'end_longitude': 39.0, 'start_latitude': 30.0, 'end_latitude': 76.25}</preprocessor:extract_region>
+    <preprocessor:mask_landsea>{'mask_out': 'sea'}</preprocessor:mask_landsea>
+    <preprocessor:regrid>{'target_grid': '2.5x2.5', 'scheme': 'linear'}</preprocessor:regrid>
+    <preprocessor:remove_supplementary_variables>{}</preprocessor:remove_supplementary_variables>
+    <preprocessor:save>{'compress': False, 'filename': PosixPath('/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc')}</preprocessor:save>
+  </prov:entity>
+</prov:document>

@@ -1,0 +1,23 @@
+auxiliary_data_dir: /albedo/home/brgrus001/auxiliary_data
+input_files:
+- /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip
+- /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_graph/tas/metadata.yml
+log_level: info
+output_file_type: png
+plot_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/weighted_temperature_graph/weighted_temperature_graph
+recipe: recipe_climwip_test_basic.yml
+run_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/weighted_temperature_graph/weighted_temperature_graph
+script: weighted_temperature_graph
+settings:
+  central_estimate: mean
+  end_day: 31
+  end_month: 12
+  end_year: 2010
+  lower_bound: 16.7
+  start_day: 1
+  start_month: 1
+  start_year: 1981
+  upper_bound: 83.3
+version: 2.10.0
+weights: weights.nc
+work_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/weighted_temperature_graph/weighted_temperature_graph

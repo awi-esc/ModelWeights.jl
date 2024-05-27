@@ -1,0 +1,438 @@
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/independence_overall_mean.png
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Euclidean distance matrix for variable overall_mean
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/independence_pr_CLIM.png
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Euclidean distance matrix for variable pr_CLIM
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/independence_tas_CLIM.png
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Euclidean distance matrix for variable tas_CLIM
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_overall_mean.png
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/native6_ERA5_reanaly_v1_Amon_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/native6_ERA5_reanaly_v1_Amon_tas_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Performance metric RMS error for variable group overall_mean
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_pr_CLIM.png
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/native6_ERA5_reanaly_v1_Amon_pr_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Performance metric RMS error for variable group pr_CLIM
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Performance metric RMS error for variable group psl_CLIM
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_tas_CLIM.png
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/native6_ERA5_reanaly_v1_Amon_tas_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Performance metric RMS error for variable group tas_CLIM
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/weights.png
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/native6_ERA5_reanaly_v1_Amon_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/native6_ERA5_reanaly_v1_Amon_tas_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Weights
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/independence_overall_mean.nc
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Euclidean distance matrix for variable overall_mean
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/independence_pr_CLIM.nc
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Euclidean distance matrix for variable pr_CLIM
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/independence_tas_CLIM.nc
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Euclidean distance matrix for variable tas_CLIM
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/performance_overall_mean.nc
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/native6_ERA5_reanaly_v1_Amon_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/native6_ERA5_reanaly_v1_Amon_tas_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Performance metric RMS error for variable group overall_mean
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/performance_pr_CLIM.nc
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/native6_ERA5_reanaly_v1_Amon_pr_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Performance metric RMS error for variable group pr_CLIM
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/performance_psl_CLIM.nc
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Performance metric RMS error for variable group psl_CLIM
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/performance_tas_CLIM.nc
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/native6_ERA5_reanaly_v1_Amon_tas_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Performance metric RMS error for variable group tas_CLIM
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/weights.nc
+: ancestors:
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/native6_ERA5_reanaly_v1_Amon_pr_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc
+  - /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/native6_ERA5_reanaly_v1_Amon_tas_1995-2014.nc
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  caption: Weights
+  domains:
+  - reg
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017

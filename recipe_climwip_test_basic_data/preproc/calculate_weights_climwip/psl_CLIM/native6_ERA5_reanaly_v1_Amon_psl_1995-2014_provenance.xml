@@ -1,0 +1,290 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<prov:document xmlns:software="https://www.esmvaltool.org/software" xmlns:file="https://www.esmvaltool.org/file" xmlns:author="https://www.esmvaltool.org/author" xmlns:preprocessor="https://www.esmvaltool.org/preprocessor" xmlns:attribute="https://www.esmvaltool.org/attribute" xmlns:task="https://www.esmvaltool.org/task" xmlns:project="https://www.esmvaltool.org/project" xmlns:recipe="https://www.esmvaltool.org/recipe" xmlns:prov="http://www.w3.org/ns/prov#" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1998_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:18:56 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 1998, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:18:53 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data1/adaptor.mars.internal-1714990732.61386-14832-10-8ccb8c7f-bffb-468a-afdf-e245f7e101e3.nc /cache/tmp/8ccb8c7f-bffb-468a-afdf-e245f7e101e3-adaptor.mars.internal-1714990727.4763265-14832-6-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:agent prov:id="author:Kalverla, Peter">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-5025-7862</attribute:orcid>
+  </prov:agent>
+  <prov:wasStartedBy>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+    <prov:trigger prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:starter prov:ref="software:esmvaltool==2.10.0"/>
+  </prov:wasStartedBy>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2013_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2002_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2012_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1998_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2004_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:37 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2004, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:01 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data3/adaptor.mars.internal-1714990800.9996061-18500-12-05f29d87-b1aa-4279-a58e-d5e28e598704.nc /cache/tmp/05f29d87-b1aa-4279-a58e-d5e28e598704-adaptor.mars.internal-1714990797.8000271-18500-8-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2010_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2007_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2014_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:37 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2014, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:57 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data0/adaptor.mars.internal-1714990796.7181602-3053-4-cb442e9d-1095-416f-a367-a1619b9edd94.nc /cache/tmp/cb442e9d-1095-416f-a367-a1619b9edd94-adaptor.mars.internal-1714990785.4243588-3053-3-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:activity prov:id="software:esmvaltool==2.10.0"/>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2008_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:18:52 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2008, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:18:46 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data9/adaptor.mars.internal-1714990726.414695-16057-3-406c490e-4495-4aa6-8e32-31b66d9a488c.nc /cache/tmp/406c490e-4495-4aa6-8e32-31b66d9a488c-adaptor.mars.internal-1714990722.231522-16057-3-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2008_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc">
+    <attribute:alias>native6</attribute:alias>
+    <attribute:dataset>ERA5</attribute:dataset>
+    <attribute:diagnostic>calculate_weights_climwip</attribute:diagnostic>
+    <attribute:end_year>2014</attribute:end_year>
+    <attribute:filename>/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc</attribute:filename>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:long_name>Sea Level Pressure</attribute:long_name>
+    <attribute:mip>Amon</attribute:mip>
+    <attribute:modeling_realm>['atmos']</attribute:modeling_realm>
+    <attribute:original_short_name>psl</attribute:original_short_name>
+    <attribute:preprocessor>climatological_mean</attribute:preprocessor>
+    <attribute:project>native6</attribute:project>
+    <attribute:recipe_dataset_index>7</attribute:recipe_dataset_index>
+    <attribute:short_name>psl</attribute:short_name>
+    <attribute:standard_name>air_pressure_at_mean_sea_level</attribute:standard_name>
+    <attribute:start_year>1995</attribute:start_year>
+    <attribute:tier>3</attribute:tier>
+    <attribute:timerange>1995/2014</attribute:timerange>
+    <attribute:type>reanaly</attribute:type>
+    <attribute:units>Pa</attribute:units>
+    <attribute:variable_group>psl_CLIM</attribute:variable_group>
+    <attribute:version>v1</attribute:version>
+    <preprocessor:climate_statistics>{'operator': 'mean'}</preprocessor:climate_statistics>
+    <preprocessor:extract_region>{'start_longitude': -10.0, 'end_longitude': 39.0, 'start_latitude': 30.0, 'end_latitude': 76.25}</preprocessor:extract_region>
+    <preprocessor:mask_landsea>{'mask_out': 'sea'}</preprocessor:mask_landsea>
+    <preprocessor:regrid>{'target_grid': '2.5x2.5', 'scheme': 'linear'}</preprocessor:regrid>
+    <preprocessor:remove_supplementary_variables>{}</preprocessor:remove_supplementary_variables>
+    <preprocessor:save>{'compress': False, 'filename': PosixPath('/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc')}</preprocessor:save>
+  </prov:entity>
+  <prov:entity prov:id="recipe:recipe_climwip_test_basic.yml">
+    <attribute:description>EUCP ClimWIP</attribute:description>
+    <attribute:references>['brunner2019', 'lorenz2018', 'knutti2017']</attribute:references>
+  </prov:entity>
+  <prov:agent prov:id="author:Camphuijsen, Jaro">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-8928-7831</attribute:orcid>
+  </prov:agent>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2011_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2012_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:35 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2012, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:21:30 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data9/adaptor.mars.internal-1714990889.7384164-18956-11-86995792-c7e6-4b03-b07e-3ccc22feec80.nc /cache/tmp/86995792-c7e6-4b03-b07e-3ccc22feec80-adaptor.mars.internal-1714990878.8962493-18956-6-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2006_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:35 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2006, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:57 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data5/adaptor.mars.internal-1714990856.7974858-22595-2-47b782d0-a505-4784-aa56-cda3917570ad.nc /cache/tmp/47b782d0-a505-4784-aa56-cda3917570ad-adaptor.mars.internal-1714990848.9355881-22595-2-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2013_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:36 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2013, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:10 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data6/adaptor.mars.internal-1714990810.4063394-17131-1-537a6d9f-f778-4bd2-85e0-45de07908864.nc /cache/tmp/537a6d9f-f778-4bd2-85e0-45de07908864-adaptor.mars.internal-1714990807.0147192-17131-1-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:agent prov:id="author:Smeets, Stef">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-5413-9038</attribute:orcid>
+  </prov:agent>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2005_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:34 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2005, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:48 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data8/adaptor.mars.internal-1714990847.8651505-8539-13-7d5dc685-869e-4451-bc55-984b139c393f.nc /cache/tmp/7d5dc685-869e-4451-bc55-984b139c393f-adaptor.mars.internal-1714990840.6758058-8539-9-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Smeets, Stef"/>
+  </prov:wasAttributedTo>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1997_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1995_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:35 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 1995, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:21:18 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data6/adaptor.mars.internal-1714990877.9389374-19315-15-4bda90d6-3583-4f8b-a251-3026b2b86e86.nc /cache/tmp/4bda90d6-3583-4f8b-a251-3026b2b86e86-adaptor.mars.internal-1714990867.4095783-19315-7-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2010_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:37 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2010, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:06 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data0/adaptor.mars.internal-1714990805.9279778-5382-8-284e5ba0-9179-4fb3-bf0f-d3920bf4b74b.nc /cache/tmp/284e5ba0-9179-4fb3-bf0f-d3920bf4b74b-adaptor.mars.internal-1714990802.1727517-5382-7-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2009_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:34 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2009, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:21:02 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data1/adaptor.mars.internal-1714990862.0053885-2968-16-625bdd79-e9cb-4db8-bfd9-7fc0cfcff754.nc /cache/tmp/625bdd79-e9cb-4db8-bfd9-7fc0cfcff754-adaptor.mars.internal-1714990857.9786217-2968-11-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2001_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2004_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2001_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:36 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2001, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:21:06 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data1/adaptor.mars.internal-1714990866.4568198-16108-13-340c6f32-95b4-49e1-887e-a9ba9a65e767.nc /cache/tmp/340c6f32-95b4-49e1-887e-a9ba9a65e767-adaptor.mars.internal-1714990863.230716-16108-8-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2002_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:19:15 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2002, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:12 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data4/adaptor.mars.internal-1714990752.151901-17693-16-ec3961c7-b148-4713-8543-2973aa0cdae1.nc /cache/tmp/ec3961c7-b148-4713-8543-2973aa0cdae1-adaptor.mars.internal-1714990733.700535-17693-12-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Camphuijsen, Jaro"/>
+  </prov:wasAttributedTo>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2000_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:36 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2000, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:35 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data8/adaptor.mars.internal-1714990834.9980805-1544-19-d722ccb7-fee7-4f11-bf98-c11f126e22de.nc /cache/tmp/d722ccb7-fee7-4f11-bf98-c11f126e22de-adaptor.mars.internal-1714990818.633965-1544-13-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2014_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Lorenz, Ruth"/>
+  </prov:wasAttributedTo>
+  <prov:agent prov:id="author:Lorenz, Ruth">
+    <attribute:github>ruthlorenz</attribute:github>
+    <attribute:institute>ETH Zurich, Switzerland</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-3986-1268</attribute:orcid>
+  </prov:agent>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1999_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Kalverla, Peter"/>
+  </prov:wasAttributedTo>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2000_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:agent prov:id="author:Brunner, Lukas">
+    <attribute:institute>ETH Zurich, Switzerland</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0001-5760-4524</attribute:orcid>
+  </prov:agent>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1995_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2006_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Brunner, Lukas"/>
+  </prov:wasAttributedTo>
+  <prov:agent prov:id="project:EU H2020 European Climate prediction"/>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1997_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:03 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 1997, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:33 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data5/adaptor.mars.internal-1714990772.8980043-19816-8-00474954-9381-4339-ab4c-f5c5fa8e99a3.nc /cache/tmp/00474954-9381-4339-ab4c-f5c5fa8e99a3-adaptor.mars.internal-1714990763.58235-19816-7-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2003_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:19:57 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2003, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:44 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data6/adaptor.mars.internal-1714990784.3298683-17033-1-6b2b5732-4d38-4aa3-8faf-a7d94ff57d20.nc /cache/tmp/6b2b5732-4d38-4aa3-8faf-a7d94ff57d20-adaptor.mars.internal-1714990774.3141842-17033-1-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2005_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2009_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2003_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2011_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:21:35 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2011, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:40 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data3/adaptor.mars.internal-1714990839.634511-19948-2-eb0215c5-3848-41ba-afe3-b5dc325e2dcc.nc /cache/tmp/eb0215c5-3848-41ba-afe3-b5dc325e2dcc-adaptor.mars.internal-1714990835.9514134-19948-2-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1996_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:20:36 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 1996, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:20:18 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data3/adaptor.mars.internal-1714990817.705953-14539-12-9bcc356b-21be-4243-b653-36906c49adf4.nc /cache/tmp/9bcc356b-21be-4243-b653-36906c49adf4-adaptor.mars.internal-1714990811.4813364-14539-8-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="project:EU H2020 European Climate prediction"/>
+  </prov:wasAttributedTo>
+  <prov:activity prov:id="task:calculate_weights_climwip/psl_CLIM"/>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1996_monthly.nc"/>
+    <prov:activity prov:ref="task:calculate_weights_climwip/psl_CLIM"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_1999_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:19:32 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 1999, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:17 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data7/adaptor.mars.internal-1714990756.919888-7713-14-0bc463dc-7815-4dc3-b8ec-998ba6ebbd2a.nc /cache/tmp/0bc463dc-7815-4dc3-b8ec-998ba6ebbd2a-adaptor.mars.internal-1714990753.2149906-7713-14-tmp.grib</attribute:history>
+  </prov:entity>
+  <prov:entity prov:id="file:/albedo/work/projects/p_forclima/climate_data/Tier3/ERA5/v1/mon/psl/era5_mean_sea_level_pressure_2007_monthly.nc">
+    <attribute:Conventions>CF-1.6</attribute:Conventions>
+    <attribute:history>2024-05-06 10:19:32 UTC by era5cli 1.4.2: reanalysis-era5-single-levels-monthly-means {'variable': 'mean_sea_level_pressure', 'year': 2007, 'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], 'time': ['00:00'], 'format': 'netcdf', 'product_type': 'monthly_averaged_reanalysis'}
+2024-05-06 10:19:22 GMT by grib_to_netcdf-2.28.1: /opt/ecmwf/mars-client/bin/grib_to_netcdf -S param -o /cache/data2/adaptor.mars.internal-1714990762.588775-1544-15-c8faf1a8-3086-4d31-97cc-4208f252fd9e.nc /cache/tmp/c8faf1a8-3086-4d31-97cc-4208f252fd9e-adaptor.mars.internal-1714990757.9941623-1544-10-tmp.grib</attribute:history>
+  </prov:entity>
+</prov:document>

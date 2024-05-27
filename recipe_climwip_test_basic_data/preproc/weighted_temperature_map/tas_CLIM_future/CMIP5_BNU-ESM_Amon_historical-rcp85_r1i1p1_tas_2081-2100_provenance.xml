@@ -1,0 +1,158 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<prov:document xmlns:software="https://www.esmvaltool.org/software" xmlns:file="https://www.esmvaltool.org/file" xmlns:author="https://www.esmvaltool.org/author" xmlns:preprocessor="https://www.esmvaltool.org/preprocessor" xmlns:attribute="https://www.esmvaltool.org/attribute" xmlns:task="https://www.esmvaltool.org/task" xmlns:project="https://www.esmvaltool.org/project" xmlns:recipe="https://www.esmvaltool.org/recipe" xmlns:prov="http://www.w3.org/ns/prov#" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <prov:agent prov:id="author:Kalverla, Peter">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-5025-7862</attribute:orcid>
+  </prov:agent>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc">
+    <attribute:alias>BNU-ESM</attribute:alias>
+    <attribute:dataset>BNU-ESM</attribute:dataset>
+    <attribute:diagnostic>weighted_temperature_map</attribute:diagnostic>
+    <attribute:end_year>2100</attribute:end_year>
+    <attribute:ensemble>r1i1p1</attribute:ensemble>
+    <attribute:exp>['historical', 'rcp85']</attribute:exp>
+    <attribute:filename>/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc</attribute:filename>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:institute>['BNU']</attribute:institute>
+    <attribute:long_name>Near-Surface Air Temperature</attribute:long_name>
+    <attribute:mip>Amon</attribute:mip>
+    <attribute:modeling_realm>['atmos']</attribute:modeling_realm>
+    <attribute:original_short_name>tas</attribute:original_short_name>
+    <attribute:preprocessor>climatological_mean</attribute:preprocessor>
+    <attribute:product>['output1', 'output2']</attribute:product>
+    <attribute:project>CMIP5</attribute:project>
+    <attribute:recipe_dataset_index>6</attribute:recipe_dataset_index>
+    <attribute:short_name>tas</attribute:short_name>
+    <attribute:standard_name>air_temperature</attribute:standard_name>
+    <attribute:start_year>2081</attribute:start_year>
+    <attribute:timerange>2081/2100</attribute:timerange>
+    <attribute:units>K</attribute:units>
+    <attribute:variable_group>tas_CLIM_future</attribute:variable_group>
+    <attribute:version>v20120510</attribute:version>
+    <preprocessor:climate_statistics>{'operator': 'mean'}</preprocessor:climate_statistics>
+    <preprocessor:extract_region>{'start_longitude': -10.0, 'end_longitude': 39.0, 'start_latitude': 30.0, 'end_latitude': 76.25}</preprocessor:extract_region>
+    <preprocessor:mask_landsea>{'mask_out': 'sea'}</preprocessor:mask_landsea>
+    <preprocessor:regrid>{'target_grid': '2.5x2.5', 'scheme': 'linear'}</preprocessor:regrid>
+    <preprocessor:remove_supplementary_variables>{}</preprocessor:remove_supplementary_variables>
+    <preprocessor:save>{'compress': False, 'filename': PosixPath('/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc')}</preprocessor:save>
+  </prov:entity>
+  <prov:activity prov:id="software:esmvaltool==2.10.0"/>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/BNU/BNU-ESM/historical/fx/atmos/fx/r0i0p0/v20140307/sftlf_fx_BNU-ESM_historical_r0i0p0.nc"/>
+    <prov:activity prov:ref="task:weighted_temperature_map/tas_CLIM_future"/>
+  </prov:wasDerivedFrom>
+  <prov:entity prov:id="recipe:recipe_climwip_test_basic.yml">
+    <attribute:description>EUCP ClimWIP</attribute:description>
+    <attribute:references>['brunner2019', 'lorenz2018', 'knutti2017']</attribute:references>
+  </prov:entity>
+  <prov:agent prov:id="author:Camphuijsen, Jaro">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-8928-7831</attribute:orcid>
+  </prov:agent>
+  <prov:wasStartedBy>
+    <prov:activity prov:ref="task:weighted_temperature_map/tas_CLIM_future"/>
+    <prov:trigger prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:starter prov:ref="software:esmvaltool==2.10.0"/>
+  </prov:wasStartedBy>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/BNU/BNU-ESM/historical/fx/atmos/fx/r0i0p0/v20140307/sftlf_fx_BNU-ESM_historical_r0i0p0.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:branch_time>0.0</attribute:branch_time>
+    <attribute:cmor_version>2.8.1</attribute:cmor_version>
+    <attribute:contact>Ji Duoying (duoyingji@bnu.edu.cn)</attribute:contact>
+    <attribute:creation_date>2014-03-05T08:00:09Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>Nat,Ant</attribute:forcing>
+    <attribute:frequency>fx</attribute:frequency>
+    <attribute:history>2014-03-05T08:00:09Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>0</attribute:initialization_method>
+    <attribute:institute_id>BNU</attribute:institute_id>
+    <attribute:institution>GCESS,BNU,Beijing,China</attribute:institution>
+    <attribute:model_id>BNU-ESM</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>pre-industrial control</attribute:parent_experiment>
+    <attribute:parent_experiment_id>piControl</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>0</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>0</attribute:realization>
+    <attribute:source>BNU-ESM</attribute:source>
+    <attribute:table_id>Table fx (26 July 2011) 491518982c8d8b607a58ba740689ea09</attribute:table_id>
+    <attribute:title>BNU-ESM model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>2da826b0-4f8a-41a3-b712-c83dbb4e355a</attribute:tracking_id>
+  </prov:entity>
+  <prov:agent prov:id="author:Smeets, Stef">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-5413-9038</attribute:orcid>
+  </prov:agent>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/BNU/BNU-ESM/rcp85/mon/atmos/Amon/r1i1p1/v20120510/tas_Amon_BNU-ESM_rcp85_r1i1p1_200601-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:branch_time>0.0</attribute:branch_time>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>Ji Duoying (duoyingji@bnu.edu.cn)</attribute:contact>
+    <attribute:creation_date>2012-03-23T08:59:58Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>Nat,Ant</attribute:forcing>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2012-03-23T08:59:58Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>BNU</attribute:institute_id>
+    <attribute:institution>GCESS,BNU,Beijing,China</attribute:institution>
+    <attribute:model_id>BNU-ESM</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r1i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>1</attribute:realization>
+    <attribute:source>BNU-ESM</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>BNU-ESM model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>e0fe2a8b-ebfd-44c7-b918-f592ca02e109</attribute:tracking_id>
+  </prov:entity>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Smeets, Stef"/>
+  </prov:wasAttributedTo>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Camphuijsen, Jaro"/>
+  </prov:wasAttributedTo>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/BNU/BNU-ESM/rcp85/mon/atmos/Amon/r1i1p1/v20120510/tas_Amon_BNU-ESM_rcp85_r1i1p1_200601-210012.nc"/>
+    <prov:activity prov:ref="task:weighted_temperature_map/tas_CLIM_future"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Lorenz, Ruth"/>
+  </prov:wasAttributedTo>
+  <prov:agent prov:id="author:Lorenz, Ruth">
+    <attribute:github>ruthlorenz</attribute:github>
+    <attribute:institute>ETH Zurich, Switzerland</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-3986-1268</attribute:orcid>
+  </prov:agent>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Kalverla, Peter"/>
+  </prov:wasAttributedTo>
+  <prov:agent prov:id="author:Brunner, Lukas">
+    <attribute:institute>ETH Zurich, Switzerland</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0001-5760-4524</attribute:orcid>
+  </prov:agent>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Brunner, Lukas"/>
+  </prov:wasAttributedTo>
+  <prov:agent prov:id="project:EU H2020 European Climate prediction"/>
+  <prov:activity prov:id="task:weighted_temperature_map/tas_CLIM_future"/>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="project:EU H2020 European Climate prediction"/>
+  </prov:wasAttributedTo>
+</prov:document>

@@ -1,0 +1,29 @@
+auxiliary_data_dir: /albedo/home/brgrus001/auxiliary_data
+input_files:
+- /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip
+- /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/metadata.yml
+- /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_reference/metadata.yml
+log_level: info
+model_aggregation: mean
+output_file_type: png
+plot_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/weighted_temperature_map/weighted_temperature_map
+recipe: recipe_climwip_test_basic.yml
+run_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/weighted_temperature_map/weighted_temperature_map
+script: weighted_temperature_map
+version: 2.10.0
+weights: weights.nc
+work_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/weighted_temperature_map/weighted_temperature_map
+xticks:
+- -10
+- 0
+- 10
+- 20
+- 30
+- 40
+yticks:
+- 30
+- 40
+- 50
+- 60
+- 70
+- 80

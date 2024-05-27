@@ -1,0 +1,346 @@
+documentation:
+  title: Basic test recipe for ClimWIP weighting method
+  description: EUCP ClimWIP
+  authors:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - camphuijsen_jaro
+  - lorenz_ruth
+  maintainer:
+  - kalverla_peter
+  - smeets_stef
+  - brunner_lukas
+  - lorenz_ruth
+  references:
+  - brunner2019
+  - lorenz2018
+  - knutti2017
+  projects:
+  - eucp
+obs_data:
+- dataset: ERA5
+  project: native6
+  type: reanaly
+  version: v1
+  tier: 3
+preprocessors:
+  climwip_general:
+    regrid:
+      target_grid: 2.5x2.5
+      scheme: linear
+    mask_landsea:
+      mask_out: sea
+    extract_region:
+      start_longitude: -10.0
+      end_longitude: 39.0
+      start_latitude: 30.0
+      end_latitude: 76.25
+  climatological_mean:
+    regrid:
+      target_grid: 2.5x2.5
+      scheme: linear
+    mask_landsea:
+      mask_out: sea
+    extract_region:
+      start_longitude: -10.0
+      end_longitude: 39.0
+      start_latitude: 30.0
+      end_latitude: 76.25
+    climate_statistics:
+      operator: mean
+  temperature_anomalies:
+    custom_order: true
+    area_statistics:
+      operator: mean
+    annual_statistics:
+      operator: mean
+    anomalies:
+      period: full
+      reference:
+        start_year: 1981
+        start_month: 1
+        start_day: 1
+        end_year: 2010
+        end_month: 12
+        end_day: 31
+      standardize: false
+  default: {}
+diagnostics:
+  calculate_weights_climwip:
+    variables:
+      tas_CLIM:
+        short_name: tas
+        mip: Amon
+        preprocessor: climatological_mean
+        timerange: 1995/2014
+      pr_CLIM:
+        short_name: pr
+        mip: Amon
+        preprocessor: climatological_mean
+        timerange: 1995/2014
+      psl_CLIM:
+        short_name: psl
+        mip: Amon
+        preprocessor: climatological_mean
+        timerange: 1995/2014
+    scripts:
+      climwip:
+        script: weighting/climwip/main.py
+        obs_data: native6
+        combine_ensemble_members: true
+        performance_sigma: 0.5
+        performance_contributions:
+          tas_CLIM: 1
+          pr_CLIM: 2
+          psl_CLIM: 1
+        independence_sigma: 0.5
+        independence_contributions:
+          tas_CLIM: 0.5
+          pr_CLIM: 0.25
+          psl_CLIM: 0
+    additional_datasets:
+    - dataset: ACCESS1-0
+      project: CMIP5
+      exp:
+      - historical
+      - rcp85
+      ensemble: r1i1p1
+      version: v20120727
+      supplementary_variables:
+      - short_name: sftlf
+        mip: fx
+        exp: historical
+        ensemble: r0i0p0
+        institute: CSIRO-BOM
+        product: output1
+        version: v20120115
+    - dataset: ACCESS1-3
+      project: CMIP5
+      exp:
+      - historical
+      - rcp85
+      ensemble: r1i1p1
+      version:
+      - v20120413
+      - v20130325
+      supplementary_variables:
+      - short_name: sftlf
+        mip: fx
+        exp: historical
+        ensemble: r0i0p0
+        institute: CSIRO-BOM
+        product: output1
+        version: v20120413
+    - dataset: BNU-ESM
+      project: CMIP5
+      exp:
+      - historical
+      - rcp85
+      ensemble: r1i1p1
+      version: v20120510
+      supplementary_variables:
+      - short_name: sftlf
+        mip: fx
+        exp: historical
+        ensemble: r0i0p0
+        institute: BNU
+        product: output1
+        version: v20140307
+    - dataset: CCSM4
+      project: CMIP5
+      exp:
+      - historical
+      - rcp85
+      ensemble: r(1:4)i1p1
+      version: v20160829
+      supplementary_variables:
+      - short_name: sftlf
+        mip: fx
+        exp: historical
+        ensemble: r0i0p0
+        institute: NCAR
+        product: output1
+        version: v20130312
+    - dataset: ERA5
+      project: native6
+      type: reanaly
+      version: v1
+      tier: 3
+  weighted_temperature_graph:
+    variables:
+      tas:
+        mip: Amon
+        preprocessor: temperature_anomalies
+        project: CMIP5
+        exp:
+        - historical
+        - rcp85
+        timerange: 1960/2100
+    scripts:
+      weighted_temperature_graph:
+        script: weighting/weighted_temperature_graph.py
+        ancestors:
+        - calculate_weights_climwip/climwip
+        - tas
+        weights: weights.nc
+        settings:
+          start_year: 1981
+          start_month: 1
+          start_day: 1
+          end_year: 2010
+          end_month: 12
+          end_day: 31
+          central_estimate: mean
+          lower_bound: 16.7
+          upper_bound: 83.3
+    additional_datasets:
+    - dataset: ACCESS1-0
+      ensemble: r1i1p1
+      version: v20120727
+      supplementary_variables:
+      - mip: fx
+        exp: historical
+        ensemble: r0i0p0
+        short_name: areacella
+        institute: CSIRO-BOM
+        product: output1
+        version: v20120115
+    - dataset: ACCESS1-3
+      ensemble: r1i1p1
+      version:
+      - v20120413
+      - v20130325
+      supplementary_variables:
+      - mip: fx
+        exp: historical
+        ensemble: r0i0p0
+        short_name: areacella
+        institute: CSIRO-BOM
+        product: output1
+        version: v20120413
+    - dataset: BNU-ESM
+      ensemble: r1i1p1
+      version: v20120510
+      supplementary_variables:
+      - mip: fx
+        exp: historical
+        ensemble: r0i0p0
+        short_name: areacella
+        institute: BNU
+        product: output1
+        version: v20140307
+    - dataset: CCSM4
+      ensemble: r(1:4)i1p1
+      version: v20160829
+      supplementary_variables:
+      - mip: fx
+        exp: historical
+        ensemble: r0i0p0
+        short_name: areacella
+        institute: NCAR
+        product: output1
+        version: v20130312
+  weighted_temperature_map:
+    variables:
+      tas_CLIM_future:
+        short_name: tas
+        mip: Amon
+        preprocessor: climatological_mean
+        project: CMIP5
+        exp:
+        - historical
+        - rcp85
+        timerange: 2081/2100
+        additional_datasets:
+        - dataset: ACCESS1-3
+          ensemble: r1i1p1
+          version: v20120413
+          supplementary_variables:
+          - short_name: sftlf
+            mip: fx
+            exp: historical
+            ensemble: r0i0p0
+            institute: CSIRO-BOM
+            product: output1
+      tas_CLIM_reference:
+        short_name: tas
+        mip: Amon
+        preprocessor: climatological_mean
+        project: CMIP5
+        exp:
+        - historical
+        - rcp85
+        timerange: 1995/2014
+        additional_datasets:
+        - dataset: ACCESS1-3
+          ensemble: r1i1p1
+          version:
+          - v20120413
+          - v20130325
+          supplementary_variables:
+          - short_name: sftlf
+            mip: fx
+            exp: historical
+            ensemble: r0i0p0
+            institute: CSIRO-BOM
+            product: output1
+            version: v20120413
+    scripts:
+      weighted_temperature_map:
+        script: weighting/weighted_temperature_map.py
+        ancestors:
+        - calculate_weights_climwip/climwip
+        - tas_CLIM_future
+        - tas_CLIM_reference
+        weights: weights.nc
+        model_aggregation: mean
+        xticks:
+        - -10
+        - 0
+        - 10
+        - 20
+        - 30
+        - 40
+        yticks:
+        - 30
+        - 40
+        - 50
+        - 60
+        - 70
+        - 80
+    additional_datasets:
+    - dataset: ACCESS1-0
+      ensemble: r1i1p1
+      version: v20120727
+      supplementary_variables:
+      - short_name: sftlf
+        mip: fx
+        exp: historical
+        ensemble: r0i0p0
+        institute: CSIRO-BOM
+        product: output1
+        version: v20120115
+    - dataset: BNU-ESM
+      ensemble: r1i1p1
+      version: v20120510
+      supplementary_variables:
+      - short_name: sftlf
+        mip: fx
+        exp: historical
+        ensemble: r0i0p0
+        institute: BNU
+        product: output1
+        version: v20140307
+    - dataset: CCSM4
+      ensemble: r(1:4)i1p1
+      version: v20160829
+      supplementary_variables:
+      - short_name: sftlf
+        mip: fx
+        exp: historical
+        ensemble: r0i0p0
+        institute: NCAR
+        product: output1
+        version: v20130312
+datasets: []

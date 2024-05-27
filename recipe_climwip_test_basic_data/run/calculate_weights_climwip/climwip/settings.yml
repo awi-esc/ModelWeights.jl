@@ -1,0 +1,25 @@
+auxiliary_data_dir: /albedo/home/brgrus001/auxiliary_data
+combine_ensemble_members: true
+independence_contributions:
+  pr_CLIM: 0.25
+  psl_CLIM: 0
+  tas_CLIM: 0.5
+independence_sigma: 0.5
+input_files:
+- /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/metadata.yml
+- /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/metadata.yml
+- /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/metadata.yml
+log_level: info
+obs_data: native6
+output_file_type: png
+performance_contributions:
+  pr_CLIM: 2
+  psl_CLIM: 1
+  tas_CLIM: 1
+performance_sigma: 0.5
+plot_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip
+recipe: recipe_climwip_test_basic.yml
+run_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/calculate_weights_climwip/climwip
+script: climwip
+version: 2.10.0
+work_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip

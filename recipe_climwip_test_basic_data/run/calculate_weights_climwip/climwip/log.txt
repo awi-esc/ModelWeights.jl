@@ -1,0 +1,741 @@
+2024-05-16 08:01:15,478 [40213] INFO     esmvaltool.diag_scripts.shared._base,522	Starting diagnostic script climwip with configuration:
+auxiliary_data_dir: /albedo/home/brgrus001/auxiliary_data
+combine_ensemble_members: true
+independence_contributions:
+  pr_CLIM: 0.25
+  psl_CLIM: 0
+  tas_CLIM: 0.5
+independence_sigma: 0.5
+input_data:
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  : alias: CMIP5_ACCESS1-0
+    dataset: ACCESS1-0
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+    frequency: mon
+    institute:
+    - CSIRO-BOM
+    long_name: Precipitation
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 0
+    short_name: pr
+    standard_name: precipitation_flux
+    start_year: 1995
+    timerange: 1995/2014
+    units: kg m-2 s-1
+    variable_group: pr_CLIM
+    version: v20120727
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  : alias: CMIP5_ACCESS1-3
+    dataset: ACCESS1-3
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+    frequency: mon
+    institute:
+    - CSIRO-BOM
+    long_name: Precipitation
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 1
+    short_name: pr
+    standard_name: precipitation_flux
+    start_year: 1995
+    timerange: 1995/2014
+    units: kg m-2 s-1
+    variable_group: pr_CLIM
+    version:
+    - v20120413
+    - v20130325
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  : alias: CMIP5_BNU-ESM
+    dataset: BNU-ESM
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+    frequency: mon
+    institute:
+    - BNU
+    long_name: Precipitation
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 6
+    short_name: pr
+    standard_name: precipitation_flux
+    start_year: 1995
+    timerange: 1995/2014
+    units: kg m-2 s-1
+    variable_group: pr_CLIM
+    version: v20120510
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+  : alias: CMIP5_CCSM4_r1i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_pr_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Precipitation
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 2
+    short_name: pr
+    standard_name: precipitation_flux
+    start_year: 1995
+    timerange: 1995/2014
+    units: kg m-2 s-1
+    variable_group: pr_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+  : alias: CMIP5_CCSM4_r2i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r2i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_pr_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Precipitation
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 3
+    short_name: pr
+    standard_name: precipitation_flux
+    start_year: 1995
+    timerange: 1995/2014
+    units: kg m-2 s-1
+    variable_group: pr_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+  : alias: CMIP5_CCSM4_r3i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r3i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_pr_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Precipitation
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 4
+    short_name: pr
+    standard_name: precipitation_flux
+    start_year: 1995
+    timerange: 1995/2014
+    units: kg m-2 s-1
+    variable_group: pr_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+  : alias: CMIP5_CCSM4_r4i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r4i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_pr_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Precipitation
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 5
+    short_name: pr
+    standard_name: precipitation_flux
+    start_year: 1995
+    timerange: 1995/2014
+    units: kg m-2 s-1
+    variable_group: pr_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/native6_ERA5_reanaly_v1_Amon_pr_1995-2014.nc
+  : alias: native6
+    dataset: ERA5
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/native6_ERA5_reanaly_v1_Amon_pr_1995-2014.nc
+    frequency: mon
+    long_name: Precipitation
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    project: native6
+    recipe_dataset_index: 7
+    short_name: pr
+    standard_name: precipitation_flux
+    start_year: 1995
+    tier: 3
+    timerange: 1995/2014
+    type: reanaly
+    units: kg m-2 s-1
+    variable_group: pr_CLIM
+    version: v1
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  : alias: CMIP5_ACCESS1-0
+    dataset: ACCESS1-0
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+    frequency: mon
+    institute:
+    - CSIRO-BOM
+    long_name: Sea Level Pressure
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 0
+    short_name: psl
+    standard_name: air_pressure_at_sea_level
+    start_year: 1995
+    timerange: 1995/2014
+    units: Pa
+    variable_group: psl_CLIM
+    version: v20120727
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  : alias: CMIP5_ACCESS1-3
+    dataset: ACCESS1-3
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+    frequency: mon
+    institute:
+    - CSIRO-BOM
+    long_name: Sea Level Pressure
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 1
+    short_name: psl
+    standard_name: air_pressure_at_sea_level
+    start_year: 1995
+    timerange: 1995/2014
+    units: Pa
+    variable_group: psl_CLIM
+    version:
+    - v20120413
+    - v20130325
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  : alias: CMIP5_BNU-ESM
+    dataset: BNU-ESM
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+    frequency: mon
+    institute:
+    - BNU
+    long_name: Sea Level Pressure
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 6
+    short_name: psl
+    standard_name: air_pressure_at_sea_level
+    start_year: 1995
+    timerange: 1995/2014
+    units: Pa
+    variable_group: psl_CLIM
+    version: v20120510
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+  : alias: CMIP5_CCSM4_r1i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_psl_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Sea Level Pressure
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 2
+    short_name: psl
+    standard_name: air_pressure_at_sea_level
+    start_year: 1995
+    timerange: 1995/2014
+    units: Pa
+    variable_group: psl_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc
+  : alias: CMIP5_CCSM4_r2i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r2i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_psl_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Sea Level Pressure
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 3
+    short_name: psl
+    standard_name: air_pressure_at_sea_level
+    start_year: 1995
+    timerange: 1995/2014
+    units: Pa
+    variable_group: psl_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc
+  : alias: CMIP5_CCSM4_r3i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r3i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_psl_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Sea Level Pressure
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 4
+    short_name: psl
+    standard_name: air_pressure_at_sea_level
+    start_year: 1995
+    timerange: 1995/2014
+    units: Pa
+    variable_group: psl_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc
+  : alias: CMIP5_CCSM4_r4i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r4i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_psl_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Sea Level Pressure
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 5
+    short_name: psl
+    standard_name: air_pressure_at_sea_level
+    start_year: 1995
+    timerange: 1995/2014
+    units: Pa
+    variable_group: psl_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc
+  : alias: native6
+    dataset: ERA5
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/native6_ERA5_reanaly_v1_Amon_psl_1995-2014.nc
+    frequency: mon
+    long_name: Sea Level Pressure
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    project: native6
+    recipe_dataset_index: 7
+    short_name: psl
+    standard_name: air_pressure_at_mean_sea_level
+    start_year: 1995
+    tier: 3
+    timerange: 1995/2014
+    type: reanaly
+    units: Pa
+    variable_group: psl_CLIM
+    version: v1
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  : alias: CMIP5_ACCESS1-0
+    dataset: ACCESS1-0
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+    frequency: mon
+    institute:
+    - CSIRO-BOM
+    long_name: Near-Surface Air Temperature
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 0
+    short_name: tas
+    standard_name: air_temperature
+    start_year: 1995
+    timerange: 1995/2014
+    units: K
+    variable_group: tas_CLIM
+    version: v20120727
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  : alias: CMIP5_ACCESS1-3
+    dataset: ACCESS1-3
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+    frequency: mon
+    institute:
+    - CSIRO-BOM
+    long_name: Near-Surface Air Temperature
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 1
+    short_name: tas
+    standard_name: air_temperature
+    start_year: 1995
+    timerange: 1995/2014
+    units: K
+    variable_group: tas_CLIM
+    version:
+    - v20120413
+    - v20130325
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  : alias: CMIP5_BNU-ESM
+    dataset: BNU-ESM
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+    frequency: mon
+    institute:
+    - BNU
+    long_name: Near-Surface Air Temperature
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 6
+    short_name: tas
+    standard_name: air_temperature
+    start_year: 1995
+    timerange: 1995/2014
+    units: K
+    variable_group: tas_CLIM
+    version: v20120510
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+  : alias: CMIP5_CCSM4_r1i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r1i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Near-Surface Air Temperature
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 2
+    short_name: tas
+    standard_name: air_temperature
+    start_year: 1995
+    timerange: 1995/2014
+    units: K
+    variable_group: tas_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+  : alias: CMIP5_CCSM4_r2i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r2i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Near-Surface Air Temperature
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 3
+    short_name: tas
+    standard_name: air_temperature
+    start_year: 1995
+    timerange: 1995/2014
+    units: K
+    variable_group: tas_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+  : alias: CMIP5_CCSM4_r3i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r3i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Near-Surface Air Temperature
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 4
+    short_name: tas
+    standard_name: air_temperature
+    start_year: 1995
+    timerange: 1995/2014
+    units: K
+    variable_group: tas_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+  : alias: CMIP5_CCSM4_r4i1p1
+    dataset: CCSM4
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    ensemble: r4i1p1
+    exp: historical-rcp85
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_1995-2014.nc
+    frequency: mon
+    institute:
+    - NCAR
+    long_name: Near-Surface Air Temperature
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    product:
+    - output1
+    - output2
+    project: CMIP5
+    recipe_dataset_index: 5
+    short_name: tas
+    standard_name: air_temperature
+    start_year: 1995
+    timerange: 1995/2014
+    units: K
+    variable_group: tas_CLIM
+    version: v20160829
+  ? /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/native6_ERA5_reanaly_v1_Amon_tas_1995-2014.nc
+  : alias: native6
+    dataset: ERA5
+    diagnostic: calculate_weights_climwip
+    end_year: 2014
+    filename: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/native6_ERA5_reanaly_v1_Amon_tas_1995-2014.nc
+    frequency: mon
+    long_name: Near-Surface Air Temperature
+    mip: Amon
+    modeling_realm:
+    - atmos
+    preprocessor: climatological_mean
+    project: native6
+    recipe_dataset_index: 7
+    short_name: tas
+    standard_name: air_temperature
+    start_year: 1995
+    tier: 3
+    timerange: 1995/2014
+    type: reanaly
+    units: K
+    variable_group: tas_CLIM
+    version: v1
+input_files:
+- /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/tas_CLIM/metadata.yml
+- /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/pr_CLIM/metadata.yml
+- /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/calculate_weights_climwip/psl_CLIM/metadata.yml
+log_level: info
+obs_data: native6
+output_file_type: png
+performance_contributions:
+  pr_CLIM: 2
+  psl_CLIM: 1
+  tas_CLIM: 1
+performance_sigma: 0.5
+plot_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip
+recipe: recipe_climwip_test_basic.yml
+run_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/calculate_weights_climwip/climwip
+script: climwip
+version: 2.10.0
+work_dir: /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip
+
+2024-05-16 08:01:15,478 [40213] INFO     esmvaltool.diag_scripts.shared._base,561	Creating /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip
+2024-05-16 08:01:15,480 [40213] INFO     esmvaltool.diag_scripts.shared._base,561	Creating /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip
+2024-05-16 08:01:15,481 [40213] INFO     main.py,234	Reading model data for pr_CLIM
+2024-05-16 08:01:15,639 [40213] INFO     main.py,242	Calculating independence for pr_CLIM
+2024-05-16 08:01:16,450 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/independence_pr_CLIM.png
+2024-05-16 08:01:16,454 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/independence_pr_CLIM.nc
+2024-05-16 08:01:16,454 [40213] INFO     main.py,234	Reading model data for tas_CLIM
+2024-05-16 08:01:16,613 [40213] INFO     main.py,242	Calculating independence for tas_CLIM
+2024-05-16 08:01:17,399 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/independence_tas_CLIM.png
+2024-05-16 08:01:17,407 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/independence_tas_CLIM.nc
+2024-05-16 08:01:17,407 [40213] INFO     main.py,252	Reading model data for pr_CLIM
+2024-05-16 08:01:17,550 [40213] INFO     main.py,260	Reading observation data for pr_CLIM
+2024-05-16 08:01:17,572 [40213] INFO     main.py,269	Calculating performance for pr_CLIM
+2024-05-16 08:01:17,610 [40213] WARNING  py.warnings,109	/albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/diag_scripts/weighting/climwip/main.py:124: UserWarning: set_ticklabels() should only be used with a fixed number of ticks, i.e. after set_ticks() or using a FixedLocator.
+  chart.set_xticklabels(chart.get_xticklabels(),
+
+2024-05-16 08:01:18,163 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_pr_CLIM.png
+2024-05-16 08:01:18,176 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/performance_pr_CLIM.nc
+2024-05-16 08:01:18,176 [40213] INFO     main.py,252	Reading model data for psl_CLIM
+2024-05-16 08:01:18,318 [40213] INFO     main.py,260	Reading observation data for psl_CLIM
+2024-05-16 08:01:18,340 [40213] INFO     main.py,269	Calculating performance for psl_CLIM
+2024-05-16 08:01:18,375 [40213] WARNING  py.warnings,109	/albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/diag_scripts/weighting/climwip/main.py:124: UserWarning: set_ticklabels() should only be used with a fixed number of ticks, i.e. after set_ticks() or using a FixedLocator.
+  chart.set_xticklabels(chart.get_xticklabels(),
+
+2024-05-16 08:01:18,899 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_psl_CLIM.png
+2024-05-16 08:01:18,916 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/performance_psl_CLIM.nc
+2024-05-16 08:01:18,916 [40213] INFO     main.py,252	Reading model data for tas_CLIM
+2024-05-16 08:01:19,093 [40213] INFO     main.py,260	Reading observation data for tas_CLIM
+2024-05-16 08:01:19,118 [40213] INFO     main.py,269	Calculating performance for tas_CLIM
+2024-05-16 08:01:19,168 [40213] WARNING  py.warnings,109	/albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/diag_scripts/weighting/climwip/main.py:124: UserWarning: set_ticklabels() should only be used with a fixed number of ticks, i.e. after set_ticks() or using a FixedLocator.
+  chart.set_xticklabels(chart.get_xticklabels(),
+
+2024-05-16 08:01:19,683 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_tas_CLIM.png
+2024-05-16 08:01:19,705 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/performance_tas_CLIM.nc
+2024-05-16 08:01:19,706 [40213] INFO     main.py,282	Computing overall mean independence
+2024-05-16 08:01:20,530 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/independence_overall_mean.png
+2024-05-16 08:01:20,560 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/independence_overall_mean.nc
+2024-05-16 08:01:20,561 [40213] INFO     main.py,295	Computing overall mean performance
+2024-05-16 08:01:20,594 [40213] WARNING  py.warnings,109	/albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/diag_scripts/weighting/climwip/main.py:124: UserWarning: set_ticklabels() should only be used with a fixed number of ticks, i.e. after set_ticks() or using a FixedLocator.
+  chart.set_xticklabels(chart.get_xticklabels(),
+
+2024-05-16 08:01:21,150 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/performance_overall_mean.png
+2024-05-16 08:01:21,205 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/performance_overall_mean.nc
+2024-05-16 08:01:21,210 [40213] INFO     main.py,317	Calculating weights
+2024-05-16 08:01:21,240 [40213] WARNING  py.warnings,109	/albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/diag_scripts/weighting/climwip/main.py:124: UserWarning: set_ticklabels() should only be used with a fixed number of ticks, i.e. after set_ticks() or using a FixedLocator.
+  chart.set_xticklabels(chart.get_xticklabels(),
+
+2024-05-16 08:01:21,768 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip/weights.png
+2024-05-16 08:01:21,817 [40213] INFO     io_functions.py,45	Output stored as /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip/weights.nc
+2024-05-16 08:01:21,817 [40213] INFO     esmvaltool.diag_scripts.shared._base,584	End of diagnostic script run.

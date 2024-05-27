@@ -1,0 +1,217 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<prov:document xmlns:software="https://www.esmvaltool.org/software" xmlns:file="https://www.esmvaltool.org/file" xmlns:author="https://www.esmvaltool.org/author" xmlns:preprocessor="https://www.esmvaltool.org/preprocessor" xmlns:attribute="https://www.esmvaltool.org/attribute" xmlns:task="https://www.esmvaltool.org/task" xmlns:project="https://www.esmvaltool.org/project" xmlns:recipe="https://www.esmvaltool.org/recipe" xmlns:prov="http://www.w3.org/ns/prov#" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <prov:agent prov:id="author:Kalverla, Peter">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-5025-7862</attribute:orcid>
+  </prov:agent>
+  <prov:activity prov:id="software:esmvaltool==2.10.0"/>
+  <prov:entity prov:id="recipe:recipe_climwip_test_basic.yml">
+    <attribute:description>EUCP ClimWIP</attribute:description>
+    <attribute:references>['brunner2019', 'lorenz2018', 'knutti2017']</attribute:references>
+  </prov:entity>
+  <prov:agent prov:id="author:Camphuijsen, Jaro">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-8928-7831</attribute:orcid>
+  </prov:agent>
+  <prov:wasStartedBy>
+    <prov:activity prov:ref="task:weighted_temperature_map/tas_CLIM_future"/>
+    <prov:trigger prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:starter prov:ref="software:esmvaltool==2.10.0"/>
+  </prov:wasStartedBy>
+  <prov:agent prov:id="author:Smeets, Stef">
+    <attribute:institute>NLeSC, Netherlands</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-5413-9038</attribute:orcid>
+  </prov:agent>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Smeets, Stef"/>
+  </prov:wasAttributedTo>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_2081-2100.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r2i1p1/v20160829/tas_Amon_CCSM4_rcp85_r2i1p1_200501-210012.nc"/>
+    <prov:activity prov:ref="task:weighted_temperature_map/tas_CLIM_future"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Camphuijsen, Jaro"/>
+  </prov:wasAttributedTo>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Lorenz, Ruth"/>
+  </prov:wasAttributedTo>
+  <prov:agent prov:id="author:Lorenz, Ruth">
+    <attribute:github>ruthlorenz</attribute:github>
+    <attribute:institute>ETH Zurich, Switzerland</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0002-3986-1268</attribute:orcid>
+  </prov:agent>
+  <prov:entity prov:id="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_2081-2100.nc">
+    <attribute:alias>CCSM4_r2i1p1</attribute:alias>
+    <attribute:dataset>CCSM4</attribute:dataset>
+    <attribute:diagnostic>weighted_temperature_map</attribute:diagnostic>
+    <attribute:end_year>2100</attribute:end_year>
+    <attribute:ensemble>r2i1p1</attribute:ensemble>
+    <attribute:exp>['historical', 'rcp85']</attribute:exp>
+    <attribute:filename>/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_2081-2100.nc</attribute:filename>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:institute>['NCAR']</attribute:institute>
+    <attribute:long_name>Near-Surface Air Temperature</attribute:long_name>
+    <attribute:mip>Amon</attribute:mip>
+    <attribute:modeling_realm>['atmos']</attribute:modeling_realm>
+    <attribute:original_short_name>tas</attribute:original_short_name>
+    <attribute:preprocessor>climatological_mean</attribute:preprocessor>
+    <attribute:product>['output1', 'output2']</attribute:product>
+    <attribute:project>CMIP5</attribute:project>
+    <attribute:recipe_dataset_index>3</attribute:recipe_dataset_index>
+    <attribute:short_name>tas</attribute:short_name>
+    <attribute:standard_name>air_temperature</attribute:standard_name>
+    <attribute:start_year>2081</attribute:start_year>
+    <attribute:timerange>2081/2100</attribute:timerange>
+    <attribute:units>K</attribute:units>
+    <attribute:variable_group>tas_CLIM_future</attribute:variable_group>
+    <attribute:version>v20160829</attribute:version>
+    <preprocessor:climate_statistics>{'operator': 'mean'}</preprocessor:climate_statistics>
+    <preprocessor:extract_region>{'start_longitude': -10.0, 'end_longitude': 39.0, 'start_latitude': 30.0, 'end_latitude': 76.25}</preprocessor:extract_region>
+    <preprocessor:mask_landsea>{'mask_out': 'sea'}</preprocessor:mask_landsea>
+    <preprocessor:regrid>{'target_grid': '2.5x2.5', 'scheme': 'linear'}</preprocessor:regrid>
+    <preprocessor:remove_supplementary_variables>{}</preprocessor:remove_supplementary_variables>
+    <preprocessor:save>{'compress': False, 'filename': PosixPath('/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_2081-2100.nc')}</preprocessor:save>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_2081-2100.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/fx/atmos/fx/r0i0p0/v20130312/sftlf_fx_CCSM4_historical_r0i0p0.nc"/>
+    <prov:activity prov:ref="task:weighted_temperature_map/tas_CLIM_future"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Kalverla, Peter"/>
+  </prov:wasAttributedTo>
+  <prov:agent prov:id="author:Brunner, Lukas">
+    <attribute:institute>ETH Zurich, Switzerland</attribute:institute>
+    <attribute:orcid>https://orcid.org/0000-0001-5760-4524</attribute:orcid>
+  </prov:agent>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r2i1p1/v20160829/tas_Amon_CCSM4_rcp85_r2i1p1_200601-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy. NCAR is sponsored by the National Science Foundation. Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL), sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>2005.0</attribute:branch_time>
+    <attribute:cesm_casename>b40.rcp8_5.1deg.002</attribute:cesm_casename>
+    <attribute:cesm_compset>BRCP85CN</attribute:cesm_compset>
+    <attribute:cesm_repotag>ccsm4_0_beta46</attribute:cesm_repotag>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-10-21T23:23:35Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SA BC MD OC Oz AA</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-10-21T23:23:35Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r2i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:processed_by>strandwg on mirage0 at 20111021</attribute:processed_by>
+    <attribute:processing_code_information>Last Changed Rev: 428 Last Changed Date: 2011-10-21 10:32:02 -0600 (Fri, 21 Oct 2011) Repository UUID: d2181dbe-5796-6825-dc7f-cbd98591f93d</attribute:processing_code_information>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>2</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4</attribute:source>
+    <attribute:table_id>Table Amon (26 July 2011) 976b7fd1d9e1be31dddd28f5dc79b7a1</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>c38ccec6-3d9c-4b8e-a793-fb7856d4451a</attribute:tracking_id>
+  </prov:entity>
+  <prov:wasDerivedFrom>
+    <prov:generatedEntity prov:ref="file:/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_2081-2100.nc"/>
+    <prov:usedEntity prov:ref="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r2i1p1/v20160829/tas_Amon_CCSM4_rcp85_r2i1p1_200601-210012.nc"/>
+    <prov:activity prov:ref="task:weighted_temperature_map/tas_CLIM_future"/>
+  </prov:wasDerivedFrom>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="author:Brunner, Lukas"/>
+  </prov:wasAttributedTo>
+  <prov:agent prov:id="project:EU H2020 European Climate prediction"/>
+  <prov:activity prov:id="task:weighted_temperature_map/tas_CLIM_future"/>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/historical/fx/atmos/fx/r0i0p0/v20130312/sftlf_fx_CCSM4_historical_r0i0p0.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy. NCAR is sponsored by the National Science Foundation. Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL), sponsored by the National Science Foundation and other agencies.This research used resources of the National Energy Research Scientific Computing Center, which is supported by the Office</attribute:acknowledgements>
+    <attribute:branch_time>0.0</attribute:branch_time>
+    <attribute:cesm_casename>not applicable</attribute:cesm_casename>
+    <attribute:cesm_compset>not applicable</attribute:cesm_compset>
+    <attribute:cesm_repotag>not applicable</attribute:cesm_repotag>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2012-02-02T17:48:32Z</attribute:creation_date>
+    <attribute:experiment>historical</attribute:experiment>
+    <attribute:experiment_id>historical</attribute:experiment_id>
+    <attribute:forcing>N/A</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>fx</attribute:frequency>
+    <attribute:history>2012-02-02T17:48:32Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>0</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>N/A</attribute:parent_experiment>
+    <attribute:parent_experiment_id>N/A</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>N/A</attribute:parent_experiment_rip>
+    <attribute:physics_version>0</attribute:physics_version>
+    <attribute:processed_by>strandwg on silver.cgd.ucar.edu at 20120202  -104832.398</attribute:processed_by>
+    <attribute:processing_code_information>Last Changed Rev: 510 Last Changed Date: 2012-02-02 08:29:31 -0700 (Thu, 02 Feb 2012) Repository UUID: d2181dbe-5796-6825-dc7f-cbd98591f93d</attribute:processing_code_information>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>0</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4</attribute:source>
+    <attribute:table_id>Table fx (12 January 2012) 3b84a801563e38720652872982814a17</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 historical</attribute:title>
+    <attribute:tracking_id>fb073ab2-0d48-41cc-b327-769c2c62a5f3</attribute:tracking_id>
+  </prov:entity>
+  <prov:wasAttributedTo>
+    <prov:entity prov:ref="recipe:recipe_climwip_test_basic.yml"/>
+    <prov:agent prov:ref="project:EU H2020 European Climate prediction"/>
+  </prov:wasAttributedTo>
+  <prov:entity prov:id="file:/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/rcp85/mon/atmos/Amon/r2i1p1/v20160829/tas_Amon_CCSM4_rcp85_r2i1p1_200501-210012.nc">
+    <attribute:Conventions>CF-1.4</attribute:Conventions>
+    <attribute:acknowledgements>The CESM project is supported by the National Science Foundation and the Office of Science (BER) of the U.S. Department of Energy.
+NCAR is sponsored by the National Science Foundation.
+Computing resources were provided by the Climate Simulation Laboratory at the NCAR Computational and Information Systems Laboratory (CISL),
+sponsored by the National Science Foundation and other agencies.</attribute:acknowledgements>
+    <attribute:branch_time>2005.0</attribute:branch_time>
+    <attribute:cmor_version>2.7.1</attribute:cmor_version>
+    <attribute:contact>cesm_data@ucar.edu</attribute:contact>
+    <attribute:creation_date>2011-07-22T02:03:55Z</attribute:creation_date>
+    <attribute:experiment>RCP8.5</attribute:experiment>
+    <attribute:experiment_id>rcp85</attribute:experiment_id>
+    <attribute:forcing>Sl GHG Vl SS Ds SA BC MD OC Oz AA</attribute:forcing>
+    <attribute:forcing_note>Additional information on the external forcings used in this experiment can be found at
+http://www.cesm.ucar.edu/CMIP5/forcing_information</attribute:forcing_note>
+    <attribute:frequency>mon</attribute:frequency>
+    <attribute:history>2011-07-22T02:03:55Z CMOR rewrote data to comply with CF standards and CMIP5 requirements.</attribute:history>
+    <attribute:initialization_method>1</attribute:initialization_method>
+    <attribute:institute_id>NCAR</attribute:institute_id>
+    <attribute:institution>NCAR (National Center for Atmospheric Research) Boulder, CO, USA</attribute:institution>
+    <attribute:model_id>CCSM4</attribute:model_id>
+    <attribute:modeling_realm>atmos</attribute:modeling_realm>
+    <attribute:parent_experiment>historical</attribute:parent_experiment>
+    <attribute:parent_experiment_id>historical</attribute:parent_experiment_id>
+    <attribute:parent_experiment_rip>r2i1p1</attribute:parent_experiment_rip>
+    <attribute:physics_version>1</attribute:physics_version>
+    <attribute:product>output</attribute:product>
+    <attribute:project_id>CMIP5</attribute:project_id>
+    <attribute:realization>2</attribute:realization>
+    <attribute:references>Gent P. R., et.al. 2011: The Community Climate System Model version 4. J. Climate, doi: 10.1175/2011JCLI4083.1</attribute:references>
+    <attribute:resolution>f09_g16 (0.9x1.25_gx1v6)</attribute:resolution>
+    <attribute:source>CCSM4 (repository tag: ccsm4_0_beta46 compset: BRCP85CN)</attribute:source>
+    <attribute:table_id>Table Amon (27 April 2011) a5a1c518f52ae340313ba0aada03f862</attribute:table_id>
+    <attribute:title>CCSM4 model output prepared for CMIP5 RCP8.5</attribute:title>
+    <attribute:tracking_id>0075f43c-dd94-46c2-b8d2-3bd9bb642be6</attribute:tracking_id>
+  </prov:entity>
+</prov:document>

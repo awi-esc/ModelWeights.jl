@@ -1,0 +1,509 @@
+INFO    [40133] 
+______________________________________________________________________
+          _____ ____  __  ____     __    _ _____           _
+         | ____/ ___||  \/  \ \   / /_ _| |_   _|__   ___ | |
+         |  _| \___ \| |\/| |\ \ / / _` | | | |/ _ \ / _ \| |
+         | |___ ___) | |  | | \ V / (_| | | | | (_) | (_) | |
+         |_____|____/|_|  |_|  \_/ \__,_|_| |_|\___/ \___/|_|
+______________________________________________________________________
+
+ESMValTool - Earth System Model Evaluation Tool.
+
+http://www.esmvaltool.org
+
+CORE DEVELOPMENT TEAM AND CONTACTS:
+  Birgit Hassler (Co-PI; DLR, Germany - birgit.hassler@dlr.de)
+  Alistair Sellar (Co-PI; Met Office, UK - alistair.sellar@metoffice.gov.uk)
+  Bouwe Andela (Netherlands eScience Center, The Netherlands - b.andela@esciencecenter.nl)
+  Lee de Mora (PML, UK - ledm@pml.ac.uk)
+  Niels Drost (Netherlands eScience Center, The Netherlands - n.drost@esciencecenter.nl)
+  Veronika Eyring (DLR, Germany - veronika.eyring@dlr.de)
+  Bettina Gier (UBremen, Germany - gier@uni-bremen.de)
+  Remi Kazeroni (DLR, Germany - remi.kazeroni@dlr.de)
+  Nikolay Koldunov (AWI, Germany - nikolay.koldunov@awi.de)
+  Axel Lauer (DLR, Germany - axel.lauer@dlr.de)
+  Saskia Loosveldt-Tomas (BSC, Spain - saskia.loosveldt@bsc.es)
+  Ruth Lorenz (ETH Zurich, Switzerland - ruth.lorenz@env.ethz.ch)
+  Benjamin Mueller (LMU, Germany - b.mueller@iggf.geo.uni-muenchen.de)
+  Valeriu Predoi (URead, UK - valeriu.predoi@ncas.ac.uk)
+  Mattia Righi (DLR, Germany - mattia.righi@dlr.de)
+  Manuel Schlund (DLR, Germany - manuel.schlund@dlr.de)
+  Breixo Solino Fernandez (DLR, Germany - breixo.solinofernandez@dlr.de)
+  Javier Vegas-Regidor (BSC, Spain - javier.vegas@bsc.es)
+  Klaus Zimmermann (SMHI, Sweden - klaus.zimmermann@smhi.se)
+
+For further help, please read the documentation at
+http://docs.esmvaltool.org. Have fun!
+
+INFO    [40133] Package versions
+INFO    [40133] ----------------
+INFO    [40133] ESMValCore: 2.10.0
+INFO    [40133] ESMValTool: 2.10.0
+INFO    [40133] ----------------
+INFO    [40133] Using config file /albedo/home/brgrus001/.esmvaltool/config-user.yml
+INFO    [40133] Writing program log files to:
+/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/main_log.txt
+/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/main_log_debug.txt
+INFO    [40133] Loading ESGF configuration from /albedo/home/brgrus001/.esmvaltool/esgf-pyclient.yml
+INFO    [40133] Starting the Earth System Model Evaluation Tool at time: 2024-05-16 08:00:20 UTC
+INFO    [40133] ----------------------------------------------------------------------
+INFO    [40133] RECIPE   = /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/recipes/recipe_climwip_test_basic.yml
+INFO    [40133] RUNDIR     = /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run
+INFO    [40133] WORKDIR    = /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work
+INFO    [40133] PREPROCDIR = /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/preproc
+INFO    [40133] PLOTDIR    = /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots
+INFO    [40133] ----------------------------------------------------------------------
+INFO    [40133] Running tasks using at most 128 processes
+INFO    [40133] If your system hangs during execution, it may not have enough memory for keeping this number of tasks in memory.
+INFO    [40133] If you experience memory problems, try reducing 'max_parallel_tasks' in your user configuration file.
+WARNING [40133] Using the Dask basic scheduler. This may lead to slow computations and out-of-memory errors. Note that the basic scheduler may still be the best choice for preprocessor functions that are not lazy. In that case, you can safely ignore this warning. See https://docs.esmvaltool.org/projects/ESMValCore/en/latest/quickstart/configure.html#dask-distributed-configuration for more information. 
+INFO    [40133] For Dataset: tas, Amon, native6, ERA5, v1, supplementaries: sftlf, *, *: ignoring supplementary variable 'sftlf', unable to expand wildcards 'mip', 'version'.
+INFO    [40133] For Dataset: pr, Amon, native6, ERA5, v1, supplementaries: sftlf, *, *: ignoring supplementary variable 'sftlf', unable to expand wildcards 'mip', 'version'.
+INFO    [40133] For Dataset: psl, Amon, native6, ERA5, v1, supplementaries: sftlf, *, *: ignoring supplementary variable 'sftlf', unable to expand wildcards 'mip', 'version'.
+INFO    [40133] Creating tasks from recipe
+INFO    [40133] Creating tasks for diagnostic calculate_weights_climwip
+INFO    [40133] Creating diagnostic task calculate_weights_climwip/climwip
+INFO    [40133] Creating preprocessor task calculate_weights_climwip/tas_CLIM
+INFO    [40133] Creating preprocessor 'climatological_mean' task for variable 'tas_CLIM'
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: sftlf, fx, historical, r0i0p0, v20120115
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, ['v20120413', 'v20130325'], supplementaries: sftlf, fx, historical, r0i0p0, v20120413
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: sftlf, fx, historical, r0i0p0, v20140307
+WARNING [40133] Preprocessor function mask_landsea works best when at least one supplementary variable of ['sftlf', 'sftof'] is defined in the recipe for Dataset:
+{'diagnostic': 'calculate_weights_climwip',
+ 'variable_group': 'tas_CLIM',
+ 'dataset': 'ERA5',
+ 'project': 'native6',
+ 'mip': 'Amon',
+ 'short_name': 'tas',
+ 'alias': 'native6',
+ 'frequency': 'mon',
+ 'long_name': 'Near-Surface Air Temperature',
+ 'modeling_realm': ['atmos'],
+ 'original_short_name': 'tas',
+ 'preprocessor': 'climatological_mean',
+ 'recipe_dataset_index': 7,
+ 'standard_name': 'air_temperature',
+ 'tier': 3,
+ 'timerange': '1995/2014',
+ 'type': 'reanaly',
+ 'units': 'K',
+ 'version': 'v1'}
+session: 'recipe_climwip_test_basic_20240516_080020'.
+INFO    [40133] Found input files for Dataset: tas, Amon, native6, ERA5, v1
+INFO    [40133] PreprocessingTask calculate_weights_climwip/tas_CLIM created.
+INFO    [40133] Creating preprocessor task calculate_weights_climwip/pr_CLIM
+INFO    [40133] Creating preprocessor 'climatological_mean' task for variable 'pr_CLIM'
+INFO    [40133] Found input files for Dataset: pr, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: sftlf, fx, historical, r0i0p0, v20120115
+INFO    [40133] Found input files for Dataset: pr, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, ['v20120413', 'v20130325'], supplementaries: sftlf, fx, historical, r0i0p0, v20120413
+INFO    [40133] Found input files for Dataset: pr, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: pr, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: pr, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: pr, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: pr, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: sftlf, fx, historical, r0i0p0, v20140307
+WARNING [40133] Preprocessor function mask_landsea works best when at least one supplementary variable of ['sftlf', 'sftof'] is defined in the recipe for Dataset:
+{'diagnostic': 'calculate_weights_climwip',
+ 'variable_group': 'pr_CLIM',
+ 'dataset': 'ERA5',
+ 'project': 'native6',
+ 'mip': 'Amon',
+ 'short_name': 'pr',
+ 'alias': 'native6',
+ 'frequency': 'mon',
+ 'long_name': 'Precipitation',
+ 'modeling_realm': ['atmos'],
+ 'original_short_name': 'pr',
+ 'preprocessor': 'climatological_mean',
+ 'recipe_dataset_index': 7,
+ 'standard_name': 'precipitation_flux',
+ 'tier': 3,
+ 'timerange': '1995/2014',
+ 'type': 'reanaly',
+ 'units': 'kg m-2 s-1',
+ 'version': 'v1'}
+session: 'recipe_climwip_test_basic_20240516_080020'.
+INFO    [40133] Found input files for Dataset: pr, Amon, native6, ERA5, v1
+INFO    [40133] PreprocessingTask calculate_weights_climwip/pr_CLIM created.
+INFO    [40133] Creating preprocessor task calculate_weights_climwip/psl_CLIM
+INFO    [40133] Creating preprocessor 'climatological_mean' task for variable 'psl_CLIM'
+INFO    [40133] Found input files for Dataset: psl, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: sftlf, fx, historical, r0i0p0, v20120115
+INFO    [40133] Found input files for Dataset: psl, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, ['v20120413', 'v20130325'], supplementaries: sftlf, fx, historical, r0i0p0, v20120413
+INFO    [40133] Found input files for Dataset: psl, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: psl, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: psl, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: psl, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: psl, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: sftlf, fx, historical, r0i0p0, v20140307
+WARNING [40133] Preprocessor function mask_landsea works best when at least one supplementary variable of ['sftlf', 'sftof'] is defined in the recipe for Dataset:
+{'diagnostic': 'calculate_weights_climwip',
+ 'variable_group': 'psl_CLIM',
+ 'dataset': 'ERA5',
+ 'project': 'native6',
+ 'mip': 'Amon',
+ 'short_name': 'psl',
+ 'alias': 'native6',
+ 'frequency': 'mon',
+ 'long_name': 'Sea Level Pressure',
+ 'modeling_realm': ['atmos'],
+ 'original_short_name': 'psl',
+ 'preprocessor': 'climatological_mean',
+ 'recipe_dataset_index': 7,
+ 'standard_name': 'air_pressure_at_mean_sea_level',
+ 'tier': 3,
+ 'timerange': '1995/2014',
+ 'type': 'reanaly',
+ 'units': 'Pa',
+ 'version': 'v1'}
+session: 'recipe_climwip_test_basic_20240516_080020'.
+INFO    [40133] Found input files for Dataset: psl, Amon, native6, ERA5, v1
+INFO    [40133] PreprocessingTask calculate_weights_climwip/psl_CLIM created.
+INFO    [40133] Creating tasks for diagnostic weighted_temperature_graph
+INFO    [40133] Creating diagnostic task weighted_temperature_graph/weighted_temperature_graph
+INFO    [40133] Creating preprocessor task weighted_temperature_graph/tas
+INFO    [40133] Creating preprocessor 'temperature_anomalies' task for variable 'tas'
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: areacella, fx, historical, r0i0p0, v20120115
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, ['v20120413', 'v20130325'], supplementaries: areacella, fx, historical, r0i0p0, v20120413
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: areacella, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: areacella, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: areacella, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: areacella, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: areacella, fx, historical, r0i0p0, v20140307
+INFO    [40133] PreprocessingTask weighted_temperature_graph/tas created.
+INFO    [40133] Creating tasks for diagnostic weighted_temperature_map
+INFO    [40133] Creating diagnostic task weighted_temperature_map/weighted_temperature_map
+INFO    [40133] Creating preprocessor task weighted_temperature_map/tas_CLIM_future
+INFO    [40133] Creating preprocessor 'climatological_mean' task for variable 'tas_CLIM_future'
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: sftlf, fx, historical, r0i0p0, v20120115
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, v20120413, supplementaries: sftlf, fx, historical, r0i0p0
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: sftlf, fx, historical, r0i0p0, v20140307
+INFO    [40133] PreprocessingTask weighted_temperature_map/tas_CLIM_future created.
+INFO    [40133] Creating preprocessor task weighted_temperature_map/tas_CLIM_reference
+INFO    [40133] Creating preprocessor 'climatological_mean' task for variable 'tas_CLIM_reference'
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: sftlf, fx, historical, r0i0p0, v20120115
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, ['v20120413', 'v20130325'], supplementaries: sftlf, fx, historical, r0i0p0, v20120413
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [40133] Found input files for Dataset: tas, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: sftlf, fx, historical, r0i0p0, v20140307
+INFO    [40133] PreprocessingTask weighted_temperature_map/tas_CLIM_reference created.
+INFO    [40133] These tasks will be executed: calculate_weights_climwip/climwip, calculate_weights_climwip/pr_CLIM, calculate_weights_climwip/psl_CLIM, weighted_temperature_graph/weighted_temperature_graph, weighted_temperature_graph/tas, weighted_temperature_map/weighted_temperature_map, calculate_weights_climwip/tas_CLIM, weighted_temperature_map/tas_CLIM_reference, weighted_temperature_map/tas_CLIM_future
+INFO    [40133] Wrote recipe with version numbers and wildcards to:
+file:///albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/recipe_climwip_test_basic_filled.yml
+INFO    [40133] Using the Dask basic scheduler.
+INFO    [40133] Running 9 tasks using 9 processes
+INFO    [40136] Starting task calculate_weights_climwip/tas_CLIM in process [40136]
+INFO    [40137] Starting task calculate_weights_climwip/pr_CLIM in process [40137]
+INFO    [40138] Starting task calculate_weights_climwip/psl_CLIM in process [40138]
+INFO    [40139] Starting task weighted_temperature_graph/tas in process [40139]
+INFO    [40140] Starting task weighted_temperature_map/tas_CLIM_future in process [40140]
+INFO    [40141] Starting task weighted_temperature_map/tas_CLIM_reference in process [40141]
+INFO    [40133] Progress: 6 tasks running, 3 tasks waiting for ancestors, 0/9 done
+WARNING [40140] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40141] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40137] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40138] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40136] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/coords.py:2153: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40140] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40140] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40141] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40137] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40138] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40136] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/coords.py:2153: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40140] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40141] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40137] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40136] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/coords.py:2153: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+WARNING [40138] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40140] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40137] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40140] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/coords.py:2153: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40141] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40140] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+INFO    [40140] Successfully completed task weighted_temperature_map/tas_CLIM_future (priority 7) in 0:00:18.770275
+INFO    [40133] Progress: 5 tasks running, 3 tasks waiting for ancestors, 1/9 done
+WARNING [40136] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40138] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40137] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40137] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40141] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40136] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40137] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40138] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/coords.py:2153: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40141] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40136] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40138] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40136] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40141] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+INFO    [40141] Successfully completed task weighted_temperature_map/tas_CLIM_reference (priority 8) in 0:00:30.303517
+INFO    [40133] Progress: 4 tasks running, 3 tasks waiting for ancestors, 2/9 done
+WARNING [40138] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/coords.py:2153: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/coords.py:2153: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+WARNING [40139] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+INFO    [40139] Successfully completed task weighted_temperature_graph/tas (priority 5) in 0:00:42.479546
+INFO    [40133] Progress: 3 tasks running, 3 tasks waiting for ancestors, 3/9 done
+WARNING [40137] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+INFO    [40137] Successfully completed task calculate_weights_climwip/pr_CLIM (priority 2) in 0:00:50.420066
+INFO    [40133] Progress: 2 tasks running, 3 tasks waiting for ancestors, 4/9 done
+WARNING [40136] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+WARNING [40138] /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/iris/fileformats/netcdf/saver.py:2670: IrisDeprecation: Saving to netcdf with legacy-style attribute handling for backwards compatibility.
+This mode is deprecated since Iris 3.8, and will eventually be removed.
+Please consider enabling the new split-attributes handling mode, by setting 'iris.FUTURE.save_split_attrs = True'.
+  warn_deprecated(message)
+
+INFO    [40136] Successfully completed task calculate_weights_climwip/tas_CLIM (priority 1) in 0:00:51.268716
+INFO    [40138] Successfully completed task calculate_weights_climwip/psl_CLIM (priority 3) in 0:00:51.298623
+INFO    [40133] Progress: 0 tasks running, 3 tasks waiting for ancestors, 6/9 done
+INFO    [40133] Progress: 1 tasks running, 2 tasks waiting for ancestors, 6/9 done
+INFO    [40142] Starting task calculate_weights_climwip/climwip in process [40142]
+INFO    [40142] Running command ['/albedo/soft/sw/conda-sw/esmvaltool/bin/python', '/albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/diag_scripts/weighting/climwip/main.py', '/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/calculate_weights_climwip/climwip/settings.yml']
+INFO    [40142] Writing output to /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/calculate_weights_climwip/climwip
+INFO    [40142] Writing plots to /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/calculate_weights_climwip/climwip
+INFO    [40142] Writing log to /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/calculate_weights_climwip/climwip/log.txt
+INFO    [40142] To re-run this diagnostic script, run:
+cd /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/calculate_weights_climwip/climwip; MPLBACKEND="Agg" /albedo/soft/sw/conda-sw/esmvaltool/bin/python /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/diag_scripts/weighting/climwip/main.py /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/calculate_weights_climwip/climwip/settings.yml
+INFO    [40142] Maximum memory used (estimate): 0.8 GB
+INFO    [40142] Sampled every second. It may be inaccurate if short but high spikes in memory consumption occur.
+INFO    [40142] Successfully completed task calculate_weights_climwip/climwip (priority 0) in 0:00:16.420319
+INFO    [40133] Progress: 0 tasks running, 2 tasks waiting for ancestors, 7/9 done
+INFO    [40133] Progress: 2 tasks running, 0 tasks waiting for ancestors, 7/9 done
+INFO    [40143] Starting task weighted_temperature_graph/weighted_temperature_graph in process [40143]
+INFO    [40144] Starting task weighted_temperature_map/weighted_temperature_map in process [40144]
+INFO    [40143] Running command ['/albedo/soft/sw/conda-sw/esmvaltool/bin/python', '/albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/diag_scripts/weighting/weighted_temperature_graph.py', '/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/weighted_temperature_graph/weighted_temperature_graph/settings.yml']
+INFO    [40143] Writing output to /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/weighted_temperature_graph/weighted_temperature_graph
+INFO    [40143] Writing plots to /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/weighted_temperature_graph/weighted_temperature_graph
+INFO    [40143] Writing log to /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/weighted_temperature_graph/weighted_temperature_graph/log.txt
+INFO    [40143] To re-run this diagnostic script, run:
+cd /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/weighted_temperature_graph/weighted_temperature_graph; MPLBACKEND="Agg" /albedo/soft/sw/conda-sw/esmvaltool/bin/python /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/diag_scripts/weighting/weighted_temperature_graph.py /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/weighted_temperature_graph/weighted_temperature_graph/settings.yml
+INFO    [40144] Running command ['/albedo/soft/sw/conda-sw/esmvaltool/bin/python', '/albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/diag_scripts/weighting/weighted_temperature_map.py', '/albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/weighted_temperature_map/weighted_temperature_map/settings.yml']
+INFO    [40144] Writing output to /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/work/weighted_temperature_map/weighted_temperature_map
+INFO    [40144] Writing plots to /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/plots/weighted_temperature_map/weighted_temperature_map
+INFO    [40144] Writing log to /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/weighted_temperature_map/weighted_temperature_map/log.txt
+INFO    [40144] To re-run this diagnostic script, run:
+cd /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/weighted_temperature_map/weighted_temperature_map; MPLBACKEND="Agg" /albedo/soft/sw/conda-sw/esmvaltool/bin/python /albedo/soft/sw/conda-sw/esmvaltool/lib/python3.11/site-packages/esmvaltool/diag_scripts/weighting/weighted_temperature_map.py /albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/weighted_temperature_map/weighted_temperature_map/settings.yml
+INFO    [40143] Maximum memory used (estimate): 0.3 GB
+INFO    [40143] Sampled every second. It may be inaccurate if short but high spikes in memory consumption occur.
+INFO    [40143] Successfully completed task weighted_temperature_graph/weighted_temperature_graph (priority 4) in 0:00:07.573445
+INFO    [40133] Progress: 1 tasks running, 0 tasks waiting for ancestors, 8/9 done
+INFO    [40144] Maximum memory used (estimate): 0.3 GB
+INFO    [40144] Sampled every second. It may be inaccurate if short but high spikes in memory consumption occur.
+INFO    [40144] Successfully completed task weighted_temperature_map/weighted_temperature_map (priority 6) in 0:00:08.770936
+INFO    [40133] Progress: 0 tasks running, 0 tasks waiting for ancestors, 9/9 done
+INFO    [40133] Successfully completed all tasks.
+INFO    [40133] Wrote recipe with version numbers and wildcards to:
+file:///albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/run/recipe_climwip_test_basic_filled.yml
+INFO    [40133] Wrote recipe output to:
+file:///albedo/home/brgrus001/esmvaltool_output/recipe_climwip_test_basic_20240516_080020/index.html
+INFO    [40133] Ending the Earth System Model Evaluation Tool at time: 2024-05-16 08:01:39 UTC
+INFO    [40133] Time for running the recipe was: 0:01:18.561087
+INFO    [40133] Maximum memory used (estimate): 10.8 GB
+INFO    [40133] Sampled every second. It may be inaccurate if short but high spikes in memory consumption occur.
+INFO    [40133] Run was successful
