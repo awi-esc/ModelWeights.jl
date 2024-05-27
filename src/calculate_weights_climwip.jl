@@ -1,5 +1,5 @@
 using CairoMakie
-using ColorSchemes
+
 include("load-data-utils.jl");
 include("plot-utils.jl");
 
