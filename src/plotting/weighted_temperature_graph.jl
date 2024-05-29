@@ -36,11 +36,11 @@ begin
     f = Figure();
     
     ax = Axis(f[1,1], 
-    xticks = (xticks, string.(xticks)), 
-    limits = ((minimum(timeInYears)-10, maximum(timeInYears)+10), (-1, 5)),
-    title = "Temperature anomaly relative to 1981-2010",
-    xlabel = "Year", 
-    ylabel = "Temperature anomaly °C"
+        xticks = (xticks, string.(xticks)), 
+        limits = ((minimum(timeInYears)-10, maximum(timeInYears)+10), (-1, 5)),
+        title = "Temperature anomaly relative to 1981-2010",
+        xlabel = "Year", 
+        ylabel = "Temperature anomaly °C"
     );
     # add ranges 
     range66 = [quantile(row, [0.167, 0.833]) for row in eachrow(temp_anomalies)];
