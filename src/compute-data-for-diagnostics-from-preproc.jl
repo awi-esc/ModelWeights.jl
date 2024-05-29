@@ -102,8 +102,16 @@ precision = 4;
 @assert round.(matrixPr, digits=precision) == round.(independencePr, digits=precision)
 
 
+# Data for overall mean plot
+independenceOvMean= NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_pr_CLIM.nc"), "dpr_CLIM");
+
+independenceOvMean = NetCDF.ncread("/Users/brgrus001/getting-started-julia/recipe_climwip_test_basic_data/work/calculate_weights_climwip/climwip/independence_overall_mean.nc", "overall_mean")
 
 
+# weights are 0.25 for PR and 0.5 for Tas: These values are taken from the recipe!
 
+normalizedTas = matrixTas./median(matrixTas);
+normalizedPr = matrixPr./median(matrixPr);
 
-
+overallMean = 0.25*(4/3) .* normalizedPr .+ 0.5*(4/3) .* normalizedTas;
+@assert round.(overallMean, digits=precision) == round.(independenceOvMean, digits=precision)
