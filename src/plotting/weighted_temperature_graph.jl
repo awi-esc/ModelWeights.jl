@@ -4,7 +4,7 @@ using CairoMakie
 
 #CairoMakie.activate!()
 
-include("load-data-utils.jl")
+include(joinpath("..", "load-data-utils.jl"));
 include("plot-utils.jl")
 
 workDir = joinpath(PATH_TO_WORK_DIR, "weighted_temperature_graph", "weighted_temperature_graph");

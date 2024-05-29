@@ -6,7 +6,7 @@ using Dates
 @pyimport numpy as np
 @pyimport textwrap
 
-include("load-data-utils.jl");
+include(joinpath("..", "load-data-utils.jl"));
 include("plot-utils.jl");
 
 workDir = joinpath(PATH_TO_WORK_DIR, "weighted_temperature_map", "weighted_temperature_map");
