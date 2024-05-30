@@ -2,6 +2,7 @@ using NetCDF
 using Dates
 using CairoMakie
 using TextWrap
+using GeoMakie
 
 include(joinpath(@__DIR__, "..", "..", "src", "load-data-utils.jl"));
 include(joinpath(@__DIR__, "..", "..", "src", "plot-utils.jl"));
@@ -31,8 +32,8 @@ function plotWeightedTemperatureMap(workDir, filenameData, textTitle, colors, vm
         yticks = (latTicks, latLabels),
         limits = ((lonTicks[1], last(lonTicks)), (latTicks[1], last(latTicks)))
     );
-
-    hm = heatmap!(ax, lonX, latY, data, colormap = colors, colorrange=(vmin, vmax));
+    hm = heatmap!(ax, lonX, latY, data, colormap = colors, alpha=0.8, colorrange=(vmin, vmax));
+    lines!(GeoMakie.coastlines(),color=:black);
     Colorbar(fig[1,2], hm)
     return fig
 end
