@@ -1,7 +1,7 @@
 using NetCDF
 
-PATH_TO_WORK_DIR = joinpath("recipe_climwip_test_basic_data", "work")
-PATH_TO_PREPROC_DIR = joinpath("recipe_climwip_test_basic_data", "preproc")
+PATH_TO_WORK_DIR = joinpath(@__DIR__, "..", "recipe_climwip_test_basic_data", "work")
+PATH_TO_PREPROC_DIR = joinpath(@__DIR__, "..", "recipe_climwip_test_basic_data", "preproc")
 
 function loadNCdataInDir(path2Dir, climateVar, dataIncluded = [], addHorizontal=true) 
     data = []
@@ -39,7 +39,7 @@ end
 function _getPath2Data(metric, workDir, varName)
     fn = join([metric, varName, "nc"], "_", ".");
     path2Data = joinpath(workDir, fn);
-    print("load data from file: " * path2Data)
+    println("load data from file: " * path2Data)
     return path2Data
 end
 

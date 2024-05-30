@@ -3,11 +3,11 @@ using Dates
 using CairoMakie
 using TextWrap
 
-include(joinpath("..", "load-data-utils.jl"));
-include("plot-utils.jl");
+include(joinpath(@__DIR__, "..", "..", "src", "load-data-utils.jl"));
+include(joinpath(@__DIR__, "..", "..", "src", "plot-utils.jl"));
 
 workDir = joinpath(PATH_TO_WORK_DIR, "weighted_temperature_map", "weighted_temperature_map");
-targetDir = joinpath("plots-replicated-with-julia", "weighted_temperature_map");
+targetDir = joinpath(pwd(), "plots-replicated-with-julia", "weighted_temperature_map");
 mkpath(targetDir)
 
 

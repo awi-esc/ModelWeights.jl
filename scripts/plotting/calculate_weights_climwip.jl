@@ -1,7 +1,7 @@
 using CairoMakie
 
-include(joinpath("..", "load-data-utils.jl"));
-include("plot-utils.jl");
+include(joinpath(@__DIR__, "..", "..", "src", "load-data-utils.jl"));
+include(joinpath(@__DIR__, "..", "..", "src", "plot-utils.jl"));
 
 workDir = joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip");
 

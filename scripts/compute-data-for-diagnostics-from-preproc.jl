@@ -1,7 +1,7 @@
 using NetCDF
 using Statistics
 
-include("load-data-utils.jl");
+include(joinpath(@__DIR__, "..", "src", "load-data-utils.jl"));
 
 # 1. Preprocessed data for weighted_temperature_graph diagnostics
 path2preprocWeightedTempGraph = joinpath(PATH_TO_PREPROC_DIR, "weighted_temperature_graph", "tas")
@@ -20,7 +20,7 @@ unweightedAvgFromPreproc = Statistics.mean(preprocTempGraph, dims = 2);
 
 
 # 2. calculate_weights_climwip
-# Model-Model Distance matrices 
+# 2.1. Independence: Model-Model Distance matrices 
 PATH_TO_PREPROC_WEIGHTS_DIR = joinpath(PATH_TO_PREPROC_DIR, "calculate_weights_climwip");
 
 preprocTas, filenamesTas = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, "tas_CLIM"), "tas", ["CMIP"], false);
@@ -96,22 +96,26 @@ matrixPr = matrixPr .+ matrixPr';
 independenceTas = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_tas_CLIM.nc"), "dtas_CLIM");
 independencePr = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_pr_CLIM.nc"), "dpr_CLIM");
 
-
 precision = 4;
 @assert round.(matrixTas, digits=precision) == round.(independenceTas, digits=precision)
 @assert round.(matrixPr, digits=precision) == round.(independencePr, digits=precision)
 
 
 # Data for overall mean plot
-independenceOvMean= NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_pr_CLIM.nc"), "dpr_CLIM");
+independenceOvMean = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_overall_mean.nc"), "overall_mean");
+# These values are taken from the climwip recipe!
+wPr, wTas = [0.25 0.5];
+# normalize them 
+wPr, wTas = [wPr wTas] ./ (wPr + wTas);
 
-independenceOvMean = NetCDF.ncread("/Users/brgrus001/getting-started-julia/recipe_climwip_test_basic_data/work/calculate_weights_climwip/climwip/independence_overall_mean.nc", "overall_mean")
-
-
-# weights are 0.25 for PR and 0.5 for Tas: These values are taken from the recipe!
 
 normalizedTas = matrixTas./median(matrixTas);
 normalizedPr = matrixPr./median(matrixPr);
 
-overallMean = 0.25*(4/3) .* normalizedPr .+ 0.5*(4/3) .* normalizedTas;
+overallMean = wPr .* normalizedPr .+ wTas .* normalizedTas;
 @assert round.(overallMean, digits=precision) == round.(independenceOvMean, digits=precision)
+
+
+# 2.2. Performance weights 
+# RMSE between models and observations
+
