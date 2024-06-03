@@ -59,21 +59,21 @@ save(joinpath(targetDir, getCurrentTime() * "_independence_tas_CLIM.png"), figTa
 
 
 # Root Mean Squared Error plots 
-data, models = loadPerformanceDistMatrix(workDir, "overall_mean", "overall_mean");
+data, models = loadPerformanceMetric(workDir, "overall_mean", "overall_mean");
 figPerformOverallMean = plotPerformanceMetric(data, "overall_mean", models)
 save(joinpath(targetDir, getCurrentTime() * "_performance_overall_mean.png"), figPerformOverallMean);
 
 
-data, models = loadPerformanceDistMatrix(workDir, "tas_CLIM", "dtas_CLIM");
+data, models = loadPerformanceMetric(workDir, "tas_CLIM", "dtas_CLIM");
 figPerformTas = plotPerformanceMetric(data, "tas_CLIM", models)
 save(joinpath(targetDir, getCurrentTime() * "_performance_tas_CLIM.png"), figPerformTas);
 
 
-data, models = loadPerformanceDistMatrix(workDir, "psl_CLIM", "dpsl_CLIM");
+data, models = loadPerformanceMetric(workDir, "psl_CLIM", "dpsl_CLIM");
 figPerformPsl = plotPerformanceMetric(data, "psl_CLIM", models)
 save(joinpath(targetDir, getCurrentTime() * "_performance_psl_CLIM.png"), figPerformPsl);
 
 
-data, models = loadPerformanceDistMatrix(workDir, "pr_CLIM", "dpr_CLIM");
+data, models = loadPerformanceMetric(workDir, "pr_CLIM", "dpr_CLIM");
 figPerformPr = plotPerformanceMetric(data, "pr_CLIM", models)
 save(joinpath(targetDir, getCurrentTime() * "_performance_pr_CLIM.png"), figPerformPr);

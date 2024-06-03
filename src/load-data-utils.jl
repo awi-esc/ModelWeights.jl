@@ -58,7 +58,7 @@ function loadIndependentDistMatrix(workDir, varName, climateVar)
 end
 
 
-function loadPerformanceDistMatrix(workDir, varName, climateVar)
+function loadPerformanceMetric(workDir, varName, climateVar)
     path2Data = _getPath2Data("performance", workDir, varName);
     data, models = _loadDistMatrix(path2Data, climateVar);
     return data, models

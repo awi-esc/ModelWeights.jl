@@ -23,9 +23,6 @@ unweightedAvgFromPreproc = Statistics.mean(preprocTempGraph, dims = 2);
 # 2.1. Independence: Model-Model Distance matrices 
 PATH_TO_PREPROC_WEIGHTS_DIR = joinpath(PATH_TO_PREPROC_DIR, "calculate_weights_climwip");
 
-preprocTas, filenamesTas = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, "tas_CLIM"), "tas", ["CMIP"], false);
-preprocPr, filenamesPr = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, "pr_CLIM"), "pr", ["CMIP"], false);
-
 #################### do some checks ###########################################
 # look at output from single model
 pathSingleModel = joinpath(PATH_TO_PREPROC_DIR, "calculate_weights_climwip", "tas_CLIM", "CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc");
@@ -49,30 +46,37 @@ latitudesAll, _ = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, "pr_CLIM
 latitudes = NetCDF.ncread(pathSingleModel, "lat")
 ###############################################################
 
-
-
-function getModelDistMatrix(climateVar::String)  
+function loadModelData(climateVar::String)
     climateVarDir = climateVar * "_CLIM";
     preprocData, filenames = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, climateVarDir), climateVar, ["CMIP"], false);
     latitudes = NetCDF.ncread(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, climateVarDir, filenames[1]), "lat");
+    preprocData3d = cat(preprocData..., dims=3);
+    return preprocData3d, latitudes
+end
 
-    # only take values where none (!) of the models has infinite values!! (Not just the two that are compared to one another)
-    data = cat(preprocData..., dims=3);
-    nbModels = size(data)[3];
-    maskNotInf = data .!= 1.0f20;
-    maskNoneInf = sum(maskNotInf, dims=3) .== nbModels;  
-    maskNoneInf = dropdims(maskNoneInf, dims=3);
+function getInfMask(data3d, dim=3)
+    n = size(data3d)[3];
+    maskNotInf = data3d .!= 1.0f20;
+    maskNoneInf = sum(maskNotInf, dims=dim) .== n;  
+    maskNoneInf = dropdims(maskNoneInf, dims=dim);
     maskInf = .!maskNoneInf;
+    return maskInf
+end
+
+function getModelDistMatrix(data3d, latitudes)  
+    # only take values where none (!) of the models has infinite values!! (Not just the two that are compared to one another)
+    nbModels = size(data3d)[3];
+    maskInf = getInfMask(data3d);
 
     # area weights differ across latitudes (because of the earth being a sphere)
     areaWeights = cos.(deg2rad.(latitudes));
     matrixS = zeros(nbModels, nbModels);
-    # apply mask: ignore entries where one model has infinite value
+    # apply mask: ignore entries where at least one model has infinite value
     for i = 1:nbModels-1
-        model_i = data[:,:,i];
+        model_i = data3d[:,:,i];
         model_i[maskInf .== 1] .= 0;
         for j = (i + 1) : nbModels
-            model_j = data[:, :, j];
+            model_j = data3d[:, :, j];
             model_j[maskInf .== 1] .= 0;
 
             sqDiff = (model_i .- model_j).^2;
@@ -85,17 +89,19 @@ function getModelDistMatrix(climateVar::String)
 end
 
 
-# make matrix symmetric
-matrixTas = getModelDistMatrix("tas");
-matrixPr = getModelDistMatrix("pr");
+modelsTas, latitudes = loadModelData("tas");
+modelsPr, latitudes = loadModelData("pr");
+modelsPsl, latitudes = loadModelData("psl");
 
+matrixTas = getModelDistMatrix(modelsTas, latitudes);
+matrixPr = getModelDistMatrix(modelsPr, latitudes);
+# make matrix symmetric
 matrixTas = matrixTas .+ matrixTas';
 matrixPr = matrixPr .+ matrixPr';
 
 # Compare to processed data used in diagnostics
 independenceTas = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_tas_CLIM.nc"), "dtas_CLIM");
 independencePr = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_pr_CLIM.nc"), "dpr_CLIM");
-
 precision = 4;
 @assert round.(matrixTas, digits=precision) == round.(independenceTas, digits=precision)
 @assert round.(matrixPr, digits=precision) == round.(independencePr, digits=precision)
@@ -108,7 +114,6 @@ wPr, wTas = [0.25 0.5];
 # normalize them 
 wPr, wTas = [wPr wTas] ./ (wPr + wTas);
 
-
 normalizedTas = matrixTas./median(matrixTas);
 normalizedPr = matrixPr./median(matrixPr);
 
@@ -119,3 +124,70 @@ overallMean = wPr .* normalizedPr .+ wTas .* normalizedTas;
 # 2.2. Performance weights 
 # RMSE between models and observations
 
+# get observational data from preproc-directory
+function getObsData(climateVar)
+    fn = "native6_ERA5_reanaly_v1_Amon_" * climateVar * "_1995-2014.nc";
+    data = NetCDF.ncread(
+        joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, climateVar * "_CLIM", fn),
+        climateVar
+    );
+    latitudes = NetCDF.ncread(
+        joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, climateVar * "_CLIM", fn),
+        "lat"
+    );
+    return data, latitudes
+end
+
+# observational data
+era5Tas, latitudes = getObsData("tas");
+era5Psl, latitudes = getObsData("psl");
+era5Pr, latitudes = getObsData("pr");
+
+
+
+
+function getModelDataDist(models, observations, latitudes)      
+    observations3d = reshape(observations, size(observations, 1), size(observations, 2), 1);
+    areaWeights = cos.(deg2rad.(latitudes));
+
+    # when using a single weightMatrix computed across all models and the observations
+    #   weightMatrix = repeat(areaWeights', size(models, 1), 1);
+    #   weightMatrix[maskInf .== 1] .= 0;
+
+    distances = [];
+    for i = 1 : size(models)[3]
+        model_i = models[:,:,i];
+        maskInf = getInfMask([observations3d;;;model_i]);
+        maskedObs = deepcopy(observations)
+        maskedObs[maskInf .== 1] .= 0;
+    
+        weightMatrix = repeat(areaWeights', size(models, 1), 1);
+        weightMatrix[maskInf .== 1] .= 0;
+        model_i[maskInf .== 1] .= 0;        
+        sqDiff = (model_i .- maskedObs).^2;
+
+        weightedValues = weightMatrix .* sqDiff;
+        areaWeightedMean = sum(weightedValues) ./ sum(weightMatrix);
+        distance = sqrt(areaWeightedMean);
+
+        push!(distances, distance);
+    end
+    return distances
+end
+
+
+
+# Make sure to use a copy of the observational data, otherwise, it will be modified within the function by applying the mask!!
+modelDataDistPr = getModelDataDist(modelsPr, deepcopy(era5Pr), latitudes);
+modelDataDistTas = getModelDataDist(modelsTas, deepcopy(era5Tas), latitudes);
+modelDataDistPsl = getModelDataDist(modelsPsl, deepcopy(era5Psl), latitudes);
+
+# compare them to data from work dir
+performancePr = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_pr_CLIM.nc"), "dpr_CLIM");
+performanceTas = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_tas_CLIM.nc"), "dtas_CLIM");
+performancePsl = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_psl_CLIM.nc"), "dpsl_CLIM");
+
+
+@assert round.(performancePr, digits=precision) == round.(modelDataDistPr, digits=precision)
+@assert round.(performanceTas, digits=precision) == round.(modelDataDistTas, digits=precision)
+@assert round.(performancePsl, digits=precision) == round.(modelDataDistPsl, digits=precision)
