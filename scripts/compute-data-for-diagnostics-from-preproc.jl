@@ -191,3 +191,22 @@ performancePsl = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_cli
 @assert round.(performancePr, digits=precision) == round.(modelDataDistPr, digits=precision)
 @assert round.(performanceTas, digits=precision) == round.(modelDataDistTas, digits=precision)
 @assert round.(performancePsl, digits=precision) == round.(modelDataDistPsl, digits=precision)
+
+
+# combine different performance diagnostics into an overall performance diagnostic:
+performanceOvMean = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_overall_mean.nc"), "overall_mean");
+# These values are taken from the climwip recipe!
+wPr, wTas, wPsl = [2 1 1];
+
+# normalize each diagnostic!
+normalizedPr = performancePr./median(performancePr);
+normalizedTas = performanceTas./median(performanceTas);
+normalizedPsl = performancePsl ./ median(performancePsl);
+
+# weight the normalized diagnostics according to weights from recipe and normalize
+overallMeanPerform = [wPr wTas wPsl] .* [normalizedPr normalizedTas normalizedPsl];
+overallMeanPerformNormalized = sum(overallMeanPerform, dims=2) ./ sum([wPr wTas wPsl])
+@assert vec(round.(overallMeanPerformNormalized, digits=precision)) == round.(performanceOvMean, digits=precision)
+
+
+# 2.3 Computation of final weights based on performance and independence weights
