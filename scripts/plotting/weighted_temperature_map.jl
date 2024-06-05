@@ -45,7 +45,7 @@ fig1 = plotWeightedTemperatureMap(
     "Weighted minus unweighted mean temperature change: 2081-2100 minus 1995-2014 (°C)",
     reverse(ColorSchemes.RdBu.colors)
 )
-save(joinpath(targetDir, getCurrentTime() * "_weighted_temperature_map_no_pycall.png"), fig1);
+save(joinpath(targetDir, getCurrentTime() * "_weighted_temperature_map.png"), fig1);
 
 fig2 = plotWeightedTemperatureMap(
     workDir, 
@@ -55,5 +55,5 @@ fig2 = plotWeightedTemperatureMap(
     2.5, 
     6.5
 )
-save(joinpath(targetDir, getCurrentTime() * "_weighted_mean_temp_change_no_pycall.png"), fig2);
+save(joinpath(targetDir, getCurrentTime() * "_weighted_mean_temp_change.png"), fig2);
 

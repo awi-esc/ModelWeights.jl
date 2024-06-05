@@ -58,8 +58,8 @@ end
 
 
 fig1 = plotWeightedTemperatureMap(workDir, "temperature_change_difference_map.nc", "Weighted minus unweighted mean temperature change: 2081-2100 minus 1995-2014 (°C)")
-savefig(joinpath(targetDir, getCurrentTime() * "_weighted_temperature_map.png"));
+savefig(joinpath(targetDir, getCurrentTime() * "_weighted_temperature_map_pycall.png"));
 
 fig2 = plotWeightedTemperatureMap(workDir, "temperature_change_weighted_map.nc", "Weighted mean temperature change: 2081-2100 minus 1995-2014 (°C)", 2.5, 6.5, "Reds")
-savefig(joinpath(targetDir, getCurrentTime() * "_weighted_mean_temp_change.png"));
+savefig(joinpath(targetDir, getCurrentTime() * "_weighted_mean_temp_change_pycall.png"));
 
