@@ -1,11 +1,12 @@
 using NetCDF
 using Statistics
+using DataStructures
 
 include(joinpath(@__DIR__, "..", "src", "load-data-utils.jl"));
 
 # 1. Preprocessed data for weighted_temperature_graph diagnostics
 path2preprocWeightedTempGraph = joinpath(PATH_TO_PREPROC_DIR, "weighted_temperature_graph", "tas")
-preprocTempGraph, _ = loadNCdataInDir(path2preprocWeightedTempGraph, "tas", []);
+preprocTempGraph, modelFileNames = loadNCdataInDir(path2preprocWeightedTempGraph, "tas", []);
 
 # get the stored data from work-directory that was used in diagnostics
 path2TempAnomalies = joinpath(PATH_TO_WORK_DIR,  "weighted_temperature_graph", "weighted_temperature_graph", "temperature_anomalies.nc");
@@ -108,7 +109,6 @@ precision = 4;
 
 
 # Data for overall mean plot
-independenceOvMean = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_overall_mean.nc"), "overall_mean");
 # These values are taken from the climwip recipe!
 wPr, wTas = [0.25 0.5];
 # normalize them 
@@ -116,9 +116,10 @@ wPr, wTas = [wPr wTas] ./ (wPr + wTas);
 
 normalizedTas = matrixTas./median(matrixTas);
 normalizedPr = matrixPr./median(matrixPr);
+overallMeanIndependence = wPr .* normalizedPr .+ wTas .* normalizedTas;
 
-overallMean = wPr .* normalizedPr .+ wTas .* normalizedTas;
-@assert round.(overallMean, digits=precision) == round.(independenceOvMean, digits=precision)
+independenceWeightsWork = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_overall_mean.nc"), "overall_mean");
+@assert round.(overallMeanIndependence, digits=precision) == round.(independenceWeightsWork, digits=precision)
 
 
 # 2.2. Performance weights 
@@ -142,8 +143,6 @@ end
 era5Tas, latitudes = getObsData("tas");
 era5Psl, latitudes = getObsData("psl");
 era5Pr, latitudes = getObsData("pr");
-
-
 
 
 function getModelDataDist(models, observations, latitudes)      
@@ -175,8 +174,6 @@ function getModelDataDist(models, observations, latitudes)
     return distances
 end
 
-
-
 # Make sure to use a copy of the observational data, otherwise, it will be modified within the function by applying the mask!!
 modelDataDistPr = getModelDataDist(modelsPr, deepcopy(era5Pr), latitudes);
 modelDataDistTas = getModelDataDist(modelsTas, deepcopy(era5Tas), latitudes);
@@ -187,14 +184,12 @@ performancePr = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_clim
 performanceTas = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_tas_CLIM.nc"), "dtas_CLIM");
 performancePsl = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_psl_CLIM.nc"), "dpsl_CLIM");
 
-
 @assert round.(performancePr, digits=precision) == round.(modelDataDistPr, digits=precision)
 @assert round.(performanceTas, digits=precision) == round.(modelDataDistTas, digits=precision)
 @assert round.(performancePsl, digits=precision) == round.(modelDataDistPsl, digits=precision)
 
 
 # combine different performance diagnostics into an overall performance diagnostic:
-performanceOvMean = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_overall_mean.nc"), "overall_mean");
 # These values are taken from the climwip recipe!
 wPr, wTas, wPsl = [2 1 1];
 
@@ -204,9 +199,56 @@ normalizedTas = performanceTas./median(performanceTas);
 normalizedPsl = performancePsl ./ median(performancePsl);
 
 # weight the normalized diagnostics according to weights from recipe and normalize
-overallMeanPerform = [wPr wTas wPsl] .* [normalizedPr normalizedTas normalizedPsl];
-overallMeanPerformNormalized = sum(overallMeanPerform, dims=2) ./ sum([wPr wTas wPsl])
-@assert vec(round.(overallMeanPerformNormalized, digits=precision)) == round.(performanceOvMean, digits=precision)
+overallMeanPerformance = [wPr wTas wPsl] .* [normalizedPr normalizedTas normalizedPsl];
+overallMeanPerformance = sum(overallMeanPerformance, dims=2) ./ sum([wPr wTas wPsl])
+
+performanceWeightsWork = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_overall_mean.nc"), "overall_mean");
+@assert vec(round.(overallMeanPerformance, digits=precision)) == round.(performanceWeightsWork, digits=precision)
 
 
 # 2.3 Computation of final weights based on performance and independence weights
+function averageEnsembleMembers(modelDiagnostics, modelNames)
+    diagnosticDct = DefaultDict{String, Vector{Any}}(Vector{Any})
+    for i in 1:length(modelNames)
+        model = modelNames[i];
+        diagnosticVal = modelDiagnostics[i];
+        push!(diagnosticDct[model], diagnosticVal);
+    end
+
+    ensembleResults = [];
+    uniqueModels = unique(modelNames);
+    for model in uniqueModels
+        push!(ensembleResults, mean(diagnosticDct[model]));
+    end
+    return ensembleResults, uniqueModels
+end
+
+modelNames = [split(model, "_")[2] for model in modelFileNames];
+overallMeanPerformanceByEnsemble, models = averageEnsembleMembers(overallMeanPerformance, modelNames);
+
+
+# TODO: this should be done with something similar to xarray with named dimensions!
+# This is just a quiuck & dirty solution, knowing that the last 4 models are from the same ensemble
+overallMeanIndependenceByEnsemble = overallMeanIndependence[1:3, 1:3];
+ccsm4 = mean(overallMeanIndependence[1:3, 4:7], dims=2);
+overallMeanIndependenceByEnsemble = hcat(overallMeanIndependenceByEnsemble, ccsm4);
+overallMeanIndependenceByEnsemble = vcat(overallMeanIndependenceByEnsemble, [ccsm4' 0]);
+
+# taken from climwip recipe!
+sigmaD = 0.5;
+sigmaS = 0.5;
+
+numerator = exp.(-(overallMeanPerformanceByEnsemble./sigmaD).^2);
+denominator = sum(exp.(-(overallMeanIndependenceByEnsemble./sigmaS).^2), dims=2); # (+1 in paper is from when model is compared to itself since exp(0)=1)
+
+weights = numerator ./ denominator
+weightsNormalized = weights ./ sum(weights)
+
+# redistributed the weight for the 4 ensemble members
+weightsComputed = vcat(weightsNormalized[1:3], fill(weightsNormalized[4]/4, 4));
+
+
+weightsWork = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "weights.nc"), "weight")
+
+
+@assert round.(weightsComputed, digits=precision) == round.(weightsWork, digits=precision)
