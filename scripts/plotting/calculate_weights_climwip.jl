@@ -45,7 +45,9 @@ end
 
 # Get processed data from work directory that was used for diagnostics
 data, models, modelRefs = loadIndependentDistMatrix(workDir, "overall_mean", "overall_mean");
-figMean = plotDistMatrices(data, "overall_mean", models, modelRefs)
+modelsAbbrev = [join(split(model, "_")[1:2], "_") for model in models]
+modelRefsAbbrev = [join(split(model, "_")[1:2], "_") for model in modelRefs]
+figMean = plotDistMatrices(data, "overall_mean", modelsAbbrev, modelRefsAbbrev)
 save(joinpath(targetDir, getCurrentTime() * "_independence_overall_mean.png"), figMean);
 
 data, models, modelRefs = loadIndependentDistMatrix(workDir, "pr_CLIM", "dpr_CLIM");
@@ -65,12 +67,14 @@ save(joinpath(targetDir, getCurrentTime() * "_performance_overall_mean.png"), fi
 
 
 data, models = loadPerformanceMetric(workDir, "tas_CLIM", "dtas_CLIM");
-figPerformTas = plotPerformanceMetric(data, "tas_CLIM", models)
+modelsAbbrev = [join(split(model, "_")[1:2], "_") for model in models]
+figPerformTas = plotPerformanceMetric(data, "tas_CLIM", modelsAbbrev);
 save(joinpath(targetDir, getCurrentTime() * "_performance_tas_CLIM.png"), figPerformTas);
 
 
 data, models = loadPerformanceMetric(workDir, "psl_CLIM", "dpsl_CLIM");
-figPerformPsl = plotPerformanceMetric(data, "psl_CLIM", models)
+modelsAbbrev = [join(split(model, "_")[1:2], "_") for model in models]
+figPerformPsl = plotPerformanceMetric(data, "psl_CLIM", modelsAbbrev)
 save(joinpath(targetDir, getCurrentTime() * "_performance_psl_CLIM.png"), figPerformPsl);
 
 

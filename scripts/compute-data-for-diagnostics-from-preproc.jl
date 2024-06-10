@@ -51,8 +51,9 @@ function loadModelData(climateVar::String)
     climateVarDir = climateVar * "_CLIM";
     preprocData, filenames = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, climateVarDir), climateVar, ["CMIP"], false);
     latitudes = NetCDF.ncread(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, climateVarDir, filenames[1]), "lat");
+    longitudes = NetCDF.ncread(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, climateVarDir, filenames[1]), "lon");
     preprocData3d = cat(preprocData..., dims=3);
-    return preprocData3d, latitudes
+    return preprocData3d, latitudes, longitudes
 end
 
 function getInfMask(data3d, dim=3)
@@ -90,9 +91,9 @@ function getModelDistMatrix(data3d, latitudes)
 end
 
 
-modelsTas, latitudes = loadModelData("tas");
-modelsPr, latitudes = loadModelData("pr");
-modelsPsl, latitudes = loadModelData("psl");
+modelsTas, latitudes, longitudes = loadModelData("tas");
+modelsPr, latitudes, longitudes = loadModelData("pr");
+modelsPsl, latitudes,longitudes = loadModelData("psl");
 
 matrixTas = getModelDistMatrix(modelsTas, latitudes);
 matrixPr = getModelDistMatrix(modelsPr, latitudes);

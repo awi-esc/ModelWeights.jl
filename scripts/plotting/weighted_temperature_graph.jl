@@ -37,7 +37,6 @@ function getInterpolatedWeightedQuantiles(quantiles, vals, weights=nothing)
     weightedQuantiles = reshape(weightedQuantiles, length(weightedQuantiles), 1);
     weightedQuantiles = (weightedQuantiles .- minimum(weightedQuantiles)) ./ maximum(weightedQuantiles);
     
-    #interp_linear = Interpolations.linear_interpolation(vec(weightedQuantiles), vals[indicesSorted]);
     interp_linear = Interpolations.linear_interpolation(vec(weightedQuantiles), 
                                                         vals[indicesSorted],
                                                         extrapolation_bc=Line()
