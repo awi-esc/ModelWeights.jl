@@ -5,7 +5,7 @@ In scripts/plotting, the data from the work-directory, which is output from ESMV
 
 In scripts/compute-data-for-diagnostics-from-preproc.jl, the data that was output from ESMValTool after the preprocessing (so in output folder 'preproc'), is used to reproduce the data that is eventually used (i.e. the data in the work-directory) for creating the plots. 
 
-## Getting started
+### Getting started
 To activate the climwipJulia project, do ```using Pkg; Pkg.activate(".");``` in the top-level directory. 
 This just activates the ClimWipJulia project, i.e. it makes it the active project.
 
@@ -26,13 +26,16 @@ On Albedo, I installed the latest version of Julia with juliaup. Make sure to us
 
 ### Difference paper vs. ESMValTool implementation
 
-|                    | ESMValTool - test_basic  | ESMValTool - brunner_20esd    [paper](https://github.com/lukasbrunner/ClimWIP)          |
+|                    | ESMValTool - test_basic  | ESMValTool - brunner_20esd                                   |
 | ------------------ | ------------------------ | --------------------------------------------------------------------------------------- |
 |performance weights | Climatology; tas, pr, psl| Anomaly (tasANOM, pslANOM), Standard deviation (tasSTD, pslSTD), Trend (tasTREND)       |
 |independence weights| Climatology; tas, psl    | Climatology; tas, psl                            |
-|observational data  | ERA5                     |   mean(ERA5, MERRA-2)                            |
+|observational data  | ERA5                     |  ERA5                         |
 |models              | subset of CMIP6 with constraints | all CMIP6 with constraints               |
 |mask|               | masks out sea and applied to specific region only | nothing, applied everywhere |
+
+
+In the recipe_climwip_brunner20esd.yml, two models are excluded that were used in the paper (CAMS-CSM1-0 and MPI-ESM1-2-HR (r2)) and only the ERA5 observerational data is used (see [documentation](https://docs.esmvaltool.org/en/latest/recipes/recipe_climwip.html#brunner-et-al-2020-recipe-and-example-independence-weighting)).
 
 Constraints for CMIP6 models: They must provide surface air temperature (tas), and sea level pressure (psl) for the historical, SSP1-2.6 and SSP5-8.5-experiments. 
 
@@ -54,3 +57,13 @@ contains the output from EsmValtool when running the recipe recipe_climwip_test_
 - src: directory contains Julia helper functions
 
 - plots-replicated-with-julia: directory that contains the reproduced figures
+
+
+
+### Conceptual stuff
+
+#### Independence and performance weights
+In the ESMVAlTool climwip recipes documentation, they say: 
+
+==Warning: Using only the independence weighting without any performance weighting might not always lead to meaningful results! The independence weighting is based on model output, which means that if a model is very different from all other models as well as the observations it will get a very high independence weight (and also total weight in absence of any performance weighting). This might not reflect the actual independence. It is therefore recommended to use weights based on both independence and performance for most cases.==
+
