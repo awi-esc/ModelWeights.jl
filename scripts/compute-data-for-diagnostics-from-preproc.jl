@@ -209,7 +209,7 @@ performanceWeightsWork = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_wei
 # 2.3 Computation of final weights based on performance and independence weights
 function averageEnsembleMembers(modelDiagnostics, modelNames)
     diagnosticDct = DefaultDict{String, Vector{Any}}(Vector{Any})
-    for i in 1:length(modelNames)
+    for i in eachindex(modelNames)
         model = modelNames[i];
         diagnosticVal = modelDiagnostics[i];
         push!(diagnosticDct[model], diagnosticVal);
