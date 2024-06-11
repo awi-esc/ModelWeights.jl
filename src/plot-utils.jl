@@ -1,16 +1,21 @@
 using ColorSchemes
 using Dates
 
+using CairoMakie    
+CairoMakie.activate!(type = "svg")
+
+
 function plotDistMatrices(distMat, climateVar, models, modelRefs)
+    size_inches = (8, 5)
+    size_pt = 72 .* size_inches
+    fig=Figure(resolution= size_pt, fontsize=12)
+
     xs = 1:length(models)
-    fig = Figure();
     ax = Axis(
         fig[1,1],
         xticks = (xs, models), 
         yticks = (xs, modelRefs),
         xticklabelrotation = pi/4,
-        xticklabelsize = 10,
-        yticklabelsize = 10,
         title = "Distance matrix for " * climateVar,
         yreversed = true
         )
@@ -21,12 +26,14 @@ end
 
 
 function plotPerformanceMetric(data, climateVar, models)
+    size_inches = (6.5, 6)
+    size_pt = 72 .* size_inches
+    fig=Figure(resolution= size_pt, fontsize=12)
+
     xs = 1:length(models)
-    fig = Figure();
     ax = Axis(fig[1,1], 
         xticks = (xs, models), 
         xticklabelrotation = pi/4,
-        xticklabelsize = 10,
         title = "RMS error for " * climateVar,
         xlabel = "Model", 
         ylabel = "RMS error " * climateVar
