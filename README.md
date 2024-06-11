@@ -26,12 +26,13 @@ On Albedo, I installed the latest version of Julia with juliaup. Make sure to us
 
 ### Difference paper vs. ESMValTool implementation
 
-|                    | ESMValTool               | [paper](https://github.com/lukasbrunner/ClimWIP) |
-| ------------------ | ------------------------ | ------------------------------------------------ |
-|performance weights | Climatology (tasCLIM)    | tasANOM, tasSTD, pslANOM, pslSTD, tasTREND       | 
-|independence weights| tasCLIM, pslCLIM         | tasCLIM, pslCLIM                                 |
+|                    | ESMValTool - test_basic  | ESMValTool - brunner_20esd    [paper](https://github.com/lukasbrunner/ClimWIP)          |
+| ------------------ | ------------------------ | --------------------------------------------------------------------------------------- |
+|performance weights | Climatology; tas, pr, psl| Anomaly (tasANOM, pslANOM), Standard deviation (tasSTD, pslSTD), Trend (tasTREND)       |
+|independence weights| Climatology; tas, psl    | Climatology; tas, psl                            |
 |observational data  | ERA5                     |   mean(ERA5, MERRA-2)                            |
 |models              | subset of CMIP6 with constraints | all CMIP6 with constraints               |
+|mask|               | masks out sea and applied to specific region only | nothing, applied everywhere |
 
 Constraints for CMIP6 models: They must provide surface air temperature (tas), and sea level pressure (psl) for the historical, SSP1-2.6 and SSP5-8.5-experiments. 
 
