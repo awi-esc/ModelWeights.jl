@@ -8,7 +8,7 @@ CairoMakie.activate!(type = "svg")
 function plotDistMatrices(distMat, climateVar, models, modelRefs)
     size_inches = (8, 5)
     size_pt = 72 .* size_inches
-    fig=Figure(resolution= size_pt, fontsize=12)
+    fig=Figure(size= size_pt, fontsize=12)
 
     xs = 1:length(models)
     ax = Axis(
@@ -28,7 +28,7 @@ end
 function plotPerformanceMetric(data, climateVar, models)
     size_inches = (6.5, 6)
     size_pt = 72 .* size_inches
-    fig=Figure(resolution= size_pt, fontsize=12)
+    fig=Figure(size= size_pt, fontsize=12)
 
     xs = 1:length(models)
     ax = Axis(fig[1,1], 
