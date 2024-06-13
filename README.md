@@ -26,11 +26,11 @@ On Albedo, I installed the latest version of Julia with juliaup. Make sure to us
 
 ### Difference paper vs. ESMValTool implementation
 
-|                    | ESMValTool - test_basic  | ESMValTool - brunner_20esd                                   |
-| ------------------ | ------------------------ | --------------------------------------------------------------------------------------- |
-|performance weights | Climatology; tas, pr, psl| Anomaly (tasANOM, pslANOM), Standard deviation (tasSTD, pslSTD), Trend (tasTREND)       |
-|independence weights| Climatology; tas, psl    | Climatology; tas, psl                            |
-|observational data  | ERA5                     |  ERA5                         |
+|                    | ESMValTool - test_basic               | ESMValTool - brunner_20esd                                   |
+| ------------------ | ------------------------------------- | --------------------------------------------------------------------------------------- |
+|performance weights | Climatology (tasCLIM, prCLIM, pslCLIM)| Anomaly (tasANOM, pslANOM), Standard deviation (tasSTD, pslSTD), Trend (tasTREND)       |
+|independence weights| Climatology; tas, psl                 | Climatology; tas, psl                            |
+|observational data  | ERA5                                  |  ERA5                         |
 |models              | subset of CMIP6 with constraints | all CMIP6 with constraints               |
 |mask|               | masks out sea and applied to specific region only | nothing, applied everywhere |
 
