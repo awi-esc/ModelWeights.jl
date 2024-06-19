@@ -48,7 +48,7 @@ In the paper,
 
 ###  Structure
 - recipe_climwip_test_basic_data:
-contains the output from EsmValtool when running the recipe recipe_climwip_test_basic.
+contains the output from EsmValTool when running the recipe recipe_climwip_test_basic.
 
 - scripts:
     - plotting: directory that contains Julia scripts that generate the figures 
