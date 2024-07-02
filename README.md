@@ -17,14 +17,17 @@ There is also Pkg.resolve(). This *updates* the dependencies, i.e. if later vers
 
 On Albedo, I installed the latest version of Julia with juliaup. Make sure to use this one by setting the Julia: executablePath in the settings.json file to the respective path.
 
-First activate project:
+Activate and instantiate project by running the following commands from the julia REPL:
 ```
-julia -e 'using Pkg; Pkg.activate("."); Pkg.update(); Pkg.instantiate();'
+using Pkg; 
+Pkg.activate("."); 
+Pkg.update(); 
+Pkg.instantiate();'
 ```
-
 Alternatively, you can go to the julia package-command interface (by typing ']' in the Julia REPL) where you should see the name of the julia environment in parentheses in the beginning of the line (like in a conda environment) and run 'update' and/or 'instantiate'. 
 
-Example command for running a specific script:
+
+Instead of using 'activate', you can specify the project on startup using --project='', e.g. for running a specific script:
 ```
 julia --project=. scripts/plotting/calculate_weights_climwip.jl
 ```
