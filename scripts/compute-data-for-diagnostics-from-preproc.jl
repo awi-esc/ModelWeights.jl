@@ -255,7 +255,7 @@ weightsNormalized = weights ./ sum(weights)
 weightsComputed = vcat(weightsNormalized[1:3], fill(weightsNormalized[4]/4, 4));
 
 
-weightsWork = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "weights.nc"), "weight")
+weightsWork = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "weights.nc"), "weight");
 
 
 @assert round.(weightsComputed, digits=precision) == round.(weightsWork, digits=precision)

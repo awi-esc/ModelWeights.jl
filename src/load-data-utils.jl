@@ -2,8 +2,15 @@ using NetCDF
 
 PATH_TO_WORK_DIR = joinpath(@__DIR__, "..", "recipe_climwip_test_basic_data", "work")
 PATH_TO_PREPROC_DIR = joinpath(@__DIR__, "..", "recipe_climwip_test_basic_data", "preproc")
+"""
+    loadNCdataInDir(path2Dir, climateVar[, dataIncluded=[], addHorizontal=true])
 
-function loadNCdataInDir(path2Dir, climateVar, dataIncluded = [], addHorizontal=true) 
+Loads all .nc files inside the directory loacated at 'path2Dir' into a single Vector.
+
+If length(dataIncluded) != 0 only those .nc files are considered whose filenames contain all elements of dataIncluded, 
+e.g. if dataIncluded=['ERA5'] only ERA5 data will be included (files with ERA5 in their filename).
+"""
+function loadNCdataInDir(path2Dir, climateVar, dataIncluded = []) 
     data = []
     sources = []
     for (root, dirs, files) in walkdir(path2Dir)
@@ -26,12 +33,6 @@ function loadNCdataInDir(path2Dir, climateVar, dataIncluded = [], addHorizontal=
                 end
             end
         end
-    end
-    # at this point data is a n-element Vector, whose elements each are k-element Vectors
-    # data... (splat operator) will unpack the n-element Vector and hcat will concatenate them horitzontally, i.e. 
-    # along dimension 2 (i.e. column-wise) so the result is a k x n matrix
-    if addHorizontal
-        data = hcat(data...);
     end
     return data, sources
 end
