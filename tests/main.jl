@@ -4,7 +4,8 @@ using NCDatasets
 
 # TODO: add real tests!
 
-pathToPreprocDir = "/Users/brgrus001/SimilarityWeights/recipe_climwip_test_basic_data/preproc/calculate_weights_climwip";
+pathToPreprocDir = "recipe_climwip_test_basic_data/preproc/calculate_weights_climwip";
+
 variables_long = ["Near-Surface Air Temperature", "Precipitation"];
 climateVariables = ["tas", "pr"];
 diagnostic = "CLIM";
