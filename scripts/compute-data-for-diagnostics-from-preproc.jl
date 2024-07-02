@@ -7,10 +7,11 @@ include(joinpath(@__DIR__, "..", "src", "load-data-utils.jl"));
 # 1. Preprocessed data for weighted_temperature_graph diagnostics
 path2preprocWeightedTempGraph = joinpath(PATH_TO_PREPROC_DIR, "weighted_temperature_graph", "tas")
 preprocTempGraph, modelFileNames = loadNCdataInDir(path2preprocWeightedTempGraph, "tas", []);
+preprocTempGraph = hcat(preprocTempGraph...);
 
 # get the stored data from work-directory that was used in diagnostics
 path2TempAnomalies = joinpath(PATH_TO_WORK_DIR,  "weighted_temperature_graph", "weighted_temperature_graph", "temperature_anomalies.nc");
-tempAnomalies = NetCDF.ncread(path2TempAnomalies, "tas")
+tempAnomalies = NetCDF.ncread(path2TempAnomalies, "tas");
 
 # the data in the preproc directory should be identical to the data stored in work directory
 @assert tempAnomalies == preprocTempGraph
@@ -38,8 +39,13 @@ timeBndsSingleModel = NetCDF.ncread(pathSingleModel, "time_bnds");
 # observational data
 # mean across time bounds had already been computed, therefore for each lat x lon - pair just one value; result is matrix of size (lon x lat) 
 preprocERA5Tas, _ = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, "tas_CLIM"), "tas", ["ERA5"]);
+# here preprocERA5Tas is an n-element Vector (n=1), whose elements each are Matrices (of size axb) 
+# data... (splat operator) will unpack the n-element Vector and hcat will concatenate them horitzontally, i.e. 
+# along dimension 2 (i.e. column-wise) so the result is n horizontally stacked matrices, yielding a big matrix with a rows and bxn columns.
+preprocERA5Tas = hcat(preprocERA5Tas...);
 size(preprocERA5Tas)
-# ncols = size(dataSingleModel)[2]
+
+## ncols = size(dataSingleModel)[2]
 # nbModels = Int(size(preprocTas)[2] / ncols)
 latitudesAll, _ = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, "tas_CLIM"), "lat", ["CMIP"])
 latitudesAll, _ = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, "pr_CLIM"), "lat", ["CMIP"])
@@ -49,7 +55,7 @@ latitudes = NetCDF.ncread(pathSingleModel, "lat")
 
 function loadModelData(climateVar::String)
     climateVarDir = climateVar * "_CLIM";
-    preprocData, filenames = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, climateVarDir), climateVar, ["CMIP"], false);
+    preprocData, filenames = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, climateVarDir), climateVar, ["CMIP"]);
     latitudes = NetCDF.ncread(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, climateVarDir, filenames[1]), "lat");
     longitudes = NetCDF.ncread(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, climateVarDir, filenames[1]), "lon");
     preprocData3d = cat(preprocData..., dims=3);
