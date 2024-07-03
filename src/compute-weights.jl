@@ -4,17 +4,23 @@ using Glob
 using Statistics
 
 """
-    loadPreprocData(pathToPreprocData, climateVar[, diagnostic=CLIM, dataIncluded=[])
+    loadPreprocData(pathToPreprocDir, climateVar, diagnostic=CLIM, dataIncluded=[])
 
 Loads all .nc files (each model is a different .nc file) for variable climateVar and 'diagnostic' inside the respective subdirectory (climateVar_diagnostic)
-of the directory located at 'path2PreprocData' into a single DimArray with dimensions lon (longitude), lat (latitude) and model. 
+of the directory located at 'path2PreprocDir' (assuming data had been preprocessed by ESMValTool) into a single DimArray with dimensions lon (longitude), lat (latitude) and model. 
 
 If length(dataIncluded) != 0 only those .nc files are considered whose filenames contain all elements of dataIncluded, 
 e.g. if dataIncluded=['ERA5'] only ERA5 data will be included (files with ERA5 in their filename).
 
+'pathToPreprocDir': path to directory with preprocessed data from ESMValTool
+'climateVariables': Array of short names of considered variables (e.g. tas, psl)
+'diagnostic': the name of the diagnotsic used by ESMValTool
+'included': Array that contains Strings that must occur in filenames of loaded data. If only a certain model should be loaded, this is specified here, e.g. 
+            ['AWI-ESM-1-1-LR'] would load only data from this particular model.
+
 returns a dictionary from climateVariable to DimArray with respective data.
 """
-function loadPreprocData(pathToPreprocDir::String, climateVariables::Vector{String}, diagnostic::String, included::Vector{String}=[])
+function loadPreprocData(pathToPreprocDir::String, climateVariables::Vector{String}, diagnostic::String="CLIM", included::Vector{String}=[])
     
     dataAllVars = Dict{String, DimArray}();
     for climVar in climateVariables
