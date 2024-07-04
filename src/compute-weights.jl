@@ -76,10 +76,8 @@ function getModelDistances(data::DimArray)
 
     # area weights differ across latitudes (because of the earth being a sphere)
     areaWeights = cos.(deg2rad.(latitudes))
-    dim = Dim{:lat}(Array(latitudes));
-    areaWeights = DimArray(areaWeights, dim);
+    areaWeights = DimArray(areaWeights, Dim{:lat}(Array(latitudes)));
     matrixS = zeros(nbModels, nbModels);
-    # apply mask: ignore entries where at least one model has infinite value
     models = dims(data, :model);
     
     for i = 1 : nbModels
@@ -108,14 +106,21 @@ end
 """
     weightDistMatrix(distMatrix::DimArray{T}, weight::T) where T<:Number
 
-Normalizes the matrix by its mean and multiplies each entry by 'weight'.
+Normalizes the matrix by its median and multiplies each entry by 'weight'.
 """
-function normalizeAndWeightDistMatrix(distMatrix::DimArray{T}, weight::T=1) where T<:Number
-    distMatrix = distMatrix ./ median(distMatrix);     # normalize distance matrix
+function normalizeAndWeightDistMatrix(distMatrix::Union{DimVector, DimArray{T}}, weight::T=1) where T<:Number
+    distMatrix = distMatrix ./ median(distMatrix); 
     weightedDistances = weight .* distMatrix;
     return weightedDistances
 end
 
+
+function normalizeWeightsVariables!(weightsVars::Dict{String, Number})
+    total = sum(values(weightsVars))
+    for key in keys(weightsVars)
+        weightsVars[key] /= total 
+    end
+end
 
 """
     calculateWeights(data::DimArray)
@@ -129,24 +134,83 @@ returns a DimArray (model1, model2) with the computed independence weights.
 """
 function getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{String, Number}=nothing)
     if !isnothing(weightsVars)
-        # normalize weights for contribution of variables to make them sum up to 1
-        total = sum(values(weightsVars))
-        for key in keys(weightsVars)
-            weightsVars[key] /= total 
-        end
+        normalizeWeightsVariables!(weightsVars);
     end
+
     weightedDistMatrices = [];
     for climVar in keys(data)
         distances = getModelDistances(data[climVar]);
-        if isnothing(weightsVars)
-            weight = 1;
-        else
-            weight = weightsVars[climVar];
-        end
+        weight = ifelse(isnothing(weightsVars), 1, weightsVars[climVar]);
         weightedDistances = normalizeAndWeightDistMatrix(distances, weight);
         push!(weightedDistMatrices, weightedDistances);
     end
-    independenceWeights = reduce(+, weightedDistMatrices);
-    return independenceWeights
+    return  reduce(+, weightedDistMatrices);
 end
 
+"""
+    getModelDataDist(models, observations)
+
+computes the distance (areaweighted rms error) between model predictions and observations. 
+
+"""
+function getModelDataDist(models::DimArray, observations::DimArray)      
+    latitudes = DimensionalData.dims(observations, :lat);
+    areaWeights = cos.(deg2rad.(latitudes));
+
+    distances = [];
+    model_names = [];
+    for (i, model_i) in enumerate(eachslice(models; dims=:model))
+        # indexing using DimensionalData.jl: model_i = models[model=1]
+        model_name = dims(models, :model)[i]  # Access the name of the current model
+
+        maskNbMissing = (ismissing.(observations) + ismissing.(model_i)) .> 0; # observations or model is missing (or both)
+        maskedObs = deepcopy(observations);
+        maskedObs = dropdims(ifelse.(maskNbMissing .> 0, 0, maskedObs), dims=:model);
+
+        weightMatrix = repeat(areaWeights', length(DimensionalData.dims(observations, :lon)), 1);  
+        weightMatrix = ifelse.(maskNbMissing .> 0, 0, weightMatrix); 
+
+        masked_model = ifelse.(maskNbMissing .> 0, 0, model_i);
+
+        sqDiff = (masked_model .- maskedObs).^2;
+
+        weightedValues = weightMatrix .* sqDiff;
+        areaWeightedMean = sum(skipmissing(weightedValues)) ./ sum(weightMatrix);
+        distance = sqrt(areaWeightedMean);
+
+        push!(model_names, model_name);
+        push!(distances, distance);
+    end
+    
+    return DimArray(distances, (Dim{:model}(model_names)))
+end
+
+
+function getPerformanceWeights(modelData::Dict{String, DimArray}, obsData::Dict{String, DimArray}, weightsVars::Dict{String, Number}=nothing)
+    if !isnothing(weightsVars)
+        normalizeWeightsVariables!(weightsVars);
+    end
+    variables = keys(modelData);
+    weightedDistMatrices = [];
+
+    for climVar in variables
+        distances = getModelDataDist(modelData[climVar], obsData[climVar]);
+        weight = ifelse(isnothing(weightsVars), 1, weightsVars[climVar]);
+
+        weightedDistances = normalizeAndWeightDistMatrix(distances, weight);
+        # just use the actual model name not all the other information stored in the model dimension
+        modelNames = map((x) -> split(x, "_")[2], dims(weightedDistances, :model));
+        weightedDistances = DimArray(Array(weightedDistances),(Dim{:model}(modelNames)))
+        push!(weightedDistMatrices, weightedDistances);
+    end
+    
+    weightedDistances = cat(weightedDistMatrices..., dims=2);
+    weightedDistances = DimArray(Array(weightedDistances), (Dim{:model}(Array(dims(weightedDistances, :model))), Dim{:variable}(collect(variables)))); 
+    weights = reduce(+, weightedDistances, dims=:variable);
+
+    weightsGrouped = mean.(groupby(weights, dims(weights, :model)));
+    indices = .!isnan.(Array(weightsGrouped));
+
+    modelNames = Array(dims(weightsGrouped, :model))
+    return DimArray(Array(weightsGrouped)[indices], Dim{:model}(modelNames[indices]))
+end
