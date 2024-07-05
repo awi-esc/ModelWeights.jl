@@ -20,7 +20,7 @@ weights = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
 Array(weights)
 
 # test
-nbDigits = 5;
+nbDigits = 6;
 
 ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_overall_mean.nc"), "r");
 independenceTrue = round.(ds["overall_mean"][:,:], digits=nbDigits);
@@ -32,14 +32,10 @@ independenceTrue .== independenceComputed
 ########################################
 # 2. Performance weights
 obsData = SimilarityWeights.loadPreprocData(pathToPreprocDir, climateVariables, diagnostic, ["ERA5"]);
-# Make sure to use a copy of the observational data, otherwise, it will be modified within the function by applying the mask!!
 climVar = climateVariables[2];
 weightsVars = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
 
-
-models = modelData[climVar];
-observations = deepcopy(obsData[climVar]);
-performanceDists = SimilarityWeights.getModelDataDist(models, observations);
+performanceDists = SimilarityWeights.getModelDataDist(modelData[climVar], obsData[climVar]);
 # compare them to data from work dir
 ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_" * climVar * "_CLIM.nc"));
 performanceDistTrue = ds["d" * climVar * "_CLIM"];

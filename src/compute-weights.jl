@@ -86,31 +86,22 @@ function getModelDistances(data::DimArray)
     # only take values where none (!) of the models has infinite values!! (Not just the two that are compared to one another)
     nbModels = length(dims(data, :model));
     maskMissing = dropdims(any(ismissing, data, dims=:model), dims=:model);
-    latitudes = dims(data, :lat);
+    # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
+    data = deepcopy(data);
 
-    # area weights differ across latitudes (because of the earth being a sphere)
-    #areaWeights = cos.(deg2rad.(latitudes))
-    #areaWeights = DimArray(areaWeights, Dim{:lat}(Array(latitudes)));
-    matrixS = zeros(nbModels, nbModels);
-    models = dims(data, :model);
-    
-    for i = 1 : nbModels
-        model_i_name = models[i];
-        model_i = data[model=At(model_i_name)];
+    matrixS = zeros(nbModels, nbModels);    
+    for (i, model_i) in enumerate(eachslice(data; dims=:model))
         model_i[maskMissing .== 1] .= 0;
         
-        for j = (i + 1) : nbModels
-            model_j_name = models[j];
-            model_j = data[model=At(model_j_name)];
+        for (j, model_j) in enumerate(eachslice(data[:, :, i+1:end]; dims=:model))
+            idx = j + i;
             model_j[maskMissing .== 1] .= 0;
-
             s_ij = areaWeightedMSE(model_i, model_j, maskMissing);
-            matrixS[i,j] = s_ij
+            matrixS[i, idx] = s_ij
         end
     end
 
     symDistMatrix = matrixS .+ matrixS';
-
     dim = Array(dims(data, :model));
     return DimArray(symDistMatrix, (Dim{:model1}(dim), Dim{:model2}(dim)));
 end
@@ -148,7 +139,6 @@ function getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{
     if !isnothing(weightsVars)
         normalizeWeightsVariables!(weightsVars);
     end
-
     weightedDistMatrices = [];
     for climVar in keys(data)
         distances = getModelDistances(data[climVar]);
@@ -166,6 +156,9 @@ computes the distance (areaweighted rms error) between model predictions and obs
 
 """
 function getModelDataDist(models::DimArray, observations::DimArray)      
+    # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
+    models = deepcopy(models);
+    observations = deepcopy(observations);
     distances = [];
     model_names = [];
     for (i, model_i) in enumerate(eachslice(models; dims=:model))
@@ -204,13 +197,16 @@ function getPerformanceWeights(modelData::Dict{String, DimArray}, obsData::Dict{
         push!(weightedDistMatrices, weightedDistances);
     end
     
-    weightedDistances = cat(weightedDistMatrices..., dims=2);
-    weightedDistances = DimArray(Array(weightedDistances), (Dim{:model}(Array(dims(weightedDistances, :model))), Dim{:variable}(collect(variables)))); 
-    weights = reduce(+, weightedDistances, dims=:variable);
+    weightsByVar = cat(weightedDistMatrices..., dims=2);
+    weightsByVar = DimArray(Array(weightsByVar), (Dim{:model}(Array(dims(weightsByVar, :model))), Dim{:variable}(collect(variables)))); 
+    weights = reduce(+, weightsByVar, dims=:variable);
 
     weightsGrouped = mean.(groupby(weights, dims(weights, :model)));
     indices = .!isnan.(Array(weightsGrouped));
-
     modelNames = Array(dims(weightsGrouped, :model))
     return DimArray(Array(weightsGrouped)[indices], Dim{:model}(modelNames[indices]))
+end
+
+function combineWeights(performanceWeights, independenceWeights)
+
 end
