@@ -57,7 +57,21 @@ function loadPreprocData(pathToPreprocDir::String, climateVariables::Vector{Stri
     return dataAllVars
 end
 
+function areaWeightedMSE(m1::DimArray, m2::DimArray, mask::DimArray)
+    latitudes = dims(m1, :lat);
+    areaWeights = cos.(deg2rad.(latitudes));
+    areaWeights = DimArray(areaWeights, Dim{:lat}(Array(latitudes)));
 
+    sqDiff = (m1 .- m2).^2;
+    weightedValues = areaWeights' .* sqDiff;
+
+    weightMatrix = repeat(areaWeights', length(DimensionalData.dims(m1, :lon)), 1);  
+    weightMatrix = ifelse.(mask .== 1, 0, weightMatrix); 
+    normalization = sum(weightMatrix);
+    
+    mse = sqrt(sum(skipmissing(weightedValues)./normalization));
+    return mse
+end
 
 """
     getModelDistMatrix(data::DimArray)
@@ -75,8 +89,8 @@ function getModelDistances(data::DimArray)
     latitudes = dims(data, :lat);
 
     # area weights differ across latitudes (because of the earth being a sphere)
-    areaWeights = cos.(deg2rad.(latitudes))
-    areaWeights = DimArray(areaWeights, Dim{:lat}(Array(latitudes)));
+    #areaWeights = cos.(deg2rad.(latitudes))
+    #areaWeights = DimArray(areaWeights, Dim{:lat}(Array(latitudes)));
     matrixS = zeros(nbModels, nbModels);
     models = dims(data, :model);
     
@@ -90,9 +104,7 @@ function getModelDistances(data::DimArray)
             model_j = data[model=At(model_j_name)];
             model_j[maskMissing .== 1] .= 0;
 
-            sqDiff = (model_i .- model_j).^2;
-            values = areaWeights' .* sqDiff;
-            s_ij = sqrt(sum(values));
+            s_ij = areaWeightedMSE(model_i, model_j, maskMissing);
             matrixS[i,j] = s_ij
         end
     end
@@ -154,9 +166,6 @@ computes the distance (areaweighted rms error) between model predictions and obs
 
 """
 function getModelDataDist(models::DimArray, observations::DimArray)      
-    latitudes = DimensionalData.dims(observations, :lat);
-    areaWeights = cos.(deg2rad.(latitudes));
-
     distances = [];
     model_names = [];
     for (i, model_i) in enumerate(eachslice(models; dims=:model))
@@ -167,21 +176,12 @@ function getModelDataDist(models::DimArray, observations::DimArray)
         maskedObs = deepcopy(observations);
         maskedObs = dropdims(ifelse.(maskNbMissing .> 0, 0, maskedObs), dims=:model);
 
-        weightMatrix = repeat(areaWeights', length(DimensionalData.dims(observations, :lon)), 1);  
-        weightMatrix = ifelse.(maskNbMissing .> 0, 0, weightMatrix); 
-
-        masked_model = ifelse.(maskNbMissing .> 0, 0, model_i);
-
-        sqDiff = (masked_model .- maskedObs).^2;
-
-        weightedValues = weightMatrix .* sqDiff;
-        areaWeightedMean = sum(skipmissing(weightedValues)) ./ sum(weightMatrix);
-        distance = sqrt(areaWeightedMean);
+        maskedModel = ifelse.(maskNbMissing .> 0, 0, model_i);
+        mse = areaWeightedMSE(maskedModel, maskedObs, maskNbMissing);
 
         push!(model_names, model_name);
-        push!(distances, distance);
+        push!(distances, mse);
     end
-    
     return DimArray(distances, (Dim{:model}(model_names)))
 end
 
@@ -198,7 +198,7 @@ function getPerformanceWeights(modelData::Dict{String, DimArray}, obsData::Dict{
         weight = ifelse(isnothing(weightsVars), 1, weightsVars[climVar]);
 
         weightedDistances = normalizeAndWeightDistMatrix(distances, weight);
-        # just use the actual model name not all the other information stored in the model dimension
+        # just use the actual model name not all the other information stored in the model dimension for averaging over ensemble
         modelNames = map((x) -> split(x, "_")[2], dims(weightedDistances, :model));
         weightedDistances = DimArray(Array(weightedDistances),(Dim{:model}(modelNames)))
         push!(weightedDistMatrices, weightedDistances);
