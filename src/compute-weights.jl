@@ -174,7 +174,7 @@ function getModelDataDist(models::DimArray, observations::DimArray)
         push!(model_names, model_name);
         push!(distances, mse);
     end
-    return DimArray(distances, (Dim{:model}(model_names)))
+    return DimArray(distances, (Dim{:model}(model_names)), metadata=models.metadata)
 end
 
 
@@ -191,18 +191,23 @@ function getPerformanceWeights(modelData::Dict{String, DimArray}, obsData::Dict{
 
         weightedDistances = normalizeAndWeightDistMatrix(distances, weight);
         # just use the actual model name not all the other information stored in the model dimension for averaging over ensemble
-        modelNames = map((x) -> split(x, "_")[2], dims(weightedDistances, :model));
-        weightedDistances = DimArray(Array(weightedDistances),(Dim{:model}(modelNames)))
+        #modelNames = map((x) -> split(x, "_")[2], dims(weightedDistances, :model));
+        #weightedDistances = DimArray(Array(weightedDistances),(Dim{:model}(modelNames)))
         push!(weightedDistMatrices, weightedDistances);
     end
     
-    weightsByVar = cat(weightedDistMatrices..., dims=2);
-    weightsByVar = DimArray(Array(weightsByVar), (Dim{:model}(Array(dims(weightsByVar, :model))), Dim{:variable}(collect(variables)))); 
+    #weightsByVar = cat(weightedDistMatrices..., dims=2);
+    # TODO: here metadata has to be combined correctly
+    weightsByVar = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
+    #dims = (Dim{:model}(sources))
+    #weightsByVar = DimArray(Array(weightsByVar), (Dim{:model}(Array(dims(weightsByVar, :model))), Dim{:variable}(collect(variables)))); 
     weights = reduce(+, weightsByVar, dims=:variable);
 
+    # TODO: here metadata gets lost, just groups are retained
     weightsGrouped = mean.(groupby(weights, dims(weights, :model)));
     indices = .!isnan.(Array(weightsGrouped));
     modelNames = Array(dims(weightsGrouped, :model))
+    # TODO: in last step add metadata!
     return DimArray(Array(weightsGrouped)[indices], Dim{:model}(modelNames[indices]))
 end
 

@@ -1,8 +1,5 @@
 include("data.jl")
-using NCDatasets
 using LinearAlgebra
-
-NB_DIGITS = 5
 
 @testset "Testset model-model" begin
     modelData =  SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas"], "CLIM", ["CMIP"]);
