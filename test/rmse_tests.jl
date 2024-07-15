@@ -5,6 +5,12 @@ using LinearAlgebra
     modelData =  SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas"], "CLIM", ["CMIP"]);
     modelDistances = SimilarityWeights.getModelDistances(modelData["tas"])
     
+    # make symmetrical matrix
+    mat = Array(modelDistances);
+    symDistMatrix = mat .+ mat';
+    dim = Array(dims(modelData["tas"], :model));
+    modelDistancesSym = DimArray(symDistMatrix, (Dim{:model1}(dim), Dim{:model2}(dim)));
+
     expected = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_tas_CLIM.nc"))["dtas_CLIM"];
     
     # in climwip recipe, the independence model to model distances are not normalized wrt to area weights. 
@@ -12,10 +18,10 @@ using LinearAlgebra
     # by the median value across models. So that  the unnormalized values get later normalized by a median
     # that is just a multiple of the median value that the normalized data gets later normalized with. Which then 
     # yields the same result.
-    diffFactor = Array(expected)./Array(modelDistances);
+    diffFactor = Array(expected)./Array(modelDistancesSym);
     # take care of diagonal values which will be NaN as divided by 0
     d = diffFactor[1,2]
-    for i in 1:size(modelDistances)[1]
+    for i in 1:size(modelDistancesSym)[1]
         diffFactor[i,i] = d
     end
     # the expected and resulting distances should therefore differ only up to a certain factor. 

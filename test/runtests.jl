@@ -9,4 +9,8 @@ using Test
     @testset "distance matrices" begin
         include("rmse_tests.jl")
     end
+
+    @testset "weights" begin
+        include("weights_tests.jl")
+    end
 end
