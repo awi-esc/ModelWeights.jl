@@ -263,7 +263,7 @@ Note that, the given weights are summarized wrt ensemble models, s.t. for each e
 'sigmaD': Nb. btw. 0 and 1; contribution of performance metric 
 'sigmaS': Nb. btw. 0 and 1; contribution of independence metric
 """
-function combineWeights(performanceWeights::DimArray, independenceWeights::DimArray, sigmaD::Number=0.5, sigmaS::Number=0.5)
+function combineWeights(performanceWeights::DimArray, independenceWeights::DimArray, sigmaD::Number, sigmaS::Number)
     
     wP = averageEnsembleVector(performanceWeights);
     wI = averageEnsembleMatrix(independenceWeights);
@@ -275,4 +275,23 @@ function combineWeights(performanceWeights::DimArray, independenceWeights::DimAr
     weights = performance ./ independence;
     weightsNormalized = weights ./ sum(weights);
     return weightsNormalized
+end
+
+"""
+    getWeights(modelData::DimArray, obsData::DimArray, sigmaD::Number=0.5, sigmaS::Number=0.5, 
+               weightsPerform::Dict{String, Number}=nothing, 
+               weightsIndep::Dict{String, Number}=nothing
+               )
+"""
+function getWeights(modelData::Dict{String, DimArray}, 
+                    obsData::Dict{String, DimArray}, 
+                    sigmaD::Number=0.5, 
+                    sigmaS::Number=0.5,
+                    weightsPerform::Dict{String, Number}=nothing, 
+                    weightsIndep::Dict{String, Number}=nothing
+    )
+    wP = getPerformanceWeights(modelData, obsData, weightsPerform);
+    wI = getIndependenceWeights(modelData, weightsIndep);
+    weights = combineWeights(wP, wI, sigmaD, sigmaS)
+    return weights
 end

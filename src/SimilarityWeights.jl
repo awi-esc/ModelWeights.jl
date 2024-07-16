@@ -1,7 +1,7 @@
 module SimilarityWeights
 
-include("compute-weights.jl")
+include("weights.jl")
 
-export loadPreprocData, getIndependenceWeights, getPerformanceWeights
+export loadPreprocData, getIndependenceWeights, getPerformanceWeights, getWeights
 
 end

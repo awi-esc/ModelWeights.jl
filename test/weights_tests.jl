@@ -66,3 +66,28 @@ end
 
     @test all((x)-> x==1, round.(expected[1:3], digits=nb_digits) .== round.(weightsEnsemble[1:3], digits=nb_digits));
 end
+
+
+@testset "Testset function getWeights" begin
+    nb_digits = 2;
+    modelData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["CMIP"]);
+    obsData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["ERA5"]);
+    
+    weightsVarsPerform = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
+    weightsVarsIndep = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
+    weights = SimilarityWeights.getWeights(modelData, obsData, 0.5, 0.5, weightsVarsPerform, weightsVarsIndep);
+
+    ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "weights.nc"));
+    expected = Array(ds["weight"]);
+
+    #last four entries are from one ensemble 
+    weightCCSM4 = weights[4]/4;
+    result = [Array(weights[1:3]); repeat([weightCCSM4], 4)]
+
+    models = [Array(dims(weights, :model)); repeat(["CCSM4"], 3)];
+    weightsEnsemble = DimArray(result, (Dim{:model}(models)))
+
+    @test all((x)-> x==1, round.(expected[1:3], digits=nb_digits) .== round.(weightsEnsemble[1:3], digits=nb_digits));
+end
+
+
