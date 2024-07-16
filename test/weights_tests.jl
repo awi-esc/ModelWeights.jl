@@ -32,6 +32,7 @@ end
     # weights = SimilarityWeights.getIndependenceWeights(MODEL_DATA, VARIABLE_CONTRIBUTIONS["independence"]);
     weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
     modelData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["CMIP"]);
+
     weights = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
     weights = round.(Array(weights), digits=NB_DIGITS);
 
@@ -42,16 +43,26 @@ end
 end
 
 
-# @testset "Testset combined weights" begin
-#     # weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
-#     wI = SimilarityWeights.getIndependenceWeights(MODEL_DATA, VARIABLE_CONTRIBUTIONS["independence"]);
+@testset "Testset combined weights" begin
+    nb_digits = 2;
+    modelData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["CMIP"]);
+    weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
+    wI = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
 
-#     # weightsVars = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
-#     wP = SimilarityWeights.getPerformanceWeights(MODEL_DATA, OBS_DATA, VARIABLE_CONTRIBUTIONS["performance"]);
-#     weights = SimilarityWeights.combineWeights(wP, wI, 0.5, 0.5)
+    obsData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["ERA5"]);
+    weightsVars = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
+    wP = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars);
+    weights = SimilarityWeights.combineWeights(wP, wI, 0.5, 0.5)
 
-#     ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "weights.nc"));
-#     expected = ds["weight"];
+    ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "weights.nc"));
+    expected = Array(ds["weight"]);
 
-#     @test round.(weights, digits=NB_DIGITS) == round.(expected, digits=NB_DIGITS)
-# end
+    #last four entries are from one ensemble 
+    weightCCSM4 = weights[4]/4;
+    result = [Array(weights[1:3]); repeat([weightCCSM4], 4)]
+
+    models = [Array(dims(weights, :model)); repeat(["CCSM4"], 3)];
+    weightsEnsemble = DimArray(result, (Dim{:model}(models)))
+
+    @test all((x)-> x==1, round.(expected[1:3], digits=nb_digits) .== round.(weightsEnsemble[1:3], digits=nb_digits));
+end

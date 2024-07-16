@@ -53,7 +53,8 @@ performanceTrueByEnsemble = round.(performanceTrueByEnsemble, digits = nbDigits)
 
 @assert !any((x) -> x!=1, performanceTrue .== performanceComputed)
 
+
+# #### Combine weights
+weights = SimilarityWeights.combineWeights(performanceWeights, independenceWeights, 0.5, 0.5)
+
 println("finished")
-
-
-

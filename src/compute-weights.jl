@@ -246,10 +246,10 @@ function averageEnsembleMatrix(distances::DimArray)
         dimModel1 = Array(dims(avg, :model1))
         ensemble[model1=At(dimModel1), model2=At(dimModel2)] = avg
     end
-
-    mat = Array(ensemble);
-    symDistMatrix = DimArray(mat .+ mat', dims(ensemble));
-    return symDistMatrix
+    return ensemble
+    # mat = Array(ensemble);
+    # symDistMatrix = DimArray(mat .+ mat', dims(ensemble));
+    # return symDistMatrix
 end
 
 """
