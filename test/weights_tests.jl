@@ -16,7 +16,8 @@ include("data.jl")
     modelData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["CMIP"]);
     obsData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["ERA5"]);
     
-    weights = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars);
+    weightsByVars = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars);
+    weights = SimilarityWeights.summarizeWeightsAcrossVars(weightsByVars);
     weightsRounded = round.(Array(weights), digits=NB_DIGITS);
 
     #weightsEnsemble = SimilarityWeights.averageEnsembleVector(weights);
@@ -33,7 +34,8 @@ end
     weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
     modelData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["CMIP"]);
 
-    weights = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
+    weightsByVars = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
+    weights = SimilarityWeights.summarizeWeightsAcrossVars(weightsByVars);
     weights = round.(Array(weights), digits=NB_DIGITS);
 
     ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_overall_mean.nc"), "r");
@@ -47,11 +49,14 @@ end
     nb_digits = 2;
     modelData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["CMIP"]);
     weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
-    wI = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
+    wI_vars = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
+    wI = SimilarityWeights.summarizeWeightsAcrossVars(wI_vars);
+
 
     obsData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["ERA5"]);
     weightsVars = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
-    wP = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars);
+    wP_vars = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars);
+    wP = SimilarityWeights.summarizeWeightsAcrossVars(wP_vars);
     weights = SimilarityWeights.combineWeights(wP, wI, 0.5, 0.5)
 
     ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "weights.nc"));

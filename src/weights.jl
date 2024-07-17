@@ -139,7 +139,7 @@ Computes an independence weight for each model in 'data'. The weights result fro
 'data' is a Dictionary mapping from the climate variable (e.g. tas) to a DimArray with the corresponding data (lon, lat, model). 
 'weightsVars' is a Dictionary mapping from the climate variable to a number which is the weight of how much the respective variable contributes to the computed independenceWeight.
 
-returns a DimArray (model1, model2) with the computed independence weights.
+returns a DimArray (model1, model2, variable) with the computed independence weights, seperately for each considered variable.
 """
 function getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{String, Number}=nothing)
     weights = copy(weightsVars);
@@ -147,13 +147,15 @@ function getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{
         normalizeWeightsVariables!(weights);
     end
     weightedDistMatrices = [];
-    for climVar in keys(data)
+    variables = keys(data)
+    for climVar in variables
         distances = getModelDistances(data[climVar]);
         weight = ifelse(isnothing(weights), 1, weights[climVar]);
         weightedDistances = normalizeAndWeightDistMatrix(distances, weight);
         push!(weightedDistMatrices, weightedDistances);
     end
-    return  reduce(+, weightedDistMatrices);
+    weightsByVars = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
+    return weightsByVars
 end
 
 """
@@ -193,9 +195,12 @@ Computes a performance weight for each model in 'modelData'. The weights result 
 the third dimension (model) just contains a single entry (e.g. ERA5).
 'weightsVars' is a Dictionary mapping from the climate variable to a number which is the weight of how much the respective variable contributes to the computed performanceWeight.
 
-returns a DimArray (model1) with the computed independence weights.
+returns a DimArray (model1) with the computed independence weights, seperately for each considered variable.
 """
-function getPerformanceWeights(modelData::Dict{String, DimArray}, obsData::Dict{String, DimArray}, weightsVars::Dict{String, Number}=nothing)
+function getPerformanceWeights(modelData::Dict{String, DimArray}, 
+                               obsData::Dict{String, DimArray},
+                               weightsVars::Dict{String, Number}=nothing
+                               )
     weights = copy(weightsVars);
     if !isnothing(weights)
         normalizeWeightsVariables!(weights);
@@ -216,8 +221,12 @@ function getPerformanceWeights(modelData::Dict{String, DimArray}, obsData::Dict{
     
     # TODO: here metadata has to be combined correctly
     weightsByVar = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
-    weights = reduce(+, weightsByVar, dims=:variable);
-    return weights
+    return weightsByVar
+end
+
+function summarizeWeightsAcrossVars(weightsByVar::DimArray)
+    summarizedWeights = reduce(+, weightsByVar, dims=:variable);
+    return dropdims(summarizedWeights, dims=:variable)
 end
 
 
@@ -247,9 +256,6 @@ function averageEnsembleMatrix(distances::DimArray)
         ensemble[model1=At(dimModel1), model2=At(dimModel2)] = avg
     end
     return ensemble
-    # mat = Array(ensemble);
-    # symDistMatrix = DimArray(mat .+ mat', dims(ensemble));
-    # return symDistMatrix
 end
 
 """
@@ -282,6 +288,12 @@ end
                weightsPerform::Dict{String, Number}=nothing, 
                weightsIndep::Dict{String, Number}=nothing
                )
+
+    Computes weight for each model in multi-model ensemble according to approach from 
+    Brunner, Lukas, Angeline G. Pendergrass, Flavio Lehner, Anna L. Merrifield, Ruth Lorenz, and Reto Knutti.
+    “Reduced Global Warming from CMIP6 Projections When Weighting Models by Performance and Independence.” 
+    Earth System Dynamics 11, no. 4 (November 13, 2020): 995–1012. https://doi.org/10.5194/esd-11-995-2020.
+
 """
 function getWeights(modelData::Dict{String, DimArray}, 
                     obsData::Dict{String, DimArray}, 
@@ -292,6 +304,6 @@ function getWeights(modelData::Dict{String, DimArray},
     )
     wP = getPerformanceWeights(modelData, obsData, weightsPerform);
     wI = getIndependenceWeights(modelData, weightsIndep);
-    weights = combineWeights(wP, wI, sigmaD, sigmaS)
+    weights = combineWeights(summarizeWeightsAcrossVars(wP), summarizeWeightsAcrossVars(wI), sigmaD, sigmaS)
     return weights
 end
