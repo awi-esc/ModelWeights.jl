@@ -23,7 +23,8 @@ returns a dictionary from climateVariable to DimArray with respective data.
 function loadPreprocData(pathToPreprocDir::String, climateVariables::Vector{String}, diagnostic::String="CLIM", included::Vector{String}=[])
     dataAllVars = Dict{String, DimArray}();
     for climVar in climateVariables
-        pathToDiagnosticData = joinpath(pathToPreprocDir, climVar * "_" * diagnostic);
+        directory = ifelse(isempty(diagnostic), climVar, join([climVar, diagnostic], "_"));
+        pathToDiagnosticData = joinpath(pathToPreprocDir, directory);
         ncFiles = glob("*.nc", pathToDiagnosticData);
         
         data = []
