@@ -11,8 +11,8 @@
             "program": "${file}",
             "stopOnEntry": false,
             "cwd": "${workspaceFolder}",
-            "juliaEnv": "/Users/brgrus001/climwipJulia"
-            // "juliaEnv": "${command:activeJuliaEnvironment}"
+            //"juliaEnv": "/Users/brgrus001/climwipJulia"
+            "juliaEnv": "${command:activeJuliaEnvironment}"
         }
     ]
 }
