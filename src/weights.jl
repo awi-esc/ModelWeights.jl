@@ -47,9 +47,18 @@ function loadPreprocData(pathToPreprocDir::String, climateVariables::Vector{Stri
                     push!(sources, split(filename, "_")[2])
                 end
                 dsVar = ds[climVar];
-                dim1 = Dim{:lon}(collect(dsVar["lon"][:]));
-                dim2 = Dim{:lat}(collect(dsVar["lat"][:]));          
-                push!(data, DimArray(Array(dsVar), (dim1, dim2), metadata=meta));
+                if climVar == "amoc"
+                    if "season_number" in keys(ds.dim)
+                        dim1 = Dim{:season}(collect(dsVar["season_number"][:]));
+                        push!(data, DimArray(Array(dsVar), (dim1), metadata=meta));
+                    else
+                        push!(data, DimArray(Array(dsVar), (), metadata=meta));
+                    end
+                else
+                    dim1 = Dim{:lon}(collect(dsVar["lon"][:]));
+                    dim2 = Dim{:lat}(collect(dsVar["lat"][:]));          
+                    push!(data, DimArray(Array(dsVar), (dim1, dim2), metadata=meta));
+                end
             end
         end
         dimData = cat(data...; dims = (Dim{:model}(sources)));

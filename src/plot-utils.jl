@@ -155,3 +155,28 @@ function plotHistAtPos(data::DimArray, location::Dict, unit::String="")
     hist!(ax, vec(data_loc))
     return fig
 end
+
+
+""" plotAMOC(data)
+    plots AMOC strength for variable "amoc" derived by ESMValTool recipe
+
+unit in ylabel should be done via metadata
+"""
+function plotAMOC(data)
+    fig = getFigure((8, 5), 12);
+    t = "variable: amoc, experiment: " * data.metadata["experiment_id"];
+
+    ax = Axis(fig[1, 1], title=join(["AMOC strength (at 26.5°N)", t], "\n"),  ylabel = "Transport in kg s^-1")
+    if length(dims(data)) == 1
+        # data for full period
+        hist!(ax, Array(data))
+    else
+        # seasonal data
+        for i in 1:4
+            hist!(ax, Array(data[i,:]), scale_to=-0.6, offset=i, direction=:x)
+        end
+        ax.xlabel = "season"
+    end
+    return fig
+end
+

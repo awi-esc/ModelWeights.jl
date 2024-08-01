@@ -82,3 +82,5 @@ Temporary Items
 # End of https://www.toptal.com/developers/gitignore/api/julia,macos,visualstudiocode
 
 slurm-*.out
+
+scripts/check-data.jl
