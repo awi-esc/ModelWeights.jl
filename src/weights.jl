@@ -42,6 +42,7 @@ function loadPreprocData(pathToPreprocDir::String, climateVariables::Vector{Stri
             if addFile
                 filename = split(basename(file), ".nc")[1];
                 ds = NCDataset(file);
+                # ds = NCDataset(joinpath(root, file));
                 meta = ds.attrib;
                 if "model_id" in keys(meta)
                     push!(sources, meta["model_id"]);
@@ -57,10 +58,6 @@ function loadPreprocData(pathToPreprocDir::String, climateVariables::Vector{Stri
                         push!(data, DimArray(Array(dsVar), (), metadata=meta));
                     end
                 else
-                    # dimensions = keys(ds.dim);
-                    # print(dimensions)
-                    # key_lon = ifelse("longitude" in dimensions, "longitude", "lon");
-                    # key_lat = ifelse("latitude" in dimensions, "latitude", "lat");
                     dim1 = Dim{:lon}(collect(dsVar["lon"][:]));
                     dim2 = Dim{:lat}(collect(dsVar["lat"][:]));          
                     push!(data, DimArray(Array(dsVar), (dim1, dim2), metadata=meta));
@@ -255,6 +252,24 @@ function averageEnsembleVector(weights::DimArray)
     # TODO: add metadata!
     weightsByEnsemble =  DimArray(Array(weightsGrouped)[indices], Dim{:model}(modelNames[indices]));
     return weightsByEnsemble
+end
+
+
+""" averageEnsembleMembers(data::DimArray)
+
+for each model, computes the mean across all ensemble members of that model.
+
+    returns a DimArray with dimensions 'lon', 'lat' and 'model'
+"""
+function averageEnsembleMembers!(data::Dict{String, DimArray})
+    for climVar in keys(data)
+        grouped = groupby(data[climVar], :model=>identity)
+        averages = map(d->mean(d, dims=:model), grouped)
+        avgData = []
+        models = Array(dims(averages, :model));
+        map(x->push!(avgData, dropdims(x, dims=:model)), averages);
+        data[climVar] = cat(avgData...; dims = (Dim{:model}(models)));
+    end
 end
 
 
