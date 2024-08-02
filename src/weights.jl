@@ -24,11 +24,13 @@ function loadPreprocData(pathToPreprocDir::String, climateVariables::Vector{Stri
     dataAllVars = Dict{String, DimArray}();
     for climVar in climateVariables
         directory = ifelse(isempty(diagnostic), climVar, join([climVar, diagnostic], "_"));
-        pathToDiagnosticData = joinpath(pathToPreprocDir, directory);
-        ncFiles = glob("*.nc", pathToDiagnosticData);
-        
+        pathToData = joinpath(pathToPreprocDir, directory);
+        ncFiles = glob("*.nc", pathToData);
+
         data = []
         sources = []
+        # for (root, dirs, files) in walkdir(pathToData; follow_symlinks=true)
+        #     ncFiles = filter(x->endswith(x, ".nc"), files);
         for file in ncFiles
             addFile = true;
             # if not empty, only includes files that contain all names given in 'included'
@@ -39,7 +41,7 @@ function loadPreprocData(pathToPreprocDir::String, climateVariables::Vector{Stri
             end
             if addFile
                 filename = split(basename(file), ".nc")[1];
-                ds = Dataset(file);
+                ds = NCDataset(file);
                 meta = ds.attrib;
                 if "model_id" in keys(meta)
                     push!(sources, meta["model_id"]);
@@ -55,12 +57,17 @@ function loadPreprocData(pathToPreprocDir::String, climateVariables::Vector{Stri
                         push!(data, DimArray(Array(dsVar), (), metadata=meta));
                     end
                 else
+                    # dimensions = keys(ds.dim);
+                    # print(dimensions)
+                    # key_lon = ifelse("longitude" in dimensions, "longitude", "lon");
+                    # key_lat = ifelse("latitude" in dimensions, "latitude", "lat");
                     dim1 = Dim{:lon}(collect(dsVar["lon"][:]));
                     dim2 = Dim{:lat}(collect(dsVar["lat"][:]));          
                     push!(data, DimArray(Array(dsVar), (dim1, dim2), metadata=meta));
                 end
             end
         end
+        # end
         dimData = cat(data...; dims = (Dim{:model}(sources)));
         dataAllVars[climVar] = dimData;
     end

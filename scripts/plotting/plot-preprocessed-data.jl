@@ -3,14 +3,25 @@ using NCDatasets
 using DimensionalData
 using Statistics
 
+function checkPathToDir(path::String)
+    return isdir(path)
+end
+
+
+
+
 function getData(pathToPreprocDir::String, climVar::String)
+    if !checkPathToDir(pathToPreprocDir)
+        throw(DomainError(pathToPreprocDir, "directory at given path does not exist!"))
+    end 
     modelData =  SimilarityWeights.loadPreprocData(pathToPreprocDir, [climVar], "", ["CMIP6"]);
     data = modelData[climVar];
     return data
 end
 
 # precipitaton
-pathToPreprocDir = "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic"; 
+#pathToPreprocDir = "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic"; 
+pathToPreprocDir = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic";
 data = getData(pathToPreprocDir, "pr");
 
 means = dropdims(mean(data, dims=:model), dims=:model);
@@ -37,8 +48,10 @@ f5 = SimilarityWeights.plotHistAtPos(data, mawsynram, "kg m-2 s-1")
 
 
 # AMOC (derived variable)
-pathToPreprocDir = "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240730_090548/preproc/climatologic_diagnostic";
-pathToPreprocDir = "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic";
+# pathToPreprocDir = "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240730_090548/preproc/climatologic_diagnostic";
+# pathToPreprocDir = "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic";
+pathToPreprocDir = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic";
+
 data = getData(pathToPreprocDir, "amoc");
 
 SimilarityWeights.plotAMOC(data)

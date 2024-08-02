@@ -15,11 +15,13 @@ function getFigure(figsize, fontsize)
     return fig
 end
 
+"""
+"""
 function plotDistMatrices(distMat, climateVar, models, modelRefs)
-    size_inches = (8, 5)
-    size_pt = 72 .* size_inches
-    fig=Figure(size= size_pt, fontsize=12)
-
+    # size_inches = (8, 5)
+    # size_pt = 72 .* size_inches
+    # fig=Figure(size= size_pt, fontsize=12)
+    fig = Figure();
     xs = 1:length(models)
     ax = Axis(
         fig[1,1],
