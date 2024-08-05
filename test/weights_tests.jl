@@ -1,20 +1,14 @@
 include("data.jl")
 
-# CLIMATE_VARS = ["tas"];
-# DIAGNOSTIC = "CLIM";
-# MODEL_DATA =  SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, CLIMATE_VARS, DIAGNOSTIC, ["CMIP"]);
-# OBS_DATA = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, CLIMATE_VARS, DIAGNOSTIC, ["ERA5"]);
-
 # VARIABLE_CONTRIBUTIONS = Dict(
 #     "independence" => Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0), 
 #     "performance" => Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1)
 # );
 
 @testset "Testset performance weights" begin    
-    # weights = SimilarityWeights.getPerformanceWeights(MODEL_DATA, OBS_DATA, VARIABLE_CONTRIBUTIONS["performance"]);
     weightsVars = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
-    modelData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["CMIP"]);
-    obsData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["ERA5"]);
+    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["CMIP"]);
+    obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["ERA5"]);
     
     weightsByVars = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars);
     weights = SimilarityWeights.summarizeWeightsAcrossVars(weightsByVars);
@@ -32,7 +26,7 @@ end
 @testset "Testset independence weights" begin
     # weights = SimilarityWeights.getIndependenceWeights(MODEL_DATA, VARIABLE_CONTRIBUTIONS["independence"]);
     weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
-    modelData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["CMIP"]);
+    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["CMIP"]);
 
     weightsByVars = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
     weights = SimilarityWeights.summarizeWeightsAcrossVars(weightsByVars);
@@ -47,13 +41,13 @@ end
 
 @testset "Testset combined weights" begin
     nb_digits = 2;
-    modelData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["CMIP"]);
+    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["CMIP"]);
     weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
     wI_vars = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
     wI = SimilarityWeights.summarizeWeightsAcrossVars(wI_vars);
 
 
-    obsData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["ERA5"]);
+    obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["ERA5"]);
     weightsVars = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
     wP_vars = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars);
     wP = SimilarityWeights.summarizeWeightsAcrossVars(wP_vars);
@@ -75,8 +69,8 @@ end
 
 @testset "Testset function getWeights" begin
     nb_digits = 2;
-    modelData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["CMIP"]);
-    obsData = SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["ERA5"]);
+    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["CMIP"]);
+    obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["ERA5"]);
     
     weightsVarsPerform = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
     weightsVarsIndep = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 

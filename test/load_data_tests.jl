@@ -2,7 +2,7 @@ using DimensionalData
 include("data.jl")
 
 @testset "Testset CMIP Data" begin
-    modelData =  SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["CMIP"]);
+    modelData =  SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["CMIP"]);
     @test length(keys(modelData)) == 3;
     @test size(modelData["tas"]) == (20, 19, 7)
     dimensions = DimensionalData.dims(modelData["tas"], :model);
@@ -12,7 +12,7 @@ end
 
 
 @testset "Testset Observational Data" begin
-    modelData =  SimilarityWeights.loadPreprocData(PATH_TO_PREPROC_DIR, ["tas", "pr", "psl"], "CLIM", ["ERA5"]);
+    modelData =  SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["ERA5"]);
     @test length(keys(modelData)) == 3;
     @test size(modelData["tas"]) == (20, 19, 1)
     

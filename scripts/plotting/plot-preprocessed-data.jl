@@ -8,21 +8,16 @@ function checkPathToDir(path::String)
 end
 
 
-
-
-function getData(pathToPreprocDir::String, climVar::String)
-    if !checkPathToDir(pathToPreprocDir)
-        throw(DomainError(pathToPreprocDir, "directory at given path does not exist!"))
-    end 
-    modelData =  SimilarityWeights.loadPreprocData(pathToPreprocDir, [climVar], "", ["CMIP6"]);
+function getData(varToPath::Dict{String, String}, climVar::String)
+    modelData =  SimilarityWeights.loadPreprocData(varToPath, "", ["CMIP6"]);
     data = modelData[climVar];
     return data
 end
 
 # precipitaton
-#pathToPreprocDir = "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic"; 
-pathToPreprocDir = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic";
-data = getData(pathToPreprocDir, "pr");
+varToPath =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
+#varToPath = Dict{String, String}("pr" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
+data = getData(varToPath, "pr");
 
 means = dropdims(mean(data, dims=:model), dims=:model);
 f1 = SimilarityWeights.plotMeansOnMap(means, "Precipitation means historical period")
@@ -48,12 +43,11 @@ f5 = SimilarityWeights.plotHistAtPos(data, mawsynram, "kg m-2 s-1")
 
 
 # AMOC (derived variable)
-# pathToPreprocDir = "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240730_090548/preproc/climatologic_diagnostic";
-# pathToPreprocDir = "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic";
-pathToPreprocDir = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic";
+# varToPath = Dict{String, String}("amoc" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240730_090548/preproc/climatologic_diagnostic");
+varToPath = Dict{String, String}("amoc" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic");
+#varToPath = Dict{String, String}("amoc" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic");
 
-data = getData(pathToPreprocDir, "amoc");
-
+data = getData(varToPath, "amoc");
 SimilarityWeights.plotAMOC(data)
 
 

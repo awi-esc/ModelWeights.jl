@@ -8,9 +8,12 @@ pathToPreprocDir = "/Users/brgrus001/SimilarityWeights/recipe_climwip_test_basic
 climateVariables = ["tas", "pr", "psl"];
 diagnostic = "CLIM";
 ##########################################
-
-modelData = SimilarityWeights.loadPreprocData(pathToPreprocDir, climateVariables, diagnostic, ["CMIP"]);
-obsData = SimilarityWeights.loadPreprocData(pathToPreprocDir, climateVariables, diagnostic, ["ERA5"]);
+var_to_preproc_data = Dict{String, String}();
+for var in climateVariables
+    var_to_preproc_data[var] = pathToPreprocDir;
+end
+modelData = SimilarityWeights.loadPreprocData(var_to_preproc_data, diagnostic, ["CMIP"]);
+obsData = SimilarityWeights.loadPreprocData(var_to_preproc_data, diagnostic, ["ERA5"]);
 
 # take equal weights for both, performance and independence metric
 weightsVarsPerform = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 

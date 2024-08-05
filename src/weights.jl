@@ -1,70 +1,69 @@
 using NCDatasets
 using DimensionalData
-using Glob
 using Statistics
 
 """
-    loadPreprocData(pathToPreprocDir, climateVar, diagnostic=CLIM, dataIncluded=[])
+    loadPreprocData(climateVarsToPaths::Dict{String,String}, diagnostic=CLIM, dataIncluded=[])
 
-Loads all .nc files (each model is a different .nc file) for variable climateVar and 'diagnostic' inside the respective subdirectory (climateVar_diagnostic)
-of the directory located at 'path2PreprocDir' (assuming data had been preprocessed by ESMValTool) into a single DimArray with dimensions lon (longitude), lat (latitude) and model. 
+Loads all preprocessed (e.g., by ESMValTool) .nc files (each model is a different .nc file) for each climate climate variable and 'diagnostic' 
+inside the respective subdirectory (climateVar_diagnostic, e.g. tos_CLIM) into a single DimArray with dimensions lon (longitude), lat (latitude) and model. 
 
 If length(dataIncluded) != 0 only those .nc files are considered whose filenames contain all elements of dataIncluded, 
 e.g. if dataIncluded=['ERA5'] only ERA5 data will be included (files with ERA5 in their filename).
 
-'pathToPreprocDir': path to directory with preprocessed data from ESMValTool
-'climateVariables': Array of short names of considered variables (e.g. tas, psl)
+# Arguments
+'climateVarsToPaths': dictionary mapping from climate variables as short names (e.g., tas) to path where respective (preprocessed) data is stored
 'diagnostic': the name of the diagnotsic used by ESMValTool
 'included': Array that contains Strings that must occur in filenames of loaded data. If only a certain model should be loaded, this is specified here, e.g. 
             ['AWI-ESM-1-1-LR'] would load only data from this particular model.
-
-returns a dictionary from climateVariable to DimArray with respective data.
 """
-function loadPreprocData(pathToPreprocDir::String, climateVariables::Vector{String}, diagnostic::String="CLIM", included::Vector{String}=[])
+function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::String="CLIM", included::Vector{String}=[])
     dataAllVars = Dict{String, DimArray}();
-    for climVar in climateVariables
+    for climVar in keys(climVarsToPaths)
         directory = ifelse(isempty(diagnostic), climVar, join([climVar, diagnostic], "_"));
-        pathToData = joinpath(pathToPreprocDir, directory);
-        ncFiles = glob("*.nc", pathToData);
+        pathToData = joinpath(climVarsToPaths[climVar], directory);
 
         data = []
         sources = []
-        # for (root, dirs, files) in walkdir(pathToData; follow_symlinks=true)
-        #     ncFiles = filter(x->endswith(x, ".nc"), files);
-        for file in ncFiles
-            addFile = true;
-            # if not empty, only includes files that contain all names given in 'included'
-            if length(included) != 0
-                if !all([occursin(name, file) for name in included])
-                    addFile = false;
-                end
-            end
-            if addFile
-                filename = split(basename(file), ".nc")[1];
-                ds = NCDataset(file);
-                # ds = NCDataset(joinpath(root, file));
-                meta = ds.attrib;
-                if "model_id" in keys(meta)
-                    push!(sources, meta["model_id"]);
-                else
-                    push!(sources, split(filename, "_")[2])
-                end
-                dsVar = ds[climVar];
-                if climVar == "amoc"
-                    if "season_number" in keys(ds.dim)
-                        dim1 = Dim{:season}(collect(dsVar["season_number"][:]));
-                        push!(data, DimArray(Array(dsVar), (dim1), metadata=meta));
-                    else
-                        push!(data, DimArray(Array(dsVar), (), metadata=meta));
+        for (root, dirs, files) in walkdir(pathToData; follow_symlinks=true)
+            ncFiles = filter(x->endswith(x, ".nc"), files);
+            for file in ncFiles
+                addFile = true;
+                # if not empty, only includes files that contain all names given in 'included'
+                if length(included) != 0
+                    if !all([occursin(name, file) for name in included])
+                        addFile = false;
                     end
-                else
-                    dim1 = Dim{:lon}(collect(dsVar["lon"][:]));
-                    dim2 = Dim{:lat}(collect(dsVar["lat"][:]));          
-                    push!(data, DimArray(Array(dsVar), (dim1, dim2), metadata=meta));
+                end
+                if addFile
+                    filename = split(basename(file), ".nc")[1];
+                    ds = NCDataset(joinpath(root, file));
+                    meta = ds.attrib;
+                    if "model_id" in keys(meta)
+                        push!(sources, meta["model_id"]);
+                    else
+                        push!(sources, split(filename, "_")[2])
+                    end
+                    dsVar = ds[climVar];
+                    if climVar == "amoc"
+                        if "season_number" in keys(ds.dim)
+                            dim1 = Dim{:season}(collect(dsVar["season_number"][:]));
+                            push!(data, DimArray(Array(dsVar), (dim1), metadata=meta));
+                        else
+                            push!(data, DimArray(Array(dsVar), (), metadata=meta));
+                        end
+                    else
+                        # TODO: hur has three dimensions, for now just lon-lat dimensions supported
+                        if length(size(dsVar)) != 2
+                            throw(ArgumentError(join(["only variables that have ONLY dimensions lon, lat are supported,", dsVar.attrib["standard_name"], "has size", size(dsVar)], " ", " ")))
+                        end
+                        dim1 = Dim{:lon}(collect(dsVar["lon"][:]));
+                        dim2 = Dim{:lat}(collect(dsVar["lat"][:]));          
+                        push!(data, DimArray(Array(dsVar), (dim1, dim2), metadata=meta));
+                    end
                 end
             end
         end
-        # end
         dimData = cat(data...; dims = (Dim{:model}(sources)));
         dataAllVars[climVar] = dimData;
     end
