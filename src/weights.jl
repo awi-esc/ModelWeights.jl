@@ -255,11 +255,12 @@ function averageEnsembleVector(weights::DimArray)
 end
 
 
-""" averageEnsembleMembers(data::DimArray)
+""" 
+    averageEnsembleMembers!(data::Dict{String, DimArray})
 
-for each model, computes the mean across all ensemble members of that model.
+for each model, compute the mean across all ensemble members of that model.
 
-    returns a DimArray with dimensions 'lon', 'lat' and 'model'
+returns a DimArray with dimensions 'lon', 'lat' and 'model'
 """
 function averageEnsembleMembers!(data::Dict{String, DimArray})
     for climVar in keys(data)
