@@ -3,23 +3,6 @@ using NetCDF
 PATH_TO_WORK_DIR = joinpath(@__DIR__, "..", "recipe_climwip_test_basic_data", "work")
 PATH_TO_PREPROC_DIR = joinpath(@__DIR__, "..", "recipe_climwip_test_basic_data", "preproc")
 
-GLOBAL_METADATA_KEYS = [
-    "realm",
-    "variable_id",
-    "experiment_id",
-    "product",
-    "software",
-    "mip_era",
-    "parent_mip_era",
-    "external_variables",
-    "project_id",
-    "Conventions",
-    "activity_id",
-    "sub_experiment_id",
-    "frequency"
-];
-
-
 """
     loadNCdataInDir(path2Dir, climateVar[, dataIncluded=[], addHorizontal=true])
 

@@ -37,6 +37,22 @@ function plotDistMatrices(distMat, climateVar, models, modelRefs)
 end
 
 
+function plotPerformanceMetric(data, climateVar, models)
+    size_inches = (6.5, 6)
+    size_pt = 72 .* size_inches
+    fig=Figure(size= size_pt, fontsize=12)
+
+    xs = 1:length(models)
+    ax = Axis(fig[1,1], 
+        xticks = (xs, models), 
+        xticklabelrotation = pi/4,
+        title = "RMS error for " * climateVar,
+        xlabel = "Model", 
+        ylabel = "RMS error " * climateVar
+    );
+    barplot!(ax, xs, data)
+    return fig
+end
 
 """ longitude2EastWest(lon)
     converts longitudes from -180 to 180 degrees into 0-180 degrees East/West
@@ -59,6 +75,12 @@ function lon360to180(lon::Number)
     return lon > 180 ? -1 * (360 - lon) : lon
 end
 
+
+function getCurrentTime()
+    currentDay = string(today()) * '_';
+    currentTime = Dates.format(now(), "HH_MM");
+    return currentDay * currentTime
+end
 
 """ plotMeansOnMap(means::DimArray, title::String)
     plots contours of world with an overlayed heatmap that shows the data which correspond to

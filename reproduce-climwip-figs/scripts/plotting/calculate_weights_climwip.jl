@@ -5,7 +5,7 @@ include(joinpath(@__DIR__, "..", "..", "src", "plot-utils.jl"));
 
 workDir = joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip");
 
-targetDir = joinpath("plots-replicated-with-julia", "calculate_weights");
+targetDir = joinpath("reproduce-climwip-figs", "plots-replicated-with-julia", "calculate_weights");
 mkpath(targetDir)
 
 # 1. output weights 

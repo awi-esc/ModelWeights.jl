@@ -4,7 +4,7 @@ using CairoMakie
 using ColorSchemes
 
 # use test data from climwip_test_basic  #
-pathToPreprocDir = "/Users/brgrus001/SimilarityWeights/recipe_climwip_test_basic_data/preproc/calculate_weights_climwip"; 
+pathToPreprocDir = joinpath(@__DIR__, "..", "reproduce-climwip-figs", "recipe_climwip_test_basic_data", "preproc", "calculate_weights_climwip");
 climateVariables = ["tas", "pr", "psl"];
 diagnostic = "CLIM";
 ##########################################
@@ -58,7 +58,6 @@ begin
         lines!(ax, xs, data[:, col], label = "$var")
     end
     
-    
     # add combined weights
     scatter!(ax, xs, Array(weights))
     lines!(ax, xs, Array(weights), label = "combined weights all vars")
@@ -94,18 +93,14 @@ wI = SimilarityWeights.averageEnsembleMatrix(wI_overall);
 performance = exp.(-(wP ./ sigmaD).^2);
 
 # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
-independence = dropdims(sum(exp.(-(wI ./ sigmaS).^2), dims=:model2), dims=:model2)
-independence = DimArray(Array(independence), (Dim{:model}(Array(dims(independence, :model1)))))
+independence = dropdims(sum(exp.(-(wI ./ sigmaS).^2), dims=:model2), dims=:model2);
+independence = DimArray(Array(independence), (Dim{:model}(Array(dims(independence, :model1)))));
 
 begin 
-    size_inches = (8, 6)
-    size_pt = 72 .* size_inches
-    fig=Figure(size= size_pt, fontsize=12)
-
-    ax = Axis(fig[1,1],
-        title = "Independence vs. performance part of weights",
-        )
-    scatter!(ax, Array(independence), Array(performance), label=Array(dims(performance, :model)))
-    Legend(fig[1,2], ax)
+    fig=Figure(fontsize=12)
+    ax = Axis(fig[1,1], title = "Independence vs. performance part of weights")
+    scatter!(ax, Array(independence), Array(performance))
+    text!(Array(independence), Array(performance), text = Array(dims(performance, :model)), 
+          align = (:center, :top))
     fig
 end

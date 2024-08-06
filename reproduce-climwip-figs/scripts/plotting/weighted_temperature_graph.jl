@@ -7,7 +7,7 @@ include(joinpath(@__DIR__, "..", "..", "src", "load-data-utils.jl"));
 include(joinpath(@__DIR__, "..", "..", "src", "plot-utils.jl"));
 
 workDir = joinpath(PATH_TO_WORK_DIR, "weighted_temperature_graph", "weighted_temperature_graph");
-targetDir = joinpath("plots-replicated-with-julia", "weighted_temperature_graph");
+targetDir = joinpath("reproduce-climwip-figs", "plots-replicated-with-julia", "weighted_temperature_graph");
 mkpath(targetDir)
 
 path2Data = joinpath(workDir, "temperature_anomalies.nc")
