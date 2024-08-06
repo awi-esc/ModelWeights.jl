@@ -35,8 +35,8 @@ LOCAL_METADATA_KEYS = [
 
 function checkMetadata(data)
     filtered = filter(((k,v),)->isa(v, Vector) && length(v) != length(dims(data, :model)) , data.metadata);
-    if !isempty(filtered)
-        @warn "Check Metadata, there are fields which were supposed to be identical across model, but werent!" filtered
+    if !isempty(filtered) && any(x -> length(x) != 0, values(filtered))
+        @warn "Check Metadata, there are fields which were supposed to be identical across models, but werent!" filtered
     end
 end
 
@@ -52,6 +52,14 @@ function hasFlawedMetadata(attributes, filename)
     return isFlawed
 end
 
+
+function createMetaDict(list_keys::Vector{String} = LOCAL_METADATA_KEYS)
+    meta = Dict();
+    for k in list_keys
+        meta[k] = [];
+    end
+    return meta
+end
 
 """
     loadPreprocData(climateVarsToPaths::Dict{String,String}, diagnostic=CLIM, dataIncluded=[])
@@ -76,10 +84,7 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::Stri
 
         data = [];
         sources = [];
-        meta = Dict();
-        for k in LOCAL_METADATA_KEYS
-            meta[k] = [];
-        end
+        meta = createMetaDict();
         for (root, dirs, files) in walkdir(pathToData; follow_symlinks=true)
             ncFiles = filter(x->endswith(x, ".nc"), files);
             # i=0;
@@ -295,19 +300,23 @@ function getPerformanceWeights(modelData::Dict{String, DimArray},
     variables = keys(modelData);
     weightedDistMatrices = [];
 
+    meta = createMetaDict(GLOBAL_METADATA_KEYS);
+    meta_not_shared = Dict();
     for climVar in variables
+        metadata = modelData[climVar].metadata;
+        meta_shared = filter(((k,v),)->!isa(v, Vector), metadata);
+        meta_not_shared[climVar] = filter(((k,v),)->isa(v, Vector), metadata);
+
         distances = getModelDataDist(modelData[climVar], obsData[climVar]);
         weight = ifelse(isnothing(weights), 1, weights[climVar]);
 
         weightedDistances = normalizeAndWeightDistMatrix(distances, weight);
-        # just use the actual model name not all the other information stored in the model dimension for averaging over ensemble
-        #modelNames = map((x) -> split(x, "_")[2], dims(weightedDistances, :model));
-        #weightedDistances = DimArray(Array(weightedDistances),(Dim{:model}(modelNames)))
         push!(weightedDistMatrices, weightedDistances);
+        meta = mergewith(appendValuesDicts, meta, meta_shared);
     end
-    
-    # TODO: here metadata has to be combined correctly
+    meta = merge(meta, meta_not_shared);
     weightsByVar = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
+    weightsByVar = rebuild(weightsByVar; metadata = meta);
     return weightsByVar
 end
 
