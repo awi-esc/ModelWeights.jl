@@ -6,14 +6,13 @@ using NCDatasets
 
 ###########################################
 pathsModelData = Dict("pr" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
-                    #  "hur" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_hur_20240801_094610/preproc/climatologic_diagnostic");
 pathsObsData = Dict("pr" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240802_115940/preproc/climatologic_diagnostic");
-                    # "hur" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_hur_20240802_120722/preproc/climatologic_diagnostic");
+
+#pathsModelData = Dict("hur" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_hur_20240801_094610/preproc/climatologic_diagnostic");
+#pathsObsData = Dict("hur" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_hur_20240802_120722/preproc/climatologic_diagnostic");
 
 ## Get preprocessed data from ESMValTool ##
-# pathToPreprocDir = "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic"; 
-# #pathToPreprocDir = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic"
-# climateVariables = ["pr", "hur"];
+#pathToPreprocDir = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic"
 diagnostic = "";
 modelData = SimilarityWeights.loadPreprocData(pathsModelData, diagnostic, ["CMIP"]);
 # pathObsData = "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240802_115940/preproc/climatologic_diagnostic";
@@ -26,7 +25,6 @@ obsData["pr"] = obsData["pr"][:,:,1:1];
 weightsVars = Dict{String, Number}("pr" => 1, "hur" => 1); 
 # Performance weights
 wP = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars)
-
 
 # Independence weights
 SimilarityWeights.averageEnsembleMembers!(modelData);

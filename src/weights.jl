@@ -2,6 +2,40 @@ using NCDatasets
 using DimensionalData
 using Statistics
 
+GLOBAL_METADATA_KEYS = [
+    "realm",
+    "variable_id",
+    "experiment_id",
+    "product",
+    "software",
+    "mip_era",
+    "parent_mip_era",
+    "external_variables",
+    "project_id",
+    "Conventions",
+    "activity_id",
+    "sub_experiment_id",
+    "frequency"
+];
+METADATA_KEYS = [
+    "source_id",
+    "institution_id",
+    "variant_label"
+];
+
+function hasFlawedMetadata(attributes, filename)
+    isFlawed = false;
+    if "branch_time_in_parent" in keys(attributes) && isa(attributes["branch_time_in_parent"], String)
+        @warn "Branch_time_in_parent is a string, excluded file:" filename
+        isFlawed = true
+    elseif "branch_time_in_child" in keys(attributes) && isa(attributes["branch_time_in_child"], String)
+        @warn "Branch_time_in_child is a string, excluded file:" filename
+        isFlawed = true
+    end
+    return isFlawed
+end
+
+
 """
     loadPreprocData(climateVarsToPaths::Dict{String,String}, diagnostic=CLIM, dataIncluded=[])
 
@@ -23,11 +57,21 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::Stri
         directory = ifelse(isempty(diagnostic), climVar, join([climVar, diagnostic], "_"));
         pathToData = joinpath(climVarsToPaths[climVar], directory);
 
-        data = []
-        sources = []
+        data = [];
+        sources = [];
+        meta = Dict();
+        for k in METADATA_KEYS
+            meta[k] = [];
+        end
         for (root, dirs, files) in walkdir(pathToData; follow_symlinks=true)
             ncFiles = filter(x->endswith(x, ".nc"), files);
+            # i=0;
             for file in ncFiles
+                # i = i+1;
+                # if i==364
+                #     break
+                # end
+                # println(i);
                 addFile = true;
                 # if not empty, only includes files that contain all names given in 'included'
                 if length(included) != 0
@@ -38,9 +82,14 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::Stri
                 if addFile
                     filename = split(basename(file), ".nc")[1];
                     ds = NCDataset(joinpath(root, file));
-                    meta = ds.attrib;
-                    if "model_id" in keys(meta)
-                        push!(sources, meta["model_id"]);
+                    attributes = deepcopy(ds.attrib);
+                    if hasFlawedMetadata(attributes, filename)
+                        continue
+                    end
+                    attributes = filter(((k,v),) -> k in GLOBAL_METADATA_KEYS || k in METADATA_KEYS, attributes);
+                    meta = mergewith(appendValuesDicts, meta, Dict(attributes));
+                    if "model_id" in keys(ds.attrib)
+                        push!(sources, ds.attrib["model_id"]);
                     else
                         push!(sources, split(filename, "_")[2])
                     end
@@ -55,16 +104,19 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::Stri
                     else
                         # TODO: hur has three dimensions, for now just lon-lat dimensions supported
                         if length(size(dsVar)) != 2
-                            throw(ArgumentError(join(["only variables that have ONLY dimensions lon, lat are supported,", dsVar.attrib["standard_name"], "has size", size(dsVar)], " ", " ")))
+                            throw(ArgumentError(join(["only variables that have ONLY dimensions lon, lat are supported,", 
+                                                dsVar.attrib["standard_name"], "has size", size(dsVar)], " ", " ")))
                         end
                         dim1 = Dim{:lon}(collect(dsVar["lon"][:]));
                         dim2 = Dim{:lat}(collect(dsVar["lat"][:]));          
-                        push!(data, DimArray(Array(dsVar), (dim1, dim2), metadata=meta));
+                        push!(data, DimArray(Array(dsVar), (dim1, dim2), metadata=ds.attrib));
                     end
                 end
             end
         end
         dimData = cat(data...; dims = (Dim{:model}(sources)));
+        dimData = rebuild(dimData; metadata = meta);
+
         dataAllVars[climVar] = dimData;
     end
     return dataAllVars
@@ -338,4 +390,24 @@ function getWeights(modelData::Dict{String, DimArray},
     wI = getIndependenceWeights(modelData, weightsIndep);
     weights = combineWeights(summarizeWeightsAcrossVars(wP), summarizeWeightsAcrossVars(wI), sigmaD, sigmaS)
     return weights
+end
+
+function appendValuesDicts(val1, val2)
+    if isa(val1, Vector) && isa(val2, Vector) 
+        #print("both are vectors")
+        return vcat(val1, val2)
+    elseif isa(val1, Vector)
+        #print("just arg1 is vector")
+        return push!(val1, val2)
+    elseif isa(val2, Vector)
+        #print("just arg2 is vector")
+        return push!(val2, val1)
+    else
+        #print("none is vector")
+        if val1 == val2
+            return val1
+        else
+            return [val1, val2]
+        end
+    end
 end
