@@ -28,7 +28,7 @@ wP = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars)
 
 # Independence weights
 SimilarityWeights.averageEnsembleMembers!(modelData);
-wI = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
+wI = SimilarityWeights.getIndependenceWeights(modelData, weightsVars)
 
 # plot wI
 wI = dropdims(wI, dims=:variable);

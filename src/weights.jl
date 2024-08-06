@@ -240,13 +240,22 @@ function getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{
     end
     weightedDistMatrices = [];
     variables = keys(data)
+    meta = createMetaDict(GLOBAL_METADATA_KEYS);
+    meta_not_shared = Dict();
     for climVar in variables
+        metadata = data[climVar].metadata;
+        meta_shared = filter(((k,v),)->!isa(v, Vector), metadata);
+        meta_not_shared[climVar] = filter(((k,v),)->isa(v, Vector), metadata);
+
         distances = getModelDistances(data[climVar]);
         weight = ifelse(isnothing(weights), 1, weights[climVar]);
         weightedDistances = normalizeAndWeightDistMatrix(distances, weight);
         push!(weightedDistMatrices, weightedDistances);
+        meta = mergewith(appendValuesDicts, meta, meta_shared);
     end
+    meta = merge(meta, meta_not_shared);
     weightsByVars = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
+    weightsByVars = rebuild(weightsByVars; metadata = meta);
     return weightsByVars
 end
 
@@ -385,7 +394,6 @@ Note that, the given weights are summarized wrt ensemble models, s.t. for each e
 'sigmaS': Nb. btw. 0 and 1; contribution of independence metric
 """
 function combineWeights(performanceWeights::DimArray, independenceWeights::DimArray, sigmaD::Number, sigmaS::Number)
-    
     wP = averageEnsembleVector(performanceWeights);
     wI = averageEnsembleMatrix(independenceWeights);
     performance = exp.(-(wP ./ sigmaD).^2);
