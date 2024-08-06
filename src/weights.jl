@@ -2,6 +2,7 @@ using NCDatasets
 using DimensionalData
 using Statistics
 
+# these are identical across models
 GLOBAL_METADATA_KEYS = [
     "realm",
     "variable_id",
@@ -15,13 +16,29 @@ GLOBAL_METADATA_KEYS = [
     "Conventions",
     "activity_id",
     "sub_experiment_id",
-    "frequency"
-];
-METADATA_KEYS = [
+    "frequency",
+
+    "standard_name",
+    "coordinates",
+    "_FillValue",
+    "units",
+    "long_name"
+    ];
+
+# these differ across models and will be saved as list
+LOCAL_METADATA_KEYS = [
     "source_id",
     "institution_id",
-    "variant_label"
+    "variant_label",
+    "cell_methods"
 ];
+
+function checkMetadata(data)
+    filtered = filter(((k,v),)->isa(v, Vector) && length(v) != length(dims(data, :model)) , data.metadata);
+    if !isempty(filtered)
+        @warn "Check Metadata, there are fields which were supposed to be identical across model, but werent!" filtered
+    end
+end
 
 function hasFlawedMetadata(attributes, filename)
     isFlawed = false;
@@ -60,7 +77,7 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::Stri
         data = [];
         sources = [];
         meta = Dict();
-        for k in METADATA_KEYS
+        for k in LOCAL_METADATA_KEYS
             meta[k] = [];
         end
         for (root, dirs, files) in walkdir(pathToData; follow_symlinks=true)
@@ -82,24 +99,26 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::Stri
                 if addFile
                     filename = split(basename(file), ".nc")[1];
                     ds = NCDataset(joinpath(root, file));
+                    dsVar = ds[climVar];
+
                     attributes = deepcopy(ds.attrib);
+                    attributes = merge(Dict(dsVar.attrib), attributes);
                     if hasFlawedMetadata(attributes, filename)
                         continue
                     end
-                    attributes = filter(((k,v),) -> k in GLOBAL_METADATA_KEYS || k in METADATA_KEYS, attributes);
+                    attributes = filter(((k,v),) -> k in GLOBAL_METADATA_KEYS || k in LOCAL_METADATA_KEYS, attributes);
                     meta = mergewith(appendValuesDicts, meta, Dict(attributes));
                     if "model_id" in keys(ds.attrib)
                         push!(sources, ds.attrib["model_id"]);
                     else
                         push!(sources, split(filename, "_")[2])
                     end
-                    dsVar = ds[climVar];
                     if climVar == "amoc"
                         if "season_number" in keys(ds.dim)
                             dim1 = Dim{:season}(collect(dsVar["season_number"][:]));
-                            push!(data, DimArray(Array(dsVar), (dim1), metadata=meta));
+                            push!(data, DimArray(Array(dsVar), (dim1)));
                         else
-                            push!(data, DimArray(Array(dsVar), (), metadata=meta));
+                            push!(data, DimArray(Array(dsVar), ()));
                         end
                     else
                         # TODO: hur has three dimensions, for now just lon-lat dimensions supported
@@ -109,7 +128,7 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::Stri
                         end
                         dim1 = Dim{:lon}(collect(dsVar["lon"][:]));
                         dim2 = Dim{:lat}(collect(dsVar["lat"][:]));          
-                        push!(data, DimArray(Array(dsVar), (dim1, dim2), metadata=ds.attrib));
+                        push!(data, DimArray(Array(dsVar), (dim1, dim2)));
                     end
                 end
             end
@@ -117,8 +136,11 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::Stri
         dimData = cat(data...; dims = (Dim{:model}(sources)));
         dimData = rebuild(dimData; metadata = meta);
 
+        checkMetadata(dimData);
         dataAllVars[climVar] = dimData;
     end
+
+
     return dataAllVars
 end
 
