@@ -1,6 +1,7 @@
 using NCDatasets
 using DimensionalData
 using Statistics
+using LinearAlgebra
 
 # these are identical across models
 GLOBAL_METADATA_KEYS = [
@@ -224,7 +225,7 @@ function normalizeWeightsVariables!(weights::Dict{String, Number})
 end
 
 """
-    getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{String, Number}=nothing)
+    getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{String, Number}=Dict{String, Number}())
 
 Computes an independence weight for each model in 'data'. The weights result from taking the average weighted root mean squared errors between pairs of models for each variable. 
 
@@ -233,13 +234,16 @@ Computes an independence weight for each model in 'data'. The weights result fro
 
 returns a DimArray (model1, model2, variable) with the computed independence weights, seperately for each considered variable.
 """
-function getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{String, Number}=nothing)
+function getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{String, Number}=Dict{String, Number}())
+    variables = keys(data);
     weights = copy(weightsVars);
-    if !isnothing(weightsVars)
+    if !isempty(weights)
         normalizeWeightsVariables!(weights);
+    else
+        weights = Dict(zip(variables, ones(length(variables))));
     end
+
     weightedDistMatrices = [];
-    variables = keys(data)
     meta = createMetaDict(GLOBAL_METADATA_KEYS);
     meta_not_shared = Dict();
     for climVar in variables
@@ -248,7 +252,7 @@ function getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{
         meta_not_shared[climVar] = filter(((k,v),)->isa(v, Vector), metadata);
 
         distances = getModelDistances(data[climVar]);
-        weight = ifelse(isnothing(weights), 1, weights[climVar]);
+        weight = ifelse(isempty(weights), 1, weights[climVar]);
         weightedDistances = normalizeAndWeightDistMatrix(distances, weight);
         push!(weightedDistMatrices, weightedDistances);
         meta = mergewith(appendValuesDicts, meta, meta_shared);
@@ -289,24 +293,26 @@ end
 
 
 """
-    getPerformanceWeights(modelData::Dict{String, DimArray}, obsData::Dict{String, DimArray}, weightsVars::Dict{String, Number}=nothing)
+    getPerformanceWeights(modelData::Dict{String, DimArray}, obsData::Dict{String, DimArray}, weightsVars::Dict{String, Number}=Dict{String, Number}())
 
 Computes a performance weight for each model in 'modelData'. The weights result from taking the average weighted root mean squared errors between each model and the observational data.
 'mdoelData' and 'obsData' are Dictionaries mapping from the climate variable (e.g. tas) to a DimArray with the corresponding data (lon, lat, model). For the observational data, 
 the third dimension (model) just contains a single entry (e.g. ERA5).
 'weightsVars' is a Dictionary mapping from the climate variable to a number which is the weight of how much the respective variable contributes to the computed performanceWeight.
 
-returns a DimArray (model1) with the computed independence weights, seperately for each considered variable.
+returns a DimArray (model1) with the computed performance weights, seperately for each considered variable.
 """
 function getPerformanceWeights(modelData::Dict{String, DimArray}, 
                                obsData::Dict{String, DimArray},
-                               weightsVars::Dict{String, Number}=nothing
+                               weightsVars::Dict{String, Number}=Dict{String, Number}()
                                )
-    weights = copy(weightsVars);
-    if !isnothing(weights)
-        normalizeWeightsVariables!(weights);
-    end
     variables = keys(modelData);
+    weights = copy(weightsVars);
+    if !isempty(weights)
+        normalizeWeightsVariables!(weights);
+    else
+        weights = Dict(zip(variables, ones(length(variables))));
+    end
     weightedDistMatrices = [];
 
     meta = createMetaDict(GLOBAL_METADATA_KEYS);
@@ -317,7 +323,7 @@ function getPerformanceWeights(modelData::Dict{String, DimArray},
         meta_not_shared[climVar] = filter(((k,v),)->isa(v, Vector), metadata);
 
         distances = getModelDataDist(modelData[climVar], obsData[climVar]);
-        weight = ifelse(isnothing(weights), 1, weights[climVar]);
+        weight = ifelse(isempty(weights), 1, weights[climVar]);
 
         weightedDistances = normalizeAndWeightDistMatrix(distances, weight);
         push!(weightedDistMatrices, weightedDistances);
@@ -335,51 +341,56 @@ function summarizeWeightsAcrossVars(weightsByVar::DimArray)
 end
 
 
-function averageEnsembleVector(weights::DimArray)
-    # TODO: here metadata gets lost, just groups are retained
-    weightsGrouped = mean.(groupby(weights, dims(weights, :model)));
-    indices = .!isnan.(Array(weightsGrouped));
-    modelNames = Array(dims(weightsGrouped, :model))
-    # TODO: add metadata!
-    weightsByEnsemble =  DimArray(Array(weightsGrouped)[indices], Dim{:model}(modelNames[indices]));
-    return weightsByEnsemble
-end
-
-
 """ 
-    averageEnsembleMembers!(data::Dict{String, DimArray})
+    averageEnsembleVector!(data::DimArray)
 
-for each model, compute the mean across all ensemble members of that model.
+For each model, compute the mean across all ensemble members of that model.
 
-returns a DimArray with dimensions 'lon', 'lat' and 'model'
+# Arguments:
+'data': a DimArray with dimensions 'model' and 'variable'
+
+returns a DimArray with dimensions 'variable', 'model'
 """
-function averageEnsembleMembers!(data::Dict{String, DimArray})
-    for climVar in keys(data)
-        grouped = groupby(data[climVar], :model=>identity)
-        averages = map(d->mean(d, dims=:model), grouped)
-        avgData = []
+function averageEnsembleVector(data::DimArray)
+    variables = Array(dims(data, :variable));
+    results = [];
+    for climVar in variables
+        # grouped = groupby(data[variable=At(climVar)], :model=>identity);
+        grouped = groupby(data[variable = Where(x -> x == climVar)], :model=>identity);
+        averages = map(d->mean(d, dims=:model), grouped);
         models = Array(dims(averages, :model));
-        map(x->push!(avgData, dropdims(x, dims=:model)), averages);
-        data[climVar] = cat(avgData...; dims = (Dim{:model}(models)));
+        avg = cat(averages..., dims=(Dim{:model}(models)));
+        push!(results, avg);
     end
+    models = unique(Array(dims(data, :model)));
+    combined = cat(results...; dims=(Dim{:variable}(variables)));
+
+    return combined
 end
 
+"""
+    averageEnsembleMatrix(data::DimArray)
 
+Computes the average weights across all members of each model ensemble.
 
-function averageEnsembleMatrix(distances::DimArray)
-    # TODO: add metadata
-    models = dims(distances, :model1);
-    modelsUnique = unique(models);
-    
-    ensemble = DimArray(zeros(length(modelsUnique), length(modelsUnique)), (Dim{:model1}(modelsUnique), Dim{:model2}(modelsUnique)));
-    for model in modelsUnique
-        avg = mean(distances[models.!=model, models.==model], dims=:model2)
-        dimModel2 = [model];  
-        avg = set(avg, :model2 => dimModel2)
-        dimModel1 = Array(dims(avg, :model1))
-        ensemble[model1=At(dimModel1), model2=At(dimModel2)] = avg
+# Arguments:
+'data' has dimensions 'model1', 'model2', 'variable'
+"""
+function averageEnsembleMatrix(data::DimArray)
+    #modelsUnique = unique(dims(data, :model1));
+    variables = Array(dims(data, :variable));
+    results = [];
+    for climVar in variables
+        distances = data[variable=Where(x -> x == climVar)];
+        grouped = groupby(distances[variable=At(climVar)], :model1 => identity, :model2=>identity);
+        averages = map(d-> mean(mean(d, dims=:model2), dims=:model1)[1,1], grouped);
+        # Note: set all comparisons of same model to itself to 0, may differ from zero for those models with several ensemble members
+        averages[LinearAlgebra.diagind(averages)] .= 0;
+        push!(results, averages)
     end
-    return ensemble
+    combined = cat(results..., dims=Dim{:variable}(variables))
+    result = rebuild(combined; metadata = data.metadata);
+    return result
 end
 
 """
@@ -388,18 +399,23 @@ end
 Combines the RMSEs between pairs of models and the RMSEs between each model and the data into a set of normalized weights, 
 one for each model. 
 
-Note that, the given weights are summarized wrt ensemble models, s.t. for each ensemble there is only one value. 
+Note that, the given weights are summarized wrt ensemble models, s.t. for each ensemble there is only one value.
 
+# Arguments:
+'performanceWeights': DimArray with dimensions 'model', 'variable'
+'independenceWeights': DimArray with dimensions 'model1', 'model2' and 'variable'
 'sigmaD': Nb. btw. 0 and 1; contribution of performance metric 
 'sigmaS': Nb. btw. 0 and 1; contribution of independence metric
 """
 function combineWeights(performanceWeights::DimArray, independenceWeights::DimArray, sigmaD::Number, sigmaS::Number)
     wP = averageEnsembleVector(performanceWeights);
     wI = averageEnsembleMatrix(independenceWeights);
+    wP = summarizeWeightsAcrossVars(wP);
+    wI = summarizeWeightsAcrossVars(wI);
     performance = exp.(-(wP ./ sigmaD).^2);
     # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
     independence = dropdims(sum(exp.(-(wI ./ sigmaS).^2), dims=:model2), dims=:model2)
-    independence = DimArray(Array(independence), (Dim{:model}(Array(dims(independence, :model1)))))
+    independence = set(independence, :model1 => :model);
 
     weights = performance ./ independence;
     weightsNormalized = weights ./ sum(weights);
@@ -407,10 +423,9 @@ function combineWeights(performanceWeights::DimArray, independenceWeights::DimAr
 end
 
 """
-    getWeights(modelData::DimArray, obsData::DimArray, sigmaD::Number=0.5, sigmaS::Number=0.5, 
-               weightsPerform::Dict{String, Number}=nothing, 
-               weightsIndep::Dict{String, Number}=nothing
-               )
+    getWeights(modelData::Dict{String, DimArray}, obsData::Dict{String, DimArray}[, sigmaD::Number=0.5, sigmaS::Number=0.5, 
+               weightsPerform::Dict{String, Number}=Dict{String, Number}(), 
+               weightsIndep::Dict{String, Number}=Dict{String, Number}()])
 
     Computes weight for each model in multi-model ensemble according to approach from 
     Brunner, Lukas, Angeline G. Pendergrass, Flavio Lehner, Anna L. Merrifield, Ruth Lorenz, and Reto Knutti.
@@ -422,12 +437,12 @@ function getWeights(modelData::Dict{String, DimArray},
                     obsData::Dict{String, DimArray}, 
                     sigmaD::Number=0.5, 
                     sigmaS::Number=0.5,
-                    weightsPerform::Dict{String, Number}=nothing, 
-                    weightsIndep::Dict{String, Number}=nothing
+                    weightsPerform::Dict{String, Number}=Dict{String, Number}(), 
+                    weightsIndep::Dict{String, Number}=Dict{String, Number}()
     )
     wP = getPerformanceWeights(modelData, obsData, weightsPerform);
     wI = getIndependenceWeights(modelData, weightsIndep);
-    weights = combineWeights(summarizeWeightsAcrossVars(wP), summarizeWeightsAcrossVars(wI), sigmaD, sigmaS)
+    weights = combineWeights(wP, wI, sigmaD, sigmaS);
     return weights
 end
 

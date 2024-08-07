@@ -88,19 +88,23 @@ end
 # end
 
 
-wP = SimilarityWeights.averageEnsembleVector(wP_overall);
-wI = SimilarityWeights.averageEnsembleMatrix(wI_overall);
+wP = SimilarityWeights.averageEnsembleVector(wP);
+wI = SimilarityWeights.averageEnsembleMatrix(wI);
 performance = exp.(-(wP ./ sigmaD).^2);
 
 # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
 independence = dropdims(sum(exp.(-(wI ./ sigmaS).^2), dims=:model2), dims=:model2);
-independence = DimArray(Array(independence), (Dim{:model}(Array(dims(independence, :model1)))));
+independence = set(independence, :model1 => :model);
+
+
+tas_ind = independence[variable = At("tas")]
+tas_perform = performance[variable = At("tas")]
 
 begin 
     fig=Figure(fontsize=12)
-    ax = Axis(fig[1,1], title = "Independence vs. performance part of weights")
-    scatter!(ax, Array(independence), Array(performance))
-    text!(Array(independence), Array(performance), text = Array(dims(performance, :model)), 
+    ax = Axis(fig[1,1], xlabel = "Independence weight", ylabel = "Performance weight", title="Variable: tas")
+    scatter!(ax, Array(tas_ind), Array(tas_perform))
+    text!(tas_ind, tas_perform, text = Array(dims(tas_perform, :model)), 
           align = (:center, :top))
     fig
 end
