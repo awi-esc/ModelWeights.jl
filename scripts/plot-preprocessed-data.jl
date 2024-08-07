@@ -2,6 +2,7 @@ using SimilarityWeights
 using NCDatasets
 using DimensionalData
 using Statistics
+using CairoMakie
 
 function checkPathToDir(path::String)
     return isdir(path)
@@ -24,7 +25,7 @@ data = getData(varToPath, "pr");
 
 means = dropdims(mean(data, dims=:model), dims=:model);
 f1 = SimilarityWeights.plotMeansOnMap(means, "Precipitation means historical period");
-
+save("precipitation-historical-simple-avg.png", f1)
 
 # histogram of all data for specific location
 # change longitudes to map from -180 to 180
