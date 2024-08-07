@@ -8,9 +8,12 @@ function checkPathToDir(path::String)
 end
 
 
-function getData(varToPath::Dict{String, String}, climVar::String)
+function getData(varToPath::Dict{String, String}, climVar::String, avgEnsembleMembers::Bool=true)
     modelData =  SimilarityWeights.loadPreprocData(varToPath, "", ["CMIP6"]);
     data = modelData[climVar];
+    if avgEnsembleMembers
+        data = SimilarityWeights.averageEnsembleVector(data)
+    end
     return data
 end
 
@@ -20,7 +23,8 @@ varToPath =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/g
 data = getData(varToPath, "pr");
 
 means = dropdims(mean(data, dims=:model), dims=:model);
-f1 = SimilarityWeights.plotMeansOnMap(means, "Precipitation means historical period")
+f1 = SimilarityWeights.plotMeansOnMap(means, "Precipitation means historical period");
+
 
 # histogram of all data for specific location
 # change longitudes to map from -180 to 180

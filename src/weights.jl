@@ -352,18 +352,25 @@ For each model, compute the mean across all ensemble members of that model.
 returns a DimArray with dimensions 'variable', 'model'
 """
 function averageEnsembleVector(data::DimArray)
-    variables = Array(dims(data, :variable));
-    results = [];
-    for climVar in variables
-        # grouped = groupby(data[variable=At(climVar)], :model=>identity);
-        grouped = groupby(data[variable = Where(x -> x == climVar)], :model=>identity);
-        averages = map(d->mean(d, dims=:model), grouped);
+    if !hasdim(data, :variable)
+        grouped = groupby(data, :model=>identity);
+        averages = map(d -> mean(d, dims=:model), grouped);
         models = Array(dims(averages, :model));
-        avg = cat(averages..., dims=(Dim{:model}(models)));
-        push!(results, avg);
+        combined = cat(averages..., dims=(Dim{:model}(models)));
+    else
+        variables = Array(dims(data, :variable));
+        results = [];
+        for climVar in variables
+            # grouped = groupby(data[variable=At(climVar)], :model=>identity);
+            grouped = groupby(data[variable = Where(x -> x == climVar)], :model=>identity);
+            averages = map(d->mean(d, dims=:model), grouped);
+            models = Array(dims(averages, :model));
+            avg = cat(averages..., dims=(Dim{:model}(models)));
+            push!(results, avg);
+        end
+        models = unique(Array(dims(data, :model)));
+        combined = cat(results...; dims=(Dim{:variable}(variables)));
     end
-    models = unique(Array(dims(data, :model)));
-    combined = cat(results...; dims=(Dim{:variable}(variables)));
 
     return combined
 end

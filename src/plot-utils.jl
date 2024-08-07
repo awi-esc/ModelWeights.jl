@@ -39,59 +39,83 @@ end
 
 
 """ longitude2EastWest(lon)
-    converts longitudes from -180 to 180 degrees into 0-180 degrees East/West
+    converts longitudes from -180° to 180° into 0° to 180° East/West
 """
 function longitude2EastWest(lon)
     return lon > 0 ? "$(lon)°E" : "$(abs(lon))°W"
 end
 
 """ latitude2NorthSouth(lat)
-    converts latitudes from -90 to 90 degrees into 0-90 degrees North/South.
+    converts latitudes from -90° to 90° into 0° to 90° North/South.
 """
 function latitude2NorthSouth(lat)
     return lat < 0 ? "$(abs(lat))°S" : "$(lat)°N"
 end
 
-""" lon360to180(lon)
-    converts longitudes measured from 0 to 360 degrees into degrees measured from -180 to 180.
+""" 
+    lon360to180(lon::Number)
+    
+    converts longitudes measured from 0° to 360° into degrees measured from -180° to 180°.
 """
 function lon360to180(lon::Number)
-    return lon > 180 ? -1 * (360 - lon) : lon
+    return lon > 179 ? lon-360 : lon
 end
+
+""" 
+    lon360to180(lon::Number)
+
+    converts longitudes measured from -180° to 180° into degrees measured from 0° to 360°.
+"""
+function lon180to360(lon::Number)
+    return ifelse(lon < 0, lon + 360, lon)
+end
+
+
 
 
 """ plotMeansOnMap(means::DimArray, title::String)
     plots contours of world with an overlayed heatmap that shows the data which correspond to
     mean value for each position in considered grid. 
         
-    Longitudes are supposed to be given as measured from 0 to 360 degrees.
+    Longitudes are supposed to be given as measured from -180° to 180°.
 """
 function plotMeansOnMap(means::DimArray, title::String)
-    latY = Array(dims(means, :lat));
-    lonX = map(lon360to180, Array(dims(means, :lon)));
+    dims_lat = Array(dims(means, :lat));
+    dims_lon = Array(dims(means, :lon));
+    if any(x -> x > 179, dims_lon)
+        dims_lon = lon360to180.(dims_lon);
+    end
+    
+    # scaling plot 
+    lon_min, lon_max = -180, 180;
+    lat_min, lat_max = -90, 90;
+    lon = range(lon_min, stop=lon_max, length=length(dims_lon));
+    lat = range(lat_min, stop=lat_max, length=length(dims_lat));
 
-    # ticks and labels
-    lonTicks = -180:10:180;
-    latTicks = -90:10:90;
-    lonLabels = SimilarityWeights.longitude2EastWest.(lonTicks);
-    latLabels = SimilarityWeights.latitude2NorthSouth.(latTicks);
+    # axis ticks
+    lonLabels = SimilarityWeights.longitude2EastWest.(dims_lon);
+    latLabels = SimilarityWeights.latitude2NorthSouth.(dims_lat);
+    # just use roughly 10 ticks
+    step_lon = Int(round(length(lonLabels)/10));
+    step_lat = Int(round(length(latLabels)/10));
 
-    # Create the figure and axis
-    fig = getFigure((14, 10), 14);
+    fig = Figure();
     ax = Axis(fig[1,1], 
         title = TextWrap.wrap(title, width=40),
         xlabel = "Longitude",
         ylabel = "Latitude",
-                xticklabelrotation = pi/4,
-        xticks = (lonTicks, lonLabels),
-        yticks = (latTicks, latLabels),
-        limits = ((lonTicks[1], last(lonTicks)), (latTicks[1], last(latTicks)))
-    );
-    hm = heatmap!(ax, lonX, latY, Array(means), alpha=0.8);
-    lines!(GeoMakie.coastlines(),color=:black);
-    Colorbar(fig[1,2], hm)
+        xticklabelrotation = pi/4,
+        xticks = (dims_lon[1 : step_lon : end], lonLabels[1 : step_lon : end]),
+        yticks = (dims_lat[1 : step_lat : end], latLabels[1 : step_lat : end]),
+        limits = ((lon_min, lon_max), (lat_min, lat_max))
+        );
+    lines!(GeoMakie.coastlines(); color=:black);
+    hm = heatmap!(ax, lon, lat, Array(means), alpha=0.8);
+    Colorbar(fig[1,2], hm);
     return fig
 end
+
+
 
 """ getClosestGridPoint(location::Dict, longitudes::Vector, latitudes::Vector)
 
@@ -125,8 +149,8 @@ function plotHistAtPos(data::DimArray, location::Dict, unit::String="")
     data_loc = dropdims(data_loc, dims=:lon)
     data_loc = dropdims(data_loc, dims=:lat)
 
-    grid_lat = SimilarityWeights.latitude2NorthSouth(coords["lat"])
-    grid_lon = SimilarityWeights.longitude2EastWest(coords["lon"])
+    grid_lat = latitude2NorthSouth(coords["lat"])
+    grid_lon = longitude2EastWest(coords["lon"])
     t1 = "Variable: " * data.metadata["variable_id"] * " Experiment: " * data.metadata["experiment_id"];
     t2 = "near " * location["name"] * "(" * grid_lat * "," * grid_lon * ")";
     
