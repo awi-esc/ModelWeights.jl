@@ -47,10 +47,10 @@ size(preprocERA5Tas)
 
 ## ncols = size(dataSingleModel)[2]
 # nbModels = Int(size(preprocTas)[2] / ncols)
-latitudesAll, _ = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, "tas_CLIM"), "lat", ["CMIP"])
-latitudesAll, _ = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, "pr_CLIM"), "lat", ["CMIP"])
+latitudesAll, _ = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, "tas_CLIM"), "lat", ["CMIP"]);
+latitudesAll, _ = loadNCdataInDir(joinpath(PATH_TO_PREPROC_WEIGHTS_DIR, "pr_CLIM"), "lat", ["CMIP"]);
 ## latitudes should be identical across models
-latitudes = NetCDF.ncread(pathSingleModel, "lat")
+latitudes = NetCDF.ncread(pathSingleModel, "lat");
 ###############################################################
 
 function loadModelData(climateVar::String)
@@ -215,6 +215,7 @@ performanceWeightsWork = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_wei
 
 # 2.3 Computation of final weights based on performance and independence weights
 function averageEnsembleMembers(modelDiagnostics, modelNames)
+    # dictionary mapping from model to list of its values
     diagnosticDct = DefaultDict{String, Vector{Any}}(Vector{Any})
     for i in eachindex(modelNames)
         model = modelNames[i];
