@@ -384,18 +384,24 @@ Computes the average weights across all members of each model ensemble.
 'data' has dimensions 'model1', 'model2', 'variable'
 """
 function averageEnsembleMatrix(data::DimArray)
-    #modelsUnique = unique(dims(data, :model1));
-    variables = Array(dims(data, :variable));
-    results = [];
-    for climVar in variables
-        distances = data[variable=Where(x -> x == climVar)];
-        grouped = groupby(distances[variable=At(climVar)], :model1 => identity, :model2=>identity);
-        averages = map(d-> mean(mean(d, dims=:model2), dims=:model1)[1,1], grouped);
-        # Note: set all comparisons of same model to itself to 0, may differ from zero for those models with several ensemble members
+    if !hasdim(data, :variable)
+        grouped = groupby(data, :model1 => identity, :model2 => identity);
+        averages = map(d -> mean(mean(d, dims=:model2), dims=:model1)[1,1], grouped);
         averages[LinearAlgebra.diagind(averages)] .= 0;
-        push!(results, averages)
+        combined = averages;
+    else
+        variables = Array(dims(data, :variable));
+        results = [];
+        for climVar in variables
+            distances = data[variable=Where(x -> x == climVar)];
+            grouped = groupby(distances[variable=At(climVar)], :model1 => identity, :model2=>identity);
+            averages = map(d-> mean(mean(d, dims=:model2), dims=:model1)[1,1], grouped);
+            # Note: set all comparisons of same model to itself to 0, may differ from zero for those models with several ensemble members
+            averages[LinearAlgebra.diagind(averages)] .= 0;
+            push!(results, averages)
+        end
+        combined = cat(results..., dims=Dim{:variable}(variables));
     end
-    combined = cat(results..., dims=Dim{:variable}(variables))
     result = rebuild(combined; metadata = data.metadata);
     return result
 end
