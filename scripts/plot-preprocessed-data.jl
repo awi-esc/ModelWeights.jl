@@ -22,6 +22,7 @@ end
 varToPath =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
 #varToPath = Dict{String, String}("pr" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
 data = getData(varToPath, "pr");
+data_all_members = getData(varToPath, "pr", false);
 
 means = dropdims(mean(data, dims=:model), dims=:model);
 f1 = SimilarityWeights.plotMeansOnMap(means, "Precipitation means historical period");
@@ -29,22 +30,22 @@ save("precipitation-historical-simple-avg.png", f1)
 
 # histogram of all data for specific location
 # change longitudes to map from -180 to 180
-longitudes = map(SimilarityWeights.lon360to180, Array(dims(data, :lon)));
+longitudes = SimilarityWeights.lon360to180.(Array(dims(data, :lon)));
 data = set(data, :lon => longitudes);
 
 
 # some locations
 potsdam = Dict([("name", "Potsdam"), ("lat", 52.3906), ("lon", 13.0645)]);
 veracruz = Dict([("name", "Veracruz"), ("lat", 19.1738), ("lon", -96.1342)]);
+# in driest region of the earth:
 atacama = Dict([("name", "San Pedro de Atacama"), ("lat", -22.9087), ("lon", -68.1997)]);
+# appearently wettest place on earth:
 mawsynram = Dict([("name", "Mawsynram"), ("lat", 25.300), ("lon", 91.583)]);
 
-f2 = SimilarityWeights.plotHistAtPos(data, potsdam, "kg m-2 s-1")
-f3 = SimilarityWeights.plotHistAtPos(data, veracruz, "kg m-2 s-1")
-# in driest region of the earth
-f4 = SimilarityWeights.plotHistAtPos(data, atacama, "kg m-2 s-1")
-# appearently wettest place on earth
-f5 = SimilarityWeights.plotHistAtPos(data, mawsynram, "kg m-2 s-1")
+f2 = SimilarityWeights.plotHistAtPos(data, potsdam)
+f3 = SimilarityWeights.plotHistAtPos(data, veracruz)
+f4 = SimilarityWeights.plotHistAtPos(data, atacama)
+f5 = SimilarityWeights.plotHistAtPos(data, mawsynram)
 
 
 # AMOC (derived variable)
@@ -53,6 +54,7 @@ varToPath = Dict{String, String}("amoc" => "/Users/brgrus001/output-from-albedo/
 #varToPath = Dict{String, String}("amoc" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic");
 
 data = getData(varToPath, "amoc");
+SimilarityWeights.convertKgsToSv!(data)
 SimilarityWeights.plotAMOC(data)
 
 

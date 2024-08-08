@@ -15,12 +15,8 @@ function getFigure(figsize, fontsize)
     return fig
 end
 
-"""
-"""
+
 function plotDistMatrices(distMat, climateVar, models, modelRefs)
-    # size_inches = (8, 5)
-    # size_pt = 72 .* size_inches
-    # fig=Figure(size= size_pt, fontsize=12)
     fig = Figure();
     xs = 1:length(models)
     ax = Axis(
@@ -38,24 +34,26 @@ end
 
 
 
-""" longitude2EastWest(lon)
-    converts longitudes from -180° to 180° into 0° to 180° East/West
+""" longitude2EastWest(lon::Number)
+
+Convert longitudes from -180° to 180° into 0° to 180° East/West.
 """
-function longitude2EastWest(lon)
+function longitude2EastWest(lon::Number)
     return lon > 0 ? "$(lon)°E" : "$(abs(lon))°W"
 end
 
-""" latitude2NorthSouth(lat)
-    converts latitudes from -90° to 90° into 0° to 90° North/South.
+""" latitude2NorthSouth(lat::Number)
+
+Convert latitudes from -90° to 90° into 0° to 90° North/South.
 """
-function latitude2NorthSouth(lat)
+function latitude2NorthSouth(lat::Number)
     return lat < 0 ? "$(abs(lat))°S" : "$(lat)°N"
 end
 
 """ 
     lon360to180(lon::Number)
     
-    converts longitudes measured from 0° to 360° into degrees measured from -180° to 180°.
+Convert longitudes measured from 0° to 360° into  -180° to 180° scale.
 """
 function lon360to180(lon::Number)
     return lon > 179 ? lon-360 : lon
@@ -64,20 +62,33 @@ end
 """ 
     lon360to180(lon::Number)
 
-    converts longitudes measured from -180° to 180° into degrees measured from 0° to 360°.
+Convert longitudes measured from -180° to 180° into 0° to 360° scale.
 """
 function lon180to360(lon::Number)
     return ifelse(lon < 0, lon + 360, lon)
 end
 
 
+"""
+    convertKgsToSv!(vec:DimArray)
+
+Convert data given in unit 'kg s-1' into Sverdrups (Sv).
+"""
+function convertKgsToSv!(data::DimArray)
+    if data.metadata["units"] != "kg s-1"
+        throw(ArgumentError("The unit of the data should be 'kg s-1', but it is " * data.metadata["units"]))
+    end
+    data[1:end] = data .* (10^-9);
+    data.metadata["units"] = "Sv";
+    return nothing
+end
+
 
 
 """ plotMeansOnMap(means::DimArray, title::String)
-    plots contours of world with an overlayed heatmap that shows the data which correspond to
-    mean value for each position in considered grid. 
-        
-    Longitudes are supposed to be given as measured from -180° to 180°.
+    
+Plot contours of world with an overlayed heatmap that shows the data which correspond to
+mean value for each position in considered grid. 
 """
 function plotMeansOnMap(means::DimArray, title::String)
     dims_lat = Array(dims(means, :lat));
@@ -119,11 +130,13 @@ end
 
 """ getClosestGridPoint(location::Dict, longitudes::Vector, latitudes::Vector)
 
-    location is a dictionary with keys: lon, lat mapping to the location for which the
-    closest point on the given grid is returned.
+Find the grid point in given `longitudes`, `latitudes` - grid closest to `location`.
 
-Longitudes are assumed to be measured from -180 to 180 and latitudes from -90 to 90 degrees.
-Make sure that location refers to this scale, too. E.g. 96°W has to be given as -96 longitude.
+# Arguments
+- `location::Dict`: 'lon', 'lat' of position for which closest grid point is returned, `lon`
+must be given from -180° to 180°
+- `longitudes::Vector`: grid longitudes measured from -180° to 180°
+- `latitudes::Vector`: grid latitudes measured from -90° to 90°
 """
 function getClosestGridPoint(location::Dict, longitudes::Vector, latitudes::Vector)
     idx_lat = argmin(abs.(latitudes .- location["lat"]));
@@ -133,15 +146,15 @@ function getClosestGridPoint(location::Dict, longitudes::Vector, latitudes::Vect
     return Dict([("name", location["name"]), ("lon", lon), ("lat", lat)])
 end
 
-""" plotHistAtPos(data::DimArray, location::Dict, unit::String)
+""" plotHistAtPos(data::DimArray, location::Dict)
 
-    plots histogram of all model data for a specific location.
+Plot histogram of all data for a specific `location`.
 
-data must have dimnensions 'lon', 'lat', which are given from -180 to 180 (lon) and from -90 to 90 (lat).
-location is a Dict with keys 'name', 'lon', 'lat'
-(unit should be retrieved via metadata from data in the future)
+# Arguments:
+- `data::DimArray`: dimensions 'lon' (from -180° to 180°), 'lat' (-90° to 90°)
+- `location::Dict`: keys 'name', 'lon', 'lat'
 """
-function plotHistAtPos(data::DimArray, location::Dict, unit::String="")
+function plotHistAtPos(data::DimArray, location::Dict)
     coords = getClosestGridPoint(location, Array(dims(data, :lon)), Array(dims(data, :lat)));
     # no idea why At doesnt work for negative values at longitude dimension...
     # At would drop dimensions directly..
@@ -155,22 +168,22 @@ function plotHistAtPos(data::DimArray, location::Dict, unit::String="")
     t2 = "near " * location["name"] * "(" * grid_lat * "," * grid_lon * ")";
     
     fig = getFigure((14,10), 16);
-    ax = Axis(fig[1,1], title = join([t1, t2], "\n"), xlabel = unit)
+    ax = Axis(fig[1,1], title = join([t1, t2], "\n"), xlabel = data.metadata["units"])
     hist!(ax, vec(data_loc))
     return fig
 end
 
 
-""" plotAMOC(data)
-    plots AMOC strength for variable "amoc" derived by ESMValTool recipe
+""" plotAMOC(data::DimArray)
 
-unit in ylabel should be done via metadata
+Plot AMOC strength for variable "amoc".
 """
-function plotAMOC(data)
+function plotAMOC(data::DimArray)
     fig = getFigure((8, 5), 12);
     t = "variable: amoc, experiment: " * data.metadata["experiment_id"];
 
-    ax = Axis(fig[1, 1], title=join(["AMOC strength (at 26.5°N)", t], "\n"),  ylabel = "Transport in kg s^-1")
+    unit = data.metadata["units"];
+    ax = Axis(fig[1, 1], title=join(["AMOC strength (at 26.5°N)", t], "\n"),  xlabel = "Transport in " * unit)
     if length(dims(data)) == 1
         # data for full period
         hist!(ax, Array(data))
