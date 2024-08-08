@@ -217,7 +217,7 @@ function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
     fig =  getFigure((16,8), 18);
     t1 = data.metadata["long_name"] * " (" * data.metadata["variable_id"] * ")";
     t = join(["at ", longitude2EastWest(lon), latitude2NorthSouth(lat)], " ");
-    t2 = "Spread of models with several ensemble members" * t; 
+    t2 = "Spread of models with several ensemble members " * t; 
     ax = Axis(fig[1,1], 
               xlabel = "Models", 
               ylabel = data.metadata["units"], 
