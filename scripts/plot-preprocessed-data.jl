@@ -61,26 +61,13 @@ SimilarityWeights.plotAMOC(data)
 # Models with different ensemble members
 
 data_all_members = getData(varToPathPr, "pr", false);
-models = unique(dims(data_all_members, :model));
-
-
-df_models = filter(x -> length(dims(data_all_members[model = Where(m -> m == x)], :model)) > 1, models);
-df = data_all_members[model = Where(x -> x in df_models)]
-
-categories = Array(dims(df, :model));
-categoriesInts = collect(1 : length(categories));
-for (i, m) in enumerate(df_models)
-    categoriesInts[findall(categories.==m)] .= i;
+longitudes = Array(dims(data_all_members, :lon));
+if any(longitudes .> 180)
+    longitudes = SimilarityWeights.lon360to180.(longitudes);
+    data_all_members = set(data_all_members, :lon => SimilarityWeights.lon360to180.(Array(dims(data_all_members, :lon))));
 end
 
-fig = Figure();
-ax = Axis(fig[1,1]);
+loc = SimilarityWeights.getClosestGridPoint(veracruz, longitudes, Array(dims(data_all_members, :lat)));
+loc = SimilarityWeights.getClosestGridPoint(potsdam, longitudes, Array(dims(data_all_members, :lat)));
 
-
-values = Array(df[7,10,:])
-boxplot!(ax, categoriesInts, values);
-fig
-
-
-loc = SimilarityWeights.getClosestGridPoint(potsdam, Array(dims(data_all_members, :lon)), Array(dims(data_all_members, :lat)));
 SimilarityWeights.plotEnsembleSpread(data_all_members, loc["lon"], loc["lat"])

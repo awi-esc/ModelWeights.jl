@@ -155,7 +155,12 @@ Plot histogram of all data for a specific `location`.
 - `location::Dict`: keys 'name', 'lon', 'lat'
 """
 function plotHistAtPos(data::DimArray, location::Dict)
-    coords = getClosestGridPoint(location, Array(dims(data, :lon)), Array(dims(data, :lat)));
+    longitudes = Array(dims(data, :lon));
+    longitudes = ifelse(any(longitudes .> 180), lon360to180.(longitudes), longitudes);
+    if location["lon"] > 180
+        location["lon"] = lon360to180(location["lon"]);
+    end
+    coords = getClosestGridPoint(location, longitudes, Array(dims(data, :lat)));
     # no idea why At doesnt work for negative values at longitude dimension...
     # At would drop dimensions directly..
     data_loc = data[lat=Where(elem-> elem == coords["lat"]), lon=Where(elem -> elem == coords["lon"])];
@@ -197,6 +202,8 @@ function plotAMOC(data::DimArray)
     return fig
 end
 
+
+
 """
     plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
 
@@ -215,9 +222,10 @@ function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
     end
     
     fig =  getFigure((16,8), 18);
-    t1 = data.metadata["long_name"] * " (" * data.metadata["variable_id"] * ")";
+    t1 = data.metadata["long_name"] * " (" * data.metadata["variable_id"] * ")";    
     t = join(["at ", longitude2EastWest(lon), latitude2NorthSouth(lat)], " ");
     t2 = "Spread of models with several ensemble members " * t; 
+
     ax = Axis(fig[1,1], 
               xlabel = "Models", 
               ylabel = data.metadata["units"], 
@@ -225,7 +233,10 @@ function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
               xticks = (collect(1:length(models_ensembles)), models_ensembles), 
               xticklabelrotation = pi/2);
     
-    values = Array(data_ensembles[lon = At(lon), lat = At(lat)]);
-    boxplot!(ax, categoriesInts, values);
+    if !(lon in Array(dims(data_ensembles, :lon)))
+        throw(ArgumentError("location and data are not given in the same longitudes scale, use either (0° to 360°) or (-180° to 180°)!"));
+    end
+    values = dropdims(data_ensembles[lon = Where(x -> x == lon), lat = Where(x -> x == lat)], dims =:lon);
+    boxplot!(ax, categoriesInts, Array(dropdims(values, dims=:lat)));
     return fig
 end
