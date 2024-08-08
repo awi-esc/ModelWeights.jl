@@ -19,10 +19,9 @@ function getData(varToPath::Dict{String, String}, climVar::String, avgEnsembleMe
 end
 
 # precipitaton
-varToPath =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
+varToPathPr =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
 #varToPath = Dict{String, String}("pr" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
-data = getData(varToPath, "pr");
-data_all_members = getData(varToPath, "pr", false);
+data = getData(varToPathPr, "pr");
 
 means = dropdims(mean(data, dims=:model), dims=:model);
 f1 = SimilarityWeights.plotMeansOnMap(means, "Precipitation means historical period");
@@ -58,6 +57,30 @@ SimilarityWeights.convertKgsToSv!(data)
 SimilarityWeights.plotAMOC(data)
 
 
-# AMOC (msftmz)
+
+# Models with different ensemble members
+
+data_all_members = getData(varToPathPr, "pr", false);
+models = unique(dims(data_all_members, :model));
 
 
+df_models = filter(x -> length(dims(data_all_members[model = Where(m -> m == x)], :model)) > 1, models);
+df = data_all_members[model = Where(x -> x in df_models)]
+
+categories = Array(dims(df, :model));
+categoriesInts = collect(1 : length(categories));
+for (i, m) in enumerate(df_models)
+    categoriesInts[findall(categories.==m)] .= i;
+end
+
+fig = Figure();
+ax = Axis(fig[1,1]);
+
+
+values = Array(df[7,10,:])
+boxplot!(ax, categoriesInts, values);
+fig
+
+
+loc = SimilarityWeights.getClosestGridPoint(potsdam, Array(dims(data_all_members, :lon)), Array(dims(data_all_members, :lat)));
+SimilarityWeights.plotEnsembleSpread(data_all_members, loc["lon"], loc["lat"])

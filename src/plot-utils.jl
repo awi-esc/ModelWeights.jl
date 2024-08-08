@@ -197,3 +197,35 @@ function plotAMOC(data::DimArray)
     return fig
 end
 
+"""
+    plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
+
+Create figure with boxplots for each model in `data` that have several ensemble members.
+"""
+function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
+    models = unique(dims(data, :model));
+    models_ensembles = filter(x -> length(dims(data[model = Where(m -> m == x)], :model)) > 1, models);
+    data_ensembles = data[model = Where(x -> x in models_ensembles)];
+    
+    # translate list of unique models into list of integers for boxplot
+    categories = Array(dims(data_ensembles, :model));
+    categoriesInts = collect(1 : length(categories));
+    for (i, m) in enumerate(models_ensembles)
+        categoriesInts[findall(categories .== m)] .= i;
+    end
+    
+    fig =  getFigure((16,8), 18);
+    t1 = data.metadata["long_name"] * " (" * data.metadata["variable_id"] * ")";
+    t = join(["at ", longitude2EastWest(lon), latitude2NorthSouth(lat)], " ");
+    t2 = "Spread of models with several ensemble members" * t; 
+    ax = Axis(fig[1,1], 
+              xlabel = "Models", 
+              ylabel = data.metadata["units"], 
+              title = join([t1, t2], "\n"), 
+              xticks = (collect(1:length(models_ensembles)), models_ensembles), 
+              xticklabelrotation = pi/2);
+    
+    values = Array(data_ensembles[lon = At(lon), lat = At(lat)]);
+    boxplot!(ax, categoriesInts, values);
+    return fig
+end
