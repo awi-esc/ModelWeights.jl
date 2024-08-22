@@ -10,7 +10,7 @@ end
 
 
 function getData(varToPath::Dict{String, String}, climVar::String, avgEnsembleMembers::Bool=true)
-    modelData =  SimilarityWeights.loadPreprocData(varToPath, "", ["CMIP6"]);
+    modelData =  SimilarityWeights.loadPreprocData(varToPath, ["CMIP6"]);
     data = modelData[climVar];
     if avgEnsembleMembers
         data = SimilarityWeights.averageEnsembleVector(data)
