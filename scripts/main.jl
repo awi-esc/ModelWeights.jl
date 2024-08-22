@@ -4,23 +4,25 @@ using CairoMakie
 using ColorSchemes
 using NCDatasets
 
-###########################################
-pathsModelData = Dict("pr" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
-pathsObsData = Dict("pr" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240802_115940/preproc/climatologic_diagnostic");
-# on albedo
-# pathObsData= "/albedo/work/projects/p_pool_clim_data/ERA5/Tier3/ERA5/v1/mon";
-# obsData = SimilarityWeights.loadPreprocData(pathObsData, diagnostic, ["era5"]);
-weightsVars = Dict{String, Number}("pr" => 1, "hur" => 1); 
 
-#pathsModelData = Dict("hur" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_hur_20240801_094610/preproc/climatologic_diagnostic");
-#pathsObsData = Dict("hur" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_hur_20240802_120722/preproc/climatologic_diagnostic");
+RUN_ON_ALBEDO = true;
 
-## Get preprocessed data from ESMValTool ##
-diagnostic = "";
-modelData = SimilarityWeights.loadPreprocData(pathsModelData, diagnostic, ["CMIP"]);
-obsData = SimilarityWeights.loadPreprocData(pathsObsData, diagnostic, ["ERA5"]);
-# just use one reference period
-obsData["pr"] = obsData["pr"][:,:,1:1]; 
+############# Get preprocessed data from ESMValTool ######################
+if RUN_ON_ALBEDO
+    # just use one reference period
+    pathsObsData= Dict("pr" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_historical_pr_20240815_124334/preproc/climatology_historical1/pr");
+    pathsModelData = Dict("pr" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_historical_pr_20240815_124334/preproc/climatology_full/pr");
+else
+    # TODO: recheck these!!
+    pathsObsData = Dict("tp" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240802_115940/preproc/climatologic_diagnostic",
+                        "hur" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_hur_20240802_120722/preproc/climatologic_diagnostic");
+    pathsModelData = Dict("pr" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic", 
+                          "hur" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_hur_20240801_094610/preproc/climatologic_diagnostic");
+end
+
+obsData = SimilarityWeights.loadPreprocData(pathsObsData, ["ERA5"]);
+weightsVars = Dict{String, Number}("pr" => 1, "tas" => 1, "hur" => 1); 
+modelData = SimilarityWeights.loadPreprocData(pathsModelData, ["CMIP"]);
 ###########################################
 
 # Performance and independent weights

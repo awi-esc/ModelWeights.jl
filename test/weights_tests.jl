@@ -3,8 +3,8 @@ using Statistics
 
 @testset "Testset performance weights" begin    
     weightsVars = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
-    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["CMIP"]);
-    obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["ERA5"]);
+    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
+    obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["ERA5"]);
     
     weightsByVars = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars);
     weights = SimilarityWeights.summarizeWeightsAcrossVars(weightsByVars);
@@ -20,7 +20,7 @@ end
 
 @testset "Testset independence weights" begin
     weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
-    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["CMIP"]);
+    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
 
     weightsByVars = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
     weights = SimilarityWeights.summarizeWeightsAcrossVars(weightsByVars);
@@ -34,7 +34,7 @@ end
 
 
 @testset "Test averaging ensemble members Matrix (independence weights)" begin
-    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["CMIP"]);
+    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
     weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
 
     weights = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
@@ -55,10 +55,10 @@ end
 end
 
 @testset "Test averaging ensemble members Vector (performance weights)" begin
-    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["CMIP"]);
+    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
     weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
 
-    obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["ERA5"]);
+    obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["ERA5"]);
     weightsVars = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
     weights = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars);
     wPerform_vars = SimilarityWeights.averageEnsembleVector(weights);
@@ -73,11 +73,11 @@ end
 
 
 @testset "Testset combined weights" begin
-    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["CMIP"]);
+    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
     weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
     independenceWeights = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
 
-    obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["ERA5"]);
+    obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["ERA5"]);
     weightsVars = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
     performanceWeights = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars);
     weights = SimilarityWeights.combineWeights(performanceWeights, independenceWeights, 0.5, 0.5)
@@ -93,20 +93,32 @@ end
 
 
 @testset "Testset function getWeights" begin
-    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["CMIP"]);
-    obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, "CLIM", ["ERA5"]);
+    modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
+    obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["ERA5"]);
     
-    weightsVarsPerform = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
-    weightsVarsIndep = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
-    weights = SimilarityWeights.getWeights(modelData, obsData, 0.5, 0.5, weightsVarsPerform, weightsVarsIndep);
+    weightsVarsPerform = Dict{String, Number}("tas" => 1, 
+                                              "pr" => 2, 
+                                              "psl" => 1); 
+    weightsVarsIndep = Dict{String, Number}("tas" => 0.5, 
+                                            "pr" => 0.25,
+                                            "psl" => 0); 
+    weights = SimilarityWeights.getWeights(modelData,
+                                           obsData, 
+                                           0.5, 
+                                           0.5, 
+                                           weightsVarsPerform, 
+                                           weightsVarsIndep);
 
-    ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "weights.nc"));
+    ds = NCDataset(joinpath(PATH_TO_WORK_DIR,
+                   "calculate_weights_climwip", 
+                   "climwip", 
+                   "weights.nc"));
     expected_all = Array(ds["weight"]);
 
     #last four entries are from one ensemble 
     expected = copy(expected_all[1:3]);
     push!(expected, sum(expected_all[4:end]))
-
+ 
     @test all((x)-> x==1, round.(expected, digits=NB_DIGITS) .== round.(weights, digits=NB_DIGITS));
 end
 

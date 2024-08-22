@@ -63,38 +63,29 @@ function createMetaDict(list_keys::Vector{String} = LOCAL_METADATA_KEYS)
 end
 
 """
-    loadPreprocData(climateVarsToPaths::Dict{String,String}, diagnostic=CLIM, dataIncluded=[])
+    loadPreprocData(climateVarsToPaths::Dict{String,String}, dataIncluded=[])
 
-Loads all preprocessed (e.g., by ESMValTool) .nc files (each model is a different .nc file) for each climate climate variable and 'diagnostic' 
-inside the respective subdirectory (climateVar_diagnostic, e.g. tos_CLIM) into a single DimArray with dimensions lon (longitude), lat (latitude) and model. 
+Loads all preprocessed (e.g., by ESMValTool) .nc files (each model is a different .nc file) for each climate climate variable
+inside the respective subdirectory (e.g. tos) into a single DimArray with dimensions lon (longitude), lat (latitude) and model. 
 
 If length(dataIncluded) != 0 only those .nc files are considered whose filenames contain all elements of dataIncluded, 
 e.g. if dataIncluded=['ERA5'] only ERA5 data will be included (files with ERA5 in their filename).
 
 # Arguments
 'climateVarsToPaths': dictionary mapping from climate variables as short names (e.g., tas) to path where respective (preprocessed) data is stored
-'diagnostic': the name of the diagnotsic used by ESMValTool
 'included': Array that contains Strings that must occur in filenames of loaded data. If only a certain model should be loaded, this is specified here, e.g. 
             ['AWI-ESM-1-1-LR'] would load only data from this particular model.
 """
-function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::String="CLIM", included::Vector{String}=[])
+function loadPreprocData(climVarsToPaths::Dict{String, String}, included::Vector{String}=[])
     dataAllVars = Dict{String, DimArray}();
     for climVar in keys(climVarsToPaths)
-        directory = ifelse(isempty(diagnostic), climVar, join([climVar, diagnostic], "_"));
-        pathToData = joinpath(climVarsToPaths[climVar], directory);
-
+        pathToData = climVarsToPaths[climVar];
         data = [];
         sources = [];
-        meta = createMetaDict();
+        meta = SimilarityWeights.createMetaDict();
         for (root, dirs, files) in walkdir(pathToData; follow_symlinks=true)
             ncFiles = filter(x->endswith(x, ".nc"), files);
-            # i=0;
             for file in ncFiles
-                # i = i+1;
-                # if i==364
-                #     break
-                # end
-                # println(i);
                 addFile = true;
                 # if not empty, only includes files that contain all names given in 'included'
                 if length(included) != 0
@@ -109,11 +100,11 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::Stri
 
                     attributes = deepcopy(ds.attrib);
                     attributes = merge(Dict(dsVar.attrib), attributes);
-                    if hasFlawedMetadata(attributes, filename)
+                    if SimilarityWeights.hasFlawedMetadata(attributes, filename)
                         continue
                     end
                     attributes = filter(((k,v),) -> k in GLOBAL_METADATA_KEYS || k in LOCAL_METADATA_KEYS, attributes);
-                    meta = mergewith(appendValuesDicts, meta, Dict(attributes));
+                    meta = mergewith(SimilarityWeights.appendValuesDicts, meta, Dict(attributes));
                     if "model_id" in keys(ds.attrib)
                         push!(sources, ds.attrib["model_id"]);
                     else
@@ -142,7 +133,7 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, diagnostic::Stri
         dimData = cat(data...; dims = (Dim{:model}(sources)));
         dimData = rebuild(dimData; metadata = meta);
 
-        checkMetadata(dimData);
+        SimilarityWeights.checkMetadata(dimData);
         dataAllVars[climVar] = dimData;
     end
 

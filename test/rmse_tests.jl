@@ -3,7 +3,7 @@ using LinearAlgebra
 
 @testset "Testset model-model" begin
     data = filter(((k,v),) -> k=="tas", VAR_TO_PREPROC_DATA);
-    modelData =  SimilarityWeights.loadPreprocData(data, "CLIM", ["CMIP"]);
+    modelData =  SimilarityWeights.loadPreprocData(data, ["CMIP"]);
     modelDistances = SimilarityWeights.getModelDistances(modelData["tas"])
     
     # make symmetrical matrix
@@ -32,8 +32,8 @@ end
 
 @testset "Testset model-obs" begin
     data = filter(((k,v),) -> k=="tas", VAR_TO_PREPROC_DATA);
-    models =  SimilarityWeights.loadPreprocData(data, "CLIM", ["CMIP"]);
-    observations = SimilarityWeights.loadPreprocData(data, "CLIM", ["ERA5"]);
+    models =  SimilarityWeights.loadPreprocData(data, ["CMIP"]);
+    observations = SimilarityWeights.loadPreprocData(data, ["ERA5"]);
 
     modelObsDistances = SimilarityWeights.getModelDataDist(models["tas"], observations["tas"])
     expected = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_tas_CLIM.nc"))["dtas_CLIM"];
