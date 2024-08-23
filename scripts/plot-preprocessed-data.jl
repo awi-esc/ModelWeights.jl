@@ -19,13 +19,15 @@ function getData(varToPath::Dict{String, String}, climVar::String, avgEnsembleMe
 end
 
 # precipitaton
-varToPathPr =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
+varToPathPr =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/recipe_historical_pr_20240815_124334/preproc/climatology_historical1");
+varToPathPr =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/recipe_historical_pr_20240815_124334/preproc/climatology_historical3");
+
 #varToPath = Dict{String, String}("pr" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
 data = getData(varToPathPr, "pr");
 
 means = dropdims(mean(data, dims=:model), dims=:model);
 f1 = SimilarityWeights.plotMeansOnMap(means, "Precipitation means historical period");
-save("precipitation-historical-simple-avg.png", f1)
+save("precipitation-historical1-simple-avg.png", f1);
 
 # histogram of all data for specific location
 # change longitudes to map from -180 to 180
@@ -34,6 +36,7 @@ data = set(data, :lon => longitudes);
 
 
 # some locations
+florida = Dict([("name", "Florida"), ("lat", 27.6648), ("lon", -81.5158)]);
 potsdam = Dict([("name", "Potsdam"), ("lat", 52.3906), ("lon", 13.0645)]);
 veracruz = Dict([("name", "Veracruz"), ("lat", 19.1738), ("lon", -96.1342)]);
 # in driest region of the earth:
@@ -45,7 +48,7 @@ f2 = SimilarityWeights.plotHistAtPos(data, potsdam)
 f3 = SimilarityWeights.plotHistAtPos(data, veracruz)
 f4 = SimilarityWeights.plotHistAtPos(data, atacama)
 f5 = SimilarityWeights.plotHistAtPos(data, mawsynram)
-
+f6 = SimilarityWeights.plotHistAtPos(data, florida)
 
 # AMOC (derived variable)
 # varToPath = Dict{String, String}("amoc" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240730_090548/preproc/climatologic_diagnostic");

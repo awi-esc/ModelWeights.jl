@@ -398,20 +398,25 @@ function averageEnsembleMatrix(data::DimArray)
 end
 
 """
-    combineWeights(performanceWeights::DimArray, independenceWeights::DimArray, sigmaD::Number=0.5, sigmaS::Number=0.5)
+    combineWeights(performanceWeights::DimArray, independenceWeights::DimArray, 
+                  sigmaD::Number=0.5, sigmaS::Number=0.5)
 
-Combines the RMSEs between pairs of models and the RMSEs between each model and the data into a set of normalized weights, 
-one for each model. 
+Combine the RMSEs between pairs of models and the RMSEs between each model and
+the data into a set of normalized weights, one for each model. 
 
-Note that, the given weights are summarized wrt ensemble models, s.t. for each ensemble there is only one value.
+Note that, the given weights are summarized wrt ensemble models, s.t. for each
+ensemble there is only one value.
 
 # Arguments:
-'performanceWeights': DimArray with dimensions 'model', 'variable'
-'independenceWeights': DimArray with dimensions 'model1', 'model2' and 'variable'
-'sigmaD': Nb. btw. 0 and 1; contribution of performance metric 
-'sigmaS': Nb. btw. 0 and 1; contribution of independence metric
+- 'performanceWeights': DimArray with dimensions 'model', 'variable'
+- 'independenceWeights': DimArray with dimensions 'model1', 'model2', 'variable'
+- 'sigmaD': Nb. btw. 0 and 1; contribution of performance metric 
+- 'sigmaS': Nb. btw. 0 and 1; contribution of independence metric
 """
-function combineWeights(performanceWeights::DimArray, independenceWeights::DimArray, sigmaD::Number, sigmaS::Number)
+function combineWeights(performanceWeights::DimArray, 
+                        independenceWeights::DimArray, 
+                        sigmaD::Number, 
+                        sigmaS::Number)
     wP = averageEnsembleVector(performanceWeights);
     wI = averageEnsembleMatrix(independenceWeights);
     wP = summarizeWeightsAcrossVars(wP);
@@ -427,17 +432,21 @@ function combineWeights(performanceWeights::DimArray, independenceWeights::DimAr
 end
 
 """
-    getWeights(modelData::Dict{String, DimArray}, obsData::Dict{String, DimArray}[, sigmaD::Number=0.5, sigmaS::Number=0.5, 
-               weightsPerform::Dict{String, Number}=Dict{String, Number}(), 
-               weightsIndep::Dict{String, Number}=Dict{String, Number}()])
+    getOverallWeights(modelData::Dict{String, DimArray}, 
+               obsData::Dict{String, DimArray}[, 
+               sigmaD::Number = 0.5, 
+               sigmaS::Number = 0.5, 
+               weightsPerform::Dict{String, Number} = Dict{String, Number}(), 
+               weightsIndep::Dict{String, Number} = Dict{String, Number}()])
 
-    Computes weight for each model in multi-model ensemble according to approach from 
-    Brunner, Lukas, Angeline G. Pendergrass, Flavio Lehner, Anna L. Merrifield, Ruth Lorenz, and Reto Knutti.
-    “Reduced Global Warming from CMIP6 Projections When Weighting Models by Performance and Independence.” 
-    Earth System Dynamics 11, no. 4 (November 13, 2020): 995–1012. https://doi.org/10.5194/esd-11-995-2020.
-
+Compute weight for each model in multi-model ensemble according to approach
+from Brunner, Lukas, Angeline G. Pendergrass, Flavio Lehner,
+Anna L. Merrifield, Ruth Lorenz, and Reto Knutti. “Reduced Global Warming
+from CMIP6 Projections When Weighting Models by Performance and
+Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
+995–1012. https://doi.org/10.5194/esd-11-995-2020.
 """
-function getWeights(modelData::Dict{String, DimArray}, 
+function getOverallWeights(modelData::Dict{String, DimArray}, 
                     obsData::Dict{String, DimArray}, 
                     sigmaD::Number=0.5, 
                     sigmaS::Number=0.5,
@@ -452,16 +461,12 @@ end
 
 function appendValuesDicts(val1, val2)
     if isa(val1, Vector) && isa(val2, Vector) 
-        #print("both are vectors")
         return vcat(val1, val2)
     elseif isa(val1, Vector)
-        #print("just arg1 is vector")
         return push!(val1, val2)
     elseif isa(val2, Vector)
-        #print("just arg2 is vector")
         return push!(val2, val1)
     else
-        #print("none is vector")
         if val1 == val2
             return val1
         else

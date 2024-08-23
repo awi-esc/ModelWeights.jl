@@ -31,13 +31,13 @@ wP_overall = SimilarityWeights.summarizeWeightsAcrossVars(wP);
 
 sigmaD = 0.5;
 sigmaS = 0.5;
-weights = SimilarityWeights.getWeights(modelData,
-                                      obsData, 
-                                      0.5, 
-                                      0.5, 
-                                      weightsVarsPerform,
-                                      weightsVarsIndep
-                                      );
+weights = SimilarityWeights.getOverallWeights(modelData,
+                                              obsData, 
+                                              0.5, 
+                                              0.5, 
+                                              weightsVarsPerform,
+                                              weightsVarsIndep
+                                             );
 # distributed CCSM4 across all 4 CCSM4-models
 weightCCSM4 = weights[4]/4;
 result = [Array(weights[1:3]); repeat([weightCCSM4], 4)]
@@ -107,8 +107,8 @@ independence = dropdims(sum(exp.(-(wI ./ sigmaS).^2), dims=:model2), dims=:model
 independence = set(independence, :model1 => :model);
 
 
-tas_ind = independence[variable = At("tas")]
-tas_perform = performance[variable = At("tas")]
+tas_ind = independence[variable = At("tas")];
+tas_perform = performance[variable = At("tas")];
 
 begin 
     fig=Figure(fontsize=12)

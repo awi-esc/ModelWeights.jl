@@ -34,4 +34,4 @@ wI_avg = SimilarityWeights.averageEnsembleMatrix(wI)
 wI = dropdims(wI_avg, dims=:variable);
 f = SimilarityWeights.plotDistMatrices(wI, "pr", Array(dims(wI, :model1)), Array(dims(wI, :model2)))
 
-weights = SimilarityWeights.getWeights(modelData, obsData)
+weights = SimilarityWeights.getOverallWeights(modelData, obsData)

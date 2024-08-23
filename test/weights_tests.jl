@@ -92,7 +92,7 @@ end
 end
 
 
-@testset "Testset function getWeights" begin
+@testset "Testset function getOverallWeights" begin
     modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
     obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["ERA5"]);
     
@@ -102,12 +102,12 @@ end
     weightsVarsIndep = Dict{String, Number}("tas" => 0.5, 
                                             "pr" => 0.25,
                                             "psl" => 0); 
-    weights = SimilarityWeights.getWeights(modelData,
-                                           obsData, 
-                                           0.5, 
-                                           0.5, 
-                                           weightsVarsPerform, 
-                                           weightsVarsIndep);
+    weights = SimilarityWeights.getOverallWeights(modelData,
+                                                  obsData, 
+                                                  0.5, 
+                                                  0.5, 
+                                                  weightsVarsPerform, 
+                                                  weightsVarsIndep);
 
     ds = NCDataset(joinpath(PATH_TO_WORK_DIR,
                    "calculate_weights_climwip", 
