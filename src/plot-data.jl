@@ -3,7 +3,7 @@
 Plot contours of world with an overlayed heatmap that shows the data which 
 correspond to mean value for each position in considered grid. 
 """
-function plotMeansOnMap(means::DimArray, title::String)
+function plotMeansOnMap(means::DimArray, title::String, target::Target=nothing)
     dims_lat = Array(dims(means, :lat));
     dims_lon = Array(dims(means, :lon));
     if any(x -> x > 179, dims_lon)
@@ -36,6 +36,8 @@ function plotMeansOnMap(means::DimArray, title::String)
     lines!(GeoMakie.coastlines(); color=:black);
     hm = heatmap!(ax, lon, lat, Array(means), alpha=0.8);
     Colorbar(fig[1,2], hm);
+
+    savePlot(fig, target)
     return fig
 end
 

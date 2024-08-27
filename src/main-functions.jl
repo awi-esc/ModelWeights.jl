@@ -1,8 +1,9 @@
 import YAML
-
+using CairoMakie
 
 @kwdef struct Config 
     base_path::String
+    target_dir::String
     experiment::String
     prefix_var_folders::String = ""
     variables::Vector{String}
@@ -40,6 +41,7 @@ function validateConfig(path_config::String)
     config_yaml = YAML.load_file(path_config);
     config = Config(
         base_path = config_yaml["base_path"],
+        target_dir = config_yaml["target_dir"],
         experiment = config_yaml["experiment"],
         prefix_var_folders = config_yaml["prefix_var_folders"],
         variables = config_yaml["variables"],
@@ -118,12 +120,12 @@ and independence weights.
 function runWeights(path_config::String, plot::Bool=false)
     config = validateConfig(path_config);
     pathsDict = buildPathsToVarData(config)
-    data = loadPreprocData(pathsDict, [config.models_project_name]);
-    modelData =  getCommonModelsAcrossVars(data);
+    modelData = loadPreprocData(pathsDict, [config.models_project_name]);
     obsData = loadPreprocData(pathsDict, [config.obs_data_name])
-
-    wP = getPerformanceWeights(modelData, obsData, config.weights_variables["performance"]);
-    wI = getIndependenceWeights(modelData, config.weights_variables["independence"]);
+    
+    modelDataAllVars =  getCommonModelsAcrossVars(modelData);
+    wP = getPerformanceWeights(modelDataAllVars, obsData, config.weights_variables["performance"]);
+    wI = getIndependenceWeights(modelDataAllVars, config.weights_variables["independence"]);
     sigmas = config.weight_contributions
     weights = combineWeights(wP, wI, sigmas["performance"], sigmas["independence"]);
 
@@ -132,6 +134,21 @@ function runWeights(path_config::String, plot::Bool=false)
         "independence" => wI,
         "combined" => weights
     );
+
+    if plot
+        for var in keys(modelDataAllVars)
+            means = dropdims(mean(modelDataAllVars[var], dims=:model), dims=:model);
+            title = join(["Unweighted average;", var, "in", 
+                means.metadata["units"], "\n experiment:", means.metadata["experiment_id"]], " ", " ");
+            target = Target(
+                directory = config.target_dir,
+                filename = "unweighted_avg_" * var * ".png",
+                save = true
+            )
+            fig = SimilarityWeights.plotMeansOnMap(means,  title, target);
+
+        end
+    end
     return result
 end
 

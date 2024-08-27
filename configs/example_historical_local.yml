@@ -2,6 +2,8 @@ base_path: /Users/brgrus001/output-from-albedo
 experiment: historical
 prefix_var_folders: recipe_historical # optional
 
+target_dir: /Users/brgrus001/SimilarityWeights/output
+
 variables: 
   - pr
 

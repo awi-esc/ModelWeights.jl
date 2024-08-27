@@ -8,12 +8,28 @@ using CairoMakie
 using GeoMakie  
 CairoMakie.activate!(type = "svg")
 
+
+@kwdef struct Target
+    directory::String
+    filename::String
+    save::Bool
+end
+
 function getFigure(figsize, fontsize)
     size_pt = 72 .* figsize
     fig=Figure(size= size_pt, fontsize=fontsize)
     return fig
 end
 
+function savePlot(fig, target::Union{Target, Nothing}=nothing)
+    if !isnothing(target) && target.save
+        target_dir = joinpath(target.directory, getCurrentTime());
+        if !isdir(target_dir)
+            mkpath(target_dir)
+        end
+        save(joinpath(target_dir, target.filename), fig);
+    end
+end
 
 function plotDistMatrices(distMat, climateVar, models, modelRefs)
     fig = Figure();
@@ -65,6 +81,12 @@ Convert longitudes measured from -180° to 180° into 0° to 360° scale.
 """
 function lon180to360(lon::Number)
     return ifelse(lon < 0, lon + 360, lon)
+end
+
+function getCurrentTime()
+    currentDay = string(Dates.today()) * '_';
+    currentTime = Dates.format(Dates.now(), "HH_MM");
+    return currentDay * currentTime
 end
 
 

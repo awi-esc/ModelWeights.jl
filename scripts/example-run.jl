@@ -1,4 +1,13 @@
 
 using SimilarityWeights
-path_config = "/Users/brgrus001/SimilarityWeights/configs/example_historical_local.yml"
-SimilarityWeights.runWeights(path_config);
+
+path_config = "configs/example_historical_albedo.yml"
+weights = SimilarityWeights.runWeights(path_config, true);
+
+
+config = SimilarityWeights.validateConfig(path_config);
+pathsDict = SimilarityWeights.buildPathsToVarData(config)
+modelData = SimilarityWeights.loadPreprocData(pathsDict, [config.models_project_name]);
+obsData = SimilarityWeights.loadPreprocData(pathsDict, [config.obs_data_name])
+
+modelDataAllVars =  SimilarityWeights.getCommonModelsAcrossVars(modelData);
