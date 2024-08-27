@@ -58,9 +58,6 @@ function validateConfig(path_config::String)
     return config
 end
 
-function buildFullModelNames()
-end
-
 
 """
     getCommonModelsAcrossVars(modelData::Dict{String, DimArray})
@@ -102,10 +99,6 @@ function getCommonModelsAcrossVars(modelData::Dict{String, DimArray})
             data.metadata[key] = data.metadata[key][indices];
         end
     end
-    # sizes = map(v-> size(data_all[v]), collect(variables));
-    # if length(unique(sizes)) != 1
-    #     @warn "Models were not uniquely identified by "
-    # end
     return data_all
 end
 
