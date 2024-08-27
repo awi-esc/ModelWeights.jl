@@ -1,12 +1,14 @@
 """
-    plotPerformanceWeights(wP::DimArray)
+    plotPerformanceWeights(wP::DimArray, wP_combined::DimArray)
 
 # Arguments:
 - wP: performanceWeights with dimensions: model, variable
 - wP_combined: performanceWeights across variables combined into single weight 
 per model
 """
-function plotPerformanceWeights(wP::DimArray, wP_combined::DimArray)
+function plotPerformanceWeights(
+    wP::DimArray, wP_combined::Union{DimArray, Nothing}=nothing
+)
     fig=Figure()
     models = Array(dims(wP, :model));
     xs = 1:length(models);
@@ -22,8 +24,10 @@ function plotPerformanceWeights(wP::DimArray, wP_combined::DimArray)
         scatter!(ax, xs, data[:, col])
         lines!(ax, xs, data[:, col], label = "$var")
     end
-    scatter!(ax, xs, Array(wP_combined))
-    lines!(ax, xs, Array(wP_combined), label = "combined weights all vars")
+    if !isnothing(wP_combined)
+        scatter!(ax, xs, Array(wP_combined))
+        lines!(ax, xs, Array(wP_combined), label = "combined weights all vars")
+    end
     axislegend(ax)
     return fig
 end

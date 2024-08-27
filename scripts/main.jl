@@ -12,10 +12,10 @@ begin
     if RUN_ON_ALBEDO
         # just use one reference period
         pathsObsData= Dict("pr" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_historical_pr_20240815_124334/preproc/climatology_historical1/pr");
-        pathsModelData = Dict("pr" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_historical_pr_20240815_124334/preproc/climatology_full/pr");
+        pathsModelData = Dict("pr" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_historical_pr_20240815_124334/preproc/climatology_historical1/pr");
     else
         pathsObsData = Dict("pr" => "/Users/brgrus001/output-from-albedo/recipe_historical_pr_20240815_124334/preproc/climatology_historical1/pr")
-        pathsModelData = Dict("pr" => "/Users/brgrus001/output-from-albedo/recipe_historical_pr_20240815_124334/preproc/climatology_full/pr")
+        pathsModelData = Dict("pr" => "/Users/brgrus001/output-from-albedo/recipe_historical_pr_20240815_124334/preproc/climatology_historical1/pr")
     end
 end
 
@@ -33,5 +33,8 @@ wI_avg = SimilarityWeights.averageEnsembleMatrix(wI)
 # plot wI
 wI = dropdims(wI_avg, dims=:variable);
 f = SimilarityWeights.plotDistMatrices(wI, "pr", Array(dims(wI, :model1)), Array(dims(wI, :model2)))
+
+# plot wP
+fig_wp = SimilarityWeights.plotPerformanceWeights(wP_avg)
 
 weights = SimilarityWeights.getOverallWeights(modelData, obsData)

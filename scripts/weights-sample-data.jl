@@ -29,6 +29,10 @@ wI = SimilarityWeights.getIndependenceWeights(modelData, weightsVarsIndep);
 wI_overall = SimilarityWeights.summarizeWeightsAcrossVars(wI);
 wP_overall = SimilarityWeights.summarizeWeightsAcrossVars(wP);
 
+SimilarityWeights.plotPerformanceWeights(wP)
+SimilarityWeights.plotPerformanceWeights(wP, wP_overall)
+
+
 sigmaD = 0.5;
 sigmaS = 0.5;
 weights = SimilarityWeights.getOverallWeights(modelData,
