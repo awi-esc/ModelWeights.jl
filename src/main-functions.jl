@@ -115,7 +115,7 @@ Note that the combined weights can have different dimension of models since
 all ensemble members of th same model are averaged before combining performance
 and independence weights.
 """
-function run(path_config::String, plot::Bool=false)
+function runWeights(path_config::String, plot::Bool=false)
     config = validateConfig(path_config);
     pathsDict = buildPathsToVarData(config)
     data = loadPreprocData(pathsDict, [config.models_project_name]);
@@ -134,3 +134,4 @@ function run(path_config::String, plot::Bool=false)
     );
     return result
 end
+

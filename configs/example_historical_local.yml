@@ -1,0 +1,21 @@
+base_path: /Users/brgrus001/output-from-albedo
+experiment: historical
+prefix_var_folders: recipe_historical # optional
+
+variables: 
+  - pr
+
+name_ref_period: historical1
+models_project_name: CMIP6
+obs_data_name: ERA5
+
+weight_contributions:
+  performance: 0.5
+  independence: 0.5
+
+weights_variables:
+  performance:
+    pr: 1
+
+  independence:
+    pr: 1

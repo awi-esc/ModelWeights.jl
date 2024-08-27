@@ -97,9 +97,13 @@ e.g. if dataIncluded=['ERA5'] only ERA5 data will be included (files with ERA5 i
             ['AWI-ESM-1-1-LR'] would load only data from this particular model.
 """
 function loadPreprocData(climVarsToPaths::Dict{String, String}, included::Vector{String}=[])
+    
     dataAllVars = Dict{String, DimArray}();
     for climVar in keys(climVarsToPaths)
         pathToData = climVarsToPaths[climVar];
+        if !isdir(pathToData)
+            throw(ArgumentError(pathToData * " does not exist!"))
+        end
         data = [];
         sources = [];
         meta = createMetaDict();

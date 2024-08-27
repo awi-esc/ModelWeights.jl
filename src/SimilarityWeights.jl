@@ -7,6 +7,6 @@ include("plot-data.jl")
 include("main-functions.jl")
 include("data-utils.jl")
 
-export loadPreprocData, getIndependenceWeights, getPerformanceWeights, getOverallWeights, run
+export loadPreprocData, getIndependenceWeights, getPerformanceWeights, getOverallWeights, runWeights
 
 end
