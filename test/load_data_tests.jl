@@ -18,5 +18,5 @@ end
     
     dimensions = DimensionalData.dims(modelData["tas"], :model);
     @test length(dimensions) == 1
-    @test  dimensions[1] == "ERA5"
+    @test  dimensions[1] == "native6_ERA5_reanaly_v1_Amon_tas_1995-2014"
 end
