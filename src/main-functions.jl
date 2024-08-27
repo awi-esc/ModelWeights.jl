@@ -41,7 +41,7 @@ function validateConfig(path_config::String)
     config_yaml = YAML.load_file(path_config);
     config = Config(
         base_path = config_yaml["base_path"],
-        target_dir = config_yaml["target_dir"],
+        target_dir = joinpath(config_yaml["target_dir"], getCurrentTime()),
         experiment = config_yaml["experiment"],
         prefix_var_folders = config_yaml["prefix_var_folders"],
         variables = config_yaml["variables"],
@@ -129,26 +129,15 @@ function runWeights(path_config::String, plot::Bool=false)
     sigmas = config.weight_contributions
     weights = combineWeights(wP, wI, sigmas["performance"], sigmas["independence"]);
 
-    result = Dict(
+    means = getWeightedAverages(modelDataAllVars, weights);
+    result = Dict{String, DimArray}(
         "performance" => wP,
         "independence" => wI,
         "combined" => weights
     );
-
     if plot
-        for var in keys(modelDataAllVars)
-            means = dropdims(mean(modelDataAllVars[var], dims=:model), dims=:model);
-            title = join(["Unweighted average;", var, "in", 
-                means.metadata["units"], "\n experiment:", means.metadata["experiment_id"]], " ", " ");
-            target = Target(
-                directory = config.target_dir,
-                filename = "unweighted_avg_" * var * ".png",
-                save = true
-            )
-            fig = SimilarityWeights.plotMeansOnMap(means,  title, target);
-
-        end
+       SimilarityWeights.plotMeanData(means, config.target_dir)
     end
-    return result
+    return (weights=result, avgs=means)
 end
 

@@ -37,7 +37,9 @@ function plotMeansOnMap(means::DimArray, title::String, target::Target=nothing)
     hm = heatmap!(ax, lon, lat, Array(means), alpha=0.8);
     Colorbar(fig[1,2], hm);
 
-    savePlot(fig, target)
+    if target.save
+        savePlot(fig, target.directory, target.filename)
+    end
     return fig
 end
 
@@ -137,4 +139,23 @@ function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
     values = dropdims(data_ensembles[lon = Where(x -> x == lon), lat = Where(x -> x == lat)], dims =:lon);
     boxplot!(ax, categoriesInts, Array(dropdims(values, dims=:lat)));
     return fig
+end
+
+
+function plotMeanData(means::Dict{String, DimArray}, target_dir::String)
+    for avg_type in keys(means)
+        avg_data = means[avg_type]
+        title = join(
+            [avg_type, avg_data.metadata["long_name"], "in", 
+             avg_data.metadata["units"], "\n experiment:",
+             avg_data.metadata["experiment_id"]
+            ], " ", " "
+        );
+        target = Target(
+            directory = target_dir;
+            filename = join([avg_type, avg_data.metadata["variable_id"], "png"], "_", "."),
+            save = true
+        )
+        SimilarityWeights.plotMeansOnMap(avg_data,  title, target);
+    end
 end

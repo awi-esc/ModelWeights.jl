@@ -319,3 +319,44 @@ function getOverallWeights(
     weights = combineWeights(wP, wI, sigmaD, sigmaS);
     return weights
 end
+
+"""
+    computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=nothing)
+
+Compute the average values for each lon,lat-grid point in 'data_var', weighted
+by weights 'w'. Members of the same ensemble are averaged before. If no weight
+vector is provided, unweighted average is computed.
+
+# Arguments:
+- data_var: DimArray with dimensions lon, lat, model
+- w: DimArray with dimension 'model'
+"""
+function computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=nothing)
+    
+    data = averageEnsembleVector(data_var);
+    models = dims(data, :model);
+    if isnothing(w)
+        w = DimArray(ones(length(models))./length(models), Dim{:model}(Array(models)))
+    elseif length(dims(data, :model)) != length(w)
+        msg = "nb of models for observational and model predictions does not match.";
+        throw(ArgumentError(msg))
+    end
+
+    for m in models
+        data[model = At(m)] = data[model = At(m)] .* w[model = At(m)]
+    end
+
+    weighted_avg = dropdims(reduce(+, data, dims=:model), dims=:model)
+    return weighted_avg
+end
+
+
+function getWeightedAverages(modelDataAllVars::Dict{String, DimArray}, weights::DimArray)
+    results = Dict{String, DimArray}();
+    for var in keys(modelDataAllVars)
+        data = modelDataAllVars[var];
+        results["unweighted"] = computeWeightedAvg(data);
+        results["weighted"] = computeWeightedAvg(data, weights);
+    end
+    return results
+end

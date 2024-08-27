@@ -6,10 +6,10 @@ using DimensionalData
 
 using CairoMakie  
 using GeoMakie  
+
 CairoMakie.activate!(type = "svg")
 
-
-@kwdef struct Target
+@kwdef mutable struct Target
     directory::String
     filename::String
     save::Bool
@@ -21,14 +21,13 @@ function getFigure(figsize, fontsize)
     return fig
 end
 
-function savePlot(fig, target::Union{Target, Nothing}=nothing)
-    if !isnothing(target) && target.save
-        target_dir = joinpath(target.directory, getCurrentTime());
-        if !isdir(target_dir)
-            mkpath(target_dir)
-        end
-        save(joinpath(target_dir, target.filename), fig);
+function savePlot(fig, target_dir::String, target_fn::String)
+    if !isdir(target_dir)
+        mkpath(target_dir)
     end
+    path_to_target = joinpath(target_dir, target_fn);
+    save(path_to_target, fig);
+    @info "saved plot to " path_to_target
 end
 
 function plotDistMatrices(distMat, climateVar, models, modelRefs)
