@@ -1,0 +1,27 @@
+base_path: /albedo/work/projects/p_forclima/preproc_data_esmvaltool
+experiment: historical
+prefix_var_folders: recipe_historical # optional
+
+variables: 
+  - tos
+  - tas
+  - pr
+
+name_ref_period: historical1
+models_project_name: CMIP6
+obs_data_name: ERA5
+
+weight_contributions:
+  performance: 0.5
+  independence: 0.5
+
+weights_variables:
+  performance:
+    tas: 1
+    pr: 1
+    tos: 1
+
+  independence:
+    tas: 0.5
+    pr: 0.25
+    tos: 0.125
