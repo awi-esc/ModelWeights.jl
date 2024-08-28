@@ -1,5 +1,6 @@
 import YAML
 using CairoMakie
+using DimensionalData
 
 @kwdef struct Config 
     base_path::String
@@ -8,6 +9,7 @@ using CairoMakie
     prefix_var_folders::String = ""
     variables::Vector{String}
     name_ref_period::String
+    name_full_period::String
     models_project_name::String
     obs_data_name::String
     weights_variables::Dict{String, Dict{String,Number}}
@@ -15,7 +17,7 @@ using CairoMakie
 end
 
 
-function buildPathsToVarData(config::Config)
+function buildPathsToVarData(config::Config, period::String)
     prefix = config.prefix_var_folders;
     var_to_path = Dict{String, String}();
     for var in config.variables
@@ -28,7 +30,7 @@ function buildPathsToVarData(config::Config)
         )
         var_to_path[var] = joinpath(
             path_data, 
-            "climatology_" * config.name_ref_period,
+            "climatology_" * period,
             var
         )
     end
@@ -46,6 +48,7 @@ function validateConfig(path_config::String)
         prefix_var_folders = config_yaml["prefix_var_folders"],
         variables = config_yaml["variables"],
         name_ref_period = config_yaml["name_ref_period"],
+        name_full_period = config_yaml["name_full_period"],
         models_project_name = config_yaml["models_project_name"],
         obs_data_name = config_yaml["obs_data_name"],
         weights_variables = convert(
@@ -111,17 +114,37 @@ all ensemble members of th same model are averaged before combining performance
 and independence weights.
 """
 function runWeights(config::Config)
-    pathsDict = buildPathsToVarData(config)
-    modelData = loadPreprocData(pathsDict, [config.models_project_name]);
-    obsData = loadPreprocData(pathsDict, [config.obs_data_name])
+    pathsDictRef = buildPathsToVarData(config, config.name_ref_period);
+    modelDataRef = loadPreprocData(pathsDictRef, [config.models_project_name]);
+    obsData = loadPreprocData(pathsDictRef, [config.obs_data_name])
     
-    modelDataAllVars =  getCommonModelsAcrossVars(modelData);
-    wP = getPerformanceWeights(modelDataAllVars, obsData, config.weights_variables["performance"]);
-    wI = getIndependenceWeights(modelDataAllVars, config.weights_variables["independence"]);
+    modelDataAllVarsRef =  getCommonModelsAcrossVars(modelDataRef);
+    wP = getPerformanceWeights(modelDataAllVarsRef, obsData, config.weights_variables["performance"]);
+    wI = getIndependenceWeights(modelDataAllVarsRef, config.weights_variables["independence"]);
     sigmas = config.weight_contributions
     weights = combineWeights(wP, wI, sigmas["performance"], sigmas["independence"]);
 
-    means = getWeightedAverages(modelDataAllVars, weights);
+    # use weights to compute weighted averages
+    pathsDictFull = buildPathsToVarData(config, config.name_full_period);
+    modelDataFull = loadPreprocData(pathsDictFull, [config.models_project_name]);
+    modelDataAllVarsFull =  getCommonModelsAcrossVars(modelDataFull);
+
+    # get Data just for those models for which also historical reference period is available
+    # only use those models for which there is historical data (computed before)
+    # TODO: change order of this to avoid computing too much that is not needed
+    # make extra function 
+    for var in keys(modelDataAllVarsRef)
+        dataFull = modelDataAllVarsFull[var];
+        full_model_names_ref = modelDataAllVarsRef[var].metadata["full_model_names"];
+        full_model_names_full = dataFull.metadata["full_model_names"];
+        
+        dataFull = set(dataFull, :model => full_model_names_full);
+        dataFull = dataFull[model = Where(x -> x in full_model_names_ref)]
+        dataFull = set(dataFull, :model => map(x -> split(x, "__")[1], Array(dims(dataFull, :model))));
+        modelDataAllVarsFull[var] = dataFull
+    end
+
+    means = getWeightedAverages(modelDataAllVarsFull, weights);
     result = Dict{String, DimArray}(
         "performance" => wP,
         "independence" => wI,

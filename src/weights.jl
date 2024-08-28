@@ -285,7 +285,6 @@ function combineWeights(wP::DimArray, wI::DimArray,  sigmaD::Number, sigmaS::Num
     # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
     independence = dropdims(sum(exp.(-(wI ./ sigmaS).^2), dims=:model2), dims=:model2)
     independence = set(independence, :model1 => :model);
-
     weights = performance ./ independence;
     weightsNormalized = weights ./ sum(weights);
     return weightsNormalized
@@ -332,7 +331,6 @@ vector is provided, unweighted average is computed.
 - w: DimArray with dimension 'model'
 """
 function computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=nothing)
-    
     data = averageEnsembleVector(data_var);
     models = dims(data, :model);
     if isnothing(w)
