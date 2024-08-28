@@ -352,11 +352,11 @@ end
 
 
 function getWeightedAverages(modelDataAllVars::Dict{String, DimArray}, weights::DimArray)
-    results = Dict{String, DimArray}();
+    results = Dict{String, Dict{String, DimArray}}("weighted" => Dict(), "unweighted" => Dict());
     for var in keys(modelDataAllVars)
         data = modelDataAllVars[var];
-        results["unweighted"] = computeWeightedAvg(data);
-        results["weighted"] = computeWeightedAvg(data, weights);
+        results["unweighted"][var] = computeWeightedAvg(data);
+        results["weighted"][var] = computeWeightedAvg(data, weights);
     end
     return results
 end

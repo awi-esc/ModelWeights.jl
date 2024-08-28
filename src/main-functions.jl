@@ -104,14 +104,13 @@ end
 
 
 """
-    run(path_config::String, plot::Bool=false)
+    runWeights(path_config::String)
 
 Note that the combined weights can have different dimension of models since 
 all ensemble members of th same model are averaged before combining performance
 and independence weights.
 """
-function runWeights(path_config::String, plot::Bool=false)
-    config = validateConfig(path_config);
+function runWeights(config::Config)
     pathsDict = buildPathsToVarData(config)
     modelData = loadPreprocData(pathsDict, [config.models_project_name]);
     obsData = loadPreprocData(pathsDict, [config.obs_data_name])
@@ -128,9 +127,5 @@ function runWeights(path_config::String, plot::Bool=false)
         "independence" => wI,
         "combined" => weights
     );
-    if plot
-       SimilarityWeights.plotMeanData(means, config.target_dir)
-    end
     return (weights=result, avgs=means)
 end
-

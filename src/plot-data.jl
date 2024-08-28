@@ -142,20 +142,23 @@ function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
 end
 
 
-function plotMeanData(means::Dict{String, DimArray}, target_dir::String)
+function plotMeanData(config::Config, means::Dict{String, Dict{String, DimArray}})
     for avg_type in keys(means)
-        avg_data = means[avg_type]
-        title = join(
-            [avg_type, avg_data.metadata["long_name"], "in", 
-             avg_data.metadata["units"], "\n experiment:",
-             avg_data.metadata["experiment_id"]
-            ], " ", " "
-        );
-        target = Target(
-            directory = target_dir;
-            filename = join([avg_type, avg_data.metadata["variable_id"], "png"], "_", "."),
-            save = true
-        )
-        SimilarityWeights.plotMeansOnMap(avg_data,  title, target);
+        data = means[avg_type]
+        for var in keys(data)
+            var_data = data[var]
+            title = join(
+                [avg_type, var_data.metadata["long_name"], "in", 
+                 var_data.metadata["units"], "\n experiment:",
+                 var_data.metadata["experiment_id"]
+                ], " ", " "
+            );
+            target = Target(
+                directory = config.target_dir;
+                filename = join([avg_type, var_data.metadata["variable_id"], "png"], "_", "."),
+                save = true
+            )
+            SimilarityWeights.plotMeansOnMap(var_data,  title, target);
+        end
     end
 end
