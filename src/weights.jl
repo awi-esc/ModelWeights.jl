@@ -61,8 +61,7 @@ Normalizes the matrix by its median and multiplies each entry by 'weight'.
 """
 function normalizeAndWeightDistMatrix(distMatrix::Union{DimVector, DimArray}, weight::T=1) where T<:Real
     distMatrix = distMatrix ./ median(distMatrix); 
-    weightedDistances = weight .* distMatrix;
-    return weightedDistances
+    return weight .* distMatrix;
 end
 
 
@@ -120,7 +119,7 @@ end
 """
     getModelDataDist(models::DimArray, observations::DimArray)
 
-Computes the distance (area-weighted rms error) between model predictions and observations. 
+Compute the distance (area-weighted rms error) between model predictions and observations. 
 
 """
 function getModelDataDist(models::DimArray, observations::DimArray)      
@@ -131,7 +130,6 @@ function getModelDataDist(models::DimArray, observations::DimArray)
     model_names = [];
     for (i, model_i) in enumerate(eachslice(models; dims=:model))
         model_name = dims(models, :model)[i]  # Access the name of the current model
-
         maskNbMissing = (ismissing.(observations) + ismissing.(model_i)) .> 0; # observations or model is missing (or both)
         maskedObs = deepcopy(observations);
         maskedObs = dropdims(ifelse.(maskNbMissing .> 0, 0, maskedObs), dims=:model);
@@ -149,12 +147,16 @@ end
 """
     getPerformanceWeights(modelData::Dict{String, DimArray}, obsData::Dict{String, DimArray}, weightsVars::Dict{String, Number}=Dict{String, Number}())
 
-Computes a performance weight for each model in 'modelData'. The weights result from taking the average weighted root mean squared errors between each model and the observational data.
-'mdoelData' and 'obsData' are Dictionaries mapping from the climate variable (e.g. tas) to a DimArray with the corresponding data (lon, lat, model). For the observational data, 
-the third dimension (model) just contains a single entry (e.g. ERA5).
-'weightsVars' is a Dictionary mapping from the climate variable to a number which is the weight of how much the respective variable contributes to the computed performanceWeight.
+Compute a performance weight for each model and climate variable in 'modelData'.
+The weights are the average weighted root mean squared errors between each model and the observational data.
 
-returns a DimArray (model1) with the computed performance weights, seperately for each considered variable.
+# Arguments
+- 'modelData': keys are climate variables, values are DimArrays with dimensions 'lon', 'lat', 'model' 
+- 'obsData':  keys are climate variables, values are DimArrays with dimensions 'lon', 'lat', 'model'
+- 'weightsVars': keys are climate variables, values are the weight of how much the respective variable contributes to the computed performanceWeight
+
+# Returns 
+- 'weightsByVar::DimArray': performance weights, seperately for each considered variable.
 """
 function getPerformanceWeights(modelData::Dict{String, DimArray}, 
                                obsData::Dict{String, DimArray},
