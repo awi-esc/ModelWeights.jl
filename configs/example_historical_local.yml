@@ -8,6 +8,8 @@ variables:
   - pr
 
 name_ref_period: historical1
+name_full_period: full
+
 models_project_name: CMIP6
 obs_data_name: ERA5
 

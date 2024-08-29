@@ -2,8 +2,9 @@
 using SimilarityWeights
 
 path_config = "configs/example_historical_albedo.yml"
-config = SimilarityWeights.validateConfig(path_config);
+#path_config = "configs/example_historical_local.yml"
 
+config = SimilarityWeights.validateConfig(path_config);
 weights, avgs = SimilarityWeights.runWeights(config);
 
 SimilarityWeights.plotMeanData(config, avgs)
