@@ -3,6 +3,9 @@ using NCDatasets
 using DimensionalData
 using Statistics
 
+
+# TODO: go through this script not up to date anymore!
+
 pathToPreprocDir = "recipe_climwip_test_basic_data/preproc/calculate_weights_climwip";
 PATH_TO_WORK_DIR = joinpath(@__DIR__, "..", "recipe_climwip_test_basic_data", "work");
 

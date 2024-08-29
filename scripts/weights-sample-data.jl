@@ -11,6 +11,8 @@ pathToPreprocDir = joinpath(@__DIR__,
                             "preproc", 
                             "calculate_weights_climwip");
 climateVariables = ["tas", "pr", "psl"];
+sigmaD = 0.5;
+sigmaS = 0.5;
 ##########################################
 var_to_preproc_data = Dict{String, String}();
 for var in climateVariables
@@ -23,25 +25,24 @@ obsData = SimilarityWeights.loadPreprocData(var_to_preproc_data, ["ERA5"]);
 weightsVarsPerform = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
 weightsVarsIndep = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
 
-wP = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVarsPerform);
-wI = SimilarityWeights.getIndependenceWeights(modelData, weightsVarsIndep);
+wP = SimilarityWeights.generalizedDistancesPerformance(modelData, obsData, weightsVarsPerform);
+wI = SimilarityWeights.generalizedDistancesIndependence(modelData, weightsVarsIndep);
 
-wI_overall = SimilarityWeights.summarizeWeightsAcrossVars(wI);
-wP_overall = SimilarityWeights.summarizeWeightsAcrossVars(wP);
+
+performances = SimilarityWeights.performanceParts(wP, sigmaD);
+independences = SimilarityWeights.independenceParts(wI, sigmaS);
+weights = performances ./ independences;
+normalizedWeights = weights ./ sum(weights);
+
+
+
 
 SimilarityWeights.plotPerformanceWeights(wP)
 SimilarityWeights.plotPerformanceWeights(wP, wP_overall)
 
-
-sigmaD = 0.5;
-sigmaS = 0.5;
-weights = SimilarityWeights.getOverallWeights(modelData,
-                                              obsData, 
-                                              0.5, 
-                                              0.5, 
-                                              weightsVarsPerform,
-                                              weightsVarsIndep
-                                             );
+weights = SimilarityWeights.overallWeights(
+    modelData, obsData, sigmaD, sigmaS, weightsVarsPerform, weightsVarsIndep
+);
 # distributed CCSM4 across all 4 CCSM4-models
 weightCCSM4 = weights[4]/4;
 result = [Array(weights[1:3]); repeat([weightCCSM4], 4)]
