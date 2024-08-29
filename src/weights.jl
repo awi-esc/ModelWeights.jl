@@ -3,7 +3,17 @@ using DimensionalData
 using Statistics
 using LinearAlgebra
 
+"""
+    areaWeightedMSE(m1::DimArray, m2::DimArray, mask::DimArray)
 
+Compute the area weighted (cosine of latitudes in radians) root mean squared 
+error between two matrices. 
+
+# Arguments:
+- 'm1': has dimensions 'lon', 'lat'
+- 'm2': has dimensions 'lon', 'lat'
+- 'mask': has values 0,1. Locations where mask is 1 are ignored, i.e. they get a weight of 0!
+"""
 function areaWeightedMSE(m1::DimArray, m2::DimArray, mask::DimArray)
     latitudes = dims(m1, :lat);
     areaWeights = cos.(deg2rad.(latitudes));
@@ -25,9 +35,11 @@ end
 
 Computes the area weighted root mean squared error between model predictions for each pair of models. 
 
-'modelData' has dimensions: lon, lat, model and contains the data for a single variable.
+# Arguments:
+- `modelData` has dimensions 'lon', 'lat', 'model' and contains the data for a single climate variable.
 
-returns a DimArray of size nxn (which is a symmetrical matrix) where n is the number of models in 'modelData'. 
+# Return:
+- Symmetrical matrix (::DimArray) of size nxn where n is the number of models in 'modelData'. 
 """
 function getModelDistances(modelData::DimArray)
     # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
@@ -55,9 +67,9 @@ end
 
 
 """
-    weightDistMatrix(distMatrix::DimArray{T}, weight::T) where T<:Number
+    weightDistMatrix(distMatrix::Union{DimVector, DimArray}, weight::T=1) where T<:Real
 
-Normalizes the matrix by its median and multiplies each entry by 'weight'.
+Normalize 'distMatrix' by its median and multiplies each entry by 'weight'.
 """
 function normalizeAndWeightDistMatrix(distMatrix::Union{DimVector, DimArray}, weight::T=1) where T<:Real
     distMatrix = distMatrix ./ median(distMatrix); 
@@ -68,7 +80,7 @@ end
 """
     normalizeWeightsVariables(weightsVars::Dict{String, Number})
 
-Modifies input vector 'weights' by normalizing it s.t. its elements sum up to 1.
+Modify weights for each variable by normalizing them s.t. they sum up to 1.
 """
 function normalizeWeightsVariables!(weights::Dict{String, Number})
     total = sum(values(weights))
@@ -80,12 +92,19 @@ end
 """
     getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{String, Number}=Dict{String, Number}())
 
-Computes an independence weight for each model in 'data'. The weights result from taking the average weighted root mean squared errors between pairs of models for each variable. 
+Compute an independence weight for each model and variable in 'data'. The 
+weights are the average weighted root mean squared errors between pairs of 
+models (for each variable). 
 
-'data' is a Dictionary mapping from the climate variable (e.g. tas) to a DimArray with the corresponding data (lon, lat, model). 
-'weightsVars' is a Dictionary mapping from the climate variable to a number which is the weight of how much the respective variable contributes to the computed independenceWeight.
+# Arguments:
+- `data`: keys are climate variables (e.g. tas), values are DimArrays with the
+corresponding data and dimensions 'lon', 'lat', 'model'. 
+- `weightsVars`: keys are climate variables, values are the weights of how much
+the respective variable contributes to the computed independenceWeight.
 
-returns a DimArray (model1, model2, variable) with the computed independence weights, seperately for each considered variable.
+# Return:
+- DimArray with dimensions 'model1', 'model2', 'variable' with the computed
+independence weights, seperately for each considered variable.
 """
 function getIndependenceWeights(data::Dict{String, DimArray}, weightsVars::Dict{String, Number}=Dict{String, Number}())
     variables = keys(data);
@@ -263,8 +282,7 @@ function averageEnsembleMatrix(data::DimArray)
 end
 
 """
-    combineWeights(performanceWeights::DimArray, independenceWeights::DimArray, 
-                  sigmaD::Number=0.5, sigmaS::Number=0.5)
+    combineWeights(wP::DimArray, wI::DimArray,  sigmaD::Number, sigmaS::Number)
 
 Combine the RMSEs between pairs of models and the RMSEs between each model and
 the data into a set of normalized weights, one for each model. 
@@ -273,10 +291,10 @@ Note that, the given weights are summarized wrt ensemble models, s.t. for each
 ensemble there is only one value.
 
 # Arguments:
-- 'performanceWeights': DimArray with dimensions 'model', 'variable'
-- 'independenceWeights': DimArray with dimensions 'model1', 'model2', 'variable'
-- 'sigmaD': Nb. btw. 0 and 1; contribution of performance metric 
-- 'sigmaS': Nb. btw. 0 and 1; contribution of independence metric
+- `wP`: DimArray with dimensions 'model', 'variable'
+- `wI`: DimArray with dimensions 'model1', 'model2', 'variable'
+- `sigmaD`: Nb. btw. 0 and 1; contribution of performance metric 
+- `sigmaS': Nb. btw. 0 and 1; contribution of independence metric
 """
 function combineWeights(wP::DimArray, wI::DimArray,  sigmaD::Number, sigmaS::Number)
     wP = averageEnsembleVector(wP);
@@ -293,12 +311,14 @@ function combineWeights(wP::DimArray, wI::DimArray,  sigmaD::Number, sigmaS::Num
 end
 
 """
-    getOverallWeights(modelData::Dict{String, DimArray}, 
-               obsData::Dict{String, DimArray}[, 
-               sigmaD::Number = 0.5, 
-               sigmaS::Number = 0.5, 
-               weightsPerform::Dict{String, Number} = Dict{String, Number}(), 
-               weightsIndep::Dict{String, Number} = Dict{String, Number}()])
+    getOverallWeights(
+        modelData::Dict{String, DimArray}, 
+        obsData::Dict{String, DimArray}[, 
+        sigmaD::Number = 0.5, 
+        sigmaS::Number = 0.5, 
+        weightsPerform::Dict{String, Number} = Dict{String, Number}(), 
+        weightsIndep::Dict{String, Number} = Dict{String, Number}()]
+    )
 
 Compute weight for each model in multi-model ensemble according to approach
 from Brunner, Lukas, Angeline G. Pendergrass, Flavio Lehner,
@@ -329,8 +349,8 @@ by weights 'w'. Members of the same ensemble are averaged before. If no weight
 vector is provided, unweighted average is computed.
 
 # Arguments:
-- data_var: DimArray with dimensions lon, lat, model
-- w: DimArray with dimension 'model'
+- `data_var`: DimArray with dimensions lon, lat, model
+- `w`: DimArray with dimension 'model'
 """
 function computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=nothing)
     data = averageEnsembleVector(data_var);
