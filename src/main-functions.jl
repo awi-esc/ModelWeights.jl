@@ -1,154 +1,32 @@
 import YAML
-using CairoMakie
 using DimensionalData
-
-@kwdef struct Config 
-    base_path::String
-    target_dir::String
-    experiment::String
-    prefix_var_folders::String = ""
-    variables::Vector{String}
-    name_ref_period::String
-    name_full_period::String
-    models_project_name::String
-    obs_data_name::String
-    weights_variables::Dict{String, Dict{String,Number}}
-    weight_contributions::Dict{String, Number}
-end
-
-
-function buildPathsToVarData(config::Config, period::String)
-    prefix = config.prefix_var_folders;
-    var_to_path = Dict{String, String}();
-    for var in config.variables
-        folder = ifelse(isempty(prefix), var, prefix * "_" * var);
-        path_data = joinpath(
-            config.base_path,
-            config.experiment, 
-            folder,
-            "preproc"
-        )
-        var_to_path[var] = joinpath(
-            path_data, 
-            "climatology_" * period,
-            var
-        )
-    end
-    return var_to_path
-end
-
-
-
-function validateConfig(path_config::String)
-    config_yaml = YAML.load_file(path_config);
-    config = Config(
-        base_path = config_yaml["base_path"],
-        target_dir = joinpath(config_yaml["target_dir"], getCurrentTime()),
-        experiment = config_yaml["experiment"],
-        prefix_var_folders = config_yaml["prefix_var_folders"],
-        variables = config_yaml["variables"],
-        name_ref_period = config_yaml["name_ref_period"],
-        name_full_period = config_yaml["name_full_period"],
-        models_project_name = config_yaml["models_project_name"],
-        obs_data_name = config_yaml["obs_data_name"],
-        weights_variables = convert(
-            Dict{String, Dict{String, Number}}, 
-            config_yaml["weights_variables"]
-        ), 
-        weight_contributions = config_yaml["weight_contributions"]
-    )
-    # TODO: add checks consistency, paths for all specified variables there and exist, etc.
-    return config
-end
-
-
-"""
-    getCommonModelsAcrossVars(modelData::Dict{String, DimArray})
-
-Keep only those models for which there is data for all variables.
-
-# Arguments
-- modelData: maps from climate variable to respective data.
-"""
-function getCommonModelsAcrossVars(modelData::Dict{String, DimArray})
-    data_all = deepcopy(modelData);
-    variables = keys(modelData);
-    
-    shared_models =  nothing
-    for var in variables
-        data_var = modelData[var];
-        names = Array(dims(data_var, :model));
-        variants = data_var.metadata["variant_label"];
-        grids = data_var.metadata["grid_label"];
-        
-        models = map(
-            x->join(x, "__", "__"), 
-            zip(names, variants, grids)
-        );
-        data_all[var].metadata["full_model_names"] = models;
-        if isnothing(shared_models)
-            shared_models = models
-        else
-            shared_models = intersect(shared_models, models)
-        end
-    end
-    for var in variables
-        data = data_all[var]
-        indices = findall(m -> m in shared_models, data.metadata["full_model_names"]);
-        data_all[var] = data[model = indices];
-        # adapt metadata accordingly
-        data.metadata["full_model_names"] = data.metadata["full_model_names"][indices];
-        for key in SimilarityWeights.LOCAL_METADATA_KEYS
-            data.metadata[key] = data.metadata[key][indices];
-        end
-    end
-    return data_all
-end
-
 
 """
     runWeights(path_config::String)
 
-Note that the combined weights can have different dimension of models since 
-all ensemble members of th same model are averaged before combining performance
-and independence weights.
+Compute weights and weighted/unweighted average of the data specified in the
+config file located at 'path_config'.
+
 """
 function runWeights(config::Config)
-    pathsDictRef = buildPathsToVarData(config, config.name_ref_period);
-    modelDataRef = loadPreprocData(pathsDictRef, [config.models_project_name]);
-    obsData = loadPreprocData(pathsDictRef, [config.obs_data_name])
-    
-    modelDataAllVarsRef =  getCommonModelsAcrossVars(modelDataRef);
-    wP = getPerformanceWeights(modelDataAllVarsRef, obsData, config.weights_variables["performance"]);
-    wI = getIndependenceWeights(modelDataAllVarsRef, config.weights_variables["independence"]);
-    sigmas = config.weight_contributions
-    weights = combineWeights(wP, wI, sigmas["performance"], sigmas["independence"]);
-
-    # use weights to compute weighted averages
-    pathsDictFull = buildPathsToVarData(config, config.name_full_period);
-    modelDataFull = loadPreprocData(pathsDictFull, [config.models_project_name]);
-    modelDataAllVarsFull =  getCommonModelsAcrossVars(modelDataFull);
-
-    # get Data just for those models for which also historical reference period is available
-    # only use those models for which there is historical data (computed before)
-    # TODO: change order of this to avoid computing too much that is not needed
-    # make extra function 
-    for var in keys(modelDataAllVarsRef)
-        dataFull = modelDataAllVarsFull[var];
-        full_model_names_ref = modelDataAllVarsRef[var].metadata["full_model_names"];
-        full_model_names_full = dataFull.metadata["full_model_names"];
-        
-        dataFull = set(dataFull, :model => full_model_names_full);
-        dataFull = dataFull[model = Where(x -> x in full_model_names_ref)]
-        dataFull = set(dataFull, :model => map(x -> split(x, "__")[1], Array(dims(dataFull, :model))));
-        modelDataAllVarsFull[var] = dataFull
-    end
-
-    means = getWeightedAverages(modelDataAllVarsFull, weights);
-    result = Dict{String, DimArray}(
-        "performance" => wP,
-        "independence" => wI,
-        "combined" => weights
+    modelDataRef = loadDataFromConfig(config, "name_ref_period", "models_project_name");
+    modelDataRef = getCommonModelsAcrossVars(modelDataRef);
+    obsData = loadDataFromConfig(config, "name_ref_period", "obs_data_name");
+    # TODO: make sure that there is observational data for all variables for 
+    # the respective reference period
+    weights = overallWeights(
+        modelDataRef, 
+        obsData, 
+        config.weight_contributions["performance"],
+        config.weight_contributions["independence"], 
+        config.weights_variables["performance"],
+        config.weights_variables["independence"]   
     );
-    return (weights=result, avgs=means)
+        
+    modelDataFull = loadDataFromConfig(config, "name_full_period", "models_project_name");
+    modelDataFull = getCommonModelsAcrossVars(modelDataFull);
+    # get Data just for those models for which also historical reference period is available
+    models = getModelsInRefPeriod(modelDataFull, modelDataRef);
+    means = getWeightedAverages(models, weights);
+    return (weights=weights, avgs=means)
 end

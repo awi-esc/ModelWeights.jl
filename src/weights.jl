@@ -417,7 +417,19 @@ function computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=noth
     return weighted_avg
 end
 
-
+"""
+    getWeightedAverages(
+        modelDataAllVars::Dict{String, DimArray}, 
+        weights::DimArray
+    )
+Compute average of 'modelDataAllVars', once weighted by 'weights' and once 
+unweighted.
+    
+Note that the model dimension of 'weights' can be smaller than the model
+dimension of 'modelDataAllVars' which may contain the predictions of all 
+ensemble members. Here, these are averaged, s.t. for each model there is a 
+just one prediction.
+"""
 function getWeightedAverages(modelDataAllVars::Dict{String, DimArray}, weights::DimArray)
     results = Dict{String, Dict{String, DimArray}}("weighted" => Dict(), "unweighted" => Dict());
     for var in keys(modelDataAllVars)
