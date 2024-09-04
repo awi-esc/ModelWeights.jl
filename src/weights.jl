@@ -125,20 +125,22 @@ function generalizedDistancesIndependence(
     end
 
     weightedDistMatrices = [];
-    meta = createMetaDict(GLOBAL_METADATA_KEYS);
-    meta_not_shared = Dict();
+    meta = Dict{String, Array}();
+    # Models are/must be identical across variables! 
     for climVar in variables
         metadata = data[climVar].metadata;
-        meta_shared = filter(((k,v),)->!isa(v, Vector), metadata);
-        meta_not_shared[climVar] = filter(((k,v),)->isa(v, Vector), metadata);
-
+        # models_key = getCMIPModelsKey(metadata);
+        # meta_shared = filter(((k,v),)->!isa(v, Vector), metadata);
+        # get!(meta_shared, "variables", [climVar]);
+        # get!(meta_shared, "full_model_names", metadata["full_model_names"]);
+        # meta_shared[models_key] = unique(metadata[models_key]);
+        meta_shared = getMetadataCombinedModels(metadata, climVar);
         distances = getModelDistances(data[climVar]);
         weight = ifelse(isempty(weights), 1, weights[climVar]);        
         weightedNormalizedDistances = normalizeAndWeightDistances(distances, weight);
         push!(weightedDistMatrices, weightedNormalizedDistances);
         meta = mergewith(appendValuesDicts, meta, meta_shared);
     end
-    meta = merge(meta, meta_not_shared);
     weightsByVars = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
     weightsByVars = rebuild(weightsByVars; metadata = meta);
     generalizedDists = generalizedDistances(weightsByVars);
@@ -217,20 +219,19 @@ function generalizedDistancesPerformance(
     end
     weightedDistMatrices = [];
 
-    meta = createMetaDict(GLOBAL_METADATA_KEYS);
-    meta_not_shared = Dict();
+    meta = Dict{String, Array}();
     for climVar in variables
         metadata = modelData[climVar].metadata;
-        meta_shared = filter(((k,v),)->!isa(v, Vector), metadata);
-        meta_not_shared[climVar] = filter(((k,v),)->isa(v, Vector), metadata);
-
+        # meta_shared = filter(((k,v),) -> !(isa(v, Vector)), metadata);
+        # get!(meta_shared, "variables", [climVar])
+        # meta_shared["full_model_names_" * climVar] = metadata["full_model_names"];
+        meta_shared = getMetadataCombinedModels(metadata, climVar);
         distances = getModelDataDist(modelData[climVar], obsData[climVar]);
         weight = ifelse(isempty(weights), 1, weights[climVar]);
         weightedNormalizedDistances = normalizeAndWeightDistances(distances, weight);
         push!(weightedDistMatrices, weightedNormalizedDistances);
         meta = mergewith(appendValuesDicts, meta, meta_shared);
     end
-    meta = merge(meta, meta_not_shared);
     weightsByVar = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
     weightsByVar = rebuild(weightsByVar; metadata = meta);
     generalizedDists = generalizedDistances(weightsByVar);

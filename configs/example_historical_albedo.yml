@@ -7,7 +7,6 @@ target_dir: /albedo/home/brgrus001/SimilarityWeights/output
 variables: 
   - tos
   - tas
-  - pr
 
 name_ref_period: historical1
 name_full_period: full
@@ -22,10 +21,10 @@ weight_contributions:
 weights_variables:
   performance:
     tas: 1
-    pr: 1
     tos: 1
+    #pr: 1
 
   independence:
     tas: 0.5
-    pr: 0.25
     tos: 0.125
+    #pr: 0.25

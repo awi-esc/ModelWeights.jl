@@ -1,40 +1,6 @@
 import YAML
 using DimensionalData
 
-# these are identical across models
-GLOBAL_METADATA_KEYS = [
-    "realm",
-    "variable_id",
-    "experiment_id",
-    "product",
-    "software",
-    "mip_era",
-    "parent_mip_era",
-    "external_variables",
-    "project_id",
-    "Conventions",
-    "activity_id",
-    "sub_experiment_id",
-
-    "standard_name",
-    "coordinates",
-    "_FillValue",
-    "units",
-    "long_name",
-
-    "grid",
-    "frequency",
-    "cell_methods"
-    ];
-    
-# these differ across models and will be saved as list
-LOCAL_METADATA_KEYS = [
-    "source_id",
-    "institution_id",
-    "variant_label",
-    "grid_label",
-];
-
 @kwdef struct Config 
     base_path::String
     target_dir::String
@@ -50,14 +16,15 @@ LOCAL_METADATA_KEYS = [
 end
 
 
-function checkMetadata(data)
-    filtered = filter(((k,v),)->isa(v, Vector) && length(v) != length(dims(data, :model)) , data.metadata);
-    if !isempty(filtered) && any(x -> length(x) != 0, values(filtered))
-        @warn "Check Metadata, there are fields which were supposed to be identical across models, but werent!" filtered
+function debugMetadata(data)
+    filtered = filter(((k,v),)->isa(v, Vector) , data.metadata);
+    if !isempty(filtered)
+        @debug "Values of metadata differ for these fields:" keys(filtered)
     end
 end
 
-function hasFlawedMetadata(attributes, filename)
+
+function warnIfFlawedMetadata(attributes, filename)
     isFlawed = false;
     if "branch_time_in_parent" in keys(attributes) && isa(attributes["branch_time_in_parent"], String)
         @warn "Branch_time_in_parent is a string, excluded file:" filename
@@ -70,33 +37,72 @@ function hasFlawedMetadata(attributes, filename)
 end
 
 
-function createMetaDict(list_keys::Vector{String} = LOCAL_METADATA_KEYS)
-    meta = Dict();
-    for k in list_keys
-        meta[k] = [];
+function getUniqueModelIds(meta::Dict{String, Union{String, Array}}, key_model_names::String)
+    mip_era = get(meta, "mip_era", get(meta, "project_id", ""))
+    models = [];
+    if mip_era == "CMIP5"
+        # TODO add
+        @warn "For CMIP5, full model names are not generated in metadata."
+    else
+        names = meta[key_model_names];
+        variants = meta["variant_label"];
+        grids = meta["grid_label"]; 
+        models = map(
+            x->join(x, "__", "__"), 
+            zip(names, variants, grids)
+        );
     end
-    return meta
+    return models
 end
 
 
-function verifyMetadata!(meta::Dict, model_dim::Number)
-    indices = findall(x -> x != model_dim, map(length, values(meta)));
-    for i in indices 
-        @warn "The following metadata key seems to be missing for some files: " collect(keys(meta))[i];
-    end
-    vals = map(k -> (k, unique(meta[k])), collect(keys(meta)))
-    unequal_values = filter(
-        ((k, l), ) -> length(l) > 1 && !(k in SimilarityWeights.LOCAL_METADATA_KEYS), vals
+"""
+    updateMetadata!(
+        meta::Dict{String, Union{Array, String}}, 
+        data::DimArray, 
+        indices_ignored::Array
     )
-    if length(unequal_values) > 0
-        msg = join(map(x -> x[1], unequal_values), ", ", ", ") 
-        @warn "values across models that aren't identical: " msg
-    end
-    for (k, l) in vals 
-        if !(k in SimilarityWeights.LOCAL_METADATA_KEYS)
-            meta[k] = l[1]
+
+Update metadata 'meta' s.t. data of ignored files is removed and attributes
+that were only present in some files/models are set to missing. Further the key 
+'full_model_names' is added which contains for every file/model the unique 
+identifier consisting of variant_label, grid_label and model_name. 
+"""
+function updateMetadata!(
+    meta::Dict{String, Union{Array, String}}, 
+    data::DimArray, 
+    indices_ignored::Array
+)
+    model_dim = length(dims(data, :model))
+    for (i, key) in enumerate(keys(meta))
+        values = meta[key]; 
+        # add missing values for the last added files 
+        n =  model_dim - length(values)
+        for i in range(1, n)
+            push!(values, missing)
+        end
+        #println("i: " * string(i) * " " * string(length(meta[key])))
+        deleteat!(values, indices_ignored)
+        # if none was missing and all have the same value, just use a string
+        if !any(ismissing, values) && length(unique(values)) == 1
+            meta[key] = string(values[1])
         end
     end
+    mip_era = get(meta, "mip_era", get(meta, "project_id", ""))
+    if !isempty(mip_era)
+        key_model_name = ifelse(mip_era == "CMIP6", "source_id", "model_id")
+        meta["full_model_names"] = getUniqueModelIds(meta, key_model_name)
+    end
+end
+
+
+function getMetadataCombinedModels(metadata::Dict, climVar::String)
+    models_key = getCMIPModelsKey(metadata);
+    meta_shared = filter(((k,v),)->!isa(v, Vector), metadata);
+    get!(meta_shared, "variables", climVar);
+    get!(meta_shared, "full_model_names", metadata["full_model_names"]);
+    meta_shared[models_key] = unique(metadata[models_key]);
+    return meta_shared
 end
 
 
@@ -124,81 +130,92 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, included::Vector
         end
         data = [];
         sources = [];
-        meta = createMetaDict();
-        for (root, dirs, files) in walkdir(pathToData; follow_symlinks=true)
-            ncFiles = filter(x->endswith(x, ".nc"), files);
-            for file in ncFiles
-                addFile = true;
-                # only include files that contain all names given in 'included'
-                if length(included) != 0
-                    if !all([occursin(name, file) for name in included])
-                        addFile = false;
-                    end
-                end
-                if addFile
-                    filename = split(basename(file), ".nc")[1];
-                    ds = NCDataset(joinpath(root, file));
-                    dsVar = ds[climVar];
-
-                    attributes = deepcopy(ds.attrib);
-                    attributes = merge(Dict(dsVar.attrib), attributes);
-                    if hasFlawedMetadata(attributes, filename)
-                        continue
-                    end
-                    attributes = filter(((k,v),) -> k in GLOBAL_METADATA_KEYS || k in LOCAL_METADATA_KEYS, attributes);
-                    meta = mergewith(appendValuesDicts, meta, Dict(attributes));
-                    if "model_id" in keys(ds.attrib)
-                        push!(sources, ds.attrib["model_id"]);
-                    else
-                        push!(sources, filename)#split(filename, "_")[2])
-                    end
-                    if climVar == "amoc"
-                        if "season_number" in keys(ds.dim)
-                            dim1 = Dim{:season}(collect(dsVar["season_number"][:]));
-                            push!(data, DimArray(Array(dsVar), (dim1)));
-                        else
-                            push!(data, DimArray(Array(dsVar), ()));
-                        end
-                    else
-                        # TODO: hur has three dimensions, for now just lon-lat dimensions supported
-                        if length(size(dsVar)) != 2
-                            throw(ArgumentError(join(["only variables that have ONLY dimensions lon, lat are supported,", 
-                                                dsVar.attrib["standard_name"], "has size", size(dsVar)], " ", " ")))
-                        end
-                        dim1 = Dim{:lon}(collect(dsVar["lon"][:]));
-                        dim2 = Dim{:lat}(collect(dsVar["lat"][:]));          
-                        push!(data, DimArray(Array(dsVar), (dim1, dim2)));
-                    end
+        meta = Dict{String, Union{String, Array}}();
+        files = readdir(pathToData; join=true);
+        ncFiles = filter(x->endswith(x, ".nc"), files);
+        indices_ignored = [];
+        for (i, file) in enumerate(ncFiles)
+            addFile = true;
+            # only include files that contain all names given in 'included'
+            if length(included) != 0
+                if !all([occursin(name, file) for name in included])
+                    addFile = false;
                 end
             end
-        end
-        dimData = cat(data...; dims = (Dim{:model}(sources)));
-        
-        verifyMetadata!(meta, length(sources));
-        dimData = rebuild(dimData; metadata = meta);
+            if addFile
+                filename = split(basename(file), ".nc")[end-1];
+                ds = NCDataset(file);
+                dsVar = ds[climVar];
 
-        checkMetadata(dimData);
+                attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)));
+                if warnIfFlawedMetadata(attributes, filename)
+                    push!(indices_ignored, i)
+                    continue
+                end
+
+                for key in keys(attributes)
+                    values = get!(meta, key, []);
+                    # fill up vector
+                    n = i - length(values) - 1;
+                    for j in range(1, n)
+                        push!(values, missing)
+                    end
+                    push!(values, attributes[key]);
+                end
+                name = get(ds.attrib, "source_id", get(ds.attrib, "model_id", ""));
+                if !isempty(name)
+                    push!(sources, name);
+                else
+                    # for observational data
+                    push!(sources, filename)
+                end
+
+                if climVar == "amoc"
+                    if "season_number" in keys(ds.dim)
+                        dim1 = Dim{:season}(collect(dsVar["season_number"][:]));
+                        push!(data, DimArray(Array(dsVar), (dim1)));
+                    else
+                        push!(data, DimArray(Array(dsVar), ()));
+                    end
+                else
+                    # TODO: hur has three dimensions, for now just lon-lat dimensions supported
+                    if length(size(dsVar)) != 2
+                        throw(ArgumentError(join(["only variables that have ONLY dimensions lon, lat are supported,", 
+                                            dsVar.attrib["standard_name"], "has size", size(dsVar)], " ", " ")))
+                    end
+                    dim1 = Dim{:lon}(collect(dsVar["lon"][:]));
+                    dim2 = Dim{:lat}(collect(dsVar["lat"][:]));          
+                    push!(data, DimArray(Array(dsVar), (dim1, dim2)));
+                end
+                # print("i=" * string(i) * ": ")
+                # println(string(length(get(meta, "model_doi_url", []))))
+            end
+        end
+        dimData = cat(data...; dims = (Dim{:model}(sources))); 
+        updateMetadata!(meta, dimData, indices_ignored);
+        dimData = rebuild(dimData; metadata = meta);
+        # TODO: if log-level set to debug: debugMetadata(dimData);
         dataAllVars[climVar] = dimData;
     end
-
-
     return dataAllVars
 end
 
 function appendValuesDicts(val1, val2)
-    if isa(val1, Vector) && isa(val2, Vector) 
-        return vcat(val1, val2)
+    if isa(val1, Vector) && isa(val2, Vector)
+        if val1 != val2 
+            @warn "Two arrays merged that weren't identical! (usuallly in metadata)"
+            @warn val1
+            @warn val2
+            return vcat(val1, val2)
+        else
+            return val1 
+        end
     elseif isa(val1, Vector)
         return push!(val1, val2)
     elseif isa(val2, Vector)
         return push!(val2, val1)
     else
         return [val1, val2]
-        # if val1 == val2
-        #     return val1
-        # else
-        #     return [val1, val2]
-        # end
     end
 end
 
@@ -261,14 +278,8 @@ function getCommonModelsAcrossVars(modelData::Dict{String, DimArray})
     shared_models =  nothing
     for var in variables
         data_var = modelData[var];
-        names = Array(dims(data_var, :model));
-        variants = data_var.metadata["variant_label"];
-        grids = data_var.metadata["grid_label"];
-        
-        models = map(
-            x->join(x, "__", "__"), 
-            zip(names, variants, grids)
-        );
+        meta = data_var.metadata;
+        models = getUniqueModelIds(meta, getCMIPModelsKey(meta));
         data_all[var].metadata["full_model_names"] = models;
         if isnothing(shared_models)
             shared_models = models
@@ -276,17 +287,39 @@ function getCommonModelsAcrossVars(modelData::Dict{String, DimArray})
             shared_models = intersect(shared_models, models)
         end
     end
-    for var in variables
-        data = data_all[var]
-        indices = findall(m -> m in shared_models, data.metadata["full_model_names"]);
-        data_all[var] = data[model = indices];
-        # adapt metadata accordingly
-        data.metadata["full_model_names"] = data.metadata["full_model_names"][indices];
-        for key in SimilarityWeights.LOCAL_METADATA_KEYS
-            data.metadata[key] = data.metadata[key][indices];
-        end
-    end
+    keepModelSubset!(data_all, shared_models);
     return data_all
+end
+
+
+function getCMIPModelsKey(meta::Dict)
+    attributes = keys(meta);
+    if "source_id" in attributes
+        return "source_id"
+    elseif "model_id" in attributes
+        return "model_id"
+    else 
+        msg = "Only CMIP6/CMIP5 supported with model name keys: source_id/model_id!"
+        throw(ArgumentError(msg))
+    end
+end
+
+function keepModelSubset!(data::Dict{String, DimArray}, shared_models::Vector{String})
+    for var in keys(data);
+        data_var = data[var]
+        indices = findall(m -> m in shared_models, data_var.metadata["full_model_names"]);
+        data_var = data_var[model = indices];
+        meta = data_var.metadata;
+        # adapt metadata accordingly
+        meta["full_model_names"] = meta["full_model_names"][indices];
+        models_key = getCMIPModelsKey(meta)
+        meta[models_key] = meta[models_key][indices];
+        attributes = filter(x -> !(x isa String), keys(meta));
+        for key in attributes
+            meta[key] = meta[key][indices];
+        end
+        data[var] = data_var;
+    end
 end
 
 
@@ -302,24 +335,5 @@ Load climate model data for variables and time periods defined in 'config'.
 function loadDataFromConfig(config::Config, key_period::String, key_data_name::String)
     pathsDict = buildPathsToVarData(config,  getproperty(config, Symbol(key_period)));
     data = loadPreprocData(pathsDict, [getproperty(config, Symbol(key_data_name))]);
-    return data
-end
-
-
-function getModelsInRefPeriod(
-    modelDataFull::Dict{String, DimArray}, modelDataRef::Dict{String, DimArray}
-)
-    data = deepcopy(modelDataFull);
-    for var in keys(modelDataRef)
-        dataFull = data[var];
-        full_model_names_ref = modelDataRef[var].metadata["full_model_names"];
-        full_model_names_full = dataFull.metadata["full_model_names"];
-        
-        dataFull = set(dataFull, :model => full_model_names_full);
-        dataFull = dataFull[model = Where(x -> x in full_model_names_ref)]
-        dataFull = set(dataFull, :model => map(x -> split(x, "__")[1], Array(dims(dataFull, :model))));
-        # TODO: check if next step is necessary
-        data[var] = dataFull
-    end
     return data
 end

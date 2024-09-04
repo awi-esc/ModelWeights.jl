@@ -11,9 +11,22 @@ config file located at 'path_config'.
 function runWeights(config::Config)
     modelDataRef = loadDataFromConfig(config, "name_ref_period", "models_project_name");
     modelDataRef = getCommonModelsAcrossVars(modelDataRef);
-    obsData = loadDataFromConfig(config, "name_ref_period", "obs_data_name");
     # TODO: make sure that there is observational data for all variables for 
-    # the respective reference period
+    # the respective reference period, for now this is just assumed but in 
+    # some rare cases it may be wrong
+    obsData = loadDataFromConfig(config, "name_ref_period", "obs_data_name");
+    modelDataFull = loadDataFromConfig(config, "name_full_period", "models_project_name");
+    modelDataFull = getCommonModelsAcrossVars(modelDataFull);
+    
+    # get weights just for those models in modelDataFull that are also in 
+    # reference period 
+    shared_models = intersect(
+        first(values(modelDataFull)).metadata["full_model_names"], 
+        first(values(modelDataRef)).metadata["full_model_names"]
+    );
+    keepModelSubset!(modelDataFull, shared_models);
+    keepModelSubset!(modelDataRef, shared_models);
+    
     weights = overallWeights(
         modelDataRef, 
         obsData, 
@@ -21,12 +34,11 @@ function runWeights(config::Config)
         config.weight_contributions["independence"], 
         config.weights_variables["performance"],
         config.weights_variables["independence"]   
-    );
-        
-    modelDataFull = loadDataFromConfig(config, "name_full_period", "models_project_name");
-    modelDataFull = getCommonModelsAcrossVars(modelDataFull);
-    # get Data just for those models for which also historical reference period is available
-    models = getModelsInRefPeriod(modelDataFull, modelDataRef);
-    means = getWeightedAverages(models, weights);
+    );   
+    means = getWeightedAverages(modelDataFull, weights);
+
+    models = weights.metadata["full_model_names"];
+    @info "Nb included models (without ensemble members): " length(weights.metadata["source_id"])
+    foreach(m -> @info(m), models)
     return (weights=weights, avgs=means)
 end
