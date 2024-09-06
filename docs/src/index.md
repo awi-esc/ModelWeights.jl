@@ -51,9 +51,11 @@ d_i ^\prime = \frac{\sum_k^{K_i} d_i^k}{K_i}
 
 ## Functions
 
-```@docs
-runWeights(config::Config)
+```@autodocs
+Modules = [SimilarityWeights]
+Order = [:function, :type]
 ```
+
 
 
 ## Index
