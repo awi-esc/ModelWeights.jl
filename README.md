@@ -1,61 +1,46 @@
 # SimilarityWeights
 
-This repository contains the code for the Julia Module SimilarityWeights, which computes so called *independence weights* for each loaded model, namely according to the approach from Brunner et al. (2020). 
-This approach assigns lower weights to models that make similar predictions (in a predefined reference period). Models whose predictions are further away (compared to the predictions of the other models in the ensemble) receive larger weights. 
+This repository contains the code for the Julia Package SimilarityWeights, which computes so called **independence** and **performance** weights for each loaded climate model, namely according to the approach from Brunner et al. (2020). 
+The documentation is found here: 
 
+<!-- This approach assigns lower weights to models that make similar predictions (in a predefined reference period). Models whose predictions are further away (compared to the predictions of the other models in the ensemble) receive larger weights.  -->
 
-### Getting started
-To activate the Julia project, do ```using Pkg; Pkg.activate(".");``` in the top-level directory. 
+### Getting started: Initialize project
+To activate the Julia project, do ```using Pkg; Pkg.activate(".");``` in the top-level directory or 
+alternatively ```pkg> activate .``` (from the package mode, entered in Julia REPL by typing ']'). 
 This just activates the project, i.e. it makes it the active project.
 
-If the project contains a Manifest.toml file, running ```instantiate``` (in package manager command line) after activating the project will install the packages in the same state that is given by the manifest file. Otherwise, it will resolve the latest versions of the dependencies compatible with the project. Then, the dependencies will be installed.  
-To update the packages specified in the Manifest.toml file, run ```update``` (in package manager command line) and then run ```instantiate``` again.
-
-There is also Pkg.resolve(). This *updates* the dependencies, i.e. if later versions that are compatible with the other packages and versions are available, these will be loaded, but not necessarily installed, this is done by 'instantiate'. And 'resolve' *updates the dependency graph* and potentially updates the Manifest.toml file. Contrary to that, 'update' fetches and installs the latest versions of packages compatible with constraints in the Project.toml file. 
-
-#### Note on using on Albedo
-
-On Albedo, I installed the latest version of Julia with juliaup. Make sure to use this one by setting the Julia: executablePath in the settings.json file to the respective path.
-
-Activate and instantiate project by running the following commands from the julia REPL:
-```
-using Pkg; 
-Pkg.activate("."); 
-Pkg.update(); 
-Pkg.instantiate();'
-```
-Alternatively, you can go to the julia package-command interface (by typing ']' in the Julia REPL) where you should see the name of the julia environment in parentheses in the beginning of the line (like in a conda environment) and run 'update' and/or 'instantiate'. 
-
-
-Instead of using 'activate', you can specify the project on startup using --project='', e.g. for running a specific script:
+Instead of running ```pkg> activate```, you can also specify the project on startup using --project='', e.g. for running a specific script:
 ```
 julia --project=. scripts/plotting/calculate_weights_climwip.jl
 ```
 
+Then run```pkg> instantiate```. When there is no Manifest.toml file in the project, this will install the latest versions of the dependencies compatible with the project and a Manifest.toml file will be generated (I think this can also be done explicitly by running ```pkg> resolve```). If the project does have a Manifest.toml file, will install the packages in exactly the same state as given by the manifest file. 
+
+To update the packages specified in the Manifest.toml file, run ```pkg> update``` and then run ```instantiate``` again. The Manifest.toml file contains the resolved versions of all dependencies.
+
+Note: ```pkg> resolve```  *updates the dependency graph*n and potentially updates the Manifest.toml file but does not necessarily *install* new compatible versions of dependencies. Contrary to that, ```pkg> update``` fetches and installs the latest versions of packages compatible with constraints in the Project.toml file. 
+
+
+
 ###  Structure
 
-- recipe_climwip_test_basic_data/: directory contains the output from ESMValTool for the recipe 'recipe_climwip_test_basic.yml'. The directory 'work' contains the processed data that is used by ESMValTool for the diagnostics.
+- scripts/: contains Julia scripts, to show examples and for trying out
 
-- scripts/: directory contains scripts for reproducing the figures from the original climwip recipes (inside scripts/plotting). Scripts/compute-data-for-diagnostics-from-preproc.jl loads the preprocessed data (output from ESMValTool, inside preproc-dir) and recomputes the data used for the diagnostics
+- src/: directory contains source code, including all explicitly exported functions for the module
 
-- src/: 
-In scripts/plotting, the data from the work-directory, which is output from ESMValTool and which contains the processed data, is loaded and used to reproduce the Figures from the climwip recipes available in ESMValTool in Julia. 
-In scripts/compute-data-for-diagnostics-from-preproc.jl, the data that was output from ESMValTool after the preprocessing (so in output folder 'preproc'), is used to reproduce the data that is eventually used (i.e. the data in the work-directory) for creating the plots. 
+- test/: directory contains tests
 
-
-- recipe_climwip_test_basic_data:
-contains the output from EsmValTool when running the recipe recipe_climwip_test_basic.
-
-- scripts:
-    - plotting: directory that contains Julia scripts that generate the figures 
-    - compute-data-for-diagnostics-from-preproc.jl: code that reconstructs the weights, distance matrices etc. from the (preprocessed) data output from ESMValTool
-
-- src: directory contains helper functions and in compute-weights.jl the exported functions for the module
-
-- plots-replicated-with-julia/: directory that contains the reproduced figures
+- reproduce-climwip-figs
+    - recipe_climwip_test_basic_data: contains the output from EsmValTool when running the recipe recipe_climwip_test_basic.
+    The directory 'work' contains the processed data that is used by ESMValTool for the diagnostics.
+    - plots-replicated-with-julia/: directory that contains the reproduced figures
+    - scripts:
+        - plotting: data from the work-directory, which is output from ESMValTool and which contains the processed data, is loaded and used to reproduce the Figures from the climwip recipes available in ESMValTool.
+        - compute-data-for-diagnostics-from-preproc.jl:  the data that was output from ESMValTool after the preprocessing (so in output folder 'preproc'), is used to reproduce the data that is eventually used (i.e. the data in the work-directory) for creating the plots. 
+    - src: contains Julia functions
 
 
-- tests: TODO: add tests for exported functions
 
 ### Difference paper vs. ESMValTool implementation
 
