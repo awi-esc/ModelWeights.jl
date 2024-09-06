@@ -8,7 +8,7 @@ from Brunner et al (2020).
 
 ## Getting started
 
-Here's an example of how to get weights for a set of models defined in the configuration 
+Here's an example (in Julia) of how to get weights for a set of models defined in the configuration 
 file stored in configs/: 
 
 ````julia
@@ -46,6 +46,8 @@ that need to be replaced):
 ....
 
 ```
+Note that the 'run'-directory will be there if the data was loaded with our ESMValTool recipes, but it doesn't contain any data that we'll need. So no need for this directory if the data was loaded differently. 
+
 
 - `base_path:`  Path to the directory that contains the preprocessed data from ESMValTool (not necessarily from ESMValTool, but the underlying structure must be the same)
 
