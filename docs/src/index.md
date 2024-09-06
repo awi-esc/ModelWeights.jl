@@ -22,7 +22,7 @@ weights, avgs = SimilarityWeights.runWeights(config);
 
 #### Configuration
 
-The assumed directory structure is as follows (upper case words are variables 
+The assumed directory structure of the data is as follows (upper case words are variables 
 that need to be replaced): 
 
 ```bash
@@ -49,11 +49,25 @@ that need to be replaced):
 
 - `base_path:`  Path to the directory that contains the preprocessed data from ESMValTool (not necessarily from ESMValTool, but the underlying structure must be the same)
 
-- `experiment:` Name of experiment for which models were run, e.g. 'historical' or 'midHolocene'
+- `experiment:` Name of experiment for which models were run, e.g. 'historical' or 'midHolocene'.
 
 - `prefix_var_folders:` (optional) The prefix of the directories for each climate variable. 
 
-- `target_dir:` 
+- `target_dir:` Path to the directory where the computed data will be stored.
+
+- `variables:` List of climate variables which will be considered.
+
+- `name_ref_period:` If the data is loaded with our ESMValTool recipes, the name of the reference period is, for now, one of 'historical1', 'historical2', 'historical3' (see below).
+
+- `name_full_period:` If the data is loaded with our ESMValTool recipes, the name with which the entire referenced period of the respective experiment is referred to, is set to 'full'.
+
+- `models_project_name:` Either 'CMIP6' or 'CMIP5'. We focus on 'CMIP6'.
+
+- `obs_data_name:` If the data is loaded with our ESMValTool recipes, for now this is set to 'ERA5'. 
+
+- `weight_contributions:` For now: one value for performance, one for independence. Should sum up to 1. This is how much each of the two weight-types is taken into account.
+
+- `weights_variables:`: For each of 'performance' and 'independence' one value per climate variable considered. These values represent the weight of how much each climate variable influences the generalized distance of a model, which is computed by taking a weighted average across the distances with respect to different variables. Should sum up to 1. 
 
 ## Computation of weights
 
