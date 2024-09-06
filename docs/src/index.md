@@ -6,6 +6,55 @@
 This Julia package computes weights for a set of climate models following the approach
 from Brunner et al (2020). 
 
+## Getting started
+
+Here's an example of how to get weights for a set of models defined in the configuration 
+file stored in configs/: 
+
+````julia
+using SimilarityWeights
+
+path_config = "configs/example_historical_albedo.yml"
+config = SimilarityWeights.validateConfig(path_config);
+
+weights, avgs = SimilarityWeights.runWeights(config);
+````
+
+#### Configuration
+
+The assumed directory structure is as follows (upper case words are variables 
+that need to be replaced): 
+
+```bash
+
+├── EXPERIMENT
+│   └── [PREFIX_VAR_FOLDERS_]VAR
+│       ├── preproc
+│       │   └── climatology_full
+│       │   │   └── VAR
+│       │   ├── climatology_historical1
+│       │   │   └── VAR
+│       │   ├── climatology_historical2
+│       │   │   └── VAR
+│       │   └── climatology_historical3
+│       │       └── VAR
+│       │     
+│       └── run
+│
+└── EXPERIMENT
+│   └── ...
+....
+
+```
+
+- `base_path:`  Path to the directory that contains the preprocessed data from ESMValTool (not necessarily from ESMValTool, but the underlying structure must be the same)
+
+- `experiment:` Name of experiment for which models were run, e.g. 'historical' or 'midHolocene'
+
+- `prefix_var_folders:` (optional) The prefix of the directories for each climate variable. 
+
+- `target_dir:` 
+
 ## Computation of weights
 
 #### Distances: area-weighted RMSE
@@ -41,6 +90,15 @@ To compute the actual weight per Model, ``w_i``, the different ensemble members 
 ```math
 d_i ^\prime = \frac{\sum_k^{K_i} d_i^k}{K_i}
 ```
+
+
+#### Reference data
+
+We use three different periods within the historical period as reference to compute the performance weights: 
+
+- historical1: 1951 - 1980
+- historical2: 1961 - 1990
+- historical3: 1990 - 2014
 
 
 ## References
