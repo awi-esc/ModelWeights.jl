@@ -8,8 +8,7 @@ from Brunner et al (2020).
 
 ## Getting started
 
-Here's an example (in Julia) of how to get weights for a set of models defined in the configuration 
-file stored in configs/: 
+Here's an example (in Julia) of how to get weights for a set of models defined in the configuration file stored in configs/: 
 
 ````julia
 using SimilarityWeights
@@ -19,6 +18,8 @@ config = SimilarityWeights.validateConfig(path_config);
 
 weights, avgs = SimilarityWeights.runWeights(config);
 ````
+
+Calling ``runWeights`` will compute weights for all models shared across climate variables. The metadata is adapted accordingly and stores information about the final set of models used. These will also be logged to the console. 
 
 #### Configuration
 
@@ -70,6 +71,7 @@ Note that the 'run'-directory will be there if the data was loaded with our ESMV
 - `weight_contributions:` For now: one value for performance, one for independence. Should sum up to 1. This is how much each of the two weight-types is taken into account.
 
 - `weights_variables:`: For each of 'performance' and 'independence' one value per climate variable considered. These values represent the weight of how much each climate variable influences the generalized distance of a model, which is computed by taking a weighted average across the distances with respect to different variables. Should sum up to 1. 
+
 
 ## Computation of weights
 
