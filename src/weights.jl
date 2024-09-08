@@ -129,11 +129,6 @@ function generalizedDistancesIndependence(
     # Models are/must be identical across variables! 
     for climVar in variables
         metadata = data[climVar].metadata;
-        # models_key = getCMIPModelsKey(metadata);
-        # meta_shared = filter(((k,v),)->!isa(v, Vector), metadata);
-        # get!(meta_shared, "variables", [climVar]);
-        # get!(meta_shared, "full_model_names", metadata["full_model_names"]);
-        # meta_shared[models_key] = unique(metadata[models_key]);
         meta_shared = getMetadataCombinedModels(metadata, climVar);
         distances = getModelDistances(data[climVar]);
         weight = ifelse(isempty(weights), 1, weights[climVar]);        

@@ -148,11 +148,15 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, included::Vector
                 dsVar = ds[climVar];
 
                 attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)));
+                if climVar == "msftmz"
+                    attributes = merge(attributes, Dict(deepcopy(ds["sector"].attrib)));
+                end
                 if warnIfFlawedMetadata(attributes, filename)
                     push!(indices_ignored, i)
                     continue
                 end
 
+                # update metadata
                 for key in keys(attributes)
                     values = get!(meta, key, []);
                     # fill up vector
@@ -170,23 +174,24 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, included::Vector
                     push!(sources, filename)
                 end
 
-                if climVar == "amoc"
-                    if "season_number" in keys(ds.dim)
-                        dim1 = Dim{:season}(collect(dsVar["season_number"][:]));
-                        push!(data, DimArray(Array(dsVar), (dim1)));
-                    else
-                        push!(data, DimArray(Array(dsVar), ()));
+                # if climVar == "amoc"
+                #     if "season_number" in keys(ds.dim)
+                #         dim1 = Dim{:season}(collect(dsVar["season_number"][:]));
+                #         push!(data, DimArray(Array(dsVar), (dim1)));
+                #     else
+                #         push!(data, DimArray(Array(dsVar), ()));
+                #     end
+                # else
+                dimension_names = dimnames(dsVar)
+                dimensions = []
+                for d in dimension_names
+                    if d in ["bnds", "string21"]
+                        continue
                     end
-                else
-                    # TODO: hur has three dimensions, for now just lon-lat dimensions supported
-                    if length(size(dsVar)) != 2
-                        throw(ArgumentError(join(["only variables that have ONLY dimensions lon, lat are supported,", 
-                                            dsVar.attrib["standard_name"], "has size", size(dsVar)], " ", " ")))
-                    end
-                    dim1 = Dim{:lon}(collect(dsVar["lon"][:]));
-                    dim2 = Dim{:lat}(collect(dsVar["lat"][:]));          
-                    push!(data, DimArray(Array(dsVar), (dim1, dim2)));
-                end
+                    push!(dimensions, Dim{Symbol(d)}(collect(dsVar[d][:])))
+                end      
+                push!(data, DimArray(Array(dsVar), Tuple(dimensions)));
+                # end
                 # print("i=" * string(i) * ": ")
                 # println(string(length(get(meta, "model_doi_url", []))))
             end
@@ -201,7 +206,7 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, included::Vector
 end
 
 function appendValuesDicts(val1, val2)
-    if isa(val1, Vector) && isa(val2, Vector)
+    if isa(val1, Vector) && isa(val2, Vector) & !(isempty(val1) || isempty(val2))
         if val1 != val2 
             @warn "Two arrays merged that weren't identical! (usuallly in metadata)"
             @warn val1
