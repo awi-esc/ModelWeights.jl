@@ -40,5 +40,7 @@ function runWeights(config::Config)
     models = weights.metadata["full_model_names"];
     @info "Nb included models (without ensemble members): " length(weights.metadata["source_id"])
     foreach(m -> @info(m), models)
+
+    saveWeights(weights, config.target_dir)
     return (weights=weights, avgs=means)
 end

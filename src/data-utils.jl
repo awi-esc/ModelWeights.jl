@@ -342,3 +342,27 @@ function loadDataFromConfig(config::Config, key_period::String, key_data_name::S
     data = loadPreprocData(pathsDict, [getproperty(config, Symbol(key_data_name))]);
     return data
 end
+
+
+function saveWeights(
+        data::DimVector,
+        target_dir::String, 
+        target_fn::String="weights.nc"
+    )
+    if !isdir(target_dir)
+        mkpath(target_dir)
+    end
+    path_to_target = joinpath(target_dir, target_fn);
+    # TODO: only works if not yet created!
+    ds = NCDataset(path_to_target, "c")
+
+    defDim(ds, "model", length(dims(data, :model)))
+    # global attributes
+    for (k, v) in data.metadata
+        ds.attrib[k] = v
+    end
+    v = defVar(ds, "weight", Float64, ("model",))
+    v[:] = Array(data)
+    close(ds)
+    @info "saved data to " path_to_target
+end
