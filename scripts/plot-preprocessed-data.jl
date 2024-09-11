@@ -19,15 +19,22 @@ function getData(varToPath::Dict{String, String}, climVar::String, avgEnsembleMe
 end
 
 # precipitaton
-varToPathPr =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/recipe_historical_pr_20240815_124334/preproc/climatology_historical1");
-varToPathPr =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/recipe_historical_pr_20240815_124334/preproc/climatology_historical3");
-
+varToPathPr =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/historical/recipe_historical_pr/preproc/climatology_historical1/pr");
+varToPathPr =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/historical/recipe_historical_pr/preproc/climatology_historical3/pr");
+output_dir = "/Users/brgrus001/output-from-albedo/" # TODO:adapt
 #varToPath = Dict{String, String}("pr" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
 data = getData(varToPathPr, "pr");
 
 means = dropdims(mean(data, dims=:model), dims=:model);
-f1 = SimilarityWeights.plotMeansOnMap(means, "Precipitation means historical period");
-save("precipitation-historical1-simple-avg.png", f1);
+f1 = SimilarityWeights.plotMeansOnMap(
+    means, 
+    "Precipitation means historical period", 
+    SimilarityWeights.Target(
+        directory  = output_dir;
+        filename = "precipitation-historical1-unweighted-avg.png",
+        save = true
+    )
+);
 
 # histogram of all data for specific location
 # change longitudes to map from -180 to 180
@@ -52,8 +59,8 @@ f6 = SimilarityWeights.plotHistAtPos(data, florida)
 
 # AMOC (derived variable)
 # varToPath = Dict{String, String}("amoc" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240730_090548/preproc/climatologic_diagnostic");
-varToPath = Dict{String, String}("amoc" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic");
-#varToPath = Dict{String, String}("amoc" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic");
+# varToPath = Dict{String, String}("amoc" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic");
+# varToPath = Dict{String, String}("amoc" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic");
 
 data = getData(varToPath, "amoc");
 SimilarityWeights.convertKgsToSv!(data)
