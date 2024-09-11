@@ -345,9 +345,10 @@ end
 
 
 function saveWeights(
-        data::DimVector,
+        weights::DimVector,
+        averages::Dict{String, Dict{String, DimArray}},
         target_dir::String, 
-        target_fn::String="weights.nc"
+        target_fn::String="output.nc"
     )
     if !isdir(target_dir)
         mkpath(target_dir)
@@ -356,13 +357,40 @@ function saveWeights(
     # TODO: only works if not yet created!
     ds = NCDataset(path_to_target, "c")
 
-    defDim(ds, "model", length(dims(data, :model)))
+    defDim(ds, "model", length(dims(weights, :model)))
     # global attributes
-    for (k, v) in data.metadata
+    for (k, v) in weights.metadata
         ds.attrib[k] = v
     end
     v = defVar(ds, "weight", Float64, ("model",))
-    v[:] = Array(data)
+    v[:] = Array(weights)
     close(ds)
+
+    # TODO: adapt for non lon,lat -data!
+    # TODO: also add/log computed averages (weighted/uweighted)
+    # for avg in ["weighted", "unweighted"]
+    #     for (climVar, values) in averages[avg]
+    #         name = join([avg, "avg", climVar], "_", "_")
+    #         var = defVar(ds, name, Float32, ("lon", "lat"))
+    #         # Replace missing with the fill value
+    #         attput(var, "_FillValue", 1.0e20) 
+    #         var[:,:] = coalesce.(Array(values), missing)  
+    #     end
+    # end
+
     @info "saved data to " path_to_target
+end
+
+function filterModels(data::DimArray, models_out::Vector{String})
+    model_names = Array(dims(data, :model))
+    # TODO: do this dynamically! function as argument
+    #indices = findall(m -> contains(m, m_out), model_names);
+    indices = findall(m -> !(m in models_out), model_names);
+
+    data = data[model = indices]
+    # TODO: dont hard code source_id! (diff. for CMIP5 e.g.)
+    # TODO: make function that iterates over all necessary metadata attributes
+    data.metadata["source_id"] = data.metadata["source_id"][indices]
+    data.metadata["full_model_names"] = data.metadata["full_model_names"][indices]
+    return data
 end

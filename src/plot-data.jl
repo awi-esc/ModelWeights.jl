@@ -108,10 +108,11 @@ end
 Create figure with boxplots for each model in `data` that have several ensemble members.
 """
 function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
-    models = unique(dims(data, :model));
-    models_ensembles = filter(x -> length(dims(data[model = Where(m -> m == x)], :model)) > 1, models);
-    data_ensembles = data[model = Where(x -> x in models_ensembles)];
-    
+    # models = unique(dims(data, :model));
+    # models_ensembles = filter(x -> length(dims(data[model = Where(m -> m == x)], :model)) > 1, models);
+    # data_ensembles = data[model = Where(x -> x in models_ensembles)];
+    data_ensembles = data;
+    models_ensembles = unique(dims(data, :model))
     # translate list of unique models into list of integers for boxplot
     categories = Array(dims(data_ensembles, :model));
     categoriesInts = collect(1 : length(categories));
@@ -136,7 +137,11 @@ function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
          use either (0° to 360°) or (-180° to 180°)!"
         throw(ArgumentError(msg));
     end
-    values = dropdims(data_ensembles[lon = Where(x -> x == lon), lat = Where(x -> x == lat)], dims =:lon);
+    values = dropdims(
+        data_ensembles[lon = Where(x -> x == lon),
+        lat = Where(x -> x == lat)], 
+        dims =:lon
+    );
     boxplot!(ax, categoriesInts, Array(dropdims(values, dims=:lat)));
     return fig
 end

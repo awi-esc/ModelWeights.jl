@@ -1,14 +1,9 @@
 import YAML
 using DimensionalData
 
-"""
-    runWeights(path_config::String)
 
-Compute weights and weighted/unweighted average of the data specified in the
-config file located at 'path_config'.
 
-"""
-function runWeights(config::Config)
+function getSharedModelData(config::Config)
     modelDataRef = loadDataFromConfig(config, "name_ref_period", "models_project_name");
     modelDataRef = getCommonModelsAcrossVars(modelDataRef);
     # TODO: make sure that there is observational data for all variables for 
@@ -26,7 +21,18 @@ function runWeights(config::Config)
     );
     keepModelSubset!(modelDataFull, shared_models);
     keepModelSubset!(modelDataRef, shared_models);
-    
+    return (modelDataFull, modelDataRef, obsData)
+end
+
+"""
+    runWeights(path_config::String)
+
+Compute weights and weighted/unweighted average of the data specified in the
+config file located at 'path_config'.
+
+"""
+function runWeights(config::Config)
+    modelDataFull, modelDataRef, obsData = getSharedModelData(config);
     weights = overallWeights(
         modelDataRef, 
         obsData, 
@@ -40,7 +46,6 @@ function runWeights(config::Config)
     models = weights.metadata["full_model_names"];
     @info "Nb included models (without ensemble members): " length(weights.metadata["source_id"])
     foreach(m -> @info(m), models)
-
-    saveWeights(weights, config.target_dir)
+    saveWeights(weights, avgs, config.target_dir)
     return (weights=weights, avgs=means)
 end
