@@ -2,7 +2,7 @@
 using SimilarityWeights
 
 path_config = "configs/example_historical_albedo.yml"
-#path_config = "configs/example_historical_local.yml"
+path_config = "configs/example_historical_local.yml"
 config = SimilarityWeights.validateConfig(path_config);
 
 ###############################################################################

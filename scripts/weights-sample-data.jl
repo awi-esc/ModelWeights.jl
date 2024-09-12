@@ -26,19 +26,19 @@ weightsVarsPerform = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1);
 weightsVarsIndep = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
 
 wP = SimilarityWeights.generalizedDistancesPerformance(modelData, obsData, weightsVarsPerform);
+Di = SimilarityWeights.overallGeneralizedDistances(wP);
+
 wI = SimilarityWeights.generalizedDistancesIndependence(modelData, weightsVarsIndep);
+Sij = SimilarityWeights.overallGeneralizedDistances(wI);
 
-
-performances = SimilarityWeights.performanceParts(wP, sigmaD);
-independences = SimilarityWeights.independenceParts(wI, sigmaS);
+performances = SimilarityWeights.performanceParts(Di, sigmaD);
+independences = SimilarityWeights.independenceParts(Sij, sigmaS);
 weights = performances ./ independences;
-normalizedWeights = weights ./ sum(weights);
-
-
+normalizedWeights = weights ./ sum(weights)
 
 
 SimilarityWeights.plotPerformanceWeights(wP)
-SimilarityWeights.plotPerformanceWeights(wP, wP_overall)
+SimilarityWeights.plotPerformanceWeights(wP, Di)
 
 weights = SimilarityWeights.overallWeights(
     modelData, obsData, sigmaD, sigmaS, weightsVarsPerform, weightsVarsIndep
@@ -66,16 +66,20 @@ begin
         xlabel = "Model", 
         ylabel = "Weight"
     );
-    data = Array(wP)
-    variables = dims(wP, :variable)
-    for (col, var) in enumerate(variables)
-        scatter!(ax, xs, data[:, col])
-        lines!(ax, xs, data[:, col], label = "$var")
+    #data = Array(wP)
+    for (col, var) in enumerate(dims(wP, :variable))
+        scatter!(ax, xs, Array(wP[variable = At(var)]))
+        lines!(ax, xs, Array(wP[variable = At(var)]), label = "$var")
     end
     
-    # add combined weights
+    # add combined weights, summed over all variables
+    scatter!(ax, xs, Array(Di))
+    lines!(ax, xs, Array(Di), label = "combined perform. weights all vars")
+
+    # add overall weights (indep + perform)
     scatter!(ax, xs, Array(weights))
-    lines!(ax, xs, Array(weights), label = "combined weights all vars")
+    lines!(ax, xs, Array(weights), label = "overall weights (with indep.)")
+
     Legend(fig[1,2], ax)
     fig
 end

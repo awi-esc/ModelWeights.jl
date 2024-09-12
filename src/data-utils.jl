@@ -16,12 +16,12 @@ using DimensionalData
 end
 
 
-function debugMetadata(data)
-    filtered = filter(((k,v),)->isa(v, Vector) , data.metadata);
-    if !isempty(filtered)
-        @debug "Values of metadata differ for these fields:" keys(filtered)
-    end
-end
+# function debugMetadata(data)
+#     filtered = filter(((k,v),)->isa(v, Vector) , data.metadata);
+#     if !isempty(filtered)
+#         @debug "Values of metadata differ for these fields:" keys(filtered)
+#     end
+# end
 
 
 function warnIfFlawedMetadata(attributes, filename)
@@ -37,19 +37,41 @@ function warnIfFlawedMetadata(attributes, filename)
 end
 
 
+function buildCMIP5EnsembleMember(realizations, initializations, physics, n)
+    function concat(elem, prefix)
+        if !(elem isa Vector)
+            return [prefix * string(elem) for _ in range(1, n)]
+        else 
+            return map(x -> prefix * string(x), elem)
+        end
+    end
+    
+    rips = [concat(realizations, "r"), concat(initializations, "i"), concat(physics, "p")];
+    variants = [join(k, "") for k in zip(rips...)]
+    return variants
+end
+
 function getUniqueModelIds(meta::Dict{String, Union{String, Array}}, key_model_names::String)
     mip_era = get(meta, "mip_era", get(meta, "project_id", ""))
-    models = [];
+    model_names = meta[key_model_names];
     if mip_era == "CMIP5"
-        # TODO add
-        @warn "For CMIP5, full model names are not generated in metadata."
+        variants = buildCMIP5EnsembleMember(
+            meta["realization"], 
+            meta["initialization_method"], 
+            meta["physics_version"],
+            length(model_names)
+        );
+        models = map(
+            x->join(x, "__"), 
+            zip(model_names, variants)
+        );
+        @warn "For CMIP5, full model names dont include grid."
     else
-        names = meta[key_model_names];
         variants = meta["variant_label"];
         grids = meta["grid_label"]; 
         models = map(
             x->join(x, "__", "__"), 
-            zip(names, variants, grids)
+            zip(model_names, variants, grids)
         );
     end
     return models
@@ -88,6 +110,7 @@ function updateMetadata!(
             meta[key] = string(values[1])
         end
     end
+    # TODO: update this, use functions!
     mip_era = get(meta, "mip_era", get(meta, "project_id", ""))
     if !isempty(mip_era)
         key_model_name = ifelse(mip_era == "CMIP6", "source_id", "model_id")
@@ -96,11 +119,19 @@ function updateMetadata!(
 end
 
 
-function getMetadataCombinedModels(metadata::Dict, climVar::String)
+"""
+    getSharedMetadataAndModelNames(metadata::Dict)
+
+Return a new metadata dictionary which contains all attributes that were
+identical across models (therefore these are single values, not Vectors). 
+Further, model names and full_model_names are added. When combining this new 
+metadata dict with another, e.g. when combining data for different variables, 
+these must be identical (which is checked in function appendValuesDicts).
+"""
+function getSharedMetadataAndModelNames(metadata::Dict)
     models_key = getCMIPModelsKey(metadata);
     meta_shared = filter(((k,v),)->!isa(v, Vector), metadata);
-    get!(meta_shared, "variables", climVar);
-    get!(meta_shared, "full_model_names", metadata["full_model_names"]);
+    meta_shared["full_model_names"] = metadata["full_model_names"];
     meta_shared[models_key] = unique(metadata[models_key]);
     return meta_shared
 end
@@ -205,6 +236,18 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, included::Vector
     return dataAllVars
 end
 
+"""
+    appendValuesDicts(val1, val2)
+
+Combine values of two different dictionaries iteratively. If both values are 
+Vectors, they should be identical and only one of them is added. If they
+aren't identical, a warning is triggered and both vectors are concatenated 
+into one big Vector.
+
+# Arguments:
+- `val1`: a Vector or a single value (e.g. String, Number, etc.)
+- `val2`: a Vector or a single value (e.g. String, Number, etc.)
+"""
 function appendValuesDicts(val1, val2)
     if isa(val1, Vector) && isa(val2, Vector) & !(isempty(val1) || isempty(val2))
         if val1 != val2 
@@ -224,7 +267,9 @@ function appendValuesDicts(val1, val2)
     end
 end
 
-
+"""
+    buildPathsToVarData(config::Config, period::String)
+"""
 function buildPathsToVarData(config::Config, period::String)
     prefix = config.prefix_var_folders;
     var_to_path = Dict{String, String}();
@@ -297,6 +342,11 @@ function getCommonModelsAcrossVars(modelData::Dict{String, DimArray})
 end
 
 
+"""
+    getCMIPModelsKey(meta::Dict)
+
+Return the respective key to retrieve model names in CMIP6 and CMIP5 data.
+"""
 function getCMIPModelsKey(meta::Dict)
     attributes = keys(meta);
     if "source_id" in attributes
@@ -309,20 +359,30 @@ function getCMIPModelsKey(meta::Dict)
     end
 end
 
+
+"""
+    keepMetadataSubset!(meta::Dict, indices::Vector{Number})
+
+# Arguments:
+- `meta::Dict`: metadata dictionary
+- `indices::Vector{Number}`: indices of data to be kept
+"""
+function keepMetadataSubset!(meta::Dict, indices::Vector{Number})
+    meta["full_model_names"] = meta["full_model_names"][indices];
+    models_key = getCMIPModelsKey(meta)
+    meta[models_key] = meta[models_key][indices];
+    attributes = filter(x -> !(x isa String), keys(meta));
+    for key in attributes
+        meta[key] = meta[key][indices];
+    end
+end
+
 function keepModelSubset!(data::Dict{String, DimArray}, shared_models::Vector{String})
     for var in keys(data);
         data_var = data[var]
         indices = findall(m -> m in shared_models, data_var.metadata["full_model_names"]);
         data_var = data_var[model = indices];
-        meta = data_var.metadata;
-        # adapt metadata accordingly
-        meta["full_model_names"] = meta["full_model_names"][indices];
-        models_key = getCMIPModelsKey(meta)
-        meta[models_key] = meta[models_key][indices];
-        attributes = filter(x -> !(x isa String), keys(meta));
-        for key in attributes
-            meta[key] = meta[key][indices];
-        end
+        keepMetadataSubset!(data_var.metdata, indices);
         data[var] = data_var;
     end
 end

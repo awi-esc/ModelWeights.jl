@@ -109,8 +109,8 @@ corresponding data and dimensions 'lon', 'lat', 'model'.
 the respective variable contributes to the computed independenceWeight.
 
 # Return:
-- DimArray with dimensions 'model1', 'model2', 'variable' with the computed
-independence weights, seperately for each considered variable.
+- `weightsByVars`: a DimArray with dimensions 'model1', 'model2', 'variable'
+with the computed independence weights, seperately for each considered variable.
 """
 function generalizedDistancesIndependence(
     data::Dict{String, DimArray}, 
@@ -126,20 +126,21 @@ function generalizedDistancesIndependence(
 
     weightedDistMatrices = [];
     meta = Dict{String, Array}();
-    # Models are/must be identical across variables! 
+    # Models are/must be the same across variables! 
     for climVar in variables
-        metadata = data[climVar].metadata;
-        meta_shared = getMetadataCombinedModels(metadata, climVar);
-        distances = getModelDistances(data[climVar]);
+        distances = SimilarityWeights.getModelDistances(data[climVar]);
         weight = ifelse(isempty(weights), 1, weights[climVar]);        
-        weightedNormalizedDistances = normalizeAndWeightDistances(distances, weight);
+        weightedNormalizedDistances = SimilarityWeights.normalizeAndWeightDistances(distances, weight);
         push!(weightedDistMatrices, weightedNormalizedDistances);
-        meta = mergewith(appendValuesDicts, meta, meta_shared);
+        
+        metadata = deepcopy(data[climVar].metadata);
+        meta_shared = SimilarityWeights.getSharedMetadataAndModelNames(metadata);
+        meta_shared["variables"] = climVar
+        meta = mergewith(SimilarityWeights.appendValuesDicts, meta, meta_shared);
     end
     weightsByVars = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
     weightsByVars = rebuild(weightsByVars; metadata = meta);
-    generalizedDists = generalizedDistances(weightsByVars);
-    return generalizedDists
+    return weightsByVars
 end
 
 """
@@ -171,12 +172,12 @@ end
 
 
 """
-    generalizedDistances(normalizedWeightedDistsByVar::DimArray)
+    overallGeneralizedDistances(normalizedWeightedDistsByVar::DimArray)
 
 Compute the generalized distance as the sum across normalized and weighted
 values for each variable (and diagnostic). 
 """
-function generalizedDistances(normalizedWeightedDistsByVar::DimArray)
+function overallGeneralizedDistances(normalizedWeightedDistsByVar::DimArray)
     generalizedDist = reduce(+, normalizedWeightedDistsByVar, dims=:variable)
     return dropdims(generalizedDist, dims=:variable)
 end
@@ -216,21 +217,19 @@ function generalizedDistancesPerformance(
 
     meta = Dict{String, Array}();
     for climVar in variables
-        metadata = modelData[climVar].metadata;
-        # meta_shared = filter(((k,v),) -> !(isa(v, Vector)), metadata);
-        # get!(meta_shared, "variables", [climVar])
-        # meta_shared["full_model_names_" * climVar] = metadata["full_model_names"];
-        meta_shared = getMetadataCombinedModels(metadata, climVar);
         distances = getModelDataDist(modelData[climVar], obsData[climVar]);
         weight = ifelse(isempty(weights), 1, weights[climVar]);
         weightedNormalizedDistances = normalizeAndWeightDistances(distances, weight);
         push!(weightedDistMatrices, weightedNormalizedDistances);
+
+        metadata = deepcopy(modelData[climVar].metadata);
+        meta_shared = getSharedMetadataAndModelNames(metadata);
+        meta_shared["variables"] = climVar
         meta = mergewith(appendValuesDicts, meta, meta_shared);
     end
     weightsByVar = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
     weightsByVar = rebuild(weightsByVar; metadata = meta);
-    generalizedDists = generalizedDistances(weightsByVar);
-    return generalizedDists
+    return weightsByVar
 end
 
 
@@ -364,6 +363,14 @@ Anna L. Merrifield, Ruth Lorenz, and Reto Knutti. “Reduced Global Warming
 from CMIP6 Projections When Weighting Models by Performance and
 Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
 995–1012. https://doi.org/10.5194/esd-11-995-2020.
+
+# Arguments:
+- `modelData::Dict{String, DimArray}`
+- `obsData::Dict{String, DimArray}`
+- `sigmaD::Number=0.5`
+- `sigmaS::Number=0.5`
+- weightsPerform::Dict{String, Number}=Dict{String, Number}(), 
+- weightsIndep::Dict{String, Number}=Dict{String, Number}()
 """
 function overallWeights(
     modelData::Dict{String, DimArray}, 
@@ -373,11 +380,13 @@ function overallWeights(
     weightsPerform::Dict{String, Number}=Dict{String, Number}(), 
     weightsIndep::Dict{String, Number}=Dict{String, Number}()
 )
-    generalizedDistsData = generalizedDistancesPerformance(modelData, obsData, weightsPerform);
-    generalizedDistsModels = generalizedDistancesIndependence(modelData, weightsIndep);
+    generalizedDistsDataByVar = generalizedDistancesPerformance(modelData, obsData, weightsPerform);
+    Di = overallGeneralizedDistances(generalizedDistsDataByVar);
+    generalizedDistsModelsByVar = generalizedDistancesIndependence(modelData, weightsIndep);
+    Sij =  overallGeneralizedDistances(generalizedDistsModelsByVar);
 
-    performances = performanceParts(generalizedDistsData, sigmaD);
-    independences = independenceParts(generalizedDistsModels, sigmaS);
+    performances = performanceParts(Di, sigmaD);
+    independences = independenceParts(Sij, sigmaS);
     weights = performances ./ independences;
     normalizedWeights = weights ./ sum(weights);
     return normalizedWeights
@@ -413,25 +422,3 @@ function computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=noth
     return weighted_avg
 end
 
-"""
-    getWeightedAverages(
-        modelDataAllVars::Dict{String, DimArray}, 
-        weights::DimArray
-    )
-Compute average of 'modelDataAllVars', once weighted by 'weights' and once 
-unweighted.
-    
-Note that the model dimension of 'weights' can be smaller than the model
-dimension of 'modelDataAllVars' which may contain the predictions of all 
-ensemble members. Here, these are averaged, s.t. for each model there is a 
-just one prediction.
-"""
-function getWeightedAverages(modelDataAllVars::Dict{String, DimArray}, weights::DimArray)
-    results = Dict{String, Dict{String, DimArray}}("weighted" => Dict(), "unweighted" => Dict());
-    for var in keys(modelDataAllVars)
-        data = modelDataAllVars[var];
-        results["unweighted"][var] = computeWeightedAvg(data);
-        results["weighted"][var] = computeWeightedAvg(data, weights);
-    end
-    return results
-end

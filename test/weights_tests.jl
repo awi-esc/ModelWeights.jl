@@ -6,7 +6,10 @@ using Statistics
     modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
     obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["ERA5"]);
     
-    weights = SimilarityWeights.generalizedDistancesPerformance(modelData, obsData, weightsVars);
+    weightsByVar = SimilarityWeights.generalizedDistancesPerformance(
+        modelData, obsData, weightsVars
+    );
+    weights = SimilarityWeights.overallGeneralizedDistances(weightsByVar);
     weightsRounded = round.(Array(weights), digits=NB_DIGITS);
 
     ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_overall_mean.nc"));
@@ -21,7 +24,10 @@ end
     weightsVars = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
     modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
 
-    weights = SimilarityWeights.generalizedDistancesIndependence(modelData, weightsVars);
+    weightsByVar = SimilarityWeights.generalizedDistancesIndependence(
+        modelData, weightsVars
+    );
+    weights = SimilarityWeights.overallGeneralizedDistances(weightsByVar);
     weights = round.(Array(weights), digits=NB_DIGITS);
 
     ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_overall_mean.nc"), "r");
