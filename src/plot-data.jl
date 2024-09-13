@@ -32,7 +32,7 @@ function plotMeansOnMap(means::Union{DimMatrix, DimArray}, title::String, target
         xticks = (dims_lon[1 : step_lon : end], lonLabels[1 : step_lon : end]),
         yticks = (dims_lat[1 : step_lat : end], latLabels[1 : step_lat : end]),
         limits = ((lon_min, lon_max), (lat_min, lat_max))
-        );
+    );
     lines!(GeoMakie.coastlines(); color=:black);
     hm = heatmap!(ax, lon, lat, Array(means), alpha=0.8);
     Colorbar(fig[1,2], hm);
@@ -166,4 +166,22 @@ function plotMeanData(config::Config, means::Dict{String, Dict{String, DimArray}
             SimilarityWeights.plotMeansOnMap(var_data,  title, target);
         end
     end
+end
+
+
+function plotWeights(weights::DimArray)
+    fig =  getFigure((16,8), 18);
+    models = Array(dims(weights, :model))
+    ax = Axis(fig[1,1], 
+              xlabel = "Models", 
+              ylabel = "weights", 
+              xticks = (collect(1:length(models)), models), 
+              xticklabelrotation = pi/2);
+    xs = 1:length(models);
+    scatter!(ax, xs, Array(weights))
+    lines!(ax, xs, Array(weights))
+    # add line with value if all weights were equal
+    n = length(models)
+    lines!(ax, xs, [1/n for _ in range(1, n)])
+    return fig
 end

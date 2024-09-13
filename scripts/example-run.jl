@@ -7,6 +7,7 @@ config = sw.validateConfig(path_config);
 
 ######################## runWeights ###########################################
 weights, avgs = sw.runWeights(config);
+sw.plotWeights(weights)
 sw.plotMeanData(config, avgs)
 
 modelDataFull, modelDataRef, obsData = sw.getSharedModelData(config);

@@ -47,7 +47,6 @@ function plotDistMatrices(distMat, climateVar, models, modelRefs)
 end
 
 
-
 """ longitude2EastWest(lon::Number)
 
 Convert longitudes from -180° to 180° into 0° to 180° East/West.
