@@ -27,8 +27,8 @@ modelData = SimilarityWeights.loadPreprocData(pathsModelData, ["CMIP"]);
 # Performance and independent weights
 wP = SimilarityWeights.getPerformanceWeights(modelData, obsData, weightsVars);
 wI = SimilarityWeights.getIndependenceWeights(modelData, weightsVars);
-wP_avg = SimilarityWeights.averageEnsembleVector(wP)
-wI_avg = SimilarityWeights.averageEnsembleMatrix(wI)
+wP_avg = SimilarityWeights.averageEnsembleVector(wP, false)
+wI_avg = SimilarityWeights.averageEnsembleMatrix(wI, false)
 
 # plot wI
 wI = dropdims(wI_avg, dims=:variable);

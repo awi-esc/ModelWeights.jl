@@ -12,7 +12,8 @@ config = SimilarityWeights.validateConfig(path_config);
 modelDataFull, modelDataRef, obsData = SimilarityWeights.getSharedModelData(config);
 
 tos_data = modelDataFull["tos"]
-data = SimilarityWeights.filterModels(tos_data, ["EC-Earth3"])
+models_out = ["EC-Earth3"]
+SimilarityWeights.keepModelSubset(tos_data, findall(m -> !(m in models_out), Array(dims(tos_data, :model))))
 SimilarityWeights.plotEnsembleSpread(data, 7.5, 82.5)
 
 ###############################################################################
@@ -36,8 +37,12 @@ shared_models = intersect(
     first(values(modelDataFull)).metadata["full_model_names"], 
     first(values(modelDataRef)).metadata["full_model_names"]
 );
-SimilarityWeights.keepModelSubset!(modelDataFull, shared_models);
-SimilarityWeights.keepModelSubset!(modelDataRef, shared_models);
+
+for var in config.variables
+    SimilarityWeights.keepModelSubset!(modelDataFull[var], shared_models);
+    SimilarityWeights.keepModelSubset!(modelDataRef[var], shared_models);
+end
+
 weights = SimilarityWeights.overallWeights(
     modelDataRef, 
     obsData, 

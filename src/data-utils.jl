@@ -16,14 +16,6 @@ using DimensionalData
 end
 
 
-# function debugMetadata(data)
-#     filtered = filter(((k,v),)->isa(v, Vector) , data.metadata);
-#     if !isempty(filtered)
-#         @debug "Values of metadata differ for these fields:" keys(filtered)
-#     end
-# end
-
-
 function warnIfFlawedMetadata(attributes, filename)
     isFlawed = false;
     if "branch_time_in_parent" in keys(attributes) && isa(attributes["branch_time_in_parent"], String)
@@ -51,7 +43,10 @@ function buildCMIP5EnsembleMember(realizations, initializations, physics, n)
     return variants
 end
 
-function getUniqueModelIds(meta::Dict{String, Union{String, Array}}, key_model_names::String)
+function getUniqueModelIds(
+    meta::Dict{String, Union{String, Array, Dict}},
+    key_model_names::String
+)
     mip_era = get(meta, "mip_era", get(meta, "project_id", ""))
     model_names = meta[key_model_names];
     if mip_era == "CMIP5"
@@ -91,33 +86,40 @@ that were only present in some files/models are set to missing. Further the key
 identifier consisting of variant_label, grid_label and model_name. 
 """
 function updateMetadata!(
-    meta::Dict{String, Union{Array, String}}, 
-    data::DimArray, 
-    indices_ignored::Array
+    meta::Dict{String, Union{Array, String, Dict}}, 
+    data::DimArray
 )
     model_dim = length(dims(data, :model))
-    for (i, key) in enumerate(keys(meta))
+    for key in keys(meta)
         values = meta[key]; 
         # add missing values for the last added files 
         n =  model_dim - length(values)
-        for i in range(1, n)
+        for _ in range(1, n)
             push!(values, missing)
         end
         #println("i: " * string(i) * " " * string(length(meta[key])))
-        deleteat!(values, indices_ignored)
         # if none was missing and all have the same value, just use a string
         if !any(ismissing, values) && length(unique(values)) == 1
             meta[key] = string(values[1])
         end
     end
-    # TODO: update this, use functions!
-    mip_era = get(meta, "mip_era", get(meta, "project_id", ""))
-    if !isempty(mip_era)
-        key_model_name = ifelse(mip_era == "CMIP6", "source_id", "model_id")
+    # for model data only
+    if !isempty(get(meta, "source_id", get(meta, "model_id", "")))
+        key_model_name = getCMIPModelsKey(meta);
         meta["full_model_names"] = getUniqueModelIds(meta, key_model_name)
     end
+    # add mapping from model names to indices in metadata arrays
+    meta["indices_map"] = getIndicesMapping(Array(dims(data, :model)));
 end
 
+
+function getIndicesMapping(names)
+    mapping = Dict();
+    for name in names
+        mapping[name] = findall(x -> x == name, names)
+    end
+    return mapping
+end
 
 """
     getSharedMetadataAndModelNames(metadata::Dict)
@@ -127,11 +129,14 @@ identical across models (therefore these are single values, not Vectors).
 Further, model names and full_model_names are added. When combining this new 
 metadata dict with another, e.g. when combining data for different variables, 
 these must be identical (which is checked in function appendValuesDicts).
+Ignores indices_map (mapping models to indices in metadata arrays), since the 
+shared data may be combined differently.
 """
 function getSharedMetadataAndModelNames(metadata::Dict)
     models_key = getCMIPModelsKey(metadata);
-    meta_shared = filter(((k,v),)->!isa(v, Vector), metadata);
-    meta_shared["full_model_names"] = metadata["full_model_names"];
+    #meta_shared = filter(((k,v),)->!isa(v, Vector), metadata);
+    meta_shared = filter(((k,v),) -> isa(v, String), metadata);
+    meta_shared["full_model_names"] = deepcopy(metadata)["full_model_names"];
     meta_shared[models_key] = unique(metadata[models_key]);
     return meta_shared
 end
@@ -161,10 +166,10 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, included::Vector
         end
         data = [];
         sources = [];
-        meta = Dict{String, Union{String, Array}}();
+        meta = Dict{String, Union{String, Array, Dict}}();
         files = readdir(pathToData; join=true);
         ncFiles = filter(x->endswith(x, ".nc"), files);
-        indices_ignored = [];
+        nbIgnored = 0;
         for (i, file) in enumerate(ncFiles)
             addFile = true;
             # only include files that contain all names given in 'included'
@@ -182,8 +187,8 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, included::Vector
                 if climVar == "msftmz"
                     attributes = merge(attributes, Dict(deepcopy(ds["sector"].attrib)));
                 end
-                if warnIfFlawedMetadata(attributes, filename)
-                    push!(indices_ignored, i)
+                if SimilarityWeights.warnIfFlawedMetadata(attributes, filename)
+                    nbIgnored += 1;
                     continue
                 end
 
@@ -191,12 +196,13 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, included::Vector
                 for key in keys(attributes)
                     values = get!(meta, key, []);
                     # fill up vector
-                    n = i - length(values) - 1;
-                    for j in range(1, n)
+                    n = i - nbIgnored - length(values) - 1;
+                    for _ in range(1, n)
                         push!(values, missing)
                     end
                     push!(values, attributes[key]);
                 end
+
                 name = get(ds.attrib, "source_id", get(ds.attrib, "model_id", ""));
                 if !isempty(name)
                     push!(sources, name);
@@ -224,13 +230,12 @@ function loadPreprocData(climVarsToPaths::Dict{String, String}, included::Vector
                 push!(data, DimArray(Array(dsVar), Tuple(dimensions)));
                 # end
                 # print("i=" * string(i) * ": ")
-                # println(string(length(get(meta, "model_doi_url", []))))
+                # println(string(length(get(meta, "initialization_index", []))))
             end
         end
         dimData = cat(data...; dims = (Dim{:model}(sources))); 
-        updateMetadata!(meta, dimData, indices_ignored);
+        updateMetadata!(meta, dimData);
         dimData = rebuild(dimData; metadata = meta);
-        # TODO: if log-level set to debug: debugMetadata(dimData);
         dataAllVars[climVar] = dimData;
     end
     return dataAllVars
@@ -245,8 +250,8 @@ aren't identical, a warning is triggered and both vectors are concatenated
 into one big Vector.
 
 # Arguments:
-- `val1`: a Vector or a single value (e.g. String, Number, etc.)
-- `val2`: a Vector or a single value (e.g. String, Number, etc.)
+- `val1`: a Vector, a Dictionary or a single value (e.g. String, Number, etc.)
+- `val2`: a Vector, a Dictionary or a single value (e.g. String, Number, etc.)
 """
 function appendValuesDicts(val1, val2)
     if isa(val1, Vector) && isa(val2, Vector) & !(isempty(val1) || isempty(val2))
@@ -262,6 +267,21 @@ function appendValuesDicts(val1, val2)
         return push!(val1, val2)
     elseif isa(val2, Vector)
         return push!(val2, val1)
+
+    elseif isa(val1, Dict) && isa(val2, Dict)
+        if val1 != val2
+            @warn "Two different dictionaries (check indices_map)"
+            @warn val1 
+            @warn val2
+            return vcat(val1, val2)
+        else
+            return val1
+        end
+
+    elseif isa(val1, Dict) || isa(val2, Dict)
+        @warn val1 
+        @warn val2
+        throw(ArgumentError("Dictionary merged with something else!"))
     else
         return [val1, val2]
     end
@@ -337,7 +357,9 @@ function getCommonModelsAcrossVars(modelData::Dict{String, DimArray})
             shared_models = intersect(shared_models, models)
         end
     end
-    keepModelSubset!(data_all, shared_models);
+    for var in variables
+        keepModelSubset!(data_all[var], shared_models);
+    end
     return data_all
 end
 
@@ -367,24 +389,22 @@ end
 - `meta::Dict`: metadata dictionary
 - `indices::Vector{Number}`: indices of data to be kept
 """
-function keepMetadataSubset!(meta::Dict, indices::Vector{Number})
-    meta["full_model_names"] = meta["full_model_names"][indices];
-    models_key = getCMIPModelsKey(meta)
-    meta[models_key] = meta[models_key][indices];
-    attributes = filter(x -> !(x isa String), keys(meta));
+function keepMetadataSubset!(meta::Dict, indices::Vector{Int64})
+    attributes = filter(x -> meta[x] isa Vector, keys(meta));
     for key in attributes
         meta[key] = meta[key][indices];
     end
 end
 
-function keepModelSubset!(data::Dict{String, DimArray}, shared_models::Vector{String})
-    for var in keys(data);
-        data_var = data[var]
-        indices = findall(m -> m in shared_models, data_var.metadata["full_model_names"]);
-        data_var = data_var[model = indices];
-        keepMetadataSubset!(data_var.metdata, indices);
-        data[var] = data_var;
-    end
+"""
+    keepModelSubset!(data::Dict{String, DimArray}, shared_models::Vector{String})
+
+Retain data only from models in `shared_models`. Takes care of metadata.
+"""
+function keepModelSubset!(data::DimArray, shared_models::Vector{String})
+    indices = findall(m -> m in shared_models, data.metadata["full_model_names"]);
+    data = data[model = indices];
+    keepMetadataSubset!(data.metadata, indices);
 end
 
 
@@ -441,16 +461,34 @@ function saveWeights(
     @info "saved data to " path_to_target
 end
 
-function filterModels(data::DimArray, models_out::Vector{String})
-    model_names = Array(dims(data, :model))
-    # TODO: do this dynamically! function as argument
-    #indices = findall(m -> contains(m, m_out), model_names);
-    indices = findall(m -> !(m in models_out), model_names);
+"""
+    updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
 
-    data = data[model = indices]
-    # TODO: dont hard code source_id! (diff. for CMIP5 e.g.)
-    # TODO: make function that iterates over all necessary metadata attributes
-    data.metadata["source_id"] = data.metadata["source_id"][indices]
-    data.metadata["full_model_names"] = data.metadata["full_model_names"][indices]
-    return data
+Vectors in metadata 'meta' have to refer to different models. These are now summarized such that
+each vector only contains N entries where N is the number of Models (without ensemble members).
+If the metadata for the ensemble members of a Model differ across the members, the respective 
+entry in the vector will be a vector itself. 
+"""
+function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
+    meta_new = filter(((k,v),) -> !(v isa Vector), meta);    
+    attributes = filter(x -> meta[x] isa Vector, keys(meta));
+    attribs_diff_across_members = [];
+    for key in attributes
+        for model in dims(grouped_data, :model)
+            indices = meta["indices_map"][model]
+            vals = get!(meta_new, key, [])       
+            val_ensemble = unique(meta[key][indices]);
+            if length(val_ensemble) != 1
+                push!(vals, val_ensemble)
+                push!(attribs_diff_across_members, key)
+            else
+                push!(vals, val_ensemble[1])
+            end
+        end
+    end
+    if !isempty(attribs_diff_across_members)
+        @warn "metadata attributes that differ across ensemble members (ok for some!)" unique(attribs_diff_across_members)
+        @assert !(getCMIPModelsKey(meta) in attribs_diff_across_members)
+    end
+    return meta_new
 end

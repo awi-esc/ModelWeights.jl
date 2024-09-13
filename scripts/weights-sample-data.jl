@@ -107,8 +107,8 @@ end
 # end
 
 
-wP = SimilarityWeights.averageEnsembleVector(wP);
-wI = SimilarityWeights.averageEnsembleMatrix(wI);
+wP = SimilarityWeights.averageEnsembleVector(wP, false);
+wI = SimilarityWeights.averageEnsembleMatrix(wI, false);
 performance = exp.(-(wP ./ sigmaD).^2);
 
 # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)

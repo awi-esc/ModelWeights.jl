@@ -19,8 +19,10 @@ function getSharedModelData(config::Config)
         first(values(modelDataFull)).metadata["full_model_names"], 
         first(values(modelDataRef)).metadata["full_model_names"]
     );
-    keepModelSubset!(modelDataFull, shared_models);
-    keepModelSubset!(modelDataRef, shared_models);
+    for var in config.variables
+        keepModelSubset!(modelDataFull[var], shared_models);
+        keepModelSubset!(modelDataRef[var], shared_models);
+    end
     return (modelDataFull, modelDataRef, obsData)
 end
 

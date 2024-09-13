@@ -128,17 +128,18 @@ function generalizedDistancesIndependence(
     meta = Dict{String, Array}();
     # Models are/must be the same across variables! 
     for climVar in variables
-        distances = SimilarityWeights.getModelDistances(data[climVar]);
+        distances = getModelDistances(data[climVar]);
         weight = ifelse(isempty(weights), 1, weights[climVar]);        
-        weightedNormalizedDistances = SimilarityWeights.normalizeAndWeightDistances(distances, weight);
+        weightedNormalizedDistances = normalizeAndWeightDistances(distances, weight);
         push!(weightedDistMatrices, weightedNormalizedDistances);
         
         metadata = deepcopy(data[climVar].metadata);
-        meta_shared = SimilarityWeights.getSharedMetadataAndModelNames(metadata);
+        meta_shared = getSharedMetadataAndModelNames(metadata);
         meta_shared["variables"] = climVar
-        meta = mergewith(SimilarityWeights.appendValuesDicts, meta, meta_shared);
+        meta = mergewith(appendValuesDicts, meta, meta_shared);
     end
     weightsByVars = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
+    meta["indices_map"] = getIndicesMapping(collect(variables))
     weightsByVars = rebuild(weightsByVars; metadata = meta);
     return weightsByVars
 end
@@ -215,7 +216,7 @@ function generalizedDistancesPerformance(
     end
     weightedDistMatrices = [];
 
-    meta = Dict{String, Array}();
+    meta = Dict{String, Union{String, Array, Dict}}();
     for climVar in variables
         distances = getModelDataDist(modelData[climVar], obsData[climVar]);
         weight = ifelse(isempty(weights), 1, weights[climVar]);
@@ -228,24 +229,29 @@ function generalizedDistancesPerformance(
         meta = mergewith(appendValuesDicts, meta, meta_shared);
     end
     weightsByVar = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
+    meta["indices_map"] = getIndicesMapping(collect(variables))
     weightsByVar = rebuild(weightsByVar; metadata = meta);
     return weightsByVar
 end
 
 
 """ 
-    averageEnsembleVector!(data::DimArray)
+    averageEnsembleVector!(data::DimArray, updateMeta::Bool)
 
 For each model and variable (if several given), compute the mean across all
 ensemble members of that model.
 
 # Arguments:
 - `data`: a DimArray with dimension 'model' and possibly 'variable'
+- `updateMeta`: set true if the vectors in the metadata refer to different models. 
+If true attribute indices_map is set in metadata. Set to false if vectors refer to 
+different variables for instance. 
 
 # Return:
 - DimArray with dimensions 'model' and possibly 'variable'
 """
-function averageEnsembleVector(data::DimArray)
+function averageEnsembleVector(data::DimArray, updateMeta::Bool)
+    grouped = nothing;
     if !hasdim(data, :variable)
         grouped = groupby(data, :model=>identity);
         averages = map(d -> mean(d, dims=:model), grouped);
@@ -265,20 +271,29 @@ function averageEnsembleVector(data::DimArray)
         combined = cat(results...; dims=(Dim{:variable}(variables)));
     end
 
-    return combined
+    if updateMeta
+        meta = updateGroupedDataMetadata(data.metadata, grouped)
+    else 
+        meta = data.metadata
+    end
+    combined = rebuild(combined; metadata = meta);
+    return combined;
 end
 
 
 """
-    averageEnsembleMatrix(data::DimArray)
+    averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
 
 Compute the average weights across all members of each model ensemble for each
 given variable.
 
 # Arguments:
 - `data`: DimArray with dimensions 'model1', 'model2' and possibly 'variable'
+- `updateMeta`: set true if the vectors in the metadata refer to different models. 
+If true attribute indices_map is set in metadata. Set to false if vectors refer to 
+different variables for instance. 
 """
-function averageEnsembleMatrix(data::DimArray)
+function averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
     if !hasdim(data, :variable)
         grouped = groupby(data, :model1 => identity, :model2 => identity);
         averages = map(d -> mean(mean(d, dims=:model2), dims=:model1)[1,1], grouped);
@@ -297,16 +312,21 @@ function averageEnsembleMatrix(data::DimArray)
         end
         combined = cat(results..., dims=Dim{:variable}(variables));
     end
-    result = rebuild(combined; metadata = data.metadata);
-    return result
+    if updateMeta
+        meta = updateGroupedDataMetadata(data.metadata, grouped)
+    else 
+        meta = data.metadata
+    end
+    combined = rebuild(combined; metadata = meta);
+    return combined
 end
 
 
-function averageEnsembleMembers(generalizedDistances::DimArray)
+function averageEnsembleMembers(generalizedDistances::DimArray, updateMeta::Bool)
     if hasdim(generalizedDistances, Symbol("model1"))
-        distances = averageEnsembleMatrix(generalizedDistances);
+        distances = averageEnsembleMatrix(generalizedDistances, updateMeta);
     else 
-        distances = averageEnsembleVector(generalizedDistances);
+        distances = averageEnsembleVector(generalizedDistances, updateMeta);
     end
     return distances
 end
@@ -323,7 +343,7 @@ each model i
 - `sigmaD`: free model parameter for impact of performance weights
 """
 function performanceParts(generalizedDistances::DimArray, sigmaD::Number)
-    distances = averageEnsembleMembers(generalizedDistances);
+    distances = averageEnsembleMembers(generalizedDistances, false);
     return exp.(-(distances ./ sigmaD).^2);
 end
 
@@ -339,7 +359,7 @@ contains S_{i,j} for each model pair
 - `sigmaS`: free model parameter for impact of independence weights
 """
 function independenceParts(generalizedDistances::DimArray, sigmaS::Number)
-    distances = averageEnsembleMembers(generalizedDistances);
+    distances = averageEnsembleMembers(generalizedDistances, false);
     # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
     indep_parts = sum(exp.(-(distances ./ sigmaS).^2), dims=:model2);
     indep_parts = dropdims(indep_parts, dims=:model2)
@@ -405,7 +425,7 @@ vector is provided, unweighted average is computed.
 - `w`: DimArray with dimension 'model'
 """
 function computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=nothing)
-    data = averageEnsembleVector(data_var);
+    data = averageEnsembleVector(data_var, true);
     models = dims(data, :model);
     if isnothing(w)
         w = DimArray(ones(length(models))./length(models), Dim{:model}(Array(models)))
