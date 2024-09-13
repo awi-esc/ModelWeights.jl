@@ -2,10 +2,15 @@ import YAML
 using DimensionalData
 
 
+"""
+    getSharedModelData(config::Config)
 
+Return all data that is shared across variables in the reference period as well 
+as in the full period.
+"""
 function getSharedModelData(config::Config)
-    modelDataRef = loadDataFromConfig(config, "name_ref_period", "models_project_name");
-    modelDataRef = getCommonModelsAcrossVars(modelDataRef);
+    modelDataRef = SimilarityWeights.loadDataFromConfig(config, "name_ref_period", "models_project_name");
+    modelDataRef = SimilarityWeights.getCommonModelsAcrossVars(modelDataRef);
     # TODO: make sure that there is observational data for all variables for 
     # the respective reference period, for now this is just assumed but in 
     # some rare cases it may be wrong
@@ -20,8 +25,8 @@ function getSharedModelData(config::Config)
         first(values(modelDataRef)).metadata["full_model_names"]
     );
     for var in config.variables
-        keepModelSubset!(modelDataFull[var], shared_models);
-        keepModelSubset!(modelDataRef[var], shared_models);
+        modelDataFull[var] = keepModelSubset(modelDataFull[var], shared_models);
+        modelDataRef[var] = keepModelSubset(modelDataRef[var], shared_models);
     end
     return (modelDataFull, modelDataRef, obsData)
 end

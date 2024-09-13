@@ -210,7 +210,7 @@ function generalizedDistancesPerformance(
     variables = keys(modelData);
     weights = copy(weightsVars);
     if !isempty(weights)
-        normalizeWeightsVariables!(weights);
+        SimilarityWeights.normalizeWeightsVariables!(weights);
     else
         weights = Dict(zip(variables, ones(length(variables))));
     end
@@ -218,15 +218,15 @@ function generalizedDistancesPerformance(
 
     meta = Dict{String, Union{String, Array, Dict}}();
     for climVar in variables
-        distances = getModelDataDist(modelData[climVar], obsData[climVar]);
+        distances = SimilarityWeights.getModelDataDist(modelData[climVar], obsData[climVar]);
         weight = ifelse(isempty(weights), 1, weights[climVar]);
-        weightedNormalizedDistances = normalizeAndWeightDistances(distances, weight);
+        weightedNormalizedDistances = SimilarityWeights.normalizeAndWeightDistances(distances, weight);
         push!(weightedDistMatrices, weightedNormalizedDistances);
 
         metadata = deepcopy(modelData[climVar].metadata);
-        meta_shared = getSharedMetadataAndModelNames(metadata);
+        meta_shared = SimilarityWeights.getSharedMetadataAndModelNames(metadata);
         meta_shared["variables"] = climVar
-        meta = mergewith(appendValuesDicts, meta, meta_shared);
+        meta = mergewith(SimilarityWeights.appendValuesDicts, meta, meta_shared);
     end
     weightsByVar = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
     meta["indices_map"] = getIndicesMapping(collect(variables))

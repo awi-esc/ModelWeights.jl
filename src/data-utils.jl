@@ -133,8 +133,8 @@ Ignores indices_map (mapping models to indices in metadata arrays), since the
 shared data may be combined differently.
 """
 function getSharedMetadataAndModelNames(metadata::Dict)
-    models_key = getCMIPModelsKey(metadata);
     #meta_shared = filter(((k,v),)->!isa(v, Vector), metadata);
+    models_key = getCMIPModelsKey(metadata);
     meta_shared = filter(((k,v),) -> isa(v, String), metadata);
     meta_shared["full_model_names"] = deepcopy(metadata)["full_model_names"];
     meta_shared[models_key] = unique(metadata[models_key]);
@@ -349,7 +349,7 @@ function getCommonModelsAcrossVars(modelData::Dict{String, DimArray})
     for var in variables
         data_var = modelData[var];
         meta = data_var.metadata;
-        models = getUniqueModelIds(meta, getCMIPModelsKey(meta));
+        models = SimilarityWeights.getUniqueModelIds(meta, SimilarityWeights.getCMIPModelsKey(meta));
         data_all[var].metadata["full_model_names"] = models;
         if isnothing(shared_models)
             shared_models = models
@@ -358,7 +358,7 @@ function getCommonModelsAcrossVars(modelData::Dict{String, DimArray})
         end
     end
     for var in variables
-        keepModelSubset!(data_all[var], shared_models);
+        data_all[var] = SimilarityWeights.keepModelSubset(data_all[var], shared_models);
     end
     return data_all
 end
@@ -397,14 +397,17 @@ function keepMetadataSubset!(meta::Dict, indices::Vector{Int64})
 end
 
 """
-    keepModelSubset!(data::Dict{String, DimArray}, shared_models::Vector{String})
+    keepModelSubset(data::Dict{String, DimArray}, shared_models::Vector{String})
 
 Retain data only from models in `shared_models`. Takes care of metadata.
 """
-function keepModelSubset!(data::DimArray, shared_models::Vector{String})
+function keepModelSubset(data::DimArray, shared_models::Vector{String})
     indices = findall(m -> m in shared_models, data.metadata["full_model_names"]);
-    data = data[model = indices];
+    @assert length(indices) == length(shared_models)
     keepMetadataSubset!(data.metadata, indices);
+    data = data[model = indices];
+    data.metadata["indices_map"] = getIndicesMapping(Array(dims(data, :model)));
+    return data
 end
 
 
