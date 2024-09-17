@@ -160,7 +160,7 @@ function plotMeanData(config::Config, means::Dict{String, Dict{String, DimArray}
             );
             target = Target(
                 directory = config.target_dir;
-                filename = join([avg_type, var_data.metadata["variable_id"], "png"], "_", "."),
+                filename = join([avg_type, var_data.metadata["standard_name"], "png"], "_", "."),
                 save = true
             )
             SimilarityWeights.plotMeansOnMap(var_data,  title, target);

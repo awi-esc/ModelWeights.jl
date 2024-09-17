@@ -1,18 +1,27 @@
 include("data.jl")
 using LinearAlgebra
+using DimensionalData
 
 @testset "Testset model-model" begin
-    data = filter(((k,v),) -> k=="tas", VAR_TO_PREPROC_DATA);
-    modelData =  SimilarityWeights.loadPreprocData(data, ["CMIP"]);
-    modelDistances = SimilarityWeights.getModelDistances(modelData["tas"])
+    data = filter(((k,v),) -> k=="tas", VAR_TO_PREPROC_DATA["CLIM"]);
+    VAR_TO_PREPROC_DATA["CLIM"] = data
+    modelData =  SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
+    modelDistances = SimilarityWeights.getModelDistances(modelData["CLIM"]["tas"])
     
     # make symmetrical matrix
     mat = Array(modelDistances);
     symDistMatrix = mat .+ mat';
-    dim = Array(dims(modelData["tas"], :model));
+    dim = Array(dims(modelData["CLIM"]["tas"], :model));
     modelDistancesSym = DimArray(symDistMatrix, (Dim{:model1}(dim), Dim{:model2}(dim)));
 
-    expected = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_tas_CLIM.nc"))["dtas_CLIM"];
+    expected = NCDataset(
+        joinpath(
+            PATH_TO_WORK_DIR,
+            "calculate_weights_climwip",
+            "climwip",
+            "independence_tas_CLIM.nc"
+        )
+    )["dtas_CLIM"];
     
     # in climwip recipe, the independence model to model distances are not normalized wrt to area weights. 
     # this does not influence the overall weights in the end since the distance matrices are later normalized
@@ -31,11 +40,21 @@ end
 
 
 @testset "Testset model-obs" begin
-    data = filter(((k,v),) -> k=="tas", VAR_TO_PREPROC_DATA);
-    models =  SimilarityWeights.loadPreprocData(data, ["CMIP"]);
-    observations = SimilarityWeights.loadPreprocData(data, ["ERA5"]);
+    data = filter(((k,v),) -> k=="tas", VAR_TO_PREPROC_DATA["CLIM"]);
+    VAR_TO_PREPROC_DATA["CLIM"] = data
+    models =  SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
+    observations = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["ERA5"]);
 
-    modelObsDistances = SimilarityWeights.getModelDataDist(models["tas"], observations["tas"])
-    expected = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_tas_CLIM.nc"))["dtas_CLIM"];
+    modelObsDistances = SimilarityWeights.getModelDataDist(
+        models["CLIM"]["tas"], observations["CLIM"]["tas"]
+    )
+    expected = NCDataset(
+        joinpath(
+            PATH_TO_WORK_DIR,
+            "calculate_weights_climwip",
+            "climwip",
+            "performance_tas_CLIM.nc"
+        )
+    )["dtas_CLIM"];
     @test round.(Array(modelObsDistances), digits=NB_DIGITS) == round.(Array(expected), digits=NB_DIGITS)
 end

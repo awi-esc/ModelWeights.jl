@@ -173,12 +173,12 @@ end
 
 
 """
-    overallGeneralizedDistances(normalizedWeightedDistsByVar::DimArray)
+    reduceGeneralizedDistancesVars(normalizedWeightedDistsByVar::DimArray)
 
 Compute the generalized distance as the sum across normalized and weighted
 values for each variable (and diagnostic). 
 """
-function overallGeneralizedDistances(normalizedWeightedDistsByVar::DimArray)
+function reduceGeneralizedDistancesVars(normalizedWeightedDistsByVar::DimArray)
     generalizedDist = reduce(+, normalizedWeightedDistsByVar, dims=:variable)
     return dropdims(generalizedDist, dims=:variable)
 end
@@ -367,9 +367,40 @@ function independenceParts(generalizedDistances::DimArray, sigmaS::Number)
     return indep_parts
 end
 
+
+function overallGeneralizedDistances(
+    modelData, 
+    obsData, 
+    weightsPerform, 
+    weightsIndep
+)
+    Di_all_diagnostics = []
+    Sij_all_diagnostics = []
+    diagnostics = keys(modelData)
+    for diagnostic in diagnostics
+        generalizedDistsPerform  = generalizedDistancesPerformance(
+            modelData[diagnostic], obsData[diagnostic], weightsPerform
+        );
+        Di = reduceGeneralizedDistancesVars(generalizedDistsPerform);
+        push!(Di_all_diagnostics, Di)
+
+        generalizedDistsIndep = generalizedDistancesIndependence(
+            modelData[diagnostic], weightsIndep
+        );
+        Sij =  reduceGeneralizedDistancesVars(generalizedDistsIndep);
+        push!(Sij_all_diagnostics, Sij)
+    end
+    Di = cat(Di_all_diagnostics..., dims = Dim{:diagnostic}(collect(diagnostics)));
+    Sij = cat(Sij_all_diagnostics..., dims = Dim{:diagnostic}(collect(diagnostics)));
+    
+    Di = dropdims(reduce(+, Di, dims=:diagnostic), dims=:diagnostic)
+    Sij = dropdims(reduce(+, Sij, dims=:diagnostic), dims=:diagnostic)
+    return (Di, Sij)
+end
+
 """
     overallWeights(
-        modelData::Dict{String, DimArray}, 
+        modelData::Dict{String, Dict{String, DimArray}},
         obsData::Dict{String, DimArray}, 
         sigmaD::Number=0.5, 
         sigmaS::Number=0.5,
@@ -385,7 +416,8 @@ Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
 995–1012. https://doi.org/10.5194/esd-11-995-2020.
 
 # Arguments:
-- `modelData::Dict{String, DimArray}`
+- `modelData::Dict{String, Dict{String, DimArray}}` mapping from diagnostic to 
+a dictionary from climate variable to respective model data
 - `obsData::Dict{String, DimArray}`
 - `sigmaD::Number=0.5`
 - `sigmaS::Number=0.5`
@@ -393,18 +425,16 @@ Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
 - weightsIndep::Dict{String, Number}=Dict{String, Number}()
 """
 function overallWeights(
-    modelData::Dict{String, DimArray}, 
-    obsData::Dict{String, DimArray}, 
+    modelData::Dict{String, Dict{String, DimArray}}, 
+    obsData::Dict{String, Dict{String, DimArray}}, 
     sigmaD::Number=0.5, 
     sigmaS::Number=0.5,
     weightsPerform::Dict{String, Number}=Dict{String, Number}(), 
     weightsIndep::Dict{String, Number}=Dict{String, Number}()
 )
-    generalizedDistsDataByVar = generalizedDistancesPerformance(modelData, obsData, weightsPerform);
-    Di = overallGeneralizedDistances(generalizedDistsDataByVar);
-    generalizedDistsModelsByVar = generalizedDistancesIndependence(modelData, weightsIndep);
-    Sij =  overallGeneralizedDistances(generalizedDistsModelsByVar);
-
+    Di, Sij = overallGeneralizedDistances(
+        modelData, obsData, weightsPerform, weightsIndep
+    );
     performances = performanceParts(Di, sigmaD);
     independences = independenceParts(Sij, sigmaS);
     weights = performances ./ independences;

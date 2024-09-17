@@ -1,4 +1,4 @@
-import SimilarityWeights
+import SimilarityWeights as sw
 using DimensionalData
 using CairoMakie
 using ColorSchemes
@@ -14,33 +14,34 @@ climateVariables = ["tas", "pr", "psl"];
 sigmaD = 0.5;
 sigmaS = 0.5;
 ##########################################
-var_to_preproc_data = Dict{String, String}();
+var_to_preproc_data = Dict{String, Dict{String, String}}();
+var_to_preproc_data["CLIM"] = Dict();
 for var in climateVariables
-    var_to_preproc_data[var] = joinpath(pathToPreprocDir, var * "_CLIM");
+    var_to_preproc_data["CLIM"][var] = joinpath(pathToPreprocDir, var * "_CLIM");
 end
-modelData = SimilarityWeights.loadPreprocData(var_to_preproc_data, ["CMIP"]);
-obsData = SimilarityWeights.loadPreprocData(var_to_preproc_data, ["ERA5"]);
+modelData = sw.loadPreprocData(var_to_preproc_data, ["CMIP"]);
+obsData = sw.loadPreprocData(var_to_preproc_data, ["ERA5"]);
 
 # take equal weights for both, performance and independence metric
 weightsVarsPerform = Dict{String, Number}("tas" => 1, "pr" => 2, "psl" => 1); 
 weightsVarsIndep = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
 
-wP = SimilarityWeights.generalizedDistancesPerformance(modelData, obsData, weightsVarsPerform);
-Di = SimilarityWeights.overallGeneralizedDistances(wP);
+wP = sw.generalizedDistancesPerformance(modelData["CLIM"], obsData["CLIM"], weightsVarsPerform);
+Di = sw.reduceGeneralizedDistancesVars(wP);
 
-wI = SimilarityWeights.generalizedDistancesIndependence(modelData, weightsVarsIndep);
-Sij = SimilarityWeights.overallGeneralizedDistances(wI);
+wI = sw.generalizedDistancesIndependence(modelData["CLIM"], weightsVarsIndep);
+Sij = sw.reduceGeneralizedDistancesVars(wI);
 
-performances = SimilarityWeights.performanceParts(Di, sigmaD);
-independences = SimilarityWeights.independenceParts(Sij, sigmaS);
+performances = sw.performanceParts(Di, sigmaD);
+independences = sw.independenceParts(Sij, sigmaS);
 weights = performances ./ independences;
 normalizedWeights = weights ./ sum(weights)
 
 
-SimilarityWeights.plotPerformanceWeights(wP)
-SimilarityWeights.plotPerformanceWeights(wP, Di)
+sw.plotPerformanceWeights(wP)
+sw.plotPerformanceWeights(wP, Di)
 
-weights = SimilarityWeights.overallWeights(
+weights = sw.overallWeights(
     modelData, obsData, sigmaD, sigmaS, weightsVarsPerform, weightsVarsIndep
 );
 # distributed CCSM4 across all 4 CCSM4-models
@@ -107,8 +108,8 @@ end
 # end
 
 
-wP = SimilarityWeights.averageEnsembleVector(wP, false);
-wI = SimilarityWeights.averageEnsembleMatrix(wI, false);
+wP = sw.averageEnsembleVector(wP, false);
+wI = sw.averageEnsembleMatrix(wI, false);
 performance = exp.(-(wP ./ sigmaD).^2);
 
 # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)

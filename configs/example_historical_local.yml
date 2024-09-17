@@ -1,14 +1,14 @@
-base_path: /Users/brgrus001/output-from-albedo
-experiment: historical
-prefix_var_folders: recipe_historical # optional
-
+base_path: /Users/brgrus001/output-from-albedo/historical/recipe_historical_pr
 target_dir: /Users/brgrus001/SimilarityWeights/output
+
+diagnostics:
+  - CLIM
 
 variables: 
   - pr
 
 name_ref_period: historical1
-name_full_period: full
+experiment: historical #name_full_period: full
 
 models_project_name: CMIP6
 obs_data_name: ERA5

@@ -9,24 +9,25 @@ Return all data that is shared across variables in the reference period as well
 as in the full period.
 """
 function getSharedModelData(config::Config)
-    modelDataRef = SimilarityWeights.loadDataFromConfig(config, "name_ref_period", "models_project_name");
-    modelDataRef = SimilarityWeights.getCommonModelsAcrossVars(modelDataRef);
-    # TODO: make sure that there is observational data for all variables for 
-    # the respective reference period, for now this is just assumed but in 
-    # some rare cases it may be wrong
-    obsData = loadDataFromConfig(config, "name_ref_period", "obs_data_name");
-    modelDataFull = loadDataFromConfig(config, "name_full_period", "models_project_name");
+    modelDataRef = loadDataFromConfig(config, config.name_ref_period, config.models_project_name);
+    modelDataRef = getCommonModelsAcrossVars(modelDataRef);
+    obsData = loadDataFromConfig(config, config.name_ref_period, config.obs_data_name);
+    modelDataFull = loadDataFromConfig(config, config.experiment, config.models_project_name);
     modelDataFull = getCommonModelsAcrossVars(modelDataFull);
     
     # get weights just for those models in modelDataFull that are also in 
     # reference period 
+    var = first(config.variables) # choose any variable
+    diagnostic = first(config.diagnostics) # choose any diagnostic
     shared_models = intersect(
-        first(values(modelDataFull)).metadata["full_model_names"], 
-        first(values(modelDataRef)).metadata["full_model_names"]
+        modelDataFull[diagnostic][var].metadata["full_model_names"], 
+        modelDataRef[diagnostic][var].metadata["full_model_names"]
     );
     for var in config.variables
-        modelDataFull[var] = keepModelSubset(modelDataFull[var], shared_models);
-        modelDataRef[var] = keepModelSubset(modelDataRef[var], shared_models);
+        for diagnostic in config.diagnostics
+            modelDataFull[diagnostic][var] = keepModelSubset(modelDataFull[diagnostic][var], shared_models);
+            modelDataRef[diagnostic][var] = keepModelSubset(modelDataRef[diagnostic][var], shared_models);
+        end
     end
     return (modelDataFull, modelDataRef, obsData)
 end
@@ -71,11 +72,12 @@ function runWeights(config::Config)
         config.weights_variables["performance"],
         config.weights_variables["independence"]   
     );   
-    means = getWeightedAverages(modelDataFull, weights);
+    means = getWeightedAverages(modelDataFull["CLIM"], weights);
 
     models = weights.metadata["full_model_names"];
-    @info "Nb included models (without ensemble members): " length(weights.metadata["source_id"])
+    model_key = getCMIPModelsKey(weights.metadata);
+    @info "Nb included models (without ensemble members): " length(weights.metadata[model_key])
     foreach(m -> @info(m), models)
-    saveWeights(weights, avgs, config.target_dir)
+    saveWeights(weights, means, config.target_dir)
     return (weights=weights, avgs=means)
 end

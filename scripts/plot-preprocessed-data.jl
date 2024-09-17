@@ -9,9 +9,14 @@ function checkPathToDir(path::String)
 end
 
 
-function getData(varToPath::Dict{String, String}, climVar::String, avgEnsembleMembers::Bool=true)
+function getData(
+    varToPath::Dict{String, Dict{String, String}}, 
+    diagnostic::String, 
+    climVar::String, 
+    avgEnsembleMembers::Bool=true
+)
     modelData =  sw.loadPreprocData(varToPath, ["CMIP6"]);
-    data = modelData[climVar];
+    data = modelData[diagnostic][climVar];
     if avgEnsembleMembers
         data = sw.averageEnsembleVector(data, true)
     end
@@ -19,18 +24,19 @@ function getData(varToPath::Dict{String, String}, climVar::String, avgEnsembleMe
 end
 
 # precipitaton
-varToPathPr =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/historical/recipe_historical_pr/preproc/climatology_historical1/pr");
-varToPathPr =  Dict{String, String}("pr" => "/Users/brgrus001/output-from-albedo/historical/recipe_historical_pr/preproc/climatology_historical3/pr");
-output_dir = "/Users/brgrus001/output-from-albedo/" # TODO:adapt
-#varToPath = Dict{String, String}("pr" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_pr_20240726_112338/preproc/climatologic_diagnostic");
-data = getData(varToPathPr, "pr");
+basePath = "/Users/brgrus001/output-from-albedo/historical/recipe_historical_pr"
+period = "historical1"
+climVar = "pr"
+diagnostic = "CLIM"
+varToPath = Dict(diagnostic => Dict(climVar => joinpath(basePath, "preproc", period, climVar * "_" * diagnostic)))
+data = getData(varToPath, diagnostic, climVar);
 
 means = dropdims(mean(data, dims=:model), dims=:model);
 f1 = sw.plotMeansOnMap(
     means, 
     "Precipitation means historical period", 
     sw.Target(
-        directory  = output_dir;
+        directory  = "output";
         filename = "precipitation-historical1-unweighted-avg.png",
         save = true
     )
@@ -57,20 +63,22 @@ f4 = sw.plotHistAtPos(data, atacama)
 f5 = sw.plotHistAtPos(data, mawsynram)
 f6 = sw.plotHistAtPos(data, florida)
 
+
+###############################################################################
+# TODO: update AMOC Plot
 # AMOC (derived variable)
 # varToPath = Dict{String, String}("amoc" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240730_090548/preproc/climatologic_diagnostic");
 # varToPath = Dict{String, String}("amoc" => "/Users/brgrus001/output-from-albedo/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic");
 # varToPath = Dict{String, String}("amoc" => "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/generated_recipe_historical_amoc_msftmz_20240731_153530/preproc/climatologic_diagnostic");
 
-data = getData(varToPath, "amoc");
-sw.convertKgsToSv!(data)
-sw.plotAMOC(data)
-
+# data = getData(varToPath, "amoc");
+# sw.convertKgsToSv!(data)
+# sw.plotAMOC(data)
+###############################################################################
 
 
 # Models with different ensemble members
-
-data_all_members = getData(varToPathPr, "pr", false);
+data_all_members = getData(varToPath, "CLIM", "pr", false);
 longitudes = Array(dims(data_all_members, :lon));
 if any(longitudes .> 180)
     longitudes = sw.lon360to180.(longitudes);

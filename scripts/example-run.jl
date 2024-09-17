@@ -1,8 +1,8 @@
-
 import SimilarityWeights as sw
 
 path_config = "configs/example_historical_albedo.yml"
 path_config = "configs/example_historical_local.yml"
+path_config = "configs/climwip_simplified_reproduced.yml"
 config = sw.validateConfig(path_config);
 
 ######################## runWeights ###########################################
@@ -18,16 +18,16 @@ weights = sw.overallWeights(
     config.weight_contributions["independence"], 
     config.weights_variables["performance"],
     config.weights_variables["independence"]   
-);      
-means = sw.getWeightedAverages(modelDataFull, weights);
+);
+means = sw.getWeightedAverages(modelDataFull["CLIM"], weights);
 ####################### overallWeights step by step: ##############################
-weightsVarsPerform = Dict{String, Number}("tas" => 1, "pr" => 2, "tos" => 1); 
-weightsVarsIndep = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "tos" => 0.25); 
+weightsVarsPerform = Dict{String, Number}("tas" => 1, "pr" => 2,  "psl" => 1); 
+weightsVarsIndep = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
 
-wP = sw.generalizedDistancesPerformance(modelDataRef, obsData, weightsVarsPerform);
-Di = sw.overallGeneralizedDistances(wP);
-wI = sw.generalizedDistancesIndependence(modelDataRef, weightsVarsIndep);
-Sij = sw.overallGeneralizedDistances(wI);
+wP = sw.generalizedDistancesPerformance(modelDataRef["CLIM"], obsData["CLIM"], weightsVarsPerform);
+Di = sw.reduceGeneralizedDistancesVars(wP);
+wI = sw.generalizedDistancesIndependence(modelDataRef["CLIM"], weightsVarsIndep);
+Sij = sw.reduceGeneralizedDistancesVars(wI);
 
 performances = sw.performanceParts(Di, 0.5);
 independences = sw.independenceParts(Sij, 0.5);

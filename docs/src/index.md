@@ -27,42 +27,52 @@ The assumed directory structure of the data is as follows (upper case words are 
 that need to be replaced): 
 
 ```bash
-
-├── EXPERIMENT
-│   └── [PREFIX_VAR_FOLDERS_]VAR
-│       ├── preproc
-│       │   └── climatology_full
-│       │   │   └── VAR
-│       │   ├── climatology_historical1
-│       │   │   └── VAR
-│       │   ├── climatology_historical2
-│       │   │   └── VAR
-│       │   └── climatology_historical3
-│       │       └── VAR
-│       │     
+├── BASE_DIR
+│   └── preproc
+│       └── PERIOD
+│       │     └── VARIABLE_DIAGNOSTIC
+│       │  
 │       └── run
-│
-└── EXPERIMENT
-│   └── ...
+│   └── ... (possibly other output from ESMValTool)
 ....
-
 ```
+
+Here's an example:
+
+```bash
+├── BASE_DIR
+│   └── preproc
+│       └── historical1
+│       │     └── tas_CLIM
+│       │     └── pr_CLIM
+│       │     └── tas_STD
+│       │     └── pr_STD
+│       └── historical
+│       │     └── pr_STD
+│       │     └── tas_STD
+│       │     └── ...
+│       └── run
+│   └── ... (possibly other output from ESMValTool)
+....
+```
+
+
 Note that the 'run'-directory will be there if the data was loaded with our ESMValTool recipes, but it doesn't contain any data that we'll need. So no need for this directory if the data was loaded differently. 
 
 
-- `base_path:`  Path to the directory that contains the preprocessed data from ESMValTool (not necessarily from ESMValTool, but the underlying structure must be the same)
+- `base_dir:`  Directory that contains the preprocessed data from ESMValTool (not necessarily from ESMValTool, but the underlying structure must be the same)
 
-- `experiment:` Name of experiment for which models were run, e.g. 'historical' or 'midHolocene'.
-
-- `prefix_var_folders:` (optional) The prefix of the directories for each climate variable. 
+- `period:` Name of experiment/time period for which models were run, e.g. 'historical', 'midHolocene'.
 
 - `target_dir:` Path to the directory where the computed data will be stored.
 
 - `variables:` List of climate variables which will be considered.
 
-- `name_ref_period:` If the data is loaded with our ESMValTool recipes, the name of the reference period is, for now, one of 'historical1', 'historical2', 'historical3' (see below).
+- `experiment:` Name of experiment. Referring to the full time period.
 
-- `name_full_period:` If the data is loaded with our ESMValTool recipes, the name with which the entire referenced period of the respective experiment is referred to, is set to 'full'.
+<!-- - `name_ref_period:` If the data is loaded with our ESMValTool recipes, the name of the reference period is, for now, one of 'historical1', 'historical2', 'historical3' (see below).
+
+- `name_full_period:` If the data is loaded with our ESMValTool recipes, the name with which the entire referenced period of the respective experiment is referred to, is set to 'full'. -->
 
 - `models_project_name:` Either 'CMIP6' or 'CMIP5'. We focus on 'CMIP6'.
 

@@ -7,12 +7,18 @@ using Statistics
     obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["ERA5"]);
     
     weightsByVar = SimilarityWeights.generalizedDistancesPerformance(
-        modelData, obsData, weightsVars
+        modelData["CLIM"], obsData["CLIM"], weightsVars
     );
-    weights = SimilarityWeights.overallGeneralizedDistances(weightsByVar);
+    weights = SimilarityWeights.reduceGeneralizedDistancesVars(weightsByVar);
     weightsRounded = round.(Array(weights), digits=NB_DIGITS);
 
-    ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_overall_mean.nc"));
+    ds = NCDataset(
+        joinpath(
+            PATH_TO_WORK_DIR,
+            "calculate_weights_climwip",
+            "climwip",
+            "performance_overall_mean.nc"
+        ));
     expected =  Array(ds["overall_mean"]);
     expectedRounded = round.(expected, digits=NB_DIGITS);
 
@@ -25,12 +31,19 @@ end
     modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
 
     weightsByVar = SimilarityWeights.generalizedDistancesIndependence(
-        modelData, weightsVars
+        modelData["CLIM"], weightsVars
     );
-    weights = SimilarityWeights.overallGeneralizedDistances(weightsByVar);
+    weights = SimilarityWeights.reduceGeneralizedDistancesVars(weightsByVar);
     weights = round.(Array(weights), digits=NB_DIGITS);
 
-    ds = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "independence_overall_mean.nc"), "r");
+    ds = NCDataset(
+        joinpath(
+            PATH_TO_WORK_DIR, 
+            "calculate_weights_climwip", 
+            "climwip",
+            "independence_overall_mean.nc"
+        ), "r"
+    );
     expected = round.(ds["overall_mean"][:,:], digits=NB_DIGITS);
 
     @test all((x)-> x==1, expected .== weights);
@@ -113,10 +126,14 @@ end
         modelData, obsData, 0.5, 0.5, weightsVarsPerform, weightsVarsIndep
     );
 
-    ds = NCDataset(joinpath(PATH_TO_WORK_DIR,
-                   "calculate_weights_climwip", 
-                   "climwip", 
-                   "weights.nc"));
+    ds = NCDataset(
+        joinpath(
+            PATH_TO_WORK_DIR,
+            "calculate_weights_climwip", 
+            "climwip", 
+            "weights.nc"
+        )
+    );
     expected_all = Array(ds["weight"]);
 
     #last four entries are from one ensemble 
