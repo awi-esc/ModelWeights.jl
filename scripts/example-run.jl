@@ -2,7 +2,7 @@ import SimilarityWeights as sw
 
 path_config = "configs/example_historical_albedo.yml"
 path_config = "configs/example_historical_local.yml"
-path_config = "configs/climwip_simplified_reproduced.yml"
+path_config = "configs/climwip_simplified.yml"
 config = sw.validateConfig(path_config);
 
 ######################## runWeights ###########################################

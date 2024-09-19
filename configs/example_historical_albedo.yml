@@ -1,8 +1,8 @@
 base_path: /albedo/work/projects/p_forclima/preproc_data_esmvaltool
-experiment: historical
-prefix_var_folders: recipe_historical # optional
-
 target_dir: /albedo/home/brgrus001/SimilarityWeights/output
+
+diagnostics:
+  - CLIM
 
 variables: 
   - tas
@@ -12,7 +12,7 @@ variables:
   #- hur
 
 name_ref_period: historical1
-name_full_period: full
+experiment: historical
 
 models_project_name: CMIP6
 obs_data_name: ERA5

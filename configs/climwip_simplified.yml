@@ -1,0 +1,32 @@
+base_path: /albedo/work/projects/p_forclima/britta/esmvaltool-output/climwip-simplified_20240919_065401
+experiment: historical
+target_dir: /albedo/work/projects/p_forclima/britta/climwip-simplified-output
+
+diagnostics:
+  - CLIM
+
+variables: 
+  - tas
+  - pr
+  - psl
+
+name_ref_period: calculate_weights_climwip # diagnostic name which is the name of the reference time period for our data recipes
+experiment: calculate_weights_climwip # the name of the entire time period considered for our data recipes
+
+models_project_name: CMIP5
+obs_data_name: ERA5
+
+weight_contributions:
+  performance: 0.5
+  independence: 0.5
+
+weights_variables:
+  performance:
+    tas: 1
+    psl: 1
+    pr: 2
+
+  independence:
+    tas: 0.5
+    pr: 0.25
+    psl: 0
