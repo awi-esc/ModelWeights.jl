@@ -40,5 +40,6 @@
 
 - add used diagnostics to metadata, now this is not saved, for every variable
 different diagnostics might be used 
+- check units in performance weights plots
 - add plots weighted temp. graph/map
 - recipe fails with forked-esmvaltool version.. for mask_sea preprocessor 
