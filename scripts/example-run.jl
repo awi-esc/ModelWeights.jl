@@ -1,4 +1,5 @@
 import SimilarityWeights as sw
+using NCDatasets
 
 path_config = "configs/example_historical_albedo.yml"
 path_config = "configs/example_historical_local.yml"
@@ -7,9 +8,13 @@ config = sw.validateConfig(path_config);
 
 ######################## runWeights ###########################################
 weights, avgs = sw.runWeights(config);
+
+w = sw.loadWeightsAsDimArray("/albedo/work/projects/p_forclima/britta/similarityweights-output/climwip-simplified/2024-09-24_14_32/weights.nc")
+
 sw.plotWeights(weights)
 sw.plotMeanData(config, avgs)
 
+####################### overallWeights step by step: ##############################
 modelDataFull, modelDataRef, obsData = sw.getSharedModelData(config);
 weights = sw.overallWeights(
     modelDataRef, 
@@ -20,17 +25,26 @@ weights = sw.overallWeights(
     config.weights_variables["independence"]   
 );
 means = sw.getWeightedAverages(modelDataFull["CLIM"], weights);
-####################### overallWeights step by step: ##############################
-weightsVarsPerform = Dict{String, Number}("tas" => 1, "pr" => 2,  "psl" => 1); 
-weightsVarsIndep = Dict{String, Number}("tas" => 0.5, "pr" => 0.25, "psl" => 0); 
-
-wP = sw.generalizedDistancesPerformance(modelDataRef["CLIM"], obsData["CLIM"], weightsVarsPerform);
+wP = sw.generalizedDistancesPerformance(modelDataRef["CLIM"], obsData["CLIM"], config.weights_variables["performance"]);
 Di = sw.reduceGeneralizedDistancesVars(wP);
-wI = sw.generalizedDistancesIndependence(modelDataRef["CLIM"], weightsVarsIndep);
+wI = sw.generalizedDistancesIndependence(modelDataRef["CLIM"], config.weights_variables["independence"]);
 Sij = sw.reduceGeneralizedDistancesVars(wI);
 
-performances = sw.performanceParts(Di, 0.5);
-independences = sw.independenceParts(Sij, 0.5);
+figs_wP = sw.plotPerformanceWeights(wP)
+figs_Di = sw.plotPerformanceWeights(wP, Di, false)
+figs_Di = sw.plotPerformanceWeights(wP, nothing, false)
+
+
+figs_wI = sw.plotIndependenceWeights(wI)
+figs_Sij = sw.plotIndependenceWeights(Sij)
+
+
+
+performances = sw.performanceParts(Di, config.weight_contributions["performance"]);
+independences = sw.independenceParts(Sij, config.weight_contributions["independence"]);
+sw.plotWeightContributions(independences, performances)
+
+
 weights = performances ./ independences;
 normalizedWeights = weights ./ sum(weights)
 ###############################################################################

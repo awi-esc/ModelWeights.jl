@@ -40,7 +40,7 @@ function plotDistMatrices(distMat, climateVar, models, modelRefs)
         xticklabelrotation = pi/4,
         title = "Distance matrix for " * climateVar,
         yreversed = true
-        )
+    )
     hm = heatmap!(ax, distMat', colormap = ColorSchemes.YlGn_4.colors)
     Colorbar(fig[1, 2], hm)
     return fig

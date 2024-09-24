@@ -1,6 +1,6 @@
-base_path: /albedo/work/projects/p_forclima/britta/esmvaltool-output/climwip-simplified_20240919_065401
+base_path: /albedo/work/projects/p_forclima/britta/esmvaltool-output/climwip-simplified_20240920_082938
 experiment: historical
-target_dir: /albedo/work/projects/p_forclima/britta/climwip-simplified-output
+target_dir: /albedo/work/projects/p_forclima/britta/similarityweights-output/climwip-simplified
 
 diagnostics:
   - CLIM

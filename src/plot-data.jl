@@ -1,3 +1,4 @@
+using ColorSchemes
 """ plotMeansOnMap(means::DimArray, title::String)
     
 Plot contours of world with an overlayed heatmap that shows the data which 
@@ -11,8 +12,8 @@ function plotMeansOnMap(means::Union{DimMatrix, DimArray}, title::String, target
     end
     
     # scaling plot 
-    lon_min, lon_max = -180, 180;
-    lat_min, lat_max = -90, 90;
+    lon_min, lon_max = minimum(dims_lon) -1, maximum(dims_lon) + 1;
+    lat_min, lat_max = minimum(dims_lat) -1, maximum(dims_lat) + 1;
     lon = range(lon_min, stop=lon_max, length=length(dims_lon));
     lat = range(lat_min, stop=lat_max, length=length(dims_lat));
 
@@ -34,7 +35,7 @@ function plotMeansOnMap(means::Union{DimMatrix, DimArray}, title::String, target
         limits = ((lon_min, lon_max), (lat_min, lat_max))
     );
     lines!(GeoMakie.coastlines(); color=:black);
-    hm = heatmap!(ax, lon, lat, Array(means), alpha=0.8);
+    hm = heatmap!(ax, lon, lat, Array(means), colormap=ColorSchemes.Reds.colors, alpha=0.8);
     Colorbar(fig[1,2], hm);
 
     if target.save

@@ -34,7 +34,15 @@ end
 # Note: yreversed=true and transposed matrix mat'!
 begin
     f = Figure();
-    ax = Axis(f[1,1], yreversed=true);
+    xs = 1:3
+    names = ["m1", "m2", "m3"]
+    ax = Axis(
+        f[1,1], 
+        xticks = (xs, names), 
+        yticks = (xs, names),
+        xticklabelrotation = pi/4,
+        yreversed=true
+    );
     mat = [0 1 2; 3 0 4; 5 6 0];
     # print(mat)
     hm = heatmap!(ax, mat')

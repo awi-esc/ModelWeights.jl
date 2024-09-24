@@ -78,6 +78,6 @@ function runWeights(config::Config)
     model_key = getCMIPModelsKey(weights.metadata);
     @info "Nb included models (without ensemble members): " length(weights.metadata[model_key])
     foreach(m -> @info(m), models)
-    saveWeights(weights, means, config.target_dir)
+    saveWeights(weights, config.target_dir)
     return (weights=weights, avgs=means)
 end

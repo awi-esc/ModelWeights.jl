@@ -7,30 +7,95 @@
 per model
 """
 function plotPerformanceWeights(
-    wP::DimArray, wP_combined::Union{DimArray, Nothing}=nothing
+    wP::DimArray, wP_combined::Union{DimArray, Nothing}=nothing, isBarPlot::Bool=true
 )
-    fig=Figure()
+    figures = [];
     models = Array(dims(wP, :model));
+    variables = dims(wP, :variable);
     xs = 1:length(models);
-    ax = Axis(fig[1,1], 
-        xticks = (xs, models), 
-        xticklabelrotation = pi/4,
-        xlabel = "Models", 
-        ylabel = "Performance weight"
-    );
-    data = Array(wP)
-    variables = dims(wP, :variable)
-    for (col, var) in enumerate(variables)
-        scatter!(ax, xs, data[:, col])
-        lines!(ax, xs, data[:, col], label = "$var")
+    if isBarPlot
+        for var in variables
+            fig=Figure()
+            ax = Axis(fig[1,1], 
+                xticks = (xs, models), 
+                xticklabelrotation = pi/4,
+                xlabel = "Models", 
+                ylabel = "Performance weight",
+                title = "$var"
+            );
+            barplot!(ax, xs, Array(wP[variable = At(var)]))
+            push!(figures, fig)
+        end
+    else 
+        fig=Figure()
+        ax = Axis(fig[1,1], 
+            xticks = (xs, models), 
+            xticklabelrotation = pi/4,
+            xlabel = "Models", 
+            ylabel = "Performance weight",
+        );
+        for var in variables
+            scatter!(ax, xs, Array(wP[variable = At(var)]))
+            lines!(ax, xs, Array(wP[variable = At(var)]), label = "$var")
+        end
+        if !isnothing(wP_combined)
+            scatter!(ax, xs, Array(wP_combined))
+            lines!(ax, xs, Array(wP_combined), label = "combined weights all vars")
+        end
+        axislegend(ax) 
+        push!(figures, fig)
     end
-    if !isnothing(wP_combined)
-        scatter!(ax, xs, Array(wP_combined))
-        lines!(ax, xs, Array(wP_combined), label = "combined weights all vars")
-    end
-    axislegend(ax)
-    return fig
+    return figures
 end
+
+
+function plotIndependenceWeights(distances::DimArray)
+    figures = []
+    models = distances.metadata["full_model_names"]
+    if hasdim(distances, :variable)
+        for var in dims(distances, :variable)
+            fig = plotDistMatrices(
+                Array(distances[variable = At(var)]), 
+                var, 
+                models,
+                models
+            )
+            push!(figures, fig)
+        end
+    else
+        fig = plotDistMatrices(Array(distances), "across variables", models, models)
+        push!(figures, fig)
+    end
+    return figures
+end
+
+#     models = Array(dims(wP, :model));
+#     xs = 1:length(models)
+#     ax = Axis(
+#         fig[1,1],
+#         xticks = (xs, models), 
+#         yticks = (xs, models),
+#         xticklabelrotation = pi/4,
+#         yticklabelrotation = pi/4,
+#         title = "Independence weights across variables",
+#         yreversed = true
+#         )
+#     hm = heatmap!(ax, wI_overall, colormap = ColorSchemes.YlGn_4.colors)
+#     Colorbar(fig[1, 2], hm)
+# several figures, one per variable
+    # scatter!(
+    #     ax, 
+    #     Array(independence[variable = At(var)]), 
+    #     Array(performance[variable = At(var)]),
+    #     label = "$var"
+    # )
+    # text!(
+    #     independence[variable = At(var)], 
+    #     performance[variable = At(var)], 
+    #     text = Array(dims(performance, :model)), 
+    #     align = (:center, :top)
+    # )
+
 
 """
     plotWeightContributions(independence::DimArray, performance::DimArray)
@@ -42,26 +107,28 @@ The overall weight is computed by dividing the independence part by the
 performance part.
 
 # Arguments: 
-- independence: (dims:model x variable) numerator exp(-(D_i/sigma_D)^2)
-- performance: (dims:model x variable) denominator 1 + sum_j≠i^M exp(-(S_ij/sigma_S)^2) 
+- independence: (dims:model) numerator exp(-(D_i/sigma_D)^2)
+- performance: (dims:model) denominator 1 + sum_j≠i^M exp(-(S_ij/sigma_S)^2) 
 """
 function plotWeightContributions(independence::DimArray, performance::DimArray)
     fig = Figure(size=(800,600), fontsize=16)
-    ax = Axis(fig[1,1], 
-              xlabel =  L"Independence\n $e^{-(D_i/\sigma_D)^2}$", 
-              ylabel = L"Performance\n\n $1 + \sum_{j≠i}^M e^{-(S_{ij}/\sigma_S)^2}$", 
-              title="Independence vs. performance contributions to overall weights",
-              xlabelsize = 24,
-              ylabelsize = 24
-              )
-    variables = dims(independence, :variable)
-    for (col, var) in enumerate(variables)
-        scatter!(ax, Array(independence)[:, col], Array(performance)[:, col],
-                 label = "$var")
-        text!(independence[:, col], performance[:, col], 
-              text = Array(dims(performance, :model)), 
-              align = (:center, :top))
-    end
-    axislegend(ax, position = :ct, orientation = :horizontal)
+    ax = Axis(
+        fig[1,1], 
+        xlabel =  L"Performance\n $e^{-(D_i/\sigma_D)^2}$", 
+        ylabel = L"Independence\n\n $1 + \sum_{j≠i}^M e^{-(S_{ij}/\sigma_S)^2}$", 
+        title="(Unnormalized) Performance vs. independence contributions to overall weights",
+        xlabelsize = 24,
+        ylabelsize = 24
+    )
+
+    scatter!(ax, Array(independence), Array(performance))
+    text!(
+        Array(independence), 
+        Array(performance), 
+        text = Array(dims(performance, :model)), 
+        align = (:center, :top)
+    )
     return fig
 end
+
+

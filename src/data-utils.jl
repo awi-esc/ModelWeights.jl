@@ -442,27 +442,36 @@ function loadDataFromConfig(config::Config, name_time_period::String, name_data:
     return data
 end
 
-
+# also save averages! (maybe two functions)
 function saveWeights(
         weights::DimVector,
-        averages::Dict{String, Dict{String, DimArray}},
         target_dir::String, 
-        target_fn::String="output.nc"
+        target_fn::String="weights.nc"
     )
     if !isdir(target_dir)
         mkpath(target_dir)
     end
     path_to_target = joinpath(target_dir, target_fn);
-    # TODO: only works if not yet created
+    if isfile(path_to_target)
+        msg1 = "File: " * path_to_target * " already exists!";
+        path_to_target = joinpath(target_dir, join([getCurrentTime(), target_fn], "_"))
+        msg2 = "Weights saved as: " * path_to_target
+        @warn msg1 * msg2
+    end
     ds = NCDataset(path_to_target, "c")
 
-    defDim(ds, "model", length(dims(weights, :model)))
+    models = dims(weights, :model)
+    defDim(ds, "model", length(models))
+    # Add a new variable to store the model names
+    v_model_names = defVar(ds, "model", String, ("model",))
+    v_model_names[:] = Array(models)
+
     # global attributes
     for (k, v) in weights.metadata
         if isa(v, Dict)
             ds.attrib[k] = [dk * "_" * string(dv) for (dk, dv) in v]
         else 
-            ds.attrib[k] = v
+            ds.attrib[k] = Vector{String}(v)
         end
     end
     v = defVar(ds, "weight", Float64, ("model",))
@@ -514,4 +523,12 @@ function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.Dim
         @assert !(getCMIPModelsKey(meta) in attribs_diff_across_members)
     end
     return meta_new
+end
+
+
+function loadWeightsAsDimArray(path_to_file::String)
+    data = NCDataset(path_to_file)
+    models = Array(data["model"])
+    arr = DimArray(Array(data["weight"]), (Dim{:model}(models)), metadata = Dict(data.attrib))
+    return arr
 end

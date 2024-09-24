@@ -34,3 +34,11 @@
 - add sanity checks correct configs
 - implement proper logging instead of logging to console
 - add tests where missing
+
+
+## CLIMWIP
+
+- add used diagnostics to metadata, now this is not saved, for every variable
+different diagnostics might be used 
+- add plots weighted temp. graph/map
+- recipe fails with forked-esmvaltool version.. for mask_sea preprocessor 
