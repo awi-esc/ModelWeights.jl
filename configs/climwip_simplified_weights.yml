@@ -1,0 +1,36 @@
+base_path: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20240926_140539
+target_dir: /albedo/work/projects/p_forclima/britta/similarityweights-output/climwip-simplified
+models_project_name: CMIP5
+obs_data_name: ERA5
+
+# SETTINGS FOR COMPUTING THE WEIGHTS
+diagnostics:
+  - CLIM
+
+variables: 
+  - tas
+  - pr
+  - psl
+
+name_ref_period: period_1995_2014 # diagnostic name which is the name of the reference time period for our data recipes
+name_full_period: "" # identical to not setting it
+name_obs_period: period_1995_2014
+
+
+weight_contributions:
+  performance: 0.5
+  independence: 0.5
+
+weights_variables:
+  performance:
+    tas: 1
+    psl: 1
+    pr: 2
+
+  independence:
+    tas: 0.5
+    pr: 0.25
+    psl: 0
+
+
+

@@ -132,3 +132,19 @@ function plotWeightContributions(independence::DimArray, performance::DimArray)
 end
 
 
+function plotWeights(weights::DimArray)
+    fig =  getFigure((16,8), 18);
+    models = Array(dims(weights, :model))
+    ax = Axis(fig[1,1], 
+              xlabel = "Models", 
+              ylabel = "weights", 
+              xticks = (collect(1:length(models)), models), 
+              xticklabelrotation = pi/2);
+    xs = 1:length(models);
+    scatter!(ax, xs, Array(weights))
+    lines!(ax, xs, Array(weights))
+    # add line with value if all weights were equal
+    n = length(models)
+    lines!(ax, xs, [1/n for _ in range(1, n)])
+    return fig
+end

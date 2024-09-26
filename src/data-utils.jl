@@ -1,17 +1,19 @@
 import YAML
 using DimensionalData
+using Interpolations
 
 @kwdef struct Config 
     base_path::String
     target_dir::String
-    experiment::String
     diagnostics::Vector{String}
     variables::Vector{String}
     name_ref_period::String
+    name_full_period::String
+    name_obs_period::String
     models_project_name::String
     obs_data_name::String
-    weights_variables::Dict{String, Dict{String,Number}}
-    weight_contributions::Dict{String, Number}
+    weights_variables::Union{Nothing, Dict{String, Dict{String,Number}}}
+    weight_contributions::Union{Nothing, Dict{String, Number}}
 end
 
 
@@ -233,7 +235,16 @@ function loadPreprocData(
                         if d in ["bnds", "string21"]
                             continue
                         end
-                        push!(dimensions, Dim{Symbol(d)}(collect(dsVar[d][:])))
+                        if d == "time"
+                            times = map(x -> NCDatasets.DateTimeStandard(
+                                Dates.year(x), Dates.month(x), Dates.day(x)
+                                ),
+                                dsVar[d][:]
+                            );
+                            push!(dimensions, Dim{Symbol(d)}(collect(times)));
+                        else
+                            push!(dimensions, Dim{Symbol(d)}(collect(dsVar[d][:])));
+                        end
                     end      
                     push!(data, DimArray(Array(dsVar), Tuple(dimensions)));
                     # end
@@ -241,7 +252,7 @@ function loadPreprocData(
                     # println(string(length(get(meta, "initialization_index", []))))
                 end
             end
-            dimData = cat(data...; dims = (Dim{:model}(sources))); 
+            dimData = cat(data...; dims = (Dim{:model}(sources)));
             updateMetadata!(meta, dimData);
             dimData = rebuild(dimData; metadata = meta);
             dataAllVars[diagnostic][climVar] = dimData;
@@ -326,21 +337,29 @@ end
 
 function validateConfig(path_config::String)
     config_yaml = YAML.load_file(path_config);
+    weights_variables = get(config_yaml, "weights_variables", nothing);
+    if !isnothing(weights_variables)
+        weights_variables = convert(
+            Dict{String, Dict{String, Number}}, 
+            weights_variables
+        )
+    end
     config = Config(
         base_path = config_yaml["base_path"],
         target_dir = joinpath(config_yaml["target_dir"], getCurrentTime()),
-        experiment = config_yaml["experiment"],
+        
         diagnostics = config_yaml["diagnostics"],
         variables = config_yaml["variables"],
-        name_ref_period = config_yaml["name_ref_period"],
         models_project_name = config_yaml["models_project_name"],
-        obs_data_name = config_yaml["obs_data_name"],
-        weights_variables = convert(
-            Dict{String, Dict{String, Number}}, 
-            config_yaml["weights_variables"]
-        ), 
-        weight_contributions = config_yaml["weight_contributions"]
-    )
+        
+        name_full_period = get(config_yaml, "name_full_period", ""),
+        name_ref_period = get(config_yaml, "name_ref_period", ""),
+        name_obs_period = get(config_yaml, "name_obs_period", ""),
+        obs_data_name = get(config_yaml, "obs_data_name", ""),
+
+        weights_variables = weights_variables,
+        weight_contributions = get(config_yaml, "weight_contributions", nothing)
+    ) 
     # TODO: add checks consistency, paths for all specified variables there and exist, etc.
     return config
 end
@@ -437,8 +456,8 @@ Load climate model data for variables and time periods defined in 'config'.
 - `name_data`: e.g. CMIP6, CMIP5, ERA5
 """
 function loadDataFromConfig(config::Config, name_time_period::String, name_data::String)
-    pathsDict = buildPathsToVarData(config,  name_time_period) # getproperty(config, Symbol(key_period)));
-    data = loadPreprocData(pathsDict, [name_data]);#[getproperty(config, Symbol(key_data_name))]);
+    pathsDict = buildPathsToVarData(config,  name_time_period);
+    data = loadPreprocData(pathsDict, [name_data]);
     return data
 end
 
@@ -532,3 +551,38 @@ function loadWeightsAsDimArray(path_to_file::String)
     arr = DimArray(Array(data["weight"]), (Dim{:model}(models)), metadata = Dict(data.attrib))
     return arr
 end
+
+function loadModelData(config::Config)
+    modelDataFull = nothing
+    modelDataRef = nothing
+    if !isempty(config.name_full_period)
+        modelDataFull = loadDataFromConfig(config, config.name_full_period, config.models_project_name);
+        modelDataFull = getCommonModelsAcrossVars(modelDataFull);
+    end
+    if !isempty(config.name_ref_period)
+        modelDataRef = loadDataFromConfig(config, config.name_ref_period, config.models_project_name);
+        modelDataRef = getCommonModelsAcrossVars(modelDataRef);
+    end
+    return (modelDataFull, modelDataRef)
+end
+
+
+function getInterpolatedWeightedQuantiles(quantiles, vals, weights=nothing)
+    if isnothing(weights)
+        weights = ones(length(vals));
+    end
+    indicesSorted = sortperm(vals);
+    weightsSorted = weights[indicesSorted];
+    weightedQuantiles = cumsum(weightsSorted) - 0.5 * weightsSorted;
+    weightedQuantiles = reshape(weightedQuantiles, length(weightedQuantiles), 1);
+    weightedQuantiles = (weightedQuantiles .- minimum(weightedQuantiles)) ./ maximum(weightedQuantiles);
+    
+    interp_linear = Interpolations.linear_interpolation(
+        vec(weightedQuantiles), 
+        vals[indicesSorted],
+        extrapolation_bc=Interpolations.Line()
+    );
+     
+    return interp_linear(quantiles)
+end
+

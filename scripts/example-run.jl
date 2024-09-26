@@ -3,11 +3,14 @@ using NCDatasets
 
 path_config = "configs/example_historical_albedo.yml"
 path_config = "configs/example_historical_local.yml"
-path_config = "configs/climwip_simplified.yml"
+path_config = "configs/climwip_simplified_weights.yml"
+path_config = "configs/climwip_simplified_temperature_graph.yml"
+
 config = sw.validateConfig(path_config);
 
-######################## runWeights ###########################################
-weights, avgs = sw.runWeights(config);
+######################## computeWeights ###########################################
+weights = sw.computeWeights(config);
+avgs = sw.getWeightedAverages(config, weights);
 
 w = sw.loadWeightsAsDimArray("/albedo/work/projects/p_forclima/britta/similarityweights-output/climwip-simplified/2024-09-24_14_32/weights.nc")
 
@@ -15,7 +18,13 @@ sw.plotWeights(weights)
 sw.plotMeanData(config, avgs)
 
 ####################### overallWeights step by step: ##############################
-modelDataFull, modelDataRef, obsData = sw.getSharedModelData(config);
+modelDataFull, modelDataRef = loadModelData(config::Config);
+modelDataFull, modelDataRef = sw.getSharedModelData(modelDataFull, modelDataRef);
+obsData = sw.loadDataFromConfig(
+    config, 
+    config.name_obs_period, 
+    config.obs_data_name
+);
 weights = sw.overallWeights(
     modelDataRef, 
     obsData, 

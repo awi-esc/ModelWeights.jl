@@ -170,19 +170,56 @@ function plotMeanData(config::Config, means::Dict{String, Dict{String, DimArray}
 end
 
 
-function plotWeights(weights::DimArray)
-    fig =  getFigure((16,8), 18);
-    models = Array(dims(weights, :model))
-    ax = Axis(fig[1,1], 
-              xlabel = "Models", 
-              ylabel = "weights", 
-              xticks = (collect(1:length(models)), models), 
-              xticklabelrotation = pi/2);
-    xs = 1:length(models);
-    scatter!(ax, xs, Array(weights))
-    lines!(ax, xs, Array(weights))
-    # add line with value if all weights were equal
-    n = length(models)
-    lines!(ax, xs, [1/n for _ in range(1, n)])
-    return fig
+function plotTempGraph(
+    data::DimArray, 
+    weights::DimArray, 
+    name_ref_period::String, 
+    lb::Number=0.167, 
+    ub::Number=0.833
+)
+    quantiles = [lb, ub]
+    unweightedRanges = [];
+    weightedRanges = [];
+
+    for t in dims(data, :time)
+        lower, upper = getInterpolatedWeightedQuantiles(quantiles, Array(data[time = At(t)]), weights);
+        push!(weightedRanges, [lower, upper]);
+        lower, upper = getInterpolatedWeightedQuantiles(quantiles, Array(data[time = At(t)]));
+        push!(unweightedRanges, [lower, upper]);
+    end
+    f = Figure(); 
+    years = Dates.year.(Array(dims(data, :time)))
+    xticks = years[1] : 20 : years[end]
+    ax = Axis(f[1,1], 
+        xticks = (xticks, string.(xticks)), 
+        limits = ((years[1]-10, years[end]+10), (-1, 5)),
+        title = "Temperature anomaly relative to " * name_ref_period,
+        xlabel = "Year", 
+        ylabel = "Temperature anomaly °C"
+    );
+    # add ranges 
+    lowerUnw = getindex.(unweightedRanges, 1);
+    upperUnw = getindex.(unweightedRanges, 2);
+    band!(ax, years, vec(lowerUnw), vec(upperUnw), color = (:red, 0.2), 
+         label = "Non-weighted 16.7-83.3perc range");
+    
+    lowerWeighted = getindex.(weightedRanges, 1);
+    upperWeighted = getindex.(weightedRanges, 2);
+    band!(ax, years, vec(lowerWeighted), vec(upperWeighted), color = (:green, 0.2), 
+          label = "Weighted 16.7-83.3perc range");
+        
+    # add results for each model model seperately
+    for m in dims(data, :model)
+        y = data[model = At(m)] 
+        lines!(ax, years, Array(y), color = :gray80, label = "ensemble members")
+    end
+    unweightedAvg =  mean(data, dims = :model);
+    weightedAvg = sum(repeat(weights', length(dims(data, :time)), 1) .* data, dims=:model);
+    lines!(ax, years, vec(unweightedAvg), color = :red, label = "Non-weighted mean")
+    lines!(ax, years, vec(weightedAvg), color = :green, label = "Weighted mean")
+
+    axislegend(ax, merge = true, position = :lt)
+    return f
 end
+
+
