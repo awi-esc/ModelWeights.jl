@@ -16,10 +16,10 @@ using SimilarityWeights
 path_config = "configs/example_historical_albedo.yml"
 config = SimilarityWeights.validateConfig(path_config);
 
-weights = SimilarityWeights.computeWeights(config);
+weights = SimilarityWeights.getOverallWeights(config);
 ````
 
-Calling ``computeWeights`` will compute weights for all models shared across climate variables. The metadata is adapted accordingly and stores information about the final set of models used. These will also be logged to the console. 
+Calling ``getOverallWeights`` will compute weights for all models shared across climate variables. The metadata is adapted accordingly and stores information about the final set of models used. These will also be logged to the console. 
 
 #### Configuration
 

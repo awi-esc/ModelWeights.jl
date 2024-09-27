@@ -35,7 +35,7 @@ function plotMeansOnMap(means::Union{DimMatrix, DimArray}, title::String, target
         limits = ((lon_min, lon_max), (lat_min, lat_max))
     );
     lines!(GeoMakie.coastlines(); color=:black);
-    hm = heatmap!(ax, lon, lat, Array(means), colormap=ColorSchemes.Reds.colors, alpha=0.8);
+    hm = heatmap!(ax, lon, lat, Array(means), colormap=reverse(ColorSchemes.redblue.colors), alpha=0.8);
     Colorbar(fig[1,2], hm);
 
     if target.save

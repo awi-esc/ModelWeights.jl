@@ -112,7 +112,7 @@ end
 # end
 
 
-@testset "Testset function getOverallWeights" begin
+@testset "Testset function computelWeights" begin
     modelData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["CMIP"]);
     obsData = SimilarityWeights.loadPreprocData(VAR_TO_PREPROC_DATA, ["ERA5"]);
     
@@ -122,8 +122,9 @@ end
     weightsVarsIndep = Dict{String, Number}("tas" => 0.5, 
                                             "pr" => 0.25,
                                             "psl" => 0); 
-    weights = SimilarityWeights.overallWeights(
-        modelData, obsData, 0.5, 0.5, weightsVarsPerform, weightsVarsIndep
+                           
+    weights = SimilarityWeights.computeWeights(
+        modelData, obsData, weightsVarsPerform, weightsVarsIndep, 0.5, 0.5
     );
 
     ds = NCDataset(
@@ -144,3 +145,6 @@ end
 end
 
 
+# TODO: add test
+# @testset "Testset compute weights from config file" begin  
+# end

@@ -398,50 +398,6 @@ function overallGeneralizedDistances(
     return (Di, Sij)
 end
 
-"""
-    overallWeights(
-        modelData::Dict{String, Dict{String, DimArray}},
-        obsData::Dict{String, DimArray}, 
-        sigmaD::Number=0.5, 
-        sigmaS::Number=0.5,
-        weightsPerform::Dict{String, Number}=Dict{String, Number}(), 
-        weightsIndep::Dict{String, Number}=Dict{String, Number}()
-    )
-
-Compute weight for each model in multi-model ensemble according to approach
-from Brunner, Lukas, Angeline G. Pendergrass, Flavio Lehner,
-Anna L. Merrifield, Ruth Lorenz, and Reto Knutti. “Reduced Global Warming
-from CMIP6 Projections When Weighting Models by Performance and
-Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
-995–1012. https://doi.org/10.5194/esd-11-995-2020.
-
-# Arguments:
-- `modelData::Dict{String, Dict{String, DimArray}}` mapping from diagnostic to 
-a dictionary from climate variable to respective model data
-- `obsData::Dict{String, DimArray}`
-- `sigmaD::Number=0.5`
-- `sigmaS::Number=0.5`
-- weightsPerform::Dict{String, Number}=Dict{String, Number}(), 
-- weightsIndep::Dict{String, Number}=Dict{String, Number}()
-"""
-function overallWeights(
-    modelData::Dict{String, Dict{String, DimArray}}, 
-    obsData::Dict{String, Dict{String, DimArray}}, 
-    sigmaD::Number=0.5, 
-    sigmaS::Number=0.5,
-    weightsPerform::Dict{String, Number}=Dict{String, Number}(), 
-    weightsIndep::Dict{String, Number}=Dict{String, Number}()
-)
-    Di, Sij = overallGeneralizedDistances(
-        modelData, obsData, weightsPerform, weightsIndep
-    );
-    performances = performanceParts(Di, sigmaD);
-    independences = independenceParts(Sij, sigmaS);
-    weights = performances ./ independences;
-    normalizedWeights = weights ./ sum(weights);
-    return normalizedWeights
-end
-
 
 """
     computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=nothing)
@@ -457,11 +413,20 @@ vector is provided, unweighted average is computed.
 function computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=nothing)
     data = averageEnsembleVector(data_var, true);
     models = dims(data, :model);
+    
     if isnothing(w)
         w = DimArray(ones(length(models))./length(models), Dim{:model}(Array(models)))
-    elseif length(dims(data, :model)) != length(w)
-        msg = "nb of models for observational and model predictions does not match.";
-        throw(ArgumentError(msg))
+    else
+        # weights may have been computed wrt a different set of variables as we use here, 
+        # so the list of models for which weights have been computed may be shorter 
+        # than the models of the given data (for the same reference period).
+        data = data[model = Where(m -> m in dims(w, :model))]
+        models = dims(data, :model)
+        if length(models) != length(w)
+            msg = "nb of models for observational and model predictions does not match: ";
+            msg2 = "weights: " * length(w) * " , data: " * length(models);
+            throw(ArgumentError(msg * msg2))
+        end
     end
 
     for m in models
@@ -472,3 +437,28 @@ function computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=noth
     return weighted_avg
 end
 
+
+function computeWeights(
+    modelData, 
+    obsData, 
+    weights_vars_perform, 
+    weights_vars_indep, 
+    sigmaD, 
+    sigmaS
+)
+    Di, Sij = overallGeneralizedDistances(
+        modelData, obsData, weights_vars_perform, weights_vars_indep
+    );
+    performances = performanceParts(Di, sigmaD);
+    independences = independenceParts(Sij, sigmaS);
+    weights = performances ./ independences;
+    weights = weights ./ sum(weights);
+    return weights
+end
+
+function logWeights(weights_metadata)
+    models = weights_metadata["full_model_names"];
+    model_key = getCMIPModelsKey(weights_metadata);
+    @info "Nb included models (without ensemble members): " length(weights_metadata[model_key])
+    foreach(m -> @info(m), models)
+end

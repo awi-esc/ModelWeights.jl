@@ -1,0 +1,14 @@
+path_to_recipes: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical
+prefix_recipes: recipe_historical
+target_dir: /albedo/work/projects/p_forclima/britta/similarityweights-output/example_historical_albedo
+
+models_project_name: CMIP6
+
+# SETTINGS FOR PLOTS BASED ON COMPUTED WEIGHTS
+diagnostics:
+  - CLIM
+
+variables: 
+  - tas
+
+name_full_period: historical # the name of the entire time period considered for our data recipes

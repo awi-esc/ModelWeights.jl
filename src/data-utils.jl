@@ -2,8 +2,10 @@ import YAML
 using DimensionalData
 using Interpolations
 
-@kwdef struct Config 
+@kwdef mutable struct Config 
     base_path::String
+    path_to_recipes::String
+    prefix_recipes::String
     target_dir::String
     diagnostics::Vector{String}
     variables::Vector{String}
@@ -344,19 +346,29 @@ function validateConfig(path_config::String)
             weights_variables
         )
     end
+    # one of base_path and path_to_recipes must be provided
+    base_path = get(config_yaml, "base_path", "")
+    path_to_recipes = get(config_yaml, "path_to_recipes", "")
+    if isempty(base_path) && isempty(path_to_recipes)
+        msg = "Either 'base_path' (path to directory that contains preproc-directory) or 'path_to_recipes' (path to directory that contains for every variable a subfolder which in turn contain the preproc-directories.)";
+        throw(ArgumentError(msg))
+    end
     config = Config(
-        base_path = config_yaml["base_path"],
+        base_path = base_path,
+        path_to_recipes = path_to_recipes,
+        prefix_recipes = get(config_yaml, "prefix_recipes", ""),
         target_dir = joinpath(config_yaml["target_dir"], getCurrentTime()),
         
         diagnostics = config_yaml["diagnostics"],
         variables = config_yaml["variables"],
-        models_project_name = config_yaml["models_project_name"],
         
-        name_full_period = get(config_yaml, "name_full_period", ""),
         name_ref_period = get(config_yaml, "name_ref_period", ""),
+        name_full_period = get(config_yaml, "name_full_period", ""),
         name_obs_period = get(config_yaml, "name_obs_period", ""),
+        
+        models_project_name = config_yaml["models_project_name"],
         obs_data_name = get(config_yaml, "obs_data_name", ""),
-
+        
         weights_variables = weights_variables,
         weight_contributions = get(config_yaml, "weight_contributions", nothing)
     ) 
@@ -455,8 +467,27 @@ Load climate model data for variables and time periods defined in 'config'.
 - `name_time_period`: e.g. 'historical', 'historical1'
 - `name_data`: e.g. CMIP6, CMIP5, ERA5
 """
-function loadDataFromConfig(config::Config, name_time_period::String, name_data::String)
-    pathsDict = buildPathsToVarData(config,  name_time_period);
+function loadDataFromConfig(config::Config, name_time_period::String, name_data::String) 
+    pathsDict = Dict{String, Dict{String, String}}();
+    config = deepcopy(config);
+    if !isempty(config.path_to_recipes)
+        variables = deepcopy(config.variables)
+        for var in variables
+            dirname = var
+            if !isempty(config.prefix_recipes)
+                dirname = config.prefix_recipes * "_" * var
+            end
+            config.base_path = joinpath(config.path_to_recipes, dirname)
+            config.variables = [var]
+            newDict = buildPathsToVarData(config,  name_time_period)
+            for diagnostic in keys(newDict)
+                merged_subdic = get(pathsDict, diagnostic, Dict{String, String}())
+                pathsDict[diagnostic] = merge(merged_subdic, newDict[diagnostic])
+            end
+        end
+    else
+        pathsDict = buildPathsToVarData(config,  name_time_period)
+    end
     data = loadPreprocData(pathsDict, [name_data]);
     return data
 end
@@ -489,7 +520,9 @@ function saveWeights(
     for (k, v) in weights.metadata
         if isa(v, Dict)
             ds.attrib[k] = [dk * "_" * string(dv) for (dk, dv) in v]
-        else 
+        elseif isa(v, String)
+            ds.attrib[k] = v
+        else
             ds.attrib[k] = Vector{String}(v)
         end
     end
@@ -552,17 +585,34 @@ function loadWeightsAsDimArray(path_to_file::String)
     return arr
 end
 
+
+"""
+    loadModelData(config::Config)
+
+Load model data for full and/or reference period as defined in config.
+Model data is only included if the model has data for all variables. 
+If full and reference period are loaded, only the data of the models that 
+they have in common are loaded.
+"""
 function loadModelData(config::Config)
     modelDataFull = nothing
     modelDataRef = nothing
-    if !isempty(config.name_full_period)
+    load_full_period = !isempty(config.name_full_period);
+    load_ref_period = !isempty(config.name_ref_period);
+    
+    if load_full_period
         modelDataFull = loadDataFromConfig(config, config.name_full_period, config.models_project_name);
         modelDataFull = getCommonModelsAcrossVars(modelDataFull);
     end
-    if !isempty(config.name_ref_period)
+    if load_ref_period
         modelDataRef = loadDataFromConfig(config, config.name_ref_period, config.models_project_name);
         modelDataRef = getCommonModelsAcrossVars(modelDataRef);
     end
+
+    if load_full_period && load_ref_period
+        modelDataFull, modelDataRef = getSharedModelData(modelDataFull, modelDataRef);
+    end
+
     return (modelDataFull, modelDataRef)
 end
 
@@ -585,4 +635,6 @@ function getInterpolatedWeightedQuantiles(quantiles, vals, weights=nothing)
      
     return interp_linear(quantiles)
 end
+
+
 

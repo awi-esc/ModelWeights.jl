@@ -122,3 +122,10 @@ function getClosestGridPoint(location::Dict, longitudes::Vector, latitudes::Vect
     lon = longitudes[idx_lon];
     return Dict([("name", location["name"]), ("lon", lon), ("lat", lat)])
 end
+
+
+function kelvinToCelsius(data::DimArray)
+    data = data.-273.15
+    data.metadata["units"] = "°C"
+    return data
+end
