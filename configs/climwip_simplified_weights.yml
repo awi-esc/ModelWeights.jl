@@ -1,4 +1,4 @@
-base_path: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20240926_140539
+base_path: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20240930_055424
 target_dir: /albedo/work/projects/p_forclima/britta/similarityweights-output/climwip-simplified
 models_project_name: CMIP5
 obs_data_name: ERA5
@@ -12,9 +12,9 @@ variables:
   - pr
   - psl
 
-name_ref_period: period_1995_2014 # diagnostic name which is the name of the reference time period for our data recipes
+name_ref_period: period_1995_2014_weights # diagnostic name which is the name of the reference time period for our data recipes
 name_full_period: "" # identical to not setting it
-name_obs_period: period_1995_2014
+name_obs_period: period_1995_2014_weights
 
 
 weight_contributions:

@@ -46,24 +46,33 @@ dimension of 'modelDataAllVars' which may contain the predictions of all
 ensemble members. Here, these are averaged, s.t. for each model there is a 
 just one prediction.
 """
-function getWeightedAverages(config::Config, weights::DimArray)
+function getWeightedAverages(config::Config, weights::DimArray, period::String)
     ref_period_weights = config.name_ref_period
-    # if isempty(ref_period_weights)
-    #     config.name_ref_period = weights.metadata["name_ref_period"]
-    # else 
     if !isempty(ref_period_weights) && (ref_period_weights != weights.metadata["name_ref_period"])
         msg = "weights were computed for period: " * weights.metadata["name_ref_period"]; 
         msg2 = ", but in config it is set to" * ref_period_weights;
-        throw(ArgumentError(msg * msg2))
+        @warn msg * msg2
     end
-    # end
-    modelDataFull, _ = loadModelData(config);
+    modelDataFull, modelDataRef = loadModelData(config);
     
     results = Dict{String, Dict{String, DimArray}}("weighted" => Dict(), "unweighted" => Dict());
     # TODO: maybe dont hard code CLIM here
-    climatologies = modelDataFull["CLIM"]
+    if period == "ref"
+        climatologies = modelDataRef["CLIM"]
+    elseif period == "full"
+        climatologies = modelDataFull["CLIM"]
+    else
+        throw(ArgumentError("Period must be one of: 'ref', 'full'."))
+    end
+    if isnothing(climatologies)
+        throw(ArgumentError("Period for computing weighted average is " * period * " but name_" * period * "_period not specified in config file!"))
+    end
     for var in keys(climatologies)
         data = climatologies[var];
+        # weights and data must either both include all ensemble members or averages
+        if length(weights) < length(dims(data, :model))
+            data = averageEnsembleVector(data, true);
+        end
         results["unweighted"][var] = computeWeightedAvg(data);
         results["weighted"][var] = computeWeightedAvg(data, weights);
     end

@@ -492,7 +492,6 @@ function loadDataFromConfig(config::Config, name_time_period::String, name_data:
     return data
 end
 
-# also save averages! (maybe two functions)
 function saveWeights(
         weights::DimVector,
         target_dir::String, 
@@ -541,7 +540,7 @@ function saveWeights(
     #         var[:,:] = coalesce.(Array(values), missing)  
     #     end
     # end
-
+    
     @info "saved data to " path_to_target
 end
 
@@ -617,7 +616,7 @@ function loadModelData(config::Config)
 end
 
 
-function getInterpolatedWeightedQuantiles(quantiles, vals, weights=nothing)
+function computeInterpolatedWeightedQuantiles(quantiles, vals, weights=nothing)
     if isnothing(weights)
         weights = ones(length(vals));
     end
@@ -637,4 +636,31 @@ function getInterpolatedWeightedQuantiles(quantiles, vals, weights=nothing)
 end
 
 
+"""
+    getUncertaintyRanges(data::DimArray, weights::DimArray, quantiles::Vector{Number})
+    
+# Arguments:
+- `data`: has dimensions 'time', 'model'
+- `weights`: has dimension 'model', sum up to 1
+- `quantiles`: Vector with two entries (btw. 0 and 1) [lower_bound, upper_bound]
+"""
+function getUncertaintyRanges(
+    data,#::DimArray,
+    weights, #::DimArray,
+    quantiles=[0.167, 0.833]
+)
+    unweightedRanges = [];
+    weightedRanges = [];
+    for t in dims(data, :time)
+        lower, upper = computeInterpolatedWeightedQuantiles(
+            quantiles, Array(data[time = At(t)]), weights
+        );
+        push!(weightedRanges, [lower, upper]);
+        lower, upper = computeInterpolatedWeightedQuantiles(
+            quantiles, Array(data[time = At(t)])
+        );
+        push!(unweightedRanges, [lower, upper]);
+    end
 
+    return (weighted=weightedRanges, unweighted=unweightedRanges)
+end

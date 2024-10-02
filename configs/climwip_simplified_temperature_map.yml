@@ -1,5 +1,4 @@
-base_path: /albedo/work/projects/p_forclima/britta/esmvaltool-output/climwip-simplified_20240920_082938
-experiment: historical
+base_path: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20240930_055424
 target_dir: /albedo/work/projects/p_forclima/britta/similarityweights-output/climwip-simplified
 
 diagnostics:
@@ -7,27 +6,16 @@ diagnostics:
 
 variables: 
   - tas
-  - pr
-  - psl
 
-name_full_period: calculate_weights_climwip # the name of the entire time period considered for our data recipes
-name_ref_period: calculate_weights_climwip
-name_obs_period: calculate_weights_climwip
 
 models_project_name: CMIP5
 obs_data_name: ERA5
 
-weight_contributions:
-  performance: 0.5
-  independence: 0.5
 
-weights_variables:
-  performance:
-    tas: 1
-    psl: 1
-    pr: 2
-
-  independence:
-    tas: 0.5
-    pr: 0.25
-    psl: 0
+# SETTINGS FOR PLOTS BASED ON COMPUTED WEIGHTS
+diagnostics:
+  - CLIM 
+variables: 
+  - tas
+name_full_period: period_2081_2100_temp_map # the name of the entire time period considered for our data recipes
+name_ref_period: period_1995_2014_temp_map

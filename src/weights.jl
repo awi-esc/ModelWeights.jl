@@ -332,6 +332,7 @@ function averageEnsembleMembers(generalizedDistances::DimArray, updateMeta::Bool
 end
 
 
+
 """
     performanceParts(generalizedDistances::DimArray)
 
@@ -410,8 +411,7 @@ vector is provided, unweighted average is computed.
 - `data_var`: DimArray with dimensions lon, lat, model
 - `w`: DimArray with dimension 'model'
 """
-function computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=nothing)
-    data = averageEnsembleVector(data_var, true);
+function computeWeightedAvg(data::DimArray, w::Union{DimArray, Nothing}=nothing)
     models = dims(data, :model);
     
     if isnothing(w)
@@ -455,6 +455,26 @@ function computeWeights(
     weights = weights ./ sum(weights);
     return weights
 end
+
+
+function makeWeightPerEnsembleMember(weights::DimArray)
+    full_model_names = weights.metadata["full_model_names"]
+    models = weights.metadata[getCMIPModelsKey(weights.metadata)]
+    nb_ensemble_members = [];
+    for model in models
+        n = count(member -> startswith(member, model), full_model_names)
+        push!(nb_ensemble_members, n)
+    end
+    weights_all_members = []
+    for (idx, w) in enumerate(weights)
+        n_members = nb_ensemble_members[idx]
+        for _ in range(1, n_members)
+            push!(weights_all_members, w/nb_ensemble_members[idx])
+        end
+    end
+    return DimArray(weights_all_members, Dim{:model}(full_model_names), metadata = weights.metadata)
+end
+
 
 function logWeights(weights_metadata)
     models = weights_metadata["full_model_names"];

@@ -147,7 +147,13 @@ function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
     return fig
 end
 
+"""
+    plotMeanData(config::Config, means::Dict{String, Dict{String, DimArray}})
 
+# Arguments:
+- `config`: path to configuration file
+- `means`: maps from 'weighted'/'unweighted' to climate variables to mean data.
+"""
 function plotMeanData(config::Config, means::Dict{String, Dict{String, DimArray}})
     for avg_type in keys(means)
         data = means[avg_type]
@@ -172,39 +178,29 @@ end
 
 function plotTempGraph(
     data::DimArray, 
-    weights::DimArray, 
-    name_ref_period::String, 
-    lb::Number=0.167, 
-    ub::Number=0.833
+    uncertaintyRanges::NamedTuple,
+    #weights::DimArray, 
+    title::String,
+    quantilesLabel::String
 )
-    quantiles = [lb, ub]
-    unweightedRanges = [];
-    weightedRanges = [];
-
-    for t in dims(data, :time)
-        lower, upper = getInterpolatedWeightedQuantiles(quantiles, Array(data[time = At(t)]), weights);
-        push!(weightedRanges, [lower, upper]);
-        lower, upper = getInterpolatedWeightedQuantiles(quantiles, Array(data[time = At(t)]));
-        push!(unweightedRanges, [lower, upper]);
-    end
     f = Figure(); 
     years = Dates.year.(Array(dims(data, :time)))
     xticks = years[1] : 20 : years[end]
     ax = Axis(f[1,1], 
         xticks = (xticks, string.(xticks)), 
         limits = ((years[1]-10, years[end]+10), (-1, 5)),
-        title = "Temperature anomaly relative to " * name_ref_period,
+        title = title,#"Temperature anomaly relative to " * name_ref_period,
         xlabel = "Year", 
-        ylabel = "Temperature anomaly °C"
+        ylabel = "Temperature in " * data.metadata["units"]# "Temperature anomaly °C"
     );
-    # add ranges 
-    lowerUnw = getindex.(unweightedRanges, 1);
-    upperUnw = getindex.(unweightedRanges, 2);
+    # add ranges TODO: make label with fn argument
+    lowerUnw = getindex.(uncertaintyRanges.unweighted, 1);
+    upperUnw = getindex.(uncertaintyRanges.unweighted, 2);
     band!(ax, years, vec(lowerUnw), vec(upperUnw), color = (:red, 0.2), 
-         label = "Non-weighted 16.7-83.3perc range");
+         label = "Non-weighted 16.7-83.3 perc range");
     
-    lowerWeighted = getindex.(weightedRanges, 1);
-    upperWeighted = getindex.(weightedRanges, 2);
+    lowerWeighted = getindex.(uncertaintyRanges.weighted, 1);
+    upperWeighted = getindex.(uncertaintyRanges.weighted, 2);
     band!(ax, years, vec(lowerWeighted), vec(upperWeighted), color = (:green, 0.2), 
           label = "Weighted 16.7-83.3perc range");
         
@@ -213,11 +209,11 @@ function plotTempGraph(
         y = data[model = At(m)] 
         lines!(ax, years, Array(y), color = :gray80, label = "ensemble members")
     end
-    unweightedAvg =  mean(data, dims = :model);
-    weightedAvg = sum(repeat(weights', length(dims(data, :time)), 1) .* data, dims=:model);
-    lines!(ax, years, vec(unweightedAvg), color = :red, label = "Non-weighted mean")
-    lines!(ax, years, vec(weightedAvg), color = :green, label = "Weighted mean")
-
+    # TODO: add (un-)weighted averages compute before!
+    # unweightedAvg =  mean(data, dims = :model);
+    # weightedAvg = sum(repeat(weights', length(dims(data, :time)), 1) .* data, dims=:model);
+    # lines!(ax, years, vec(unweightedAvg), color = :red, label = "Non-weighted mean")
+    # lines!(ax, years, vec(weightedAvg), color = :green, label = "Weighted mean")
     axislegend(ax, merge = true, position = :lt)
     return f
 end
