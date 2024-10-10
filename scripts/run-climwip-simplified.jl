@@ -110,7 +110,7 @@ begin
     @assert approxEqual
 
     d = DimArray(data_ww_orig, (Dim{:lon}(Array(dims(diff_ww, :lon))), Dim{:lat}(Array(dims(diff_ww, :lat)))))
-    sw.plotMeansOnMap(d, "Weighted mean temp. change 2081-2100 - 1995-2014", ColorSchemes.Reds.colors)
+    sw.plotMeansOnMap(d, "Weighted mean temp. change 2081-2100 - 1995-2014", ColorSchemes.Reds.colors);
 end
 
 # TODO: go through these:

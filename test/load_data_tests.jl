@@ -6,7 +6,7 @@ include("data.jl")
     @test length(keys(modelData["CLIM"])) == 3;
     @test size(modelData["CLIM"]["tas"]) == (20, 19, 7)
     dimensions = DimensionalData.dims(modelData["CLIM"]["tas"], :model);
-    @test  Array(dimensions) == ["ACCESS1-0", "ACCESS1.3", "BNU-ESM", "CCSM4", "CCSM4", "CCSM4", "CCSM4"]
+    @test  Array(dimensions) == ["ACCESS1-0#r1i1p1", "ACCESS1.3#r1i1p1", "BNU-ESM#r1i1p1", "CCSM4#r1i1p1", "CCSM4#r2i1p1", "CCSM4#r3i1p1", "CCSM4#r4i1p1"]
     @warn "ACCESS1.3 should be ACCESS1-3 according to filenames (and content of metadata.yml), but the actual metadata says ACCESS1.3 instead."
 end
 

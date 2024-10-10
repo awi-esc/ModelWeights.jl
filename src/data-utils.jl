@@ -42,7 +42,6 @@ function buildCMIP5EnsembleMember(realizations, initializations, physics, n)
             return map(x -> prefix * string(x), elem)
         end
     end
-    
     rips = [concat(realizations, "r"), concat(initializations, "i"), concat(physics, "p")];
     variants = [join(k, "") for k in zip(rips...)]
     return variants
