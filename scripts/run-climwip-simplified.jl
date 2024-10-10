@@ -99,7 +99,7 @@ begin
     diff_ww = sw.sortLongitudesWest2East(diff_ww)
     
     # TODO: diff_ww has more missing data than in original data from climwip
-    sw.plotMeansOnMap(diff_ww, "Weighted mean temp. change 2081-2100 - 1995-2014", ColorSchemes.Reds.colors)
+    f = sw.plotMeansOnMap(diff_ww, "Weighted mean temp. change 2081-2100 - 1995-2014", ColorSchemes.Reds.colors)
     
     # compare to original data (must have adapted the latitudes above)
     data_orig = NCDataset("/albedo/home/brgrus001/SimilarityWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_map/weighted_temperature_map/temperature_change_weighted_map.nc");
@@ -111,6 +111,8 @@ begin
 
     d = DimArray(data_ww_orig, (Dim{:lon}(Array(dims(diff_ww, :lon))), Dim{:lat}(Array(dims(diff_ww, :lat)))))
     sw.plotMeansOnMap(d, "Weighted mean temp. change 2081-2100 - 1995-2014", ColorSchemes.Reds.colors);
+    
+    f
 end
 
 # TODO: go through these:
