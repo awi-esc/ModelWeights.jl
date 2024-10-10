@@ -94,14 +94,14 @@ function sortLongitudesWest2East(data::DimArray)
     sorted_lon = [Array(west); Array(east)];
 
     # necessary to specify that lookup dimension values aren't sorted anymore!
-    # otherwise Selector At won't work!
+    # otherwise Selector At won't work! does seem to work don't know TODO: CHECK THIS!!
     lookup_lon = Lookups.Sampled(
         sorted_lon;
         span=Lookups.Irregular(minimum(lon), maximum(lon)), 
         order=Lookups.Unordered()
     )
-    data = set(data, lon = lookup_lon)
     data = data[lon=At(sorted_lon)]
+    data = DimensionalData.Lookups.set(data, lon = lookup_lon)
     return data
 end
 

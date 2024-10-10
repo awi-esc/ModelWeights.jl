@@ -51,7 +51,7 @@ end
 
 ##### Temperature graph #####
 begin
-    #weights = sw.loadWeightsAsDimArray("/albedo/work/projects/p_forclima/britta/similarityweights-output/climwip-simplified/2024-10-09_08_25/weights.nc");
+    weights = sw.loadWeightsAsDimArray("/albedo/work/projects/p_forclima/britta/similarityweights-output/climwip-simplified/2024-10-09_08_25/weights.nc");
     weights_all_members = sw.makeWeightPerEnsembleMember(weights);
     
     path_config_temp_graph = "configs/climwip_simplified_temperature_graph.yml";
@@ -93,9 +93,11 @@ begin
     data_ref =  modelDataRef["CLIM"]["tas"][lat = Where(x -> x <= 68.75)];
 
     # Compute weighted mean temperature change: 2081-2100 minus 1995-2014 (°C)"
-    avgs_full = sw.computeWeightedAvg(sw.sortLongitudesWest2East(data_full), weights_all_members);
-    avgs_ref = sw.computeWeightedAvg(sw.sortLongitudesWest2East(data_ref), weights_all_members);
+    avgs_full = sw.computeWeightedAvg(data_full, weights_all_members);
+    avgs_ref = sw.computeWeightedAvg(data_ref, weights_all_members);
     diff_ww = avgs_full .- avgs_ref;
+    diff_ww = sw.sortLongitudesWest2East(diff_ww)
+    
     # TODO: diff_ww has more missing data than in original data from climwip
     sw.plotMeansOnMap(diff_ww, "Weighted mean temp. change 2081-2100 - 1995-2014", ColorSchemes.Reds.colors)
     
