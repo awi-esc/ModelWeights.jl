@@ -9,12 +9,6 @@ using GeoMakie
 
 CairoMakie.activate!(type = "svg")
 
-@kwdef mutable struct Target
-    directory::String
-    filename::String
-    save::Bool
-end
-
 function getFigure(figsize, fontsize)
     size_pt = 72 .* figsize
     fig=Figure(size= size_pt, fontsize=fontsize)
@@ -87,6 +81,29 @@ function getCurrentTime()
     return currentDay * currentTime
 end
 
+
+"""
+    sortLongitudesWest2East(data::DimArray)
+
+Arrange 'data' such that western latitudes come first, then eastern latitudes.
+"""
+function sortLongitudesWest2East(data::DimArray)
+    lon = dims(data, :lon)
+    east = lon[lon .< 180]
+    west = lon[lon .>= 180]
+    sorted_lon = [Array(west); Array(east)];
+
+    # necessary to specify that lookup dimension values aren't sorted anymore!
+    # otherwise Selector At won't work!
+    lookup_lon = Lookups.Sampled(
+        sorted_lon;
+        span=Lookups.Irregular(minimum(lon), maximum(lon)), 
+        order=Lookups.Unordered()
+    )
+    data = set(data, lon = lookup_lon)
+    data = data[lon=At(sorted_lon)]
+    return data
+end
 
 """
     convertKgsToSv!(vec:DimArray)

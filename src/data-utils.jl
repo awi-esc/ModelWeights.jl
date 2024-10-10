@@ -19,6 +19,8 @@ using Interpolations
 end
 
 
+const MODEL_MEMBER_DELIM = "#"
+
 function warnIfFlawedMetadata(attributes, filename)
     isFlawed = false;
     if "branch_time_in_parent" in keys(attributes) && isa(attributes["branch_time_in_parent"], String)
@@ -47,7 +49,7 @@ function buildCMIP5EnsembleMember(realizations, initializations, physics, n)
 end
 
 function getUniqueModelIds(
-    meta::Dict{String, Union{String, Array, Dict}},
+    meta::Dict, #{String, Union{String, Array, Dict}},
     key_model_names::String
 )
     mip_era = get(meta, "mip_era", get(meta, "project_id", ""))
@@ -60,7 +62,7 @@ function getUniqueModelIds(
             length(model_names)
         );
         models = map(
-            x->join(x, "__"), 
+            x->join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM), 
             zip(model_names, variants)
         );
         @warn "For CMIP5, full model names dont include grid."
@@ -68,7 +70,7 @@ function getUniqueModelIds(
         variants = meta["variant_label"];
         grids = meta["grid_label"]; 
         models = map(
-            x->join(x, "__", "__"), 
+            x->join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM), 
             zip(model_names, variants, grids)
         );
     end
@@ -110,9 +112,11 @@ function updateMetadata!(
     if !isempty(get(meta, "source_id", get(meta, "model_id", "")))
         key_model_name = getCMIPModelsKey(meta);
         meta["full_model_names"] = getUniqueModelIds(meta, key_model_name)
+        # add mapping from model (ensemble) names to indices in metadata arrays
+        meta["ensemble_names"] = Array(dims(data, :model))
+        meta["indices_map"] = getIndicesMapping(meta["ensemble_names"]);
     end
-    # add mapping from model names to indices in metadata arrays
-    meta["indices_map"] = getIndicesMapping(Array(dims(data, :model)));
+
 end
 
 
@@ -218,8 +222,7 @@ function loadPreprocData(
                     name = get(ds.attrib, "source_id", get(ds.attrib, "model_id", ""));
                     if !isempty(name)
                         push!(sources, name);
-                    else
-                        # for observational data
+                    else # observational data does not have model name
                         push!(sources, filename)
                     end
 
@@ -257,6 +260,14 @@ function loadPreprocData(
             dimData = cat(data...; dims = (Dim{:model}(sources)));
             updateMetadata!(meta, dimData);
             dimData = rebuild(dimData; metadata = meta);
+
+            # set model names in model dimension to full model name which was 
+            # built in updateMetadata! (cannot be done before since missing 
+            # files etc. have to be accounted for first)
+
+            if !isempty(get(meta, "full_model_names", []))
+                dimData = set(dimData, :model => meta["full_model_names"])
+            end
             dataAllVars[diagnostic][climVar] = dimData;
         end
     end
@@ -452,13 +463,13 @@ function keepModelSubset(data::DimArray, shared_models::Vector{String})
     @assert length(indices) == length(shared_models)
     keepMetadataSubset!(data.metadata, indices);
     data = data[model = indices];
-    data.metadata["indices_map"] = getIndicesMapping(Array(dims(data, :model)));
+    data.metadata["indices_map"] = getIndicesMapping(data.metadata["ensemble_names"])
     return data
 end
 
 
 """
-    loadModelDataFromConfig(config::Config, name_time_period::String, name_data::String)
+    loadDataFromConfig(config::Config, name_time_period::String, name_data::String)
 
 Load climate model data for variables and time periods defined in 'config'. 
 
@@ -548,8 +559,8 @@ end
     updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
 
 Vectors in metadata 'meta' have to refer to different models. These are now summarized such that
-each vector only contains N entries where N is the number of Models (without ensemble members).
-If the metadata for the ensemble members of a Model differ across the members, the respective 
+each vector only contains N entries where N is the number of Ensembles/Models (i.e. without the unique ensemble members).
+If the metadata for the ensemble members of a Model/Ensemble differ across the members, the respective 
 entry in the vector will be a vector itself. 
 """
 function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
@@ -615,12 +626,16 @@ function loadModelData(config::Config)
     return (modelDataFull, modelDataRef)
 end
 
+"""
+    computeInterpolatedWeightedQuantiles
 
+This implementation follows the one used by Brunner et al.
+"""
 function computeInterpolatedWeightedQuantiles(quantiles, vals, weights=nothing)
     if isnothing(weights)
         weights = ones(length(vals));
     end
-    indicesSorted = sortperm(vals);
+    indicesSorted = Array(sortperm(vals)); # gives indices of smallest to largest data point
     weightsSorted = weights[indicesSorted];
     weightedQuantiles = cumsum(weightsSorted) - 0.5 * weightsSorted;
     weightedQuantiles = reshape(weightedQuantiles, length(weightedQuantiles), 1);
@@ -636,6 +651,7 @@ function computeInterpolatedWeightedQuantiles(quantiles, vals, weights=nothing)
 end
 
 
+
 """
     getUncertaintyRanges(data::DimArray, weights::DimArray, quantiles::Vector{Number})
     
@@ -645,15 +661,15 @@ end
 - `quantiles`: Vector with two entries (btw. 0 and 1) [lower_bound, upper_bound]
 """
 function getUncertaintyRanges(
-    data,#::DimArray,
-    weights, #::DimArray,
+    data::DimArray,
+    w::DimArray,
     quantiles=[0.167, 0.833]
 )
     unweightedRanges = [];
     weightedRanges = [];
     for t in dims(data, :time)
         lower, upper = computeInterpolatedWeightedQuantiles(
-            quantiles, Array(data[time = At(t)]), weights
+            quantiles, Array(data[time = At(t)]), w
         );
         push!(weightedRanges, [lower, upper]);
         lower, upper = computeInterpolatedWeightedQuantiles(
@@ -663,4 +679,20 @@ function getUncertaintyRanges(
     end
 
     return (weighted=weightedRanges, unweighted=unweightedRanges)
+end
+
+"""
+    renameModelDimsFromMemberToEnsemble(data::DimArray, dim_names::Vector{String})
+
+# Arguments:
+- `data`
+- `dim_names`: names of dimensions to be changed, e.g. 'model', 'model1', etc.
+"""
+function renameModelDimsFromMemberToEnsemble(data::DimArray, dim_names::Vector{String})
+    for dim in dim_names
+        unique_members = dims(data, Symbol(dim))
+        ensembles = map(x -> split(x, MODEL_MEMBER_DELIM)[1], unique_members)
+        data = set(data, Symbol(dim) => ensembles)
+    end
+    return data
 end

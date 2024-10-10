@@ -16,6 +16,30 @@ avgs = sw.getWeightedAverages(config, weights);
 
 # TODO: add title weights based on which variables and diagnostics, add this to metadata when saving weights!
 sw.plotWeights(weights)
+
+"""
+    plotMeanData(config::Config, means::Dict{String, Dict{String, DimArray}})
+
+# Arguments:
+- `config`: path to configuration file
+- `means`: maps from 'weighted'/'unweighted' to climate variables to mean data.
+"""
+function plotMeanData(config::Config, means::Dict{String, Dict{String, DimArray}})
+    for avg_type in keys(means)
+        data = means[avg_type]
+        for var in keys(data)
+            var_data = data[var]
+            title = join(
+                [avg_type, var_data.metadata["long_name"], "in", 
+                 var_data.metadata["units"], "\n experiment:",
+                 var_data.metadata["experiment_id"]
+                ], " ", " "
+            );
+            f = plotMeansOnMap(var_data,  title);
+            sw.savePlot(f, config.target_dir, join([avg_type, var_data.metadata["standard_name"], "png"], "_", "."))
+        end
+    end
+end
 sw.plotMeanData(config, avgs)
 
 # convert to celsius

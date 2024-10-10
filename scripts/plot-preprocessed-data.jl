@@ -34,13 +34,10 @@ data = getData(varToPath, diagnostic, climVar);
 means = dropdims(mean(data, dims=:model), dims=:model);
 f1 = sw.plotMeansOnMap(
     means, 
-    "Precipitation means historical period", 
-    sw.Target(
-        directory  = "output";
-        filename = "precipitation-historical1-unweighted-avg.png",
-        save = true
-    )
+    "Precipitation means historical period"
 );
+sw.savePlot(f1, "output", "precipitation-historical1-unweighted-avg.png")
+
 
 # histogram of all data for specific location
 # change longitudes to map from -180 to 180

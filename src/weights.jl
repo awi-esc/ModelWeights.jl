@@ -252,6 +252,8 @@ different variables for instance.
 """
 function averageEnsembleVector(data::DimArray, updateMeta::Bool)
     grouped = nothing;
+    data = renameModelDimsFromMemberToEnsemble(data, ["model"])
+    
     if !hasdim(data, :variable)
         grouped = groupby(data, :model=>identity);
         averages = map(d -> mean(d, dims=:model), grouped);
@@ -294,6 +296,7 @@ If true attribute indices_map is set in metadata. Set to false if vectors refer 
 different variables for instance. 
 """
 function averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
+    data = renameModelDimsFromMemberToEnsemble(data, ["model1", "model2"])
     if !hasdim(data, :variable)
         grouped = groupby(data, :model1 => identity, :model2 => identity);
         averages = map(d -> mean(mean(d, dims=:model2), dims=:model1)[1,1], grouped);
@@ -413,7 +416,7 @@ vector is provided, unweighted average is computed.
 """
 function computeWeightedAvg(data::DimArray, w::Union{DimArray, Nothing}=nothing)
     models = dims(data, :model);
-    
+    data = deepcopy(data)
     if isnothing(w)
         w = DimArray(ones(length(models))./length(models), Dim{:model}(Array(models)))
     else
@@ -424,7 +427,7 @@ function computeWeightedAvg(data::DimArray, w::Union{DimArray, Nothing}=nothing)
         models = dims(data, :model)
         if length(models) != length(w)
             msg = "nb of models for observational and model predictions does not match: ";
-            msg2 = "weights: " * length(w) * " , data: " * length(models);
+            msg2 = "weights: " * string(length(w)) * " , data: " * string(length(models));
             throw(ArgumentError(msg * msg2))
         end
     end

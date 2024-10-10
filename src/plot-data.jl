@@ -1,10 +1,11 @@
 using ColorSchemes
-""" plotMeansOnMap(means::DimArray, title::String)
+""" plotMeansOnMap(means::DimArray, title::String, colors=nothing)
     
 Plot contours of world with an overlayed heatmap that shows the data which 
 correspond to mean value for each position in considered grid. 
 """
-function plotMeansOnMap(means::Union{DimMatrix, DimArray}, title::String, target::Target=nothing)
+function plotMeansOnMap(means::DimArray, title::String, colors=nothing)
+    means = sortLongitudesWest2East(means);
     dims_lat = Array(dims(means, :lat));
     dims_lon = Array(dims(means, :lon));
     if any(x -> x > 179, dims_lon)
@@ -34,13 +35,13 @@ function plotMeansOnMap(means::Union{DimMatrix, DimArray}, title::String, target
         yticks = (dims_lat[1 : step_lat : end], latLabels[1 : step_lat : end]),
         limits = ((lon_min, lon_max), (lat_min, lat_max))
     );
+    if isnothing(colors)
+        colors = reverse(ColorSchemes.redblue.colors)
+    end
+    hm = heatmap!(ax, lon, lat, Array(means), colormap=colors, alpha=0.8);
     lines!(GeoMakie.coastlines(); color=:black);
-    hm = heatmap!(ax, lon, lat, Array(means), colormap=reverse(ColorSchemes.redblue.colors), alpha=0.8);
     Colorbar(fig[1,2], hm);
 
-    if target.save
-        savePlot(fig, target.directory, target.filename)
-    end
     return fig
 end
 
@@ -147,39 +148,11 @@ function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
     return fig
 end
 
-"""
-    plotMeanData(config::Config, means::Dict{String, Dict{String, DimArray}})
-
-# Arguments:
-- `config`: path to configuration file
-- `means`: maps from 'weighted'/'unweighted' to climate variables to mean data.
-"""
-function plotMeanData(config::Config, means::Dict{String, Dict{String, DimArray}})
-    for avg_type in keys(means)
-        data = means[avg_type]
-        for var in keys(data)
-            var_data = data[var]
-            title = join(
-                [avg_type, var_data.metadata["long_name"], "in", 
-                 var_data.metadata["units"], "\n experiment:",
-                 var_data.metadata["experiment_id"]
-                ], " ", " "
-            );
-            target = Target(
-                directory = config.target_dir;
-                filename = join([avg_type, var_data.metadata["standard_name"], "png"], "_", "."),
-                save = true
-            )
-            plotMeansOnMap(var_data,  title, target);
-        end
-    end
-end
-
 
 function plotTempGraph(
     data::DimArray, 
+    averages::NamedTuple, 
     uncertaintyRanges::NamedTuple,
-    #weights::DimArray, 
     title::String,
     quantilesLabel::String
 )
@@ -212,8 +185,9 @@ function plotTempGraph(
     # TODO: add (un-)weighted averages compute before!
     # unweightedAvg =  mean(data, dims = :model);
     # weightedAvg = sum(repeat(weights', length(dims(data, :time)), 1) .* data, dims=:model);
-    # lines!(ax, years, vec(unweightedAvg), color = :red, label = "Non-weighted mean")
-    # lines!(ax, years, vec(weightedAvg), color = :green, label = "Weighted mean")
+    
+    lines!(ax, years, vec(averages.unweighted), color = :red, label = "Non-weighted mean")
+    lines!(ax, years, vec(averages.weighted), color = :green, label = "Weighted mean")
     axislegend(ax, merge = true, position = :lt)
     return f
 end
