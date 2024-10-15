@@ -1,13 +1,14 @@
 """
-    plotPerformanceWeights(wP::DimArray, wP_combined::DimArray)
+    plotPerformanceWeights(wP::DimArray; wP_combined::Union{DimArray, Nothing}=nothing, isBarPlot::Bool=true)
 
 # Arguments:
-- wP: performanceWeights with dimensions: model, variable
-- wP_combined: performanceWeights across variables combined into single weight 
+- `wP`: performanceWeights with dimensions: model, variable
+- `wP_combined`: performanceWeights across variables combined into single weight 
 per model
+- `isBarPlot`: 
 """
 function plotPerformanceWeights(
-    wP::DimArray, wP_combined::Union{DimArray, Nothing}=nothing, isBarPlot::Bool=true
+    wP::DimArray; wP_combined::Union{DimArray, Nothing}=nothing, isBarPlot::Bool=true
 )
     figures = [];
     models = Array(dims(wP, :model));
@@ -68,33 +69,6 @@ function plotIndependenceWeights(distances::DimArray)
     end
     return figures
 end
-
-#     models = Array(dims(wP, :model));
-#     xs = 1:length(models)
-#     ax = Axis(
-#         fig[1,1],
-#         xticks = (xs, models), 
-#         yticks = (xs, models),
-#         xticklabelrotation = pi/4,
-#         yticklabelrotation = pi/4,
-#         title = "Independence weights across variables",
-#         yreversed = true
-#         )
-#     hm = heatmap!(ax, wI_overall, colormap = ColorSchemes.YlGn_4.colors)
-#     Colorbar(fig[1, 2], hm)
-# several figures, one per variable
-    # scatter!(
-    #     ax, 
-    #     Array(independence[variable = At(var)]), 
-    #     Array(performance[variable = At(var)]),
-    #     label = "$var"
-    # )
-    # text!(
-    #     independence[variable = At(var)], 
-    #     performance[variable = At(var)], 
-    #     text = Array(dims(performance, :model)), 
-    #     align = (:center, :top)
-    # )
 
 
 """

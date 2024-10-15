@@ -32,6 +32,7 @@ function areaWeightedRMSE(m1::DimArray, m2::DimArray, mask::DimArray)
     return sqrt(sum(skipmissing(weightedValues)./normalization));
 end
 
+
 """
     getModelDistMatrix(modelData::DimArray)
 
@@ -93,58 +94,6 @@ end
 
 
 """
-    generalizedDistancesIndependence(
-        data::Dict{String, DimArray}, 
-        weightsVars::Dict{String, Number}=Dict{String, Number}()
-    )
-
-Compute an independence weight for each model and variable in 'data'. The 
-weights are the average weighted root mean squared errors between pairs of 
-models (for each variable). 
-
-# Arguments:
-- `data`: keys are climate variables (e.g. tas), values are DimArrays with the
-corresponding data and dimensions 'lon', 'lat', 'model'. 
-- `weightsVars`: keys are climate variables, values are the weights of how much
-the respective variable contributes to the computed independenceWeight.
-
-# Return:
-- `weightsByVars`: a DimArray with dimensions 'model1', 'model2', 'variable'
-with the computed independence weights, seperately for each considered variable.
-"""
-function generalizedDistancesIndependence(
-    data::Dict{String, DimArray}, 
-    weightsVars::Dict{String, Number}=Dict{String, Number}()
-)
-    variables = keys(data);
-    weights = copy(weightsVars);
-    if !isempty(weights)
-        normalizeWeightsVariables!(weights);
-    else
-        weights = Dict(zip(variables, ones(length(variables))));
-    end
-
-    weightedDistMatrices = [];
-    meta = Dict{String, Array}();
-    # Models are/must be the same across variables! 
-    for climVar in variables
-        distances = getModelDistances(data[climVar]);
-        weight = ifelse(isempty(weights), 1, weights[climVar]);        
-        weightedNormalizedDistances = normalizeAndWeightDistances(distances, weight);
-        push!(weightedDistMatrices, weightedNormalizedDistances);
-        
-        metadata = deepcopy(data[climVar].metadata);
-        meta_shared = getSharedMetadataAndModelNames(metadata);
-        meta_shared["variables"] = climVar
-        meta = mergewith(appendValuesDicts, meta, meta_shared);
-    end
-    weightsByVars = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
-    meta["indices_map"] = getIndicesMapping(collect(variables))
-    weightsByVars = rebuild(weightsByVars; metadata = meta);
-    return weightsByVars
-end
-
-"""
     getModelDataDist(models::DimArray, observations::DimArray)
 
 Compute the distance (area-weighted rmse) between model predictions and observations. 
@@ -185,10 +134,11 @@ end
 
 
 """
-    generalizedDistancesPerformance(
-        modelData::Dict{String, DimArray}, 
-        obsData::Dict{String, DimArray}, 
-        weightsVars::Dict{String, Number}=Dict{String, Number}()
+    generalizedDistances(
+        modelData::Dict{String, DimArray},
+        dist_type::String;
+        weightsVars::Dict{String, Number}=Dict{String, Number}(),
+        obsData::Dict{String, DimArray}
     )
 
 Compute a performance weight for each model and climate variable in 'modelData'.
@@ -202,12 +152,13 @@ The weights are the average weighted root mean squared errors between each model
 # Returns 
 - `weightsByVar::DimArray`: performance weights for each considered variable
 """
-function generalizedDistancesPerformance(
+function generalizedDistances(
     modelData::Dict{String, DimArray}, 
-    obsData::Dict{String, DimArray},
-    weightsVars::Dict{String, Number}=Dict{String, Number}()
+    dist_type::String;
+    weightsVars::Dict{String, Number}=Dict{String, Number}(),
+    obsData::Dict{String, DimArray}=Dict{String, DimArray}()
 )
-    variables = keys(modelData);
+    variables = collect(keys(weightsVars))
     weights = copy(weightsVars);
     if !isempty(weights)
         SimilarityWeights.normalizeWeightsVariables!(weights);
@@ -218,15 +169,28 @@ function generalizedDistancesPerformance(
 
     meta = Dict{String, Union{String, Array, Dict}}();
     for climVar in variables
-        distances = SimilarityWeights.getModelDataDist(modelData[climVar], obsData[climVar]);
-        weight = ifelse(isempty(weights), 1, weights[climVar]);
-        weightedNormalizedDistances = SimilarityWeights.normalizeAndWeightDistances(distances, weight);
+        modelDict = filter(((k,v),) -> occursin("_" * climVar * "_", k), modelData)
+        obsDataDict = filter(((k,v),) -> occursin("_" * climVar * "_", k), obsData)
+        if length(modelDict) > 1
+            @warn "more than one dataset for computing generalizedDistances, first is taken!"
+        end
+        model = first(values(modelDict))
+        
+        if dist_type == "performance"
+            obs = first(values(obsDataDict))
+            distances = getModelDataDist(model, obs)
+        elseif dist_type == "independence"
+            distances = getModelDistances(model)
+        else
+            throw(ArgumentError("generalizedDsitancesPerformance can be computed for dist_type='performance' or 'independence'!"))
+        end
+        weightedNormalizedDistances = normalizeAndWeightDistances(distances, weights[climVar]);
         push!(weightedDistMatrices, weightedNormalizedDistances);
 
-        metadata = deepcopy(modelData[climVar].metadata);
-        meta_shared = SimilarityWeights.getSharedMetadataAndModelNames(metadata);
+        metadata = deepcopy(model.metadata);
+        meta_shared = getSharedMetadataAndModelNames(metadata);
         meta_shared["variables"] = climVar
-        meta = mergewith(SimilarityWeights.appendValuesDicts, meta, meta_shared);
+        meta = mergewith(appendValuesDicts, meta, meta_shared);
     end
     weightsByVar = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
     meta["indices_map"] = getIndicesMapping(collect(variables))
@@ -236,7 +200,7 @@ end
 
 
 """ 
-    averageEnsembleVector!(data::DimArray, updateMeta::Bool)
+    averageEnsembleVector(data::DimArray, updateMeta::Bool)
 
 For each model and variable (if several given), compute the mean across all
 ensemble members of that model.
@@ -337,7 +301,7 @@ end
 
 
 """
-    performanceParts(generalizedDistances::DimArray)
+    performanceParts(generalizedDistances::DimArray, sigmaD::Number)
 
 Compute the performance part (numerator) of the overall weight for each model.
 
@@ -372,46 +336,61 @@ function independenceParts(generalizedDistances::DimArray, sigmaS::Number)
 end
 
 
-function overallGeneralizedDistances(
-    modelData, 
-    obsData, 
-    weightsPerform, 
-    weightsIndep
-)
-    Di_all_diagnostics = []
-    Sij_all_diagnostics = []
-    diagnostics = keys(modelData)
+function overallGeneralizedDistances(data::Data, config_weights::ConfigWeights)
+    diagnostics = unique(map(x -> x.statistic, data.ids))
+    Di_all = []
+    Sij_all = []
+    Di = []
+    Sij = []
     for diagnostic in diagnostics
-        generalizedDistsPerform  = generalizedDistancesPerformance(
-            modelData[diagnostic], obsData[diagnostic], weightsPerform
-        );
-        Di = reduceGeneralizedDistancesVars(generalizedDistsPerform);
-        push!(Di_all_diagnostics, Di)
+        ids = map(dataID -> dataID.key, filter(x -> x.statistic == diagnostic, data.ids))
+        models = filter(((k, v),) -> k in ids, data.models)
+        obsData = filter(((k, v),) -> occursin("_" * diagnostic * "_", k), data.obs)
+        weights_perform = filter(((k, v),) -> occursin("_" * diagnostic, k), config_weights.performance)
+        weights_indep = filter(((k, v),) -> occursin("_" * diagnostic, k), config_weights.independence)
+        # weights dictionary for this particular diagnostic shall map just from variable to value
+        wP = Dict{String, Number}()
+        wI = Dict{String, Number}()
+        for key in keys(weights_perform)
+            wP[split(key, "_")[1]] = weights_perform[key]
+            wI[split(key, "_")[1]] = weights_indep[key]
+        end
+        generalizedDistsPerform  = generalizedDistances(
+            models, 
+            "performance"; 
+            weightsVars=wP, 
+            obsData=obsData
+        )
+        push!(Di_all, generalizedDistsPerform)
+        push!(Di, reduceGeneralizedDistancesVars(generalizedDistsPerform))
 
-        generalizedDistsIndep = generalizedDistancesIndependence(
-            modelData[diagnostic], weightsIndep
-        );
-        Sij =  reduceGeneralizedDistancesVars(generalizedDistsIndep);
-        push!(Sij_all_diagnostics, Sij)
+        generalizedDistsIndep = generalizedDistances(models, "independence"; weightsVars=wI);
+        push!(Sij_all, generalizedDistsIndep)
+        push!(Sij, reduceGeneralizedDistancesVars(generalizedDistsIndep))
     end
-    Di = cat(Di_all_diagnostics..., dims = Dim{:diagnostic}(collect(diagnostics)));
-    Sij = cat(Sij_all_diagnostics..., dims = Dim{:diagnostic}(collect(diagnostics)));
+    # put into DimArray
+    Di_all = cat(Di_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
+    Sij_all = cat(Sij_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
     
+    # summarized across variables (done in for loop) and diagnostics
+    Di = cat(Di..., dims = Dim{:diagnostic}(collect(diagnostics)));
+    Sij = cat(Sij..., dims = Dim{:diagnostic}(collect(diagnostics)));
     Di = dropdims(reduce(+, Di, dims=:diagnostic), dims=:diagnostic)
     Sij = dropdims(reduce(+, Sij, dims=:diagnostic), dims=:diagnostic)
-    return (Di, Sij)
+
+    return (Di_all, Sij_all, Di, Sij)
 end
 
 
 """
-    computeWeightedAvg(data_var::DimArray, w::Union{DimArray, Nothing}=nothing)
+    computeWeightedAvg(data::DimArray, w::Union{DimArray, Nothing}=nothing)
 
 Compute the average values for each (lon,lat) grid point in 'data_var', weighted
 by weights 'w'. Members of the same ensemble are averaged before. If no weight
 vector is provided, unweighted average is computed.
 
 # Arguments:
-- `data_var`: DimArray with dimensions lon, lat, model
+- `data`: DimArray with dimensions lon, lat, model
 - `w`: DimArray with dimension 'model'
 """
 function computeWeightedAvg(data::DimArray, w::Union{DimArray, Nothing}=nothing)
@@ -441,22 +420,23 @@ function computeWeightedAvg(data::DimArray, w::Union{DimArray, Nothing}=nothing)
 end
 
 
-function computeWeights(
-    modelData, 
-    obsData, 
-    weights_vars_perform, 
-    weights_vars_indep, 
-    sigmaD, 
-    sigmaS
-)
-    Di, Sij = overallGeneralizedDistances(
-        modelData, obsData, weights_vars_perform, weights_vars_indep
+function computeWeights(data::Data, config_weights::ConfigWeights)
+    Di_all, Sij_all, Di, Sij = overallGeneralizedDistances(
+        data, config_weights
     );
-    performances = performanceParts(Di, sigmaD);
-    independences = independenceParts(Sij, sigmaS);
+    performances = performanceParts(Di, config_weights.sigma_performance);
+    independences = independenceParts(Sij, config_weights.sigma_independence);
     weights = performances ./ independences;
     weights = weights ./ sum(weights);
-    return weights
+    weights.metadata["name_ref_period"] = config_weights.ref_period
+    
+    return ClimwipWeights(
+        performance_all = Di_all, 
+        independence_all = Sij_all, 
+        performance = Di,
+        independence = Sij,
+        overall=weights
+    )
 end
 
 

@@ -1,5 +1,12 @@
 using DimensionalData
 
+"""
+    getUniqueModelIds(meta::Dict, key_model_names::String)
+
+# Arguments:
+- `meta`:
+- `key_model_names`:
+"""
 function getUniqueModelIds(
     meta::Dict, #{String, Union{String, Array, Dict}},
     key_model_names::String
@@ -29,13 +36,33 @@ function getUniqueModelIds(
     return models
 end
 
+"""
+    getIndicesMapping(names)
 
+# Arguments:
+- `names`:
+"""
 function getIndicesMapping(names)
     mapping = Dict();
     for name in names
         mapping[name] = findall(x -> x == name, names)
     end
     return mapping
+end
+
+"""
+    getModelSubset(data::Dict{String, DimArray}, shared_models::Vector{String})
+
+Return data in 'data' only from the models specified in `shared_models`. 
+Takes care of metadata.
+"""
+function getModelSubset(data::DimArray, shared_models::Vector{String})
+    indices = findall(m -> m in shared_models, data.metadata["full_model_names"]);
+    @assert length(indices) == length(shared_models)
+    keepMetadataSubset!(data.metadata, indices);
+    data = data[model = indices];
+    data.metadata["indices_map"] = getIndicesMapping(data.metadata["ensemble_names"])
+    return data
 end
 
 
@@ -60,161 +87,252 @@ end
 
 
 """
-    loadPreprocData(diagnosticVarToPaths::Dict{String, Dict{String, String}}, dataIncluded=[])
+    loadPreprocData(path_data_dir::String, included::Vector{String}=[])
 
-Loads all preprocessed (e.g., by ESMValTool) .nc files (each model is a different .nc file) for each climate climate variable
-inside the respective subdirectory (e.g. tos) into a single DimArray with dimensions lon (longitude), lat (latitude) and model. 
+    This is the new version!
 
-If length(dataIncluded) != 0 only those .nc files are considered whose filenames contain all elements of dataIncluded, 
-e.g. if dataIncluded=['ERA5'] only ERA5 data will be included (files with ERA5 in their filename).
-
-# Arguments
--`diagnosticVarToPaths`: dictionary mapping from diagnostics (e.g., CLIM) to a
-dictionary from climate variables as short names (e.g., tas) to path where 
-respective (preprocessed) data of that climate variable is stored.
--`included`: Array that contains Strings that must occur in filenames of loaded
-data. If only a certain model should be loaded, this is specified here, e.g.
-['AWI-ESM-1-1-LR'] would load only data from this particular model.
+# Arguments:
+- `path_data_dir`: base path to directory that contains subdirectory with name
+of the respective experiment (see TODO for assumed data structure)
+- `included`: either observational or model data can be loaded at once, e.g. 
+set to ["ERA5"] or ["CMIP5"] for ERA5-observational and CMIP5 model data respectively
 """
-function loadPreprocData(
-    diagnosticVarToPaths::Dict{String, Dict{String, String}},
-    included::Vector{String}=[]
-)
-    dataAllVars = Dict{String, Dict{String, DimArray}}();
-    diagnostics = keys(diagnosticVarToPaths)
-    for diagnostic in diagnostics
-        varToPaths = diagnosticVarToPaths[diagnostic];
-        dataAllVars[diagnostic] = Dict{String, DimArray}();
-        for climVar in keys(varToPaths)
-            pathToData = varToPaths[climVar]
-            if !isdir(pathToData)
-                throw(ArgumentError(pathToData * " does not exist!"))
+function loadPreprocData(path_data_dir::String, included::Vector{String}=[])
+    if !isdir(path_data_dir)
+        throw(ArgumentError(path_data_dir * " does not exist!"))
+    end
+    data = [];
+    sources = [];
+    meta = Dict{String, Union{String, Array, Dict}}();
+    ncFiles = filter(
+        x -> isfile(x) && endswith(x, ".nc"), 
+        readdir(path_data_dir; join=true)
+    );
+    nbIgnored = 0;
+    for (i, file) in enumerate(ncFiles)
+        addFile = true;
+        # only include files that contain all names given in 'included'
+        if length(included) != 0
+            if !all([occursin(name, file) for name in included])
+                addFile = false;
             end
-            data = [];
-            sources = [];
-            meta = Dict{String, Union{String, Array, Dict}}();
-            files = readdir(pathToData; join=true);
-            ncFiles = filter(x->endswith(x, ".nc"), files);
-            nbIgnored = 0;
-            for (i, file) in enumerate(ncFiles)
-                addFile = true;
-                # only include files that contain all names given in 'included'
-                if length(included) != 0
-                    if !all([occursin(name, file) for name in included])
-                        addFile = false;
-                    end
+        end
+        #println("processing file.." * file)
+        if addFile
+            # @info file
+            parts = splitpath(file)
+            filename = split(parts[end], ".nc")[end-1]
+            climVar = split(parts[end-1], "_")[1]
+            
+            ds = NCDataset(file);
+            dsVar = ds[climVar];
+
+            attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)));
+            if climVar == "msftmz"
+                attributes = merge(attributes, Dict(deepcopy(ds["sector"].attrib)));
+            end
+            if warnIfFlawedMetadata(attributes, filename)
+                nbIgnored += 1;
+                continue
+            end
+
+            # update metadata
+            for key in keys(attributes)
+                values = get!(meta, key, []);
+                # fill up vector
+                n = i - nbIgnored - length(values) - 1;
+                for _ in range(1, n)
+                    push!(values, missing)
                 end
-                if addFile
-                    filename = split(basename(file), ".nc")[end-1];
-                    ds = NCDataset(file);
-                    dsVar = ds[climVar];
+                push!(values, attributes[key]);
+            end
 
-                    attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)));
-                    if climVar == "msftmz"
-                        attributes = merge(attributes, Dict(deepcopy(ds["sector"].attrib)));
-                    end
-                    if SimilarityWeights.warnIfFlawedMetadata(attributes, filename)
-                        nbIgnored += 1;
-                        continue
-                    end
+            name = get(ds.attrib, "source_id", get(ds.attrib, "model_id", ""));
+            if !isempty(name)
+                push!(sources, name);
+            else # observational data does not have model name
+                push!(sources, filename)
+            end
 
-                    # update metadata
-                    for key in keys(attributes)
-                        values = get!(meta, key, []);
-                        # fill up vector
-                        n = i - nbIgnored - length(values) - 1;
-                        for _ in range(1, n)
-                            push!(values, missing)
-                        end
-                        push!(values, attributes[key]);
-                    end
-
-                    name = get(ds.attrib, "source_id", get(ds.attrib, "model_id", ""));
-                    if !isempty(name)
-                        push!(sources, name);
-                    else # observational data does not have model name
-                        push!(sources, filename)
-                    end
-
-                    # if climVar == "amoc"
-                    #     if "season_number" in keys(ds.dim)
-                    #         dim1 = Dim{:season}(collect(dsVar["season_number"][:]));
-                    #         push!(data, DimArray(Array(dsVar), (dim1)));
-                    #     else
-                    #         push!(data, DimArray(Array(dsVar), ()));
-                    #     end
-                    # else
-                    dimension_names = dimnames(dsVar)
-                    dimensions = []
-                    for d in dimension_names
-                        if d in ["bnds", "string21"]
-                            continue
-                        end
-                        if d == "time"
-                            times = map(x -> NCDatasets.DateTimeStandard(
-                                Dates.year(x), Dates.month(x), Dates.day(x)
-                                ),
-                                dsVar[d][:]
-                            );
-                            push!(dimensions, Dim{Symbol(d)}(collect(times)));
-                        else
-                            push!(dimensions, Dim{Symbol(d)}(collect(dsVar[d][:])));
-                        end
-                    end      
-                    push!(data, DimArray(Array(dsVar), Tuple(dimensions)));
-                    # end
-                    # print("i=" * string(i) * ": ")
-                    # println(string(length(get(meta, "initialization_index", []))))
+            dimension_names = dimnames(dsVar)
+            dimensions = []
+            for d in dimension_names
+                if d in ["bnds", "string21"]
+                    continue
                 end
-            end
-            dimData = cat(data...; dims = (Dim{:model}(sources)));
-            updateMetadata!(meta, dimData);
-            dimData = rebuild(dimData; metadata = meta);
-
-            # set model names in model dimension to full model name which was 
-            # built in updateMetadata! (cannot be done before since missing 
-            # files etc. have to be accounted for first)
-
-            if !isempty(get(meta, "full_model_names", []))
-                dimData = set(dimData, :model => meta["full_model_names"])
-            end
-            dataAllVars[diagnostic][climVar] = dimData;
+                if d == "time"
+                    times = map(x -> NCDatasets.DateTimeStandard(
+                        Dates.year(x), Dates.month(x), Dates.day(x)
+                        ),
+                        dsVar[d][:]
+                    );
+                    push!(dimensions, Dim{Symbol(d)}(collect(times)));
+                else
+                    push!(dimensions, Dim{Symbol(d)}(collect(dsVar[d][:])));
+                end
+            end      
+            push!(data, DimArray(Array(dsVar), Tuple(dimensions)));
         end
     end
-    return dataAllVars
+
+    if length(data) > 0
+        #dimData = cat(data..., dims=3) # way too slow!
+        # all of the preprocessed model data assumed to have the same lon,lat grid
+        # Preallocate a 3D array of respective size
+        size_dims = size(data[1])
+        n = length(data)
+        raw_data = Array{eltype(parent(data[1]))}(undef, size_dims..., n)
+        if length(size_dims) == 1
+            for i in 1:n
+                raw_data[:,i] = parent(data[i])
+            end
+        elseif length(size_dims) == 2
+            for i in 1:n
+                raw_data[:, :, i] = parent(data[i])  # Extract and assign the underlying data
+            end
+        else 
+            throw(ArgumentError("More than 3 data dimensions not supported."))
+        end
+        dimData = DimArray(raw_data, (DimensionalData.dims(data[1])..., Dim{:model}(sources)))
+        updateMetadata!(meta, dimData);
+        dimData = rebuild(dimData; metadata = meta);
+
+        # set model names in model dimension to full model name which was 
+        # built in updateMetadata! (cannot be done before since missing 
+        # files etc. have to be accounted for first)
+        if !isempty(get(meta, "full_model_names", []))
+            dimData = set(dimData, :model => meta["full_model_names"])
+        end
+        return dimData
+    else
+        return nothing
+    end
+end
+
+
+
+"""
+    loadData(
+    path_to_config_dir::String, 
+    base_path::String, 
+    dir_per_var::Bool=true,
+    constraints::DataConstraint=DataConstraint()
+)
+
+Loads the data from the config files located at 'paths_to_config_dir'. For necessary
+structure of config files, see TODO. For each variable, experiment, statistic
+and timerange (task) a different DimArray is loaded.
+
+# Arguments:
+- `path_to_config_dir`: path to directory that contains one or more yaml config 
+files with the following structure: TODO
+- `base_path`:  if dir_per_var is true, path to directory that contains one or
+more subdirectories that each contains a directory 'preproc' with the
+preprocessed data. If dir_per_var is false, base_path is the path to a directory
+that contains the 'preproc' subdirectory.
+"""
+function loadData(
+    path_to_config_dir::String, 
+    base_path::String;
+    dir_per_var::Bool=true, 
+    constraints::DataConstraint=DataConstraint()
+)
+    ids = buildDataIDsFromConfigs(path_to_config_dir)    
+    applyDataConstraints!(ids, constraints)
+
+    model_data = Dict{String, DimArray}()
+    obs_data = Dict{String, DimArray}()
+    for id in ids
+        #rest, name = split(id, "#")
+        #exp, stat, var, timerange = split(rest, "_")
+        # if dir_per_var is true, directory at base_path has subdirectories, 
+        # one for each variable (they must end with _ and the name of the variable),
+        # otherwise path_config_dir is the path to the directory that contains 
+        # a subdirectory 'preproc'
+        path_to_subdirs = [base_path]
+        if dir_per_var
+            path_to_subdirs = filter(isdir, readdir(base_path, join=true))
+            filter!(x -> endswith(x, "_" * id.variable), path_to_subdirs)
+            if length(path_to_subdirs) > 1
+                @warn "There are several subdirectories for variable " * var * " and experiment " * exp
+                path_to_subdirs = path_to_subdirs[1:1]
+                @warn "First is chosen: " path_to_subdirs[1]
+            end
+        end
+        for path_dir in path_to_subdirs
+            path_data_dir = joinpath(
+                path_dir, "preproc", id.task, join([id.variable, id.statistic], "_")
+            )
+            if !isdir(path_data_dir)
+                continue
+            end
+            # the name of the time period is needed for loading the data, but 
+            # as it is arbitrary (e.g. historical1 ~ 1950-1981), we do not 
+            # included in the data ids
+            #base_id = join([id.statistic, id.variable, id.timerange], "_")
+            base_id = join(split(id.key, "_")[2:end], "_")
+            #id_wit_exp =  join([id.exp, base_id], "_")
+            data = loadPreprocData(path_data_dir, ["CMIP"])
+            if !isnothing(data)
+                #data = convert(DimArray, data)
+                model_data[id.key] = data
+            end
+            # TODO: don't hard code name of observational dataset!
+            name_obs_data = "ERA5"
+            obs = loadPreprocData(path_data_dir, [name_obs_data])
+            if !isnothing(obs)
+                #obs = convert(Dict{String, DimArray}, obs)
+                obs_data[join([name_obs_data, base_id], "_")] = obs
+            end
+        end
+    end
+    @info "The following data was found and loaded: " keys(model_data)
+
+    if constraints.commonModelsAcrossVars
+        model_data = getCommonModelsAcrossVars(model_data, ids)
+    end
+    return Data(
+        base_path = base_path,
+        ids = ids,
+        models = model_data,
+        obs = obs_data
+    )
 end
 
 
 """
-    getCommonModelsAcrossVars(modelData::Dict{String, Dict{String, DimArray}})
+    getCommonModelsAcrossVars(modelData::Dict{String, DimArray}, ids::Vector{DataID})
 
-Keep only those models for which there is data for all variables.
+Return only those models for which there is data for all variables.
 
 # Arguments
-- `modelData`: maps from diagnostic to climate variable to respective data
+- `modelData`:
+- `ids`:
 """
-function getCommonModelsAcrossVars(modelData::Dict{String, Dict{String, DimArray}})
+function getCommonModelsAcrossVars(modelData::Dict{String, DimArray}, ids::Vector{DataID})
     data_all = deepcopy(modelData);
-    diagnostics = keys(modelData)
+    variables = map(id -> id.variable, ids)
     shared_models =  nothing
-    for diagnostic in diagnostics
-        for var in keys(modelData[diagnostic])
-            data_var = modelData[diagnostic][var];
-            meta = data_var.metadata;
-            models = getUniqueModelIds(meta, getCMIPModelsKey(meta));
-            data_all[diagnostic][var].metadata["full_model_names"] = models;
-            if isnothing(shared_models)
-                shared_models = models
-            else
-                shared_models = intersect(shared_models, models)
-            end
+    for var in variables
+        modelDict = filter(((k,v),)-> occursin(var, k), modelData)
+        if length(modelDict) > 1
+            @warn "more than one dataset for computing getCommonModelsAcrossVars, first is taken!"
+        end
+        data_var = first(values(modelDict))
+        meta = data_var.metadata;
+        models = getUniqueModelIds(meta, getCMIPModelsKey(meta));
+        data_all[first(keys(modelDict))].metadata["full_model_names"] = models
+        if isnothing(shared_models)
+            shared_models = models
+        else
+            shared_models = intersect(shared_models, models)
         end
     end
-    for diagnostic in diagnostics
-        for var in keys(modelData[diagnostic])
-            data_all[diagnostic][var] = keepModelSubset(data_all[diagnostic][var], shared_models);
-        end
+
+    for id in map(id -> id.key, ids)
+        data_all[id] = getModelSubset(data_all[id], shared_models);
     end
+
     return data_all
 end
 
@@ -236,154 +354,91 @@ function getCMIPModelsKey(meta::Dict)
     end
 end
 
-
 """
-    loadDataFromConfig(config::Config, name_time_period::String, name_data::String)
-
-Load climate model data for variables and time periods defined in 'config'. 
+    saveWeights(
+        weights::DimVector,
+        target_dir::String;
+        target_fn::String="weights.nc"
+    )
 
 # Arguments:
-- `config`: Config generated from config file (e.g, output of fn validateConfig)
-- `name_time_period`: e.g. 'historical', 'historical1'
-- `name_data`: e.g. CMIP6, CMIP5, ERA5
+- `weights`:
+- `target_dir`:
+- `target_fn`:
 """
-function loadDataFromConfig(config::Config, name_time_period::String, name_data::String) 
-    pathsDict = Dict{String, Dict{String, String}}();
-    config = deepcopy(config);
-    if !isempty(config.path_to_recipes)
-        variables = deepcopy(config.variables)
-        for var in variables
-            dirname = var
-            if !isempty(config.prefix_recipes)
-                dirname = config.prefix_recipes * "_" * var
-            end
-            config.base_path = joinpath(config.path_to_recipes, dirname)
-            config.variables = [var]
-            newDict = buildPathsToVarData(config,  name_time_period)
-            for diagnostic in keys(newDict)
-                merged_subdic = get(pathsDict, diagnostic, Dict{String, String}())
-                pathsDict[diagnostic] = merge(merged_subdic, newDict[diagnostic])
-            end
-        end
-    else
-        pathsDict = buildPathsToVarData(config,  name_time_period)
-    end
-    data = loadPreprocData(pathsDict, [name_data]);
-    return data
-end
-
-
 function saveWeights(
     weights::DimVector,
-    target_dir::String, 
+    target_dir::String;
     target_fn::String="weights.nc"
 )
-if !isdir(target_dir)
-    mkpath(target_dir)
-end
-path_to_target = joinpath(target_dir, target_fn);
-if isfile(path_to_target)
-    msg1 = "File: " * path_to_target * " already exists!";
-    path_to_target = joinpath(target_dir, join([getCurrentTime(), target_fn], "_"))
-    msg2 = "Weights saved as: " * path_to_target
-    @warn msg1 * msg2
-end
-ds = NCDataset(path_to_target, "c")
-
-models = dims(weights, :model)
-defDim(ds, "model", length(models))
-# Add a new variable to store the model names
-v_model_names = defVar(ds, "model", String, ("model",))
-v_model_names[:] = Array(models)
-
-# global attributes
-for (k, v) in weights.metadata
-    if isa(v, Dict)
-        ds.attrib[k] = [dk * "_" * string(dv) for (dk, dv) in v]
-    elseif isa(v, String)
-        ds.attrib[k] = v
-    else
-        ds.attrib[k] = Vector{String}(v)
+    if !isdir(target_dir)
+        mkpath(target_dir)
     end
+    path_to_target = joinpath(target_dir, target_fn);
+    if isfile(path_to_target)
+        msg1 = "File: " * path_to_target * " already exists!";
+        path_to_target = joinpath(target_dir, join([getCurrentTime(), target_fn], "_"))
+        msg2 = "Weights saved as: " * path_to_target
+        @warn msg1 * msg2
+    end
+    ds = NCDataset(path_to_target, "c")
+
+    models = dims(weights, :model)
+    defDim(ds, "model", length(models))
+    # Add a new variable to store the model names
+    v_model_names = defVar(ds, "model", String, ("model",))
+    v_model_names[:] = Array(models)
+
+    # global attributes
+    for (k, v) in weights.metadata
+        if isa(v, Dict)
+            ds.attrib[k] = [dk * "_" * string(dv) for (dk, dv) in v]
+        elseif isa(v, String)
+            ds.attrib[k] = v
+        else
+            ds.attrib[k] = Vector{String}(v)
+        end
+    end
+    v = defVar(ds, "weight", Float64, ("model",))
+    v[:] = Array(weights)
+    close(ds)
+
+    @info "saved data to " path_to_target
 end
-v = defVar(ds, "weight", Float64, ("model",))
-v[:] = Array(weights)
-close(ds)
-
-# TODO: adapt for non lon,lat -data!
-# TODO: also add/log computed averages (weighted/uweighted)
-# for avg in ["weighted", "unweighted"]
-#     for (climVar, values) in averages[avg]
-#         name = join([avg, "avg", climVar], "_", "_")
-#         var = defVar(ds, name, Float32, ("lon", "lat"))
-#         # Replace missing with the fill value
-#         attput(var, "_FillValue", 1.0e20) 
-#         var[:,:] = coalesce.(Array(values), missing)  
-#     end
-# end
-
-@info "saved data to " path_to_target
-end
 
 
+"""
+    loadWeightsAsDimArray(path_to_file::String)
+"""
 function loadWeightsAsDimArray(path_to_file::String)
     data = NCDataset(path_to_file)
     models = Array(data["model"])
-    arr = DimArray(Array(data["weight"]), (Dim{:model}(models)), metadata = Dict(data.attrib))
+    arr = DimArray(
+        Array(data["weight"]), 
+        (Dim{:model}(models)), metadata = Dict(data.attrib)
+    )
     return arr
 end
 
 
-
 """
-    loadModelData(config::Config)
-
-Load model data for full and/or reference period as defined in config.
-Model data is only included if the model has data for all variables. 
-If full and reference period are loaded, only the data of the models that 
-they have in common are loaded.
-"""
-function loadModelData(config::Config)
-    modelDataFull = nothing
-    modelDataRef = nothing
-    load_full_period = !isempty(config.name_full_period);
-    load_ref_period = !isempty(config.name_ref_period);
-    
-    if load_full_period
-        modelDataFull = loadDataFromConfig(config, config.name_full_period, config.models_project_name);
-        modelDataFull = getCommonModelsAcrossVars(modelDataFull);
-    end
-    if load_ref_period
-        modelDataRef = loadDataFromConfig(config, config.name_ref_period, config.models_project_name);
-        modelDataRef = getCommonModelsAcrossVars(modelDataRef);
-    end
-
-    if load_full_period && load_ref_period
-        modelDataFull, modelDataRef = getSharedModelData(modelDataFull, modelDataRef);
-    end
-
-    return (modelDataFull, modelDataRef)
-end
-
-
-"""
-    getUncertaintyRanges(data::DimArray, weights::DimArray, quantiles::Vector{Number})
+    getUncertaintyRanges(data::DimArray, w::DimArray; quantiles=[0.167, 0.833]})
     
 # Arguments:
 - `data`: has dimensions 'time', 'model'
-- `weights`: has dimension 'model', sum up to 1
+- `w`: has dimension 'model', sum up to 1
 - `quantiles`: Vector with two entries (btw. 0 and 1) [lower_bound, upper_bound]
 """
 function getUncertaintyRanges(
     data::DimArray,
-    w::DimArray,
+    w::DimArray;
     quantiles=[0.167, 0.833]
 )
     unweightedRanges = [];
     weightedRanges = [];
     for t in dims(data, :time)
         lower, upper = computeInterpolatedWeightedQuantiles(
-            quantiles, Array(data[time = At(t)]), w
+            quantiles, Array(data[time = At(t)]); weights=w
         );
         push!(weightedRanges, [lower, upper]);
         lower, upper = computeInterpolatedWeightedQuantiles(

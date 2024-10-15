@@ -1,4 +1,5 @@
 using ColorSchemes
+
 """ plotMeansOnMap(means::DimArray, title::String, colors=nothing)
     
 Plot contours of world with an overlayed heatmap that shows the data which 
@@ -182,9 +183,6 @@ function plotTempGraph(
         y = data[model = At(m)] 
         lines!(ax, years, Array(y), color = :gray80, label = "ensemble members")
     end
-    # TODO: add (un-)weighted averages compute before!
-    # unweightedAvg =  mean(data, dims = :model);
-    # weightedAvg = sum(repeat(weights', length(dims(data, :time)), 1) .* data, dims=:model);
     
     lines!(ax, years, vec(averages.unweighted), color = :red, label = "Non-weighted mean")
     lines!(ax, years, vec(averages.weighted), color = :green, label = "Weighted mean")

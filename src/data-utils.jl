@@ -19,6 +19,52 @@ using Interpolations
 end
 
 
+@kwdef struct DataID
+    key::String
+    exp::String
+    statistic::String
+    variable::String
+    timerange::String
+    task::String
+end
+
+
+@kwdef struct Data
+    base_path::String
+    ids::Vector{DataID}=[]
+    models::Dict{String, DimArray}=Dict()
+    obs::Dict{String, DimArray}=Dict()
+end
+
+
+@kwdef struct DataConstraint
+    variables::Vector{String}=[]
+    timeranges::Vector{String}=[]
+    statistics::Vector{String}=[]
+    tasks::Vector{String}=[]
+    commonModelsAcrossVars::Bool=false
+end
+
+
+@kwdef struct ConfigWeights
+    performance::Dict{String, Number}=Dict()
+    independence::Dict{String, Number}=Dict()
+    sigma_performance::Number=0.5
+    sigma_independence::Number=0.5
+    ref_period::String=""
+    target_dir::String=""
+end
+
+
+@kwdef struct ClimwipWeights
+    performance_all::DimArray
+    independence_all::DimArray
+    performance::DimArray
+    independence::DimArray
+    overall::DimArray
+end
+
+
 function warnIfFlawedMetadata(attributes, filename)
     isFlawed = false;
     if "branch_time_in_parent" in keys(attributes) && isa(attributes["branch_time_in_parent"], String)
@@ -49,8 +95,7 @@ end
 """
     updateMetadata!(
         meta::Dict{String, Union{Array, String}}, 
-        data::DimArray, 
-        indices_ignored::Array
+        data::DimArray
     )
 
 Update metadata 'meta' s.t. data of ignored files is removed and attributes
@@ -84,7 +129,6 @@ function updateMetadata!(
         meta["ensemble_names"] = Array(dims(data, :model))
         meta["indices_map"] = getIndicesMapping(meta["ensemble_names"]);
     end
-
 end
 
 
@@ -134,80 +178,13 @@ function appendValuesDicts(val1, val2)
     end
 end
 
-"""
-    buildPathsToVarData(config::Config, name_time_period::String)
-
-Returns a mapping from diagnostic (e.g. CLIM) to variable (e.g. tas) to the
-paths where the data is stored. The assumed structure of the data is this: 
-config.base_path contains the path to the directory that contains a directory 
-called 'preproc', which contains a directory for every time period considered 
-(e.g. historical1, historical) which in turn contains a directory for every 
-combination of variable and diagnostic (e.g., tas_CLIM).
-"""
-function buildPathsToVarData(config::Config, name_time_period::String)
-    var_to_path = Dict{String, Dict{String, String}}();
-    for diagnostic in config.diagnostics
-        var_to_path[diagnostic] = Dict();
-        for var in config.variables
-            var_diagnostic = var * "_" * diagnostic
-            var_to_path[diagnostic][var] = joinpath(
-                config.base_path,
-                "preproc",
-                name_time_period,
-                var_diagnostic
-            )
-        end
-    end
-    return var_to_path
-end
-
-
-function validateConfig(path_config::String)
-    config_yaml = YAML.load_file(path_config);
-    weights_variables = get(config_yaml, "weights_variables", nothing);
-    if !isnothing(weights_variables)
-        weights_variables = convert(
-            Dict{String, Dict{String, Number}}, 
-            weights_variables
-        )
-    end
-    # one of base_path and path_to_recipes must be provided
-    base_path = get(config_yaml, "base_path", "")
-    path_to_recipes = get(config_yaml, "path_to_recipes", "")
-    if isempty(base_path) && isempty(path_to_recipes)
-        msg = "Either 'base_path' (path to directory that contains preproc-directory) or 'path_to_recipes' (path to directory that contains for every variable a subfolder which in turn contain the preproc-directories.)";
-        throw(ArgumentError(msg))
-    end
-    config = Config(
-        base_path = base_path,
-        path_to_recipes = path_to_recipes,
-        prefix_recipes = get(config_yaml, "prefix_recipes", ""),
-        target_dir = joinpath(config_yaml["target_dir"], getCurrentTime()),
-        
-        diagnostics = config_yaml["diagnostics"],
-        variables = config_yaml["variables"],
-        
-        name_ref_period = get(config_yaml, "name_ref_period", ""),
-        name_full_period = get(config_yaml, "name_full_period", ""),
-        name_obs_period = get(config_yaml, "name_obs_period", ""),
-        
-        models_project_name = config_yaml["models_project_name"],
-        obs_data_name = get(config_yaml, "obs_data_name", ""),
-        
-        weights_variables = weights_variables,
-        weight_contributions = get(config_yaml, "weight_contributions", nothing)
-    ) 
-    # TODO: add checks consistency, paths for all specified variables there and exist, etc.
-    return config
-end
-
 
 """
     keepMetadataSubset!(meta::Dict, indices::Vector{Number})
 
 # Arguments:
-- `meta::Dict`: metadata dictionary
-- `indices::Vector{Number}`: indices of data to be kept
+- `meta`: metadata dictionary
+- `indices`: indices of data to be kept
 """
 function keepMetadataSubset!(meta::Dict, indices::Vector{Int64})
     attributes = filter(x -> meta[x] isa Vector, keys(meta));
@@ -216,19 +193,6 @@ function keepMetadataSubset!(meta::Dict, indices::Vector{Int64})
     end
 end
 
-"""
-    keepModelSubset(data::Dict{String, DimArray}, shared_models::Vector{String})
-
-Retain data only from models in `shared_models`. Takes care of metadata.
-"""
-function keepModelSubset(data::DimArray, shared_models::Vector{String})
-    indices = findall(m -> m in shared_models, data.metadata["full_model_names"]);
-    @assert length(indices) == length(shared_models)
-    keepMetadataSubset!(data.metadata, indices);
-    data = data[model = indices];
-    data.metadata["indices_map"] = getIndicesMapping(data.metadata["ensemble_names"])
-    return data
-end
 
 
 """
@@ -265,11 +229,15 @@ end
 
 
 """
-    computeInterpolatedWeightedQuantiles
+    computeInterpolatedWeightedQuantiles(quantiles, vals; weights=nothing)
 
 This implementation follows the one used by Brunner et al.
 """
-function computeInterpolatedWeightedQuantiles(quantiles, vals, weights=nothing)
+function computeInterpolatedWeightedQuantiles(
+    quantiles::Vector{<:Number},
+    vals::Vector;
+    weights=nothing
+)
     if isnothing(weights)
         weights = ones(length(vals));
     end
@@ -303,4 +271,64 @@ function renameModelDimsFromMemberToEnsemble(data::DimArray, dim_names::Vector{S
         data = set(data, Symbol(dim) => ensembles)
     end
     return data
+end
+
+
+"""
+    buildDataIDsFromConfigs(paths_to_config_dir::String)
+
+# Arguments:
+- `path_to_config_dir`: path to directory that contains one or more yaml config
+files. For the assumed structure of the config files, see: TODO.
+"""
+function buildDataIDsFromConfigs(path_to_config_dir::String)
+    paths_to_configs = filter(
+        x -> isfile(x) && endswith(x, ".yml"), 
+        readdir(path_to_config_dir, join=true)
+    )
+    ids::Vector{DataID} = []
+    for path_config in paths_to_configs
+        config = YAML.load_file(path_config);
+        data_all = config["diagnostics"]
+        names = keys(data_all)
+    
+        for name in names
+            data = data_all[name]["variables"]     
+            for (k,v) in data
+                variable, statistic = split(k, "_")
+                if typeof(v["exp"]) <: String
+                    experiment = v["exp"]
+                else 
+                    experiment = join(v["exp"], "-")
+                end
+                timerange = replace(get(v, "timerange", "full"), "/" => "-")
+                id = join([experiment, statistic, variable, timerange, name], "_", "#")
+                dataID = DataID(id, experiment, statistic, variable, timerange, name)
+                push!(ids, dataID)
+            end
+        end
+    end
+    return ids
+end
+
+
+function applyDataConstraints!(ids::Vector{DataID}, constraint::DataConstraint)   
+    if !isempty(constraint.variables)
+        keepVar(id::DataID) = any(var -> id.variable == var, constraint.variables)
+        filter!(keepVar, ids)
+    end
+    if !isempty(constraint.tasks)
+        keepTasks(id::DataID) = any(name -> id.task == name, constraint.tasks)
+        filter!(keepTasks, ids)
+    end
+
+    if !isempty(constraint.statistics)
+        keepStats(id::DataID) = any(stat -> id.statistic == stat, constraint.statistics)
+        filter!(keepStats, ids)
+    end
+
+    if !isempty(constraint.timeranges)
+        keepTimeRange(id::DataID) = any(tr -> id.timerange == tr, constraint.timeranges)
+        filter!(keepTimeRange, ids)
+    end
 end
