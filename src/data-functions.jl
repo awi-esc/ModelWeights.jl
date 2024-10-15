@@ -119,17 +119,23 @@ function loadPreprocData(path_data_dir::String, included::Vector{String}=[])
         end
         #println("processing file.." * file)
         if addFile
-            # @info file
             parts = splitpath(file)
             filename = split(parts[end], ".nc")[end-1]
             climVar = split(parts[end-1], "_")[1]
             
             ds = NCDataset(file);
             dsVar = ds[climVar];
-
+            # if climVar == "amoc"
+            #     dsVar = ds["msftmz"]
+            # else 
+            # end
+            
             attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)));
             if climVar == "msftmz"
-                attributes = merge(attributes, Dict(deepcopy(ds["sector"].attrib)));
+                sector = get(ds, "sector", nothing)
+                if !isnothing(sector)
+                    attributes = merge(attributes, Dict(deepcopy(sector.attrib)));
+                end
             end
             if warnIfFlawedMetadata(attributes, filename)
                 nbIgnored += 1;
@@ -183,12 +189,12 @@ function loadPreprocData(path_data_dir::String, included::Vector{String}=[])
         n = length(data)
         raw_data = Array{eltype(parent(data[1]))}(undef, size_dims..., n)
         if length(size_dims) == 1
-            for i in 1:n
-                raw_data[:,i] = parent(data[i])
+            for idx in 1:n
+                raw_data[:,idx] = parent(data[idx])
             end
         elseif length(size_dims) == 2
-            for i in 1:n
-                raw_data[:, :, i] = parent(data[i])  # Extract and assign the underlying data
+            for idx in 1:n
+                raw_data[:, :, idx] = parent(data[idx])  # Extract and assign the underlying data
             end
         else 
             throw(ArgumentError("More than 3 data dimensions not supported."))

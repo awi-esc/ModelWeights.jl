@@ -23,15 +23,15 @@
 
 ## Program
 
-- add sanity checks correct configs
 - implement proper logging instead of logging to console
-- add tests where missing
-- in plot-uitls check Lookups for negative values when lookup values had been changed!
+- update tests! and add where missing
+- in plot-utils check Lookups for negative values when lookup values had been changed!
+- update documentation!
 
 ## CLIMWIP
 
 - add used diagnostics to metadata, now this is not saved, for every variable
 different diagnostics might be used
 - check units in performance weights plots
-- plot weighted temp. map check why I get more missing data than they
-- recipe fails with forked-esmvaltool version.. for mask_sea preprocessor, might be solved due to updated packages 
+- check why I get more missing data than they in climwip replicated temp map/graph plots
+

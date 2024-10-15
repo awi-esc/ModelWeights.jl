@@ -3,89 +3,138 @@
 ```@contents
 ```
 
-This Julia package computes weights for a set of climate models following the approach
-from Brunner et al (2020). 
+This Julia package computes weights for a set of climate models following the approach from Brunner et al (2020). 
+
+## Prerequisite Data structure
+
+We assume that you have your preprocessed data ready, so that the data from
+the different models can be combined, meaning that all models must for instance 
+have the same grid.
+We do the preprocessing of the data with ESMValTool. A set of recipes to 
+download and preprocess some data can be found in our repository [ESMDataPrep](https://github.com/awi-esc/ESMDataPrep).
+
+The structure of the directroies where the preprocessed data is stored is
+expected by our tool to follow a certain structure. If there is one subdirectory
+for each climate variable, the structure should adhere to this:
+
+```bash
+├── BASE_DIR
+│   └── anyname_VAR
+│   └── anyname_VAR
+│       └── preproc
+│       │      └── TASKNAME_VAR
+│       │      │       └── VAR_STATISTIC
+│       │      │            └── model1.nc
+│       │      │            └── model2.nc
+│       │      │            └── ...
+│       │      │       └── VAR_STATISTIC
+│       │      └── TASKNAME_VAR
+│       │      │       └── VAR_STATISTIC
+│       │      │       └── VAR_STATISTIC
+│       │      │            └── model1.nc
+│       │      │            └── model2.nc
+│       │      │            └── ...
+│       └── possibly other output from ESMValTool
+....
+```
+
+The structure is basically the same if there is not a seperate subdirectory for
+each climate variable, except that the BASE_DIR refers to the directory that
+immediately contains the preproc-subdirectory: 
+
+
+```bash
+├── BASE_DIR
+│       └── preproc
+│       │      └── TASKNAME_VAR
+│       │      │       └── VAR_STATISTIC
+│       │      │            └── model1.nc
+│       │      │            └── model2.nc
+│       │      │            └── ...
+│       │      │       └── VAR_STATISTIC
+│       │      └── TASKNAME_VAR
+│       │      │       └── VAR_STATISTIC
+│       │      │       └── VAR_STATISTIC
+│       │      │            └── model1.nc
+│       │      │            └── model2.nc
+│       │      │            └── ...
+│       └── possibly other output from ESMValTool
+....
+```
+
+
+Further, to load the data, we need one or more yaml configuration files.
+We use ESMValTool to preprocess the data and simply use our ESMValTool recipes
+as config files here. Not everything in the recipes is needed for loading the
+data. For a minimal example, see `/configs/recipe_configs/recipe_historical_pr_filled.yml` 
+where the unnecessary sections were removed.
+
+
 
 ## Getting started
 
-Here's an example (in Julia) of how to get weights for a set of models defined in the configuration file stored in configs/: 
+For the entire example code, see `scripts/example.jl`.
+
+#### How to load data
+
+To load data, you always have to specify the path to the directory that contains the
+yaml config files `path_to_config_dir` and the path to the directory that 
+contains the prerpocessed data `base_path` (see above for details on structure).
 
 ````julia
-using SimilarityWeights
+import SimilarityWeights as sw
 
-path_config = "configs/example_historical_albedo.yml"
-config = SimilarityWeights.validateConfig(path_config);
+base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical";
+path_to_config_dir = "configs/recipe_configs";
 
-weights = SimilarityWeights.getOverallWeights(config);
+data = sw.loadData(path_to_config_dir, base_path)
 ````
 
-Calling ``getOverallWeights`` will compute weights for all models shared across climate variables. The metadata is adapted accordingly and stores information about the final set of models used. These will also be logged to the console. 
+Here it is assumed that there is one subdirectory in base_path for each climate variable.
+If this is not the case (e.g. see example in `scripts/run-climwip-simplified.yml`), 
+set the parameter `dir_per_var=false` when calling `sw.loadData`. 
 
-#### Configuration
+You might not want to load all data, but only a subset of it. In that case, 
+you can specify a `DataConstraint` (struct defined in src/data-utils.jl) like so:
 
-The assumed directory structure of the data is as follows (upper case words are variables 
-that need to be replaced): 
+````julia
+dc = sw.DataConstraint(
+    variables=["tas", "pr"], 
+    tasks=["historical1"],
+    commonModelsAcrossVars=true
+);
+````
 
-```bash
-├── BASE_DIR
-│   └── preproc
-│       └── PERIOD
-│       │     └── VARIABLE_DIAGNOSTIC
-│       │  
-│       └── run
-│   └── ... (possibly other output from ESMValTool)
-....
-```
-
-Here's an example:
-
-```bash
-├── BASE_DIR
-│   └── preproc
-│       └── historical1
-│       │     └── tas_CLIM
-│       │     └── pr_CLIM
-│       │     └── tas_STD
-│       │     └── pr_STD
-│       └── historical
-│       │     └── pr_STD
-│       │     └── tas_STD
-│       │     └── ...
-│       └── run
-│   └── ... (possibly other output from ESMValTool)
-....
-```
+You can specify which variables to load and specify whether only those models should be
+loaded that provide data for all variables (parameter `commonModelsAcrossVars`), which 
+is by default set to false.
+Further, you can filter the timeranges (`timeranges`, e.g. set to `"1951-1980"`) and 
+which tasks (`tasks`) to load. A task usually refers to a certain time period, e.g. 
+we call the time period from 1951-1980 'historical1'. 
+So in this case it does not matter whether you provied `timerange=1951-1980` or 
+`task=historical1`.
+Then you can filter the statistics to load (e.g., `statistics=["CLIM"]` or `statistics=["ANOM"]`). 
+The names of the statistics/diagnostics depend on how you called them when preprocessing the data. 
 
 
-Note that the 'run'-directory will be there if the data was loaded with our ESMValTool recipes, but it doesn't contain any data that we'll need. So no need for this directory if the data was loaded differently. 
+#### How to compute weights
 
+For a full example, see `scripts/run-climwip-simplified.yml`.
 
-- `base_dir:`  Directory that contains the preprocessed data from ESMValTool (not necessarily from ESMValTool, but the underlying structure must be the same)
+Calling ``sw.getOverallWeights(data, config)`` will compute weights based on the model data in `data`.
+The config parameter is of type `ConfigWeights` defined in `src/data-utils.jl`. It holds information 
+about the contribution of each combination of statistic/diagnostic and climate variable, once for computing
+independence weights and once for computing performance weights. Further parameters from the weighting approach
+are specified here (`sigmaD`, `sigmaS`). 
 
-- `period:` Name of experiment/time period for which models were run, e.g. 'historical', 'midHolocene'.
+The output of the function `getOverallWeights` is an object of type `ClimwipWeights` (see `src/data-utils.jl`) which
+holds the performance weights for all combinations of statistics/diagnostics and climate variables, for performance as well as
+independence weights. 
+Further, it contains the overall weights (one for each model, summing up to 1) as well as the performance and independence weights 
+for each variable (summed across statistics/diagnostics).
+<!-- - `weights_variables:`: For each of 'performance' and 'independence' one value per climate variable considered. These values represent the weight of how much each climate variable influences the generalized distance of a model, which is computed by taking a weighted average across the distances with respect to different variables. Should sum up to 1.  -->
 
-- `target_dir:` Path to the directory where the computed data will be stored.
-
-- `variables:` List of climate variables which will be considered.
-
-- `experiment:` Name of experiment. Referring to the full time period.
-
-<!-- - `name_ref_period:` If the data is loaded with our ESMValTool recipes, the name of the reference period is, for now, one of 'historical1', 'historical2', 'historical3' (see below).
-
-- `name_full_period:` If the data is loaded with our ESMValTool recipes, the name with which the entire referenced period of the respective experiment is referred to, is set to 'full'. -->
-
-- `models_project_name:` Either 'CMIP6' or 'CMIP5'. We focus on 'CMIP6'.
-
-- `obs_data_name:` If the data is loaded with our ESMValTool recipes, for now this is set to 'ERA5'. 
-
-- `weight_contributions:` For now: one value for performance, one for independence. Should sum up to 1. This is how much each of the two weight-types is taken into account.
-
-- `weights_variables:`: For each of 'performance' and 'independence' one value per climate variable considered. These values represent the weight of how much each climate variable influences the generalized distance of a model, which is computed by taking a weighted average across the distances with respect to different variables. Should sum up to 1. 
-
-
-## Computation of weights
-
-#### Distances: area-weighted RMSE
+#### Defintion of the weights: area-weighted RMSE
 ``d_i``is the area-weighted root mean squared error between model predictions and observational data.
 This values is computed for every model (including different ensemble members)[^1], diagnostic and variable (summarized as DIAG):
 
@@ -119,16 +168,6 @@ To compute the actual weight per Model, ``w_i``, the different ensemble members 
 d_i ^\prime = \frac{\sum_k^{K_i} d_i^k}{K_i}
 ```
 
-
-#### Reference data
-
-We use three different periods within the historical period as reference to compute the performance weights: 
-
-- historical1: 1951 - 1980
-- historical2: 1961 - 1990
-- historical3: 1990 - 2014
-
-
 ## References
 
 - Brunner Lukas, Angeline G. Pendergrass, Flavio Lehner, Anna L. Merrifield, Ruth Lorenz, and Reto Knutti. “Reduced Global Warming from CMIP6 Projections When Weighting Models by Performance and Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020): 995–1012. https://doi.org/10.5194/esd-11-995-2020.
@@ -141,8 +180,6 @@ We use three different periods within the historical period as reference to comp
 Modules = [SimilarityWeights]
 Order = [:function, :type]
 ```
-
-
 
 ## Index
 
