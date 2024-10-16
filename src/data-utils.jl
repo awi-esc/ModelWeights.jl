@@ -2,22 +2,6 @@ import YAML
 using DimensionalData
 using Interpolations
 
-@kwdef mutable struct Config 
-    base_path::String
-    path_to_recipes::String
-    prefix_recipes::String
-    target_dir::String
-    diagnostics::Vector{String}
-    variables::Vector{String}
-    name_ref_period::String
-    name_full_period::String
-    name_obs_period::String
-    models_project_name::String
-    obs_data_name::String
-    weights_variables::Union{Nothing, Dict{String, Dict{String,Number}}}
-    weight_contributions::Union{Nothing, Dict{String, Number}}
-end
-
 
 @kwdef struct DataID
     key::String
@@ -34,16 +18,9 @@ end
     ids::Vector{DataID}=[]
     models::Dict{String, DimArray}=Dict()
     obs::Dict{String, DimArray}=Dict()
+    #data instead of models& obs
 end
 
-
-@kwdef struct DataConstraint
-    variables::Vector{String}=[]
-    timeranges::Vector{String}=[]
-    statistics::Vector{String}=[]
-    tasks::Vector{String}=[]
-    commonModelsAcrossVars::Bool=false
-end
 
 
 @kwdef struct ConfigWeights
@@ -59,9 +36,9 @@ end
 @kwdef struct ClimwipWeights
     performance_all::DimArray
     independence_all::DimArray
-    performance::DimArray
-    independence::DimArray
-    overall::DimArray
+    performance::DimArray #normalize
+    independence::DimArray #normalize
+    overall::DimArray #weights
 end
 
 
@@ -312,23 +289,23 @@ function buildDataIDsFromConfigs(path_to_config_dir::String)
 end
 
 
-function applyDataConstraints!(ids::Vector{DataID}, constraint::DataConstraint)   
-    if !isempty(constraint.variables)
-        keepVar(id::DataID) = any(var -> id.variable == var, constraint.variables)
+function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{String}})   
+    if !isnothing(get(subset, "variables", nothing))
+        keepVar(id::DataID) = any(var -> id.variable == var, subset["variables"])
         filter!(keepVar, ids)
     end
-    if !isempty(constraint.tasks)
-        keepTasks(id::DataID) = any(name -> id.task == name, constraint.tasks)
+    if !isnothing(get(subset, "aliases", nothing))
+        keepTasks(id::DataID) = any(name -> id.task == name, subset["aliases"])
         filter!(keepTasks, ids)
     end
 
-    if !isempty(constraint.statistics)
-        keepStats(id::DataID) = any(stat -> id.statistic == stat, constraint.statistics)
+    if !isnothing(get(subset, "statistics", nothing))
+        keepStats(id::DataID) = any(stat -> id.statistic == stat, subset["statistics"])
         filter!(keepStats, ids)
     end
 
-    if !isempty(constraint.timeranges)
-        keepTimeRange(id::DataID) = any(tr -> id.timerange == tr, constraint.timeranges)
+    if !isnothing(get(subset, "timeranges", nothing))
+        keepTimeRange(id::DataID) = any(tr -> id.timerange == tr, subset["timeranges"])
         filter!(keepTimeRange, ids)
     end
 end

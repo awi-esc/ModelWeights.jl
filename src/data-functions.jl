@@ -219,41 +219,43 @@ end
 
 """
     loadData(
-    path_to_config_dir::String, 
-    base_path::String, 
-    dir_per_var::Bool=true,
-    constraints::DataConstraint=DataConstraint()
-)
+        base_path::String, 
+        config_path::String;
+        dir_per_var::Bool=true,
+        subset::Dict=Dict(),
+    )
 
 Loads the data from the config files located at 'paths_to_config_dir'. For necessary
 structure of config files, see TODO. For each variable, experiment, statistic
 and timerange (task) a different DimArray is loaded.
 
 # Arguments:
-- `path_to_config_dir`: path to directory that contains one or more yaml config 
-files with the following structure: TODO
 - `base_path`:  if dir_per_var is true, path to directory that contains one or
 more subdirectories that each contains a directory 'preproc' with the
 preprocessed data. If dir_per_var is false, base_path is the path to a directory
 that contains the 'preproc' subdirectory.
+- `config_path`: path to directory that contains one or more yaml config 
+files with the following structure: TODO
+- `dir_per_var`: if true, one subdirectory for data of each climate variable
+- `subset`: dictionary specifying the subset of data to be loaded, has keys
+'variables', 'statistics', 'aliases', each mapping to a vector of Strings
 """
 function loadData(
-    path_to_config_dir::String, 
-    base_path::String;
-    dir_per_var::Bool=true, 
-    constraints::DataConstraint=DataConstraint()
+    base_path::String,
+    config_path::String;
+    dir_per_var::Bool=true,
+    common_models_across_vars=false,
+    subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}()
 )
-    ids = buildDataIDsFromConfigs(path_to_config_dir)    
-    applyDataConstraints!(ids, constraints)
+    ids = buildDataIDsFromConfigs(config_path)    
+    applyDataConstraints!(ids, subset)
 
     model_data = Dict{String, DimArray}()
     obs_data = Dict{String, DimArray}()
     for id in ids
-        #rest, name = split(id, "#")
-        #exp, stat, var, timerange = split(rest, "_")
         # if dir_per_var is true, directory at base_path has subdirectories, 
         # one for each variable (they must end with _ and the name of the variable),
-        # otherwise path_config_dir is the path to the directory that contains 
+        # otherwise config_path is the path to the directory that contains 
         # a subdirectory 'preproc'
         path_to_subdirs = [base_path]
         if dir_per_var
@@ -294,7 +296,7 @@ function loadData(
     end
     @info "The following data was found and loaded: " keys(model_data)
 
-    if constraints.commonModelsAcrossVars
+    if common_models_across_vars
         model_data = getCommonModelsAcrossVars(model_data, ids)
     end
     return Data(

@@ -5,13 +5,24 @@ using ColorSchemes
 using NCDatasets
 
 base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358"; 
-path_to_config_dir = "/albedo/home/brgrus001/SimilarityWeights/configs/climwip_config";
+config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/climwip_config";
 
 # specify which data to load (default: all data will be loaded if compatible)
-dc_weights = sw.DataConstraint(
-    tasks=["calculate_weights_climwip"],
-    commonModelsAcrossVars=true
+data_weights = sw.loadData(
+    base_path,
+    config_path;
+    dir_per_var=false,
+    common_models_across_vars=true,
+    subset=Dict(
+        #"variables" => Vector{String}(),
+        #"statistics" => Vector{String}(),
+        "aliases" => ["calculate_weights_climwip"],
+        #"timeranges" => Vector{String}()
+    )
 );
+
+
+
 
 # 1. Compute Weights
 # configure parameters for computing weights
@@ -23,12 +34,6 @@ config_weights = sw.ConfigWeights(
     ref_period = "1995-2014"
 );
 
-data_weights = sw.loadData(
-    path_to_config_dir, 
-    base_path; 
-    dir_per_var=false, 
-    constraints=dc_weights
-);
 
 weights = sw.getOverallWeights(data_weights, config_weights);
 # make some Plots
@@ -48,7 +53,7 @@ figs_wI = sw.plotIndependenceWeights(wI_by_var)
 
 # 2. apply computed weights - Temperature map plots
 data_temp_map_future = sw.loadData(
-    path_to_config_dir,
+    config_path,
     base_path, 
     dir_per_var=false,
     constraints = sw.DataConstraint(
@@ -56,7 +61,7 @@ data_temp_map_future = sw.loadData(
     )
 );
 data_temp_map_reference = sw.loadData(
-    path_to_config_dir,
+    config_path,
     base_path, 
     dir_per_var=false,
     constraints = sw.DataConstraint(
@@ -122,7 +127,7 @@ end
 
 # 3. Apply computed weights - Temperature graph plots
 data_temp_graph = sw.loadData(
-    path_to_config_dir,
+    config_path,
     base_path, 
     dir_per_var=false,
     constraints = sw.DataConstraint(
