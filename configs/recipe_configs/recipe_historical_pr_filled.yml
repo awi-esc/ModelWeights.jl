@@ -2,39 +2,23 @@ diagnostics:
   historical:
     variables:
       pr_CLIM:
-        short_name: pr
-        preprocessor: climatological_mean
-        variable_long_name: Precipitation
         exp: historical
-        mip: Amon
         mip_era: CMIP6
   historical1:
     variables:
       pr_CLIM:
-        short_name: pr
-        preprocessor: climatological_mean
-        variable_long_name: Precipitation
         exp: historical
-        mip: Amon
         mip_era: CMIP6
         timerange: 1951/1980
   historical2:
     variables:
       pr_CLIM:
-        short_name: pr
-        preprocessor: climatological_mean
-        variable_long_name: Precipitation
         exp: historical
-        mip: Amon
         mip_era: CMIP6
         timerange: 1961/1990
   historical3:
     variables:
       pr_CLIM:
-        short_name: pr
-        preprocessor: climatological_mean
-        variable_long_name: Precipitation
         exp: historical
-        mip: Amon
         mip_era: CMIP6
         timerange: 1991/2014
