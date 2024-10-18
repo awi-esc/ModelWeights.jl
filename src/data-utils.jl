@@ -290,21 +290,21 @@ end
 
 
 function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{String}})   
-    if !isnothing(get(subset, "variables", nothing))
+    if !isempty(get(subset, "variables", Vector{String}()))
         keepVar(id::DataID) = any(var -> id.variable == var, subset["variables"])
         filter!(keepVar, ids)
     end
-    if !isnothing(get(subset, "aliases", nothing))
+    if !isempty(get(subset, "aliases", Vector{String}()))
         keepTasks(id::DataID) = any(name -> id.task == name, subset["aliases"])
         filter!(keepTasks, ids)
     end
 
-    if !isnothing(get(subset, "statistics", nothing))
+    if !isempty(get(subset, "statistics", Vector{String}()))
         keepStats(id::DataID) = any(stat -> id.statistic == stat, subset["statistics"])
         filter!(keepStats, ids)
     end
 
-    if !isnothing(get(subset, "timeranges", nothing))
+    if !isempty(get(subset, "timeranges", Vector{String}()))
         keepTimeRange(id::DataID) = any(tr -> id.timerange == tr, subset["timeranges"])
         filter!(keepTimeRange, ids)
     end
