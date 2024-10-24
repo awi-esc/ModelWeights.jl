@@ -393,26 +393,45 @@ vector is provided, unweighted average is computed.
 - `data`: DimArray with dimensions lon, lat, model
 - `w`: DimArray with dimension 'model'
 """
-function computeWeightedAvg(data::DimArray; w::Union{DimArray, Nothing}=nothing)
-    models = dims(data, :model);
+function computeWeightedAvg(
+    data::DimArray; weights::Union{DimArray, Nothing}=nothing
+)
     data = deepcopy(data)
-    if isnothing(w)
-        w = DimArray(ones(length(models))./length(models), Dim{:model}(Array(models)))
+    if isnothing(weights)
+        # make sure that the number of ensemble members per model is considered
+        ensemble_names = data.metadata["ensemble_names"]
+        indices = []
+        for model in unique(ensemble_names)
+            push!(indices, findall(x -> x==model, ensemble_names))
+        end
+        n_ensembles = length(indices)
+        w = []
+        for positions in indices
+            n_members = length(positions)
+            for _ in range(1, n_members)
+                push!(w, (1/n_ensembles) *  (1/n_members))
+            end
+        end
+        weights = DimArray(w, Dim{:model}(Array(dims(data, :model))))
     else
         # weights may have been computed wrt a different set of variables as we use here, 
         # so the list of models for which weights have been computed may be shorter 
         # than the models of the given data (for the same reference period).
-        data = data[model = Where(m -> m in dims(w, :model))]
-        models = dims(data, :model)
-        if length(models) != length(w)
+        if sort(dims(weights, :model)) != sort(models)
+            @warn "Mismatch between models that weights were computed for and models in the data."
+        end
+        data = data[model = Where(m -> m in dims(weights, :model))]
+        n_models_data = length(dims(data, :model))
+        n_weights = length(weights)
+        if n_models_data != n_weights
             msg = "nb of models for observational and model predictions does not match: ";
-            msg2 = "weights: " * string(length(w)) * " , data: " * string(length(models));
+            msg2 = "weights: " * string(n_weights) * " , data: " * string(n_models_data);
             throw(ArgumentError(msg * msg2))
         end
     end
-
-    for m in models
-        data[model = At(m)] = data[model = At(m)] .* w[model = At(m)]
+    @assert isapprox(sum(weights), 1; atol=10^-4)
+    for m in dims(data, :model)
+        data[model = At(m)] = data[model = At(m)] .* weights[model = At(m)]
     end
 
     weighted_avg = dropdims(reduce(+, data, dims=:model), dims=:model)
