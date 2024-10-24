@@ -5,7 +5,7 @@ using ColorSchemes
 Plot contours of world with an overlayed heatmap that shows the data which 
 correspond to mean value for each position in considered grid. 
 """
-function plotMeansOnMap(means::DimArray, title::String, colors=nothing)
+function plotMeansOnMap(means::DimArray, title::String; colors=nothing)
     means = sortLongitudesWest2East(means);
     dims_lat = Array(dims(means, :lat));
     dims_lon = Array(dims(means, :lon));

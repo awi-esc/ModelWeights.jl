@@ -393,7 +393,7 @@ vector is provided, unweighted average is computed.
 - `data`: DimArray with dimensions lon, lat, model
 - `w`: DimArray with dimension 'model'
 """
-function computeWeightedAvg(data::DimArray, w::Union{DimArray, Nothing}=nothing)
+function computeWeightedAvg(data::DimArray; w::Union{DimArray, Nothing}=nothing)
     models = dims(data, :model);
     data = deepcopy(data)
     if isnothing(w)
@@ -459,9 +459,9 @@ function makeWeightPerEnsembleMember(weights::DimArray)
 end
 
 
-function logWeights(weights_metadata)
-    models = weights_metadata["full_model_names"];
-    model_key = getCMIPModelsKey(weights_metadata);
-    @info "Nb included models (without ensemble members): " length(weights_metadata[model_key])
+function logWeights(metadata_weights)
+    models = metadata_weights["full_model_names"];
+    model_key = getCMIPModelsKey(metadata_weights);
+    @info "Nb included models (without ensemble members): " length(metadata_weights[model_key])
     foreach(m -> @info(m), models)
 end

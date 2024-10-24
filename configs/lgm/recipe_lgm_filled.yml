@@ -1,0 +1,284 @@
+documentation:
+  title: Get CMIP6 tas-data for LGM experiments.
+  description: The recipe downloads climate data (near-surface air temperature) for
+    LGM experiments,  regrids the data to a 5x5 grid and provides the climatological
+    mean of each variable for the entire period as well as for three periods within
+    the historical period.
+  authors:
+  - grusdt_britta
+  maintainer:
+  - grusdt_britta
+preprocessors:
+  general:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+  climatological_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: mean
+      period: full
+  standard_dev:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: std_dev
+      period: full
+  default: {}
+diagnostics:
+  lgm:
+    variables:
+      tas_CLIM:
+        short_name: tas
+        preprocessor: climatological_mean
+        variable_long_name: Near-Surface Air Temperature
+        exp: lgm
+        mip: Amon
+        additional_datasets:
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: CCSM4
+          institute: NCAR
+          ensemble: r1i1p1
+          version: v20120203
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: CCSM4
+          institute: NCAR
+          ensemble: r2i1p1
+          version: v20120604
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: CNRM-CM5
+          institute: CNRM-CERFACS
+          ensemble: r1i1p1
+          version: v20120530
+        - mip_era: CMIP6
+          project: CMIP6
+          dataset: INM-CM4-8
+          institute: INM
+          ensemble: r1i1p1f1
+          grid: gr1
+          version: v20190802
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MIROC-ESM
+          institute: MIROC
+          ensemble: r1i1p1
+          version: v20120710
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MPI-ESM-P
+          institute: MPI-M
+          ensemble: r1i1p1
+          version: v20120602
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MRI-CGCM3
+          institute: MRI
+          ensemble: r1i1p1
+          version: v20120701
+      tas_STD:
+        short_name: tas
+        preprocessor: standard_dev
+        variable_long_name: Near-Surface Air Temperature
+        exp: lgm
+        mip: Amon
+        additional_datasets:
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: CCSM4
+          institute: NCAR
+          ensemble: r1i1p1
+          version: v20120203
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: CCSM4
+          institute: NCAR
+          ensemble: r2i1p1
+          version: v20120604
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: CNRM-CM5
+          institute: CNRM-CERFACS
+          ensemble: r1i1p1
+          version: v20120530
+        - mip_era: CMIP6
+          project: CMIP6
+          dataset: INM-CM4-8
+          institute: INM
+          ensemble: r1i1p1f1
+          grid: gr1
+          version: v20190802
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MIROC-ESM
+          institute: MIROC
+          ensemble: r1i1p1
+          version: v20120710
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MPI-ESM-P
+          institute: MPI-M
+          ensemble: r1i1p1
+          version: v20120602
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MRI-CGCM3
+          institute: MRI
+          ensemble: r1i1p1
+          version: v20120701
+      tos_CLIM:
+        short_name: tos
+        preprocessor: climatological_mean
+        variable_long_name: Sea Surface Temperature
+        exp: lgm
+        mip: Omon
+        additional_datasets:
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: CNRM-CM5
+          institute: CNRM-CERFACS
+          ensemble: r1i1p1
+          version: v20120730
+        - mip_era: CMIP6
+          project: CMIP6
+          dataset: INM-CM4-8
+          institute: INM
+          ensemble: r1i1p1f1
+          grid: gr1
+          version: v20201112
+        - mip_era: CMIP6
+          project: CMIP6
+          dataset: MIROC-ES2L
+          institute: MIROC
+          ensemble: r1i1p1f2
+          grid: gr1
+          version: v20200911
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MIROC-ESM
+          institute: MIROC
+          ensemble: r1i1p1
+          version: v20130712
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MPI-ESM-P
+          institute: MPI-M
+          ensemble: r1i1p1
+          version: v20120625
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MRI-CGCM3
+          institute: MRI
+          ensemble: r1i1p1
+          version: v20120609
+      tos_STD:
+        short_name: tos
+        preprocessor: standard_dev
+        variable_long_name: Sea Surface Temperature
+        exp: lgm
+        mip: Omon
+        additional_datasets:
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: CNRM-CM5
+          institute: CNRM-CERFACS
+          ensemble: r1i1p1
+          version: v20120730
+        - mip_era: CMIP6
+          project: CMIP6
+          dataset: INM-CM4-8
+          institute: INM
+          ensemble: r1i1p1f1
+          grid: gr1
+          version: v20201112
+        - mip_era: CMIP6
+          project: CMIP6
+          dataset: MIROC-ES2L
+          institute: MIROC
+          ensemble: r1i1p1f2
+          grid: gr1
+          version: v20200911
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MIROC-ESM
+          institute: MIROC
+          ensemble: r1i1p1
+          version: v20130712
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MPI-ESM-P
+          institute: MPI-M
+          ensemble: r1i1p1
+          version: v20120625
+        - mip_era: CMIP5
+          project: CMIP5
+          dataset: MRI-CGCM3
+          institute: MRI
+          ensemble: r1i1p1
+          version: v20120609
+    scripts: null
+datasets:
+- mip_era: CMIP6
+  project: CMIP6
+  dataset: AWI-ESM-1-1-LR
+  institute: AWI
+  ensemble: r1i1p1f1
+  grid: gn
+  version: v20200212
+- mip_era: CMIP6
+  project: CMIP6
+  dataset: CESM2-FV2
+  institute: NCAR
+  ensemble: r1i2p2f1
+  grid: gn
+  version: v20220915
+- mip_era: CMIP6
+  project: CMIP6
+  dataset: CESM2-WACCM-FV2
+  institute: NCAR
+  ensemble: r1i2p2f1
+  grid: gn
+  version: v20220915
+- mip_era: CMIP5
+  project: CMIP5
+  dataset: FGOALS-g2
+  institute: LASG-CESS
+  ensemble: r1i1p1
+  version: v1
+- mip_era: CMIP5
+  project: CMIP5
+  dataset: GISS-E2-R
+  institute: NASA-GISS
+  ensemble: r1i1p(150:151)
+  version: v20160510
+- mip_era: CMIP5
+  project: CMIP5
+  dataset: IPSL-CM5A-LR
+  institute: IPSL
+  ensemble: r1i1p1
+  version: v20120114
+- mip_era: CMIP6
+  project: CMIP6
+  dataset: MIROC-ES2L
+  institute: MIROC
+  ensemble: r1i1p1f2
+  grid: gn
+  version: v20191002
+- mip_era: CMIP5
+  project: CMIP5
+  dataset: MPI-ESM-P
+  institute: MPI-M
+  ensemble: r1i1p2
+  version: v20120713
+- mip_era: CMIP6
+  project: CMIP6
+  dataset: MPI-ESM1-2-LR
+  institute: MPI-M
+  ensemble: r1i1p1f1
+  grid: gn
+  version: v20190710

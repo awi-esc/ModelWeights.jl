@@ -5,12 +5,21 @@ using Interpolations
 
 @kwdef struct DataID
     key::String
-    exp::String
-    statistic::String
     variable::String
+    statistic::String
+    alias::String
+    exp::String
     timerange::String
-    task::String
 end
+
+# Overload the Base.show method to print key-value pairs of DataID instances
+function Base.show(io::IO, x::DataID)
+    for field in fieldnames(DataID)
+        value = getfield(x, field)        
+        print(io, "$field=$value  ")
+    end
+end
+
 
 
 @kwdef struct Data
@@ -55,7 +64,14 @@ function warnIfFlawedMetadata(attributes, filename)
 end
 
 
-function buildCMIP5EnsembleMember(realizations, initializations, physics, n)
+function buildCMIP5EnsembleMember(
+    realizations::Vector, initializations::Vector, physics::Vector
+)
+    n = length(realizations)
+    if (n != length(initializations)) || (n != length(physics))
+        msg = "inconsistent input for building up CMIP5EnsembleMembers!"
+        throw(ArgumentError(msg))
+    end
     function concat(elem, prefix)
         if !(elem isa Vector)
             return [prefix * string(elem) for _ in range(1, n)]
@@ -72,23 +88,25 @@ end
 """
     updateMetadata!(
         meta::Dict{String, Union{Array, String}}, 
-        data::DimArray
+        source_names::Vector{String},
+        isModelData::Bool
     )
 
 Update metadata 'meta' s.t. data of ignored files is removed and attributes
 that were only present in some files/models are set to missing. Further the key 
 'full_model_names' is added which contains for every file/model the unique 
-identifier consisting of variant_label, grid_label and model_name. 
+identifier consisting of variant_label, grid_label (for CMIP6) and model_name. 
 """
 function updateMetadata!(
     meta::Dict{String, Union{Array, String, Dict}}, 
-    data::DimArray
+    source_names::Vector{String},
+    isModelData::Bool
 )
-    model_dim = length(dims(data, :model))
+    n_dim = length(source_names)
     for key in keys(meta)
         values = meta[key]; 
         # add missing values for the last added files 
-        n =  model_dim - length(values)
+        n =  n_dim - length(values)
         for _ in range(1, n)
             push!(values, missing)
         end
@@ -99,12 +117,11 @@ function updateMetadata!(
         end
     end
     # for model data only
-    if !isempty(get(meta, "source_id", get(meta, "model_id", "")))
-        key_model_name = getCMIPModelsKey(meta);
-        meta["full_model_names"] = getUniqueModelIds(meta, key_model_name)
+    if isModelData
+        meta["full_model_names"] = getUniqueModelIds(meta, source_names)
         # add mapping from model (ensemble) names to indices in metadata arrays
-        meta["ensemble_names"] = Array(dims(data, :model))
-        meta["indices_map"] = getIndicesMapping(meta["ensemble_names"]);
+        meta["ensemble_names"] = source_names
+        meta["indices_map"] = getIndicesMapping(source_names);
     end
 end
 
@@ -199,7 +216,6 @@ function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.Dim
     end
     if !isempty(attribs_diff_across_members)
         @warn "metadata attributes that differ across ensemble members (ok for some!)" unique(attribs_diff_across_members)
-        @assert !(getCMIPModelsKey(meta) in attribs_diff_across_members)
     end
     return meta_new
 end
@@ -252,25 +268,25 @@ end
 
 
 """
-    buildDataIDsFromConfigs(paths_to_config_dir::String)
+    buildDataIDsFromConfigs(config_path::String)
 
 # Arguments:
-- `path_to_config_dir`: path to directory that contains one or more yaml config
+- `config_path`: path to directory that contains one or more yaml config
 files. For the assumed structure of the config files, see: TODO.
 """
-function buildDataIDsFromConfigs(path_to_config_dir::String)
+function buildDataIDsFromConfigs(config_path::String)
     paths_to_configs = filter(
         x -> isfile(x) && endswith(x, ".yml"), 
-        readdir(path_to_config_dir, join=true)
+        readdir(config_path, join=true)
     )
     ids::Vector{DataID} = []
     for path_config in paths_to_configs
         config = YAML.load_file(path_config);
         data_all = config["diagnostics"]
-        names = keys(data_all)
+        aliases = keys(data_all)
     
-        for name in names
-            data = data_all[name]["variables"]     
+        for alias in aliases
+            data = data_all[alias]["variables"]     
             for (k,v) in data
                 variable, statistic = split(k, "_")
                 if typeof(v["exp"]) <: String
@@ -279,8 +295,14 @@ function buildDataIDsFromConfigs(path_to_config_dir::String)
                     experiment = join(v["exp"], "-")
                 end
                 timerange = replace(get(v, "timerange", "full"), "/" => "-")
-                id = join([experiment, statistic, variable, timerange, name], "_", "#")
-                dataID = DataID(id, experiment, statistic, variable, timerange, name)
+                id = join([variable, statistic, alias], "_")
+                dataID = DataID(
+                    key=id, 
+                    variable=variable,
+                    statistic=statistic,
+                    alias=alias,
+                    exp=experiment, 
+                    timerange=timerange)
                 push!(ids, dataID)
             end
         end

@@ -1,36 +1,39 @@
 using DimensionalData
 
 """
-    getUniqueModelIds(meta::Dict, key_model_names::String)
+    getUniqueModelIds(meta::Dict, model_names::Vector{String})
 
 # Arguments:
 - `meta`:
-- `key_model_names`:
+- `model_names`:
 """
 function getUniqueModelIds(
-    meta::Dict, #{String, Union{String, Array, Dict}},
-    key_model_names::String
+    meta::Dict,
+    model_names::Vector{String}
 )
-    mip_era = get(meta, "mip_era", get(meta, "project_id", ""))
-    model_names = meta[key_model_names];
-    if mip_era == "CMIP5"
+    mip_eras = meta["mip_era"]
+    indices_cmip5 = findall(x -> x == "CMIP5", mip_eras)
+    indices_cmip6 = findall(x -> x == "CMIP6", mip_eras)
+    models = Vector{String}(undef, length(model_names))
+
+    if !isempty(indices_cmip5)
         variants = buildCMIP5EnsembleMember(
-            meta["realization"], 
-            meta["initialization_method"], 
-            meta["physics_version"],
-            length(model_names)
-        );
-        models = map(
-            x->join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM), 
-            zip(model_names, variants)
-        );
-        @warn "For CMIP5, full model names dont include grid."
-    else
-        variants = meta["variant_label"];
-        grids = meta["grid_label"]; 
-        models = map(
-            x->join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM), 
-            zip(model_names, variants, grids)
+            meta["realization"][indices_cmip5], 
+            meta["initialization_method"][indices_cmip5], 
+            meta["physics_version"][indices_cmip5]
+        )
+        models[indices_cmip5] =  map(
+            x -> join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM), 
+            zip(model_names[indices_cmip5], variants)
+        )
+        @debug "For CMIP5, full model names dont include grid."
+    end
+    if !isempty(indices_cmip6)
+        variants = meta["variant_label"][indices_cmip6]
+        grids = meta["grid_label"][indices_cmip6]
+        models[indices_cmip6] = map(
+            x->join(x, MODEL_MEMBER_DELIM, "_"), 
+            zip(model_names[indices_cmip6], variants, grids)
         );
     end
     return models
@@ -87,9 +90,11 @@ end
 
 
 """
-    loadPreprocData(path_data_dir::String, included::Vector{String}=[])
-
-    This is the new version!
+    loadPreprocData(
+        path_data_dir::String;
+        included::Vector{String}=[],
+        isModelData::Bool=true
+    )
 
 # Arguments:
 - `path_data_dir`: base path to directory that contains subdirectory with name
@@ -97,18 +102,22 @@ of the respective experiment (see TODO for assumed data structure)
 - `included`: either observational or model data can be loaded at once, e.g. 
 set to ["ERA5"] or ["CMIP5"] for ERA5-observational and CMIP5 model data respectively
 """
-function loadPreprocData(path_data_dir::String, included::Vector{String}=[])
+function loadPreprocData(
+    path_data_dir::String; 
+    included::Vector{String}=[],
+    isModelData::Bool=true
+)
     if !isdir(path_data_dir)
         throw(ArgumentError(path_data_dir * " does not exist!"))
     end
-    data = [];
-    sources = [];
-    meta = Dict{String, Union{String, Array, Dict}}();
+    data = []
+    source_names = Vector{String}()
+    meta = Dict{String, Union{String, Array, Dict}}()
     ncFiles = filter(
         x -> isfile(x) && endswith(x, ".nc"), 
         readdir(path_data_dir; join=true)
-    );
-    nbIgnored = 0;
+    )
+    nbIgnored = 0
     for (i, file) in enumerate(ncFiles)
         addFile = true;
         # only include files that contain all names given in 'included'
@@ -127,7 +136,6 @@ function loadPreprocData(path_data_dir::String, included::Vector{String}=[])
             dsVar = ds[climVar];
             # if climVar == "amoc"
             #     dsVar = ds["msftmz"]
-            # else 
             # end
             
             attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)));
@@ -142,10 +150,25 @@ function loadPreprocData(path_data_dir::String, included::Vector{String}=[])
                 continue
             end
 
-            # update metadata
+            # add mip_era for models since it is not provided in CMIP5-models
+            name = ""
+            if isModelData
+                model_key = getCMIPModelsKey(Dict(ds.attrib))
+                mip_era = get(attributes, "mip_era", nothing)
+                if isnothing(mip_era)
+                    attributes["mip_era"] = "CMIP5"
+                end
+                name = ds.attrib[model_key]
+            else 
+                name = filename
+            end
+            push!(source_names, name)
+            
+            # update metadata-dictionary for all processed files with the 
+            # metadata from the current file
             for key in keys(attributes)
                 values = get!(meta, key, []);
-                # fill up vector
+                # fill up vector up to processed file i
                 n = i - nbIgnored - length(values) - 1;
                 for _ in range(1, n)
                     push!(values, missing)
@@ -153,12 +176,6 @@ function loadPreprocData(path_data_dir::String, included::Vector{String}=[])
                 push!(values, attributes[key]);
             end
 
-            name = get(ds.attrib, "source_id", get(ds.attrib, "model_id", ""));
-            if !isempty(name)
-                push!(sources, name);
-            else # observational data does not have model name
-                push!(sources, filename)
-            end
 
             dimension_names = dimnames(dsVar)
             dimensions = []
@@ -199,8 +216,8 @@ function loadPreprocData(path_data_dir::String, included::Vector{String}=[])
         else 
             throw(ArgumentError("More than 3 data dimensions not supported."))
         end
-        dimData = DimArray(raw_data, (DimensionalData.dims(data[1])..., Dim{:model}(sources)))
-        updateMetadata!(meta, dimData);
+        dimData = DimArray(raw_data, (DimensionalData.dims(data[1])..., Dim{:model}(source_names)))
+        updateMetadata!(meta, source_names, isModelData);
         dimData = rebuild(dimData; metadata = meta);
 
         # set model names in model dimension to full model name which was 
@@ -227,7 +244,7 @@ end
 
 Loads the data from the config files located at 'paths_to_config_dir'. For necessary
 structure of config files, see TODO. For each variable, experiment, statistic
-and timerange (task) a different DimArray is loaded.
+and timerange (alias) a different DimArray is loaded.
 
 # Arguments:
 - `base_path`:  if dir_per_var is true, path to directory that contains one or
@@ -247,7 +264,7 @@ function loadData(
     common_models_across_vars=false,
     subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}()
 )
-    ids = buildDataIDsFromConfigs(config_path)    
+    ids = buildDataIDsFromConfigs(config_path)
     applyDataConstraints!(ids, subset)
 
     model_data = Dict{String, DimArray}()
@@ -269,28 +286,25 @@ function loadData(
         end
         for path_dir in path_to_subdirs
             path_data_dir = joinpath(
-                path_dir, "preproc", id.task, join([id.variable, id.statistic], "_")
+                path_dir, "preproc", id.alias, join([id.variable, id.statistic], "_")
             )
             if !isdir(path_data_dir)
+                @warn "$path_data_dir does not exist"
                 continue
             end
-            # the name of the time period is needed for loading the data, but 
-            # as it is arbitrary (e.g. historical1 ~ 1950-1981), we do not 
-            # included in the data ids
-            #base_id = join([id.statistic, id.variable, id.timerange], "_")
-            base_id = join(split(id.key, "_")[2:end], "_")
-            #id_wit_exp =  join([id.exp, base_id], "_")
-            data = loadPreprocData(path_data_dir, ["CMIP"])
+            data = loadPreprocData(path_data_dir; included=["CMIP"])
             if !isnothing(data)
                 #data = convert(DimArray, data)
                 model_data[id.key] = data
             end
             # TODO: don't hard code name of observational dataset!
             name_obs_data = "ERA5"
-            obs = loadPreprocData(path_data_dir, [name_obs_data])
+            obs = loadPreprocData(
+                path_data_dir; included=[name_obs_data], isModelData=false
+            )
             if !isnothing(obs)
                 #obs = convert(Dict{String, DimArray}, obs)
-                obs_data[join([name_obs_data, base_id], "_")] = obs
+                obs_data[join([name_obs_data, id.key], "_")] = obs
             end
         end
     end
@@ -357,10 +371,11 @@ function getCMIPModelsKey(meta::Dict)
     elseif "model_id" in attributes
         return "model_id"
     else 
-        msg = "Only CMIP6/CMIP5 supported with model name keys: source_id/model_id!"
+        msg = "Only CMIP6/5 supported (model name keys: source_id/model_id)"
         throw(ArgumentError(msg))
     end
 end
+
 
 """
     saveWeights(
