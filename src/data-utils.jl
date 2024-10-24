@@ -25,9 +25,7 @@ end
 @kwdef struct Data
     base_path::String
     ids::Vector{DataID}=[]
-    models::Dict{String, DimArray}=Dict()
-    obs::Dict{String, DimArray}=Dict()
-    #data instead of models& obs
+    data::Dict{String, DimArray}=Dict()
 end
 
 

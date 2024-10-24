@@ -104,11 +104,19 @@ set to ["ERA5"] or ["CMIP5"] for ERA5-observational and CMIP5 model data respect
 """
 function loadPreprocData(
     path_data_dir::String; 
-    included::Vector{String}=[],
+    included::Vector{String}=Vector{String}(),
     isModelData::Bool=true
 )
     if !isdir(path_data_dir)
         throw(ArgumentError(path_data_dir * " does not exist!"))
+    end
+    # set default values for model data
+    if isempty(included)
+        if isModelData
+            included = ["CMIP"]
+        else
+            included = ["ERA5"]
+        end
     end
     data = []
     source_names = Vector{String}()
@@ -239,10 +247,12 @@ end
         base_path::String, 
         config_path::String;
         dir_per_var::Bool=true,
+        isModelData::Bool=true,
+        common_models_across_vars::Bool=false,
         subset::Dict=Dict(),
     )
 
-Loads the data from the config files located at 'paths_to_config_dir'. For necessary
+Loads the data from the config files located at 'config_path'. For necessary
 structure of config files, see TODO. For each variable, experiment, statistic
 and timerange (alias) a different DimArray is loaded.
 
@@ -254,6 +264,8 @@ that contains the 'preproc' subdirectory.
 - `config_path`: path to directory that contains one or more yaml config 
 files with the following structure: TODO
 - `dir_per_var`: if true, one subdirectory for data of each climate variable
+- `isModelData`:
+- `common_models_across_vars`:
 - `subset`: dictionary specifying the subset of data to be loaded, has keys
 'variables', 'statistics', 'aliases', each mapping to a vector of Strings
 """
@@ -261,14 +273,14 @@ function loadData(
     base_path::String,
     config_path::String;
     dir_per_var::Bool=true,
-    common_models_across_vars=false,
+    isModelData::Bool=true,
+    common_models_across_vars::Bool=false,
     subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}()
 )
     ids = buildDataIDsFromConfigs(config_path)
     applyDataConstraints!(ids, subset)
 
-    model_data = Dict{String, DimArray}()
-    obs_data = Dict{String, DimArray}()
+    data_all = Dict{String, DimArray}()
     for id in ids
         # if dir_per_var is true, directory at base_path has subdirectories, 
         # one for each variable (they must end with _ and the name of the variable),
@@ -292,32 +304,24 @@ function loadData(
                 @warn "$path_data_dir does not exist"
                 continue
             end
-            data = loadPreprocData(path_data_dir; included=["CMIP"])
+            # TODO: set argument included here
+            data = loadPreprocData(path_data_dir; isModelData=isModelData)
             if !isnothing(data)
                 #data = convert(DimArray, data)
-                model_data[id.key] = data
-            end
-            # TODO: don't hard code name of observational dataset!
-            name_obs_data = "ERA5"
-            obs = loadPreprocData(
-                path_data_dir; included=[name_obs_data], isModelData=false
-            )
-            if !isnothing(obs)
                 #obs = convert(Dict{String, DimArray}, obs)
-                obs_data[join([name_obs_data, id.key], "_")] = obs
+                data_all[id.key] = data
             end
         end
     end
-    @info "The following data was found and loaded: " keys(model_data)
+    @info "The following data was found and loaded: " keys(data_all)
 
     if common_models_across_vars
-        model_data = getCommonModelsAcrossVars(model_data, ids)
+        data_all = getCommonModelsAcrossVars(data_all, ids)
     end
     return Data(
         base_path = base_path,
         ids = ids,
-        models = model_data,
-        obs = obs_data
+        data = data_all
     )
 end
 

@@ -15,7 +15,7 @@ function getData(
     climVar::String, 
     avgEnsembleMembers::Bool=true
 )
-    modelData =  sw.loadPreprocData(varToPath, ["CMIP6"]);
+    modelData =  sw.loadPreprocData(varToPath; included=["CMIP6"]);
     data = modelData[diagnostic][climVar];
     if avgEnsembleMembers
         data = sw.averageEnsembleVector(data, true)
