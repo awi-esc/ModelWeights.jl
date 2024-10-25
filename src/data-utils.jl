@@ -96,10 +96,16 @@ that were only present in some files/models are set to missing. Further the key
 identifier consisting of variant_label, grid_label (for CMIP6) and model_name. 
 """
 function updateMetadata!(
-    meta::Dict{String, Union{Array, String, Dict}}, 
+    meta::Dict{String, Union{Vector, String, Dict}}, 
     source_names::Vector{String},
     isModelData::Bool
 )
+    meta_model_ids = Dict{String, Vector}()
+    keys_model_ids = [
+        "realization", "physics_version", "initialization_method", 
+        "mip_era", "grid_label", "variant_label"
+    ]
+
     n_dim = length(source_names)
     for key in keys(meta)
         values = meta[key]; 
@@ -109,14 +115,17 @@ function updateMetadata!(
             push!(values, missing)
         end
         #println("i: " * string(i) * " " * string(length(meta[key])))
+        if isModelData && key in keys_model_ids
+            meta_model_ids[key] = get(meta, key, Vector())
+        end
         # if none was missing and all have the same value, just use a string
         if !any(ismissing, values) && length(unique(values)) == 1
             meta[key] = string(values[1])
         end
     end
-    # for model data only
+
     if isModelData
-        meta["full_model_names"] = getUniqueModelIds(meta, source_names)
+        meta["full_model_names"] = getUniqueModelIds(meta_model_ids, source_names)
         # add mapping from model (ensemble) names to indices in metadata arrays
         meta["ensemble_names"] = source_names
         meta["indices_map"] = getIndicesMapping(source_names);
@@ -315,7 +324,7 @@ function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{
         filter!(keepVar, ids)
     end
     if !isempty(get(subset, "aliases", Vector{String}()))
-        keepTasks(id::DataID) = any(name -> id.task == name, subset["aliases"])
+        keepTasks(id::DataID) = any(name -> id.alias == name, subset["aliases"])
         filter!(keepTasks, ids)
     end
 

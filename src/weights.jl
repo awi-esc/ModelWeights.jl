@@ -169,8 +169,8 @@ function generalizedDistances(
 
     meta = Dict{String, Union{String, Array, Dict}}();
     for climVar in variables
-        modelDict = filter(((k,v),) -> occursin("_" * climVar * "_", k), modelData)
-        obsDataDict = filter(((k,v),) -> occursin("_" * climVar * "_", k), obsData)
+        modelDict = filter(((k,v),) -> startswith(k, climVar * "_"), modelData)
+        obsDataDict = filter(((k,v),) -> startswith(k, climVar * "_"), obsData)
         if length(modelDict) > 1
             @warn "more than one dataset for computing generalizedDistances, first is taken!"
         end
@@ -336,16 +336,26 @@ function independenceParts(generalizedDistances::DimArray, sigmaS::Number)
 end
 
 
-function overallGeneralizedDistances(data::Data, config_weights::ConfigWeights)
-    diagnostics = unique(map(x -> x.statistic, data.ids))
+function overallGeneralizedDistances(
+    model_data::Data, 
+    obs_data::Data,
+    config_weights::ConfigWeights
+)
+    if obs_data.ids != model_data.ids
+        msg = "model and obs data ids differ!Obs: $obs_ids   Model: $model_ids"
+        throw(ArgumentError(msg))
+    end
+    ids = model_data.ids
+    diagnostics = unique(map(x -> x.statistic, ids))
     Di_all = []
     Sij_all = []
     Di = []
     Sij = []
     for diagnostic in diagnostics
-        ids = map(dataID -> dataID.key, filter(x -> x.statistic == diagnostic, data.ids))
-        models = filter(((k, v),) -> k in ids, data.models)
-        obsData = filter(((k, v),) -> occursin("_" * diagnostic * "_", k), data.obs)
+        keys_ids = map(dataID -> dataID.key, filter(x -> x.statistic == diagnostic, ids))
+        models = filter(((k, v),) -> k in keys_ids, model_data.data)
+        obsData = filter(((k, v),) -> k in keys_ids, obs_data.data)
+
         weights_perform = filter(((k, v),) -> occursin("_" * diagnostic, k), config_weights.performance)
         weights_indep = filter(((k, v),) -> occursin("_" * diagnostic, k), config_weights.independence)
         # weights dictionary for this particular diagnostic shall map just from variable to value
@@ -356,10 +366,7 @@ function overallGeneralizedDistances(data::Data, config_weights::ConfigWeights)
             wI[split(key, "_")[1]] = weights_indep[key]
         end
         generalizedDistsPerform  = generalizedDistances(
-            models, 
-            "performance"; 
-            weightsVars=wP, 
-            obsData=obsData
+            models, "performance"; weightsVars=wP, obsData=obsData
         )
         push!(Di_all, generalizedDistsPerform)
         push!(Di, reduceGeneralizedDistancesVars(generalizedDistsPerform))
@@ -439,9 +446,11 @@ function computeWeightedAvg(
 end
 
 
-function computeWeights(data::Data, config_weights::ConfigWeights)
+function computeWeights(
+    model_data::Data, obs_data::Data, config_weights::ConfigWeights
+)
     Di_all, Sij_all, Di, Sij = overallGeneralizedDistances(
-        data, config_weights
+        model_data, obs_data, config_weights
     );
     performances = performanceParts(Di, config_weights.sigma_performance);
     independences = independenceParts(Sij, config_weights.sigma_independence);

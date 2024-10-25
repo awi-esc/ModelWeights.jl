@@ -121,7 +121,7 @@ The names of the statistics/diagnostics depend on how you called them when prepr
 
 For a full example, see `scripts/run-climwip-simplified.yml`.
 
-Calling ``sw.getOverallWeights(data, config)`` will compute weights based on the model data in `data`.
+Calling ``sw.getOverallWeights(model_data, obs_data, config)`` will compute weights based on the provided data.
 The config parameter is of type `ConfigWeights` defined in `src/data-utils.jl`. It holds information 
 about the contribution of each combination of statistic/diagnostic and climate variable, once for computing
 independence weights and once for computing performance weights. Further parameters from the weighting approach

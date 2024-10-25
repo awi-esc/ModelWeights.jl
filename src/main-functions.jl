@@ -29,7 +29,7 @@ end
 
 
 """
-    getOverallWeights(data::Data, config::ConfigWeights)
+    getOverallWeights(model_data::Data, obs_data::Data, config::ConfigWeights)
 
 Compute weight for each model in multi-model ensemble according to approach
 from Brunner, Lukas, Angeline G. Pendergrass, Flavio Lehner,
@@ -39,11 +39,15 @@ Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
 995–1012. https://doi.org/10.5194/esd-11-995-2020.
 
 # Arguments:
-- `data`:
+- `model_data`:
+- `obs_data`:
 - `config`:
 """
-function getOverallWeights(data::Data, config::ConfigWeights)::ClimwipWeights
-    weights = computeWeights(data, config);
+function getOverallWeights(
+    model_data::Data, obs_data::Data, config::ConfigWeights
+)::ClimwipWeights
+
+    weights = computeWeights(model_data, obs_data, config);
     logWeights(weights.overall.metadata);
     if !isempty(config.target_dir)
         saveWeights(weights, config.target_dir)

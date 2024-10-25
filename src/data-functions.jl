@@ -3,12 +3,13 @@ using DimensionalData
 """
     getUniqueModelIds(meta::Dict, model_names::Vector{String})
 
+
 # Arguments:
 - `meta`:
 - `model_names`:
 """
 function getUniqueModelIds(
-    meta::Dict,
+    meta::Dict{String, Vector},
     model_names::Vector{String}
 )
     mip_eras = meta["mip_era"]
@@ -120,7 +121,7 @@ function loadPreprocData(
     end
     data = []
     source_names = Vector{String}()
-    meta = Dict{String, Union{String, Array, Dict}}()
+    meta = Dict{String, Union{String, Vector, Dict}}()
     ncFiles = filter(
         x -> isfile(x) && endswith(x, ".nc"), 
         readdir(path_data_dir; join=true)
@@ -224,7 +225,7 @@ function loadPreprocData(
         else 
             throw(ArgumentError("More than 3 data dimensions not supported."))
         end
-        dimData = DimArray(raw_data, (DimensionalData.dims(data[1])..., Dim{:model}(source_names)))
+        dimData = DimArray(raw_data, (dims(data[1])..., Dim{:model}(source_names)))
         updateMetadata!(meta, source_names, isModelData);
         dimData = rebuild(dimData; metadata = meta);
 
@@ -315,9 +316,9 @@ function loadData(
     end
     @info "The following data was found and loaded: " keys(data_all)
 
-    if common_models_across_vars
-        data_all = getCommonModelsAcrossVars(data_all, ids)
-    end
+    # if common_models_across_vars
+    #     data_all = getCommonModelsAcrossVars(data_all, ids)
+    # end
     return Data(
         base_path = base_path,
         ids = ids,
@@ -342,11 +343,11 @@ function getCommonModelsAcrossVars(modelData::Dict{String, DimArray}, ids::Vecto
     for var in variables
         modelDict = filter(((k,v),)-> occursin(var, k), modelData)
         if length(modelDict) > 1
-            @warn "more than one dataset for computing getCommonModelsAcrossVars, first is taken!"
+            @warn "more than one dataset for variable $var when computing getCommonModelsAcrossVars, first is taken!"
         end
         data_var = first(values(modelDict))
         meta = data_var.metadata;
-        models = getUniqueModelIds(meta, getCMIPModelsKey(meta));
+        models = getUniqueModelIds(meta, Array(dims(data_var, :model)))
         data_all[first(keys(modelDict))].metadata["full_model_names"] = models
         if isnothing(shared_models)
             shared_models = models

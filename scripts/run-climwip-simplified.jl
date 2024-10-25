@@ -8,10 +8,11 @@ base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/cl
 config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/climwip_config";
 
 # specify which data to load (default: all data will be loaded if compatible)
-data_weights = sw.loadData(
+model_data_weights = sw.loadData(
     base_path,
     config_path;
     dir_per_var=false,
+    isModelData=true,
     common_models_across_vars=true,
     subset=Dict(
         #"variables" => Vector{String}(),
@@ -21,7 +22,14 @@ data_weights = sw.loadData(
     )
 );
 
-
+obs_data_weights = sw.loadData(
+    base_path,
+    config_path;
+    dir_per_var=false,
+    isModelData=false,
+    common_models_across_vars=true,
+    subset=Dict("aliases" => ["calculate_weights_climwip"])
+);
 
 
 # 1. Compute Weights
@@ -35,7 +43,9 @@ config_weights = sw.ConfigWeights(
 );
 
 
-weights = sw.getOverallWeights(data_weights, config_weights);
+weights = sw.getOverallWeights(
+    model_data_weights, obs_data_weights, config_weights
+);
 # make some Plots
 sw.plotWeights(weights.overall)
 
