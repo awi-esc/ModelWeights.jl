@@ -280,7 +280,7 @@ that contains the 'preproc' subdirectory.
 - `config_path`: path to directory that contains one or more yaml config 
 files with the following structure: TODO
 - `dir_per_var`: if true, one subdirectory for data of each climate variable
-- `isModelData`:
+- `isModelData`: set true for CMIP5/6 data, false for observational data
 - `common_models_across_vars`:
 - `subset`: dictionary specifying the subset of data to be loaded, has keys
 'variables', 'statistics', 'aliases', each mapping to a vector of Strings
@@ -321,7 +321,11 @@ function loadData(
                 continue
             end
             # TODO: set argument included here
-            data = loadPreprocData(path_data_dir; isModelData=isModelData)
+            data = loadPreprocData(
+                path_data_dir; 
+                included = get(subset, "data_type", Vector{String}()),
+                isModelData=isModelData
+            )
             if !isnothing(data)
                 #data = convert(DimArray, data)
                 #obs = convert(Dict{String, DimArray}, obs)
@@ -329,16 +333,14 @@ function loadData(
             end
         end
     end
-    @info "The following data was found and loaded: " keys(data_all)
-
-    # if common_models_across_vars
-    #     data_all = getCommonModelsAcrossVars(data_all, ids)
-    # end
-    return Data(
-        base_path = base_path,
-        ids = ids,
-        data = data_all
-    )
+    result =  Data(base_path = base_path, ids = ids, data = data_all)
+    @info "The following data was found and loaded: " result.ids
+    if common_models_across_vars
+        result = getCommonModelsAcrossVars(result)
+    else
+        alignIDsFilteredData!(result)
+    end
+    return result
 end
     
 
@@ -346,6 +348,7 @@ end
     getCommonModelsAcrossVars(modelData::Data)
 
 Return only those models for which there is data for all variables.
+TODO: add checks that model dimensions are identical everywhere!
 
 # Arguments
 - `modelData`
@@ -372,7 +375,9 @@ function getCommonModelsAcrossVars(modelData::Data)
     for id in map(id -> id.key, modelData.ids)
         data_all[id] = getModelSubset(data_all[id], shared_models);
     end
-    return Data(base_path = modelData.base_path, ids = modelData.ids, data = data_all)
+    result = Data(base_path = modelData.base_path, ids = modelData.ids, data = data_all)
+    alignIDsFilteredData!(result)
+    return result
 end
 
 

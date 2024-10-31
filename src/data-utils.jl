@@ -329,3 +329,9 @@ function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{
         filter!(keepTimeRange, ids)
     end
 end
+
+
+function alignIDsFilteredData!(data::Data)
+    actual_data = keys(data.data)
+    filter!(x -> x.key in actual_data, data.ids)
+end

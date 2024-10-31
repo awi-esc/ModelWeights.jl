@@ -12,15 +12,25 @@ data_all.ids
 data = sw.loadData(
     base_path,
     config_path;
-    dir_per_var=true, 
+    isModelData = true,
+    dir_per_var = true, 
+    common_models_across_vars = false,
     subset = Dict(
         "variables" => ["tas", "pr"], 
         "aliases" => ["historical1"],
-        "statistics" => Vector{String}() # identical to not setting it
+        "statistics" => Vector{String}(), # identical to not setting it
+        "models" => Vector{String}(), # identical to not setting it
+        "data_type" => Vector{String}() # identical to not setting it; e.g. ERA5, CMIP, CMIP5. 
+        # loadPreprocData will only load files containing all(!) given values, 
+        # if empty and is_model_data=true, only CMIP data will be loaded, if empty and model_data=false,
+        # only ERA5 data will be loaded.
     )
 );
 
+# can be done directly if argument set to true in loadData above
 joint_data = sw.getCommonModelsAcrossVars(data)
+
+
 # TODO: add examples for computing weights for this data
 
 # amoc_data = sw.loadData(
