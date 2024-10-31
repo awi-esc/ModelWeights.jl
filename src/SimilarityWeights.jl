@@ -10,6 +10,6 @@ include("plot-weights.jl")
 include("plot-data.jl")
 include("main-functions.jl")
 
-export loadData, loadPreprocData, getIndependenceWeights, getPerformanceWeights, getOverallWeights
+export loadData, loadPreprocData, getIndependenceWeights, getPerformanceWeights, getOverallWeights, getCommonModelsAcrossVars
 
 end

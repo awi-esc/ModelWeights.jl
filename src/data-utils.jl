@@ -100,12 +100,6 @@ function updateMetadata!(
     source_names::Vector{String},
     isModelData::Bool
 )
-    meta_model_ids = Dict{String, Vector}()
-    keys_model_ids = [
-        "realization", "physics_version", "initialization_method", 
-        "mip_era", "grid_label", "variant_label"
-    ]
-
     n_dim = length(source_names)
     for key in keys(meta)
         values = meta[key]; 
@@ -115,9 +109,6 @@ function updateMetadata!(
             push!(values, missing)
         end
         #println("i: " * string(i) * " " * string(length(meta[key])))
-        if isModelData && key in keys_model_ids
-            meta_model_ids[key] = get(meta, key, Vector())
-        end
         # if none was missing and all have the same value, just use a string
         if !any(ismissing, values) && length(unique(values)) == 1
             meta[key] = string(values[1])
@@ -125,7 +116,7 @@ function updateMetadata!(
     end
 
     if isModelData
-        meta["full_model_names"] = getUniqueModelIds(meta_model_ids, source_names)
+        meta["full_model_names"] = getUniqueModelIds(meta, source_names)
         # add mapping from model (ensemble) names to indices in metadata arrays
         meta["ensemble_names"] = source_names
         meta["indices_map"] = getIndicesMapping(source_names);

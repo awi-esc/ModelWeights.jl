@@ -5,23 +5,38 @@ using DimensionalData
 
 
 # Arguments:
-- `meta`:
+- `meta`: for CMIP5 data, must have keys: 'mip_era', 'realization', 'initialization_method',
+'physics_version'. For CMIP6 data must have keys: 'variant_label', 'grid_label'
 - `model_names`:
 """
 function getUniqueModelIds(
-    meta::Dict{String, Vector},
+    meta::Dict,
     model_names::Vector{String}
 )
-    mip_eras = meta["mip_era"]
+    meta_subdict = Dict{String, Vector}()
+    keys_model_ids = [
+        "realization", "physics_version", "initialization_method", 
+        "mip_era", "grid_label", "variant_label"
+    ]
+    n = length(model_names)
+    for key in filter(k -> k in keys_model_ids, keys(meta))
+        val = meta[key]
+        if isa(val, String)
+            meta_subdict[key] = repeat([val], outer=n)
+        else
+            meta_subdict[key] = val
+        end
+    end
+    mip_eras = meta_subdict["mip_era"]
     indices_cmip5 = findall(x -> x == "CMIP5", mip_eras)
     indices_cmip6 = findall(x -> x == "CMIP6", mip_eras)
     models = Vector{String}(undef, length(model_names))
 
     if !isempty(indices_cmip5)
         variants = buildCMIP5EnsembleMember(
-            meta["realization"][indices_cmip5], 
-            meta["initialization_method"][indices_cmip5], 
-            meta["physics_version"][indices_cmip5]
+            meta_subdict["realization"][indices_cmip5], 
+            meta_subdict["initialization_method"][indices_cmip5], 
+            meta_subdict["physics_version"][indices_cmip5]
         )
         models[indices_cmip5] =  map(
             x -> join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM), 
@@ -30,8 +45,8 @@ function getUniqueModelIds(
         @debug "For CMIP5, full model names dont include grid."
     end
     if !isempty(indices_cmip6)
-        variants = meta["variant_label"][indices_cmip6]
-        grids = meta["grid_label"][indices_cmip6]
+        variants = meta_subdict["variant_label"][indices_cmip6]
+        grids = meta_subdict["grid_label"][indices_cmip6]
         models[indices_cmip6] = map(
             x->join(x, MODEL_MEMBER_DELIM, "_"), 
             zip(model_names[indices_cmip6], variants, grids)
@@ -325,7 +340,7 @@ function loadData(
         data = data_all
     )
 end
-
+    
 
 """
     getCommonModelsAcrossVars(modelData::Dict{String, DimArray}, ids::Vector{DataID})
@@ -336,27 +351,26 @@ Return only those models for which there is data for all variables.
 - `modelData`:
 - `ids`:
 """
-function getCommonModelsAcrossVars(modelData::Dict{String, DimArray}, ids::Vector{DataID})
-    data_all = deepcopy(modelData);
-    variables = map(id -> id.variable, ids)
+function getCommonModelsAcrossVars(modelData::Data)
+    data_all = deepcopy(modelData.data);
+    variables = map(id -> id.variable, modelData.ids)
     shared_models =  nothing
     for var in variables
-        modelDict = filter(((k,v),)-> occursin(var, k), modelData)
-        if length(modelDict) > 1
-            @warn "more than one dataset for variable $var when computing getCommonModelsAcrossVars, first is taken!"
-        end
-        data_var = first(values(modelDict))
-        meta = data_var.metadata;
-        models = getUniqueModelIds(meta, Array(dims(data_var, :model)))
-        data_all[first(keys(modelDict))].metadata["full_model_names"] = models
-        if isnothing(shared_models)
-            shared_models = models
-        else
-            shared_models = intersect(shared_models, models)
+        modelDict = filter(((k,v),)-> occursin(var, k), modelData.data)
+        # iterate over all combinations (of diagnostics/statistics) with current variable
+        for (k, data_var) in modelDict
+            meta = data_var.metadata;
+            models = getUniqueModelIds(meta, Array(dims(data_var, :model)))
+            data_all[k].metadata["full_model_names"] = models
+            if isnothing(shared_models)
+                shared_models = models
+            else
+                shared_models = intersect(shared_models, models)
+            end
         end
     end
 
-    for id in map(id -> id.key, ids)
+    for id in map(id -> id.key, modelData.ids)
         data_all[id] = getModelSubset(data_all[id], shared_models);
     end
 
