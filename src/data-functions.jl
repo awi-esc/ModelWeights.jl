@@ -343,13 +343,12 @@ end
     
 
 """
-    getCommonModelsAcrossVars(modelData::Dict{String, DimArray}, ids::Vector{DataID})
+    getCommonModelsAcrossVars(modelData::Data)
 
 Return only those models for which there is data for all variables.
 
 # Arguments
-- `modelData`:
-- `ids`:
+- `modelData`
 """
 function getCommonModelsAcrossVars(modelData::Data)
     data_all = deepcopy(modelData.data);
@@ -373,8 +372,7 @@ function getCommonModelsAcrossVars(modelData::Data)
     for id in map(id -> id.key, modelData.ids)
         data_all[id] = getModelSubset(data_all[id], shared_models);
     end
-
-    return data_all
+    return Data(base_path = modelData.base_path, ids = modelData.ids, data = data_all)
 end
 
 
