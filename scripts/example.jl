@@ -19,11 +19,11 @@ data = sw.loadData(
         "variables" => ["tas", "pr"], 
         "aliases" => ["historical1"],
         "statistics" => Vector{String}(), # identical to not setting it
-        "models" => Vector{String}(), # identical to not setting it
+        "models" => ["UKESM1-0-LL", "ACCESS-ESM1-5"],
         "data_type" => Vector{String}() # identical to not setting it; e.g. ERA5, CMIP, CMIP5. 
-        # loadPreprocData will only load files containing all(!) given values, 
-        # if empty and is_model_data=true, only CMIP data will be loaded, if empty and model_data=false,
-        # only ERA5 data will be loaded.
+        # loadPreprocData will only load files containing all(!) values in "data_type" and files containing any(!) value in "models" 
+        # if data_type is empty and is_model_data=true, only CMIP data will be loaded, 
+        # if data_type is empty and model_data=false, only ERA5 data will be loaded.
     )
 );
 

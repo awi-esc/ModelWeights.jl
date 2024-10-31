@@ -28,8 +28,8 @@ function getUniqueModelIds(
         end
     end
     mip_eras = meta_subdict["mip_era"]
-    indices_cmip5 = findall(x -> x == "CMIP5", mip_eras)
-    indices_cmip6 = findall(x -> x == "CMIP6", mip_eras)
+    indices_cmip5 = findall(x -> !ismissing(x) && x == "CMIP5", mip_eras)
+    indices_cmip6 = findall(x -> !ismissing(x) && x == "CMIP6", mip_eras)
     models = Vector{String}(undef, length(model_names))
 
     if !isempty(indices_cmip5)
@@ -108,61 +108,70 @@ end
 """
     loadPreprocData(
         path_data_dir::String;
-        included::Vector{String}=[],
+        included_all::Vector{String}=Vector{String}(),
+        included_any::Vector{String}=Vector{String}(),
         isModelData::Bool=true
     )
 
 # Arguments:
 - `path_data_dir`: base path to directory that contains subdirectory with name
 of the respective experiment (see TODO for assumed data structure)
-- `included`: either observational or model data can be loaded at once, e.g. 
-set to ["ERA5"] or ["CMIP5"] for ERA5-observational and CMIP5 model data respectively
+- `included_all`: only data is loaded whose filenames contain ALL elements within 'included_all'
+- `included_any`: only data is loaded whose filenames containy ANY element within 'included_any'
+- `isModelData`: observational and model data loaded seperately, if true modelData, else observational data 
 """
 function loadPreprocData(
     path_data_dir::String; 
-    included::Vector{String}=Vector{String}(),
+    included_all::Vector{String}=Vector{String}(),
+    included_any::Vector{String}=Vector{String}(),
     isModelData::Bool=true
 )
     if !isdir(path_data_dir)
         throw(ArgumentError(path_data_dir * " does not exist!"))
     end
     # set default values for model data
-    if isempty(included)
+    if isempty(included_all)
         if isModelData
-            included = ["CMIP"]
+            included_all = ["CMIP"]
         else
-            included = ["ERA5"]
+            included_all = ["ERA5"]
         end
     end
     data = []
-    source_names = Vector{String}()
-    meta = Dict{String, Union{String, Vector, Dict}}()
+    meta = Dict{String, Any}()# Dict{String, Union{String, Vector, Dict}}()
     ncFiles = filter(
         x -> isfile(x) && endswith(x, ".nc"), 
         readdir(path_data_dir; join=true)
     )
     nbIgnored = 0
+    n_files = length(ncFiles)
+    source_names = repeat(Union{Missing, String}[missing], outer = n_files)
     for (i, file) in enumerate(ncFiles)
         addFile = true;
-        # only include files that contain all names given in 'included'
-        if length(included) != 0
-            if !all([occursin(name, file) for name in included])
+        # constrain files that will be loaded
+        if length(included_all) != 0
+            if !all([occursin(name, file) for name in included_all])
                 addFile = false;
             end
         end
-        #println("processing file.." * file)
+        if length(included_any) != 0
+            if !any([occursin(name, file) for name in included_any])
+                addFile = false;
+            end
+        end
         if addFile
+            #println("processing file.." * file)
             parts = splitpath(file)
             filename = split(parts[end], ".nc")[end-1]
             climVar = split(parts[end-1], "_")[1]
             
-            ds = NCDataset(file);
-            dsVar = ds[climVar];
+            ds = NCDataset(file)
+            dsVar = ds[climVar]
             # if climVar == "amoc"
             #     dsVar = ds["msftmz"]
             # end
             
-            attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)));
+            attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)))
             if climVar == "msftmz"
                 sector = get(ds, "sector", nothing)
                 if !isnothing(sector)
@@ -173,33 +182,22 @@ function loadPreprocData(
                 nbIgnored += 1;
                 continue
             end
-
             # add mip_era for models since it is not provided in CMIP5-models
             name = ""
             if isModelData
                 model_key = getCMIPModelsKey(Dict(ds.attrib))
-                mip_era = get(attributes, "mip_era", nothing)
-                if isnothing(mip_era)
-                    attributes["mip_era"] = "CMIP5"
-                end
+                get!(attributes, "mip_era", "CMIP5")
                 name = ds.attrib[model_key]
             else 
                 name = filename
             end
-            push!(source_names, name)
-            
+            source_names[i] = name        
             # update metadata-dictionary for all processed files with the 
             # metadata from the current file
             for key in keys(attributes)
-                values = get!(meta, key, []);
-                # fill up vector up to processed file i
-                n = i - nbIgnored - length(values) - 1;
-                for _ in range(1, n)
-                    push!(values, missing)
-                end
-                push!(values, attributes[key]);
+                values = get!(meta, key, repeat(Union{Missing, Any}[missing], outer=n_files));
+                values[i] = attributes[key]
             end
-
 
             dimension_names = dimnames(dsVar)
             dimensions = []
@@ -221,7 +219,6 @@ function loadPreprocData(
             push!(data, DimArray(Array(dsVar), Tuple(dimensions)));
         end
     end
-
     if length(data) > 0
         #dimData = cat(data..., dims=3) # way too slow!
         # all of the preprocessed model data assumed to have the same lon,lat grid
@@ -240,8 +237,8 @@ function loadPreprocData(
         else 
             throw(ArgumentError("More than 3 data dimensions not supported."))
         end
-        dimData = DimArray(raw_data, (dims(data[1])..., Dim{:model}(source_names)))
         updateMetadata!(meta, source_names, isModelData);
+        dimData = DimArray(raw_data, (dims(data[1])..., Dim{:model}(collect(skipmissing(source_names)))))
         dimData = rebuild(dimData; metadata = meta);
 
         # set model names in model dimension to full model name which was 
@@ -320,11 +317,11 @@ function loadData(
                 @warn "$path_data_dir does not exist"
                 continue
             end
-            # TODO: set argument included here
             data = loadPreprocData(
                 path_data_dir; 
-                included = get(subset, "data_type", Vector{String}()),
-                isModelData=isModelData
+                included_all = get(subset, "data_type", Vector{String}()),
+                included_any = get(subset, "models", Vector{String}()),
+                isModelData = isModelData
             )
             if !isnothing(data)
                 #data = convert(DimArray, data)

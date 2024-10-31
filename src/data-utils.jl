@@ -96,31 +96,28 @@ that were only present in some files/models are set to missing. Further the key
 identifier consisting of variant_label, grid_label (for CMIP6) and model_name. 
 """
 function updateMetadata!(
-    meta::Dict{String, Union{Vector, String, Dict}}, 
-    source_names::Vector{String},
+    meta::Dict{String, Any}, 
+    source_names::Vector{Union{Missing, String}},
     isModelData::Bool
 )
-    n_dim = length(source_names)
+    indices = findall(x -> !ismissing(x), source_names)
     for key in keys(meta)
-        values = meta[key]; 
-        # add missing values for the last added files 
-        n =  n_dim - length(values)
-        for _ in range(1, n)
-            push!(values, missing)
-        end
-        #println("i: " * string(i) * " " * string(length(meta[key])))
+        values = meta[key][indices]
+        meta[key] = values  
         # if none was missing and all have the same value, just use a string
         if !any(ismissing, values) && length(unique(values)) == 1
             meta[key] = string(values[1])
         end
     end
-
+    
     if isModelData
-        meta["full_model_names"] = getUniqueModelIds(meta, source_names)
+        included_models = Array{String}(source_names[indices])
+        meta["full_model_names"] = getUniqueModelIds(meta, included_models)
         # add mapping from model (ensemble) names to indices in metadata arrays
-        meta["ensemble_names"] = source_names
-        meta["indices_map"] = getIndicesMapping(source_names);
+        meta["ensemble_names"] = included_models
+        meta["indices_map"] = getIndicesMapping(included_models)
     end
+    return nothing
 end
 
 
