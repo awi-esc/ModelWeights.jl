@@ -118,7 +118,9 @@ end
 of the respective experiment (see TODO for assumed data structure)
 - `included_all`: only data is loaded whose filenames contain ALL elements within 'included_all'
 - `included_any`: only data is loaded whose filenames containy ANY element within 'included_any'
-- `isModelData`: observational and model data loaded seperately, if true modelData, else observational data 
+- `isModelData`: observational and model data loaded seperately, if true modelData, else observational data
+
+# Returns: DimArray or nothing
 """
 function loadPreprocData(
     path_data_dir::String; 
@@ -160,7 +162,7 @@ function loadPreprocData(
             end
         end
         if addFile
-            #println("processing file.." * file)
+            @debug "processing file.." * file
             parts = splitpath(file)
             filename = split(parts[end], ".nc")[end-1]
             climVar = split(parts[end-1], "_")[1]
@@ -276,7 +278,9 @@ preprocessed data. If dir_per_var is false, base_path is the path to a directory
 that contains the 'preproc' subdirectory.
 - `config_path`: path to directory that contains one or more yaml config 
 files with the following structure: TODO
-- `dir_per_var`: if true, one subdirectory for data of each climate variable
+- `dir_per_var`: if true, directory at base_path has subdirectories, one for
+each variable (they must end with _ and the name of the variable), otherwise
+base_path is the path to the directory that contains a subdirectory 'preproc'
 - `isModelData`: set true for CMIP5/6 data, false for observational data
 - `common_models_across_vars`:
 - `subset`: dictionary specifying the subset of data to be loaded, has keys
@@ -297,16 +301,16 @@ function loadData(
     for id in ids
         # if dir_per_var is true, directory at base_path has subdirectories, 
         # one for each variable (they must end with _ and the name of the variable),
-        # otherwise config_path is the path to the directory that contains 
+        # otherwise base_path is the path to the directory that contains 
         # a subdirectory 'preproc'
         path_to_subdirs = [base_path]
         if dir_per_var
             path_to_subdirs = filter(isdir, readdir(base_path, join=true))
             filter!(x -> endswith(x, "_" * id.variable), path_to_subdirs)
             if length(path_to_subdirs) > 1
-                @warn "There are several subdirectories for variable " * var * " and experiment " * exp
-                path_to_subdirs = path_to_subdirs[1:1]
-                @warn "First is chosen: " path_to_subdirs[1]
+                @warn "There are several subdirectories for given variable and experiment:" path_to_subdirs
+                #path_to_subdirs = path_to_subdirs[1:1]
+                #@warn "First is chosen: " path_to_subdirs[1]
             end
         end
         for path_dir in path_to_subdirs
@@ -317,6 +321,7 @@ function loadData(
                 @warn "$path_data_dir does not exist"
                 continue
             end
+            #print("processing...: " * path_data_dir)
             data = loadPreprocData(
                 path_data_dir; 
                 included_all = get(subset, "data_type", Vector{String}()),
@@ -324,15 +329,23 @@ function loadData(
                 isModelData = isModelData
             )
             if !isnothing(data)
-                #data = convert(DimArray, data)
-                #obs = convert(Dict{String, DimArray}, obs)
-                data_all[id.key] = data
+                previously_added_data = get(data_all, id.key, nothing)
+                if isnothing(previously_added_data)
+                    data_all[id.key] = data
+                else
+                    prev_models = collect(dims(previously_added_data, :model))
+                    new_models = collect(dims(data, :model))
+                    joint_data = cat(previously_added_data, data, dims=Dim{:model}(vcat(prev_models, new_models)))
+                    joint_meta = joinMetadata(previously_added_data.metadata, data.metadata)
+                    data_all[id.key] = rebuild(joint_data; metadata = joint_meta)
+                end
             end
         end
     end
     result =  Data(base_path = base_path, ids = ids, data = data_all)
     @info "The following data was found and loaded: " result.ids
     if common_models_across_vars
+        @info "only retain models shared across all variables"
         result = getCommonModelsAcrossVars(result)
     else
         alignIDsFilteredData!(result)

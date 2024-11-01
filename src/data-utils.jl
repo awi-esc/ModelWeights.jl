@@ -109,7 +109,6 @@ function updateMetadata!(
             meta[key] = string(values[1])
         end
     end
-    
     if isModelData
         included_models = Array{String}(source_names[indices])
         meta["full_model_names"] = getUniqueModelIds(meta, included_models)
@@ -118,6 +117,71 @@ function updateMetadata!(
         meta["indices_map"] = getIndicesMapping(included_models)
     end
     return nothing
+end
+
+
+function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any})
+    meta = Dict{String, Any}()
+    n1 = length(meta1["full_model_names"])
+    n2 = length(meta2["full_model_names"])
+    keys_meta1 = keys(meta1)
+    keys_meta2 = keys(meta2)
+    keys_shared = collect(intersect(keys_meta1, keys_meta2))
+    keys_uniq_m1 = filter(x -> !(x in keys_shared), keys_meta1)
+    keys_uniq_m2 = filter(x -> !(x in keys_shared), keys_meta2)
+
+    for k in keys_shared
+        if k == "map_indices"
+            continue
+        end
+        v1 = meta1[k]
+        v2 = meta2[k]
+        if isa(v1, String)
+            if isa(v2, String)
+                if v1 == v2
+                    meta[k] = v1
+                else
+                    meta[k] = vcat(repeat([v1], outer=n1), repeat([v2], outer=n2))
+                end
+            else
+                meta[k] = vcat(repeat([v1], outer=n1), v2)
+            end
+        elseif isa(v1, Vector)
+            if isa(v2, String)
+                meta[k] = vcat(v1, repeat([v2], outer=n2))
+            elseif isa(v2, Vector)
+                meta[k] = vcat(v1, v2)
+            end
+        end
+    end
+
+    for keys_uniq in [keys_uniq_m1, keys_uniq_m2]
+        for k in keys_uniq
+            v = get(meta1, k, nothing)
+            if isnothing(v)
+                v = meta2[k]
+                n_added = n1
+                n = n2
+            else
+                n_added = n2
+                n = n1
+            end
+            v_added = repeat([missing], outer=n_added)
+            if isa(v, String)
+                meta[k] = vcat(repeat([v], outer=n), v_added)
+            else
+                meta[k] = vcat(v, v_added)
+            end
+        end
+    end
+    meta["indices_map"] = Dict()
+    for (k,vals) in meta2["indices_map"]
+        meta["indices_map"][k] = vals .+ n1
+    end
+    for (k, vals) in meta1["indices_map"]
+        meta["indices_map"][k] = deepcopy(vals)
+    end
+    return meta
 end
 
 

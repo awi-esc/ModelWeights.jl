@@ -8,22 +8,21 @@ using DimensionalData
         modelDataRef::Dict{String, DimArray}
     )
 
-Return all data that is shared across variables in the reference period as well 
-as in the period of interested (refered to as full period).
+Return the data of those models available in both datasets.
 """
 function keepSharedModelData!(
-    modelDataFull::Dict{String, DimArray},
-    modelDataRef::Dict{String, DimArray}
+    modelData1::Dict{String, DimArray},
+    modelData2::Dict{String, DimArray}
 )    
     shared_models = intersect(
-        first(values(modelDataFull)).metadata["full_model_names"], 
-        first(values(modelDataRef)).metadata["full_model_names"]
+        first(values(modelData1)).metadata["full_model_names"], 
+        first(values(modelData2)).metadata["full_model_names"]
     );
-    for id in keys(modelDataFull)
-        modelDataFull[id] = getModelSubset(modelDataFull[id], shared_models)
+    for id in keys(modelData1)
+        modelData1[id] = getModelSubset(modelData1[id], shared_models)
     end 
-    for id in keys(modelDataRef)       
-        modelDataRef[id] = getModelSubset(modelDataRef[id], shared_models);
+    for id in keys(modelData2)       
+        modelData2[id] = getModelSubset(modelData2[id], shared_models);
     end
 end
 
