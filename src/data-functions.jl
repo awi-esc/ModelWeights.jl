@@ -344,7 +344,7 @@ function loadData(
     end
     result =  Data(base_path = base_path, ids = ids, data = data_all)
     @info "The following data was found and loaded: " result.ids
-    if common_models_across_vars
+    if isModelData && common_models_across_vars
         @info "only retain models shared across all variables"
         result = getCommonModelsAcrossVars(result)
     else

@@ -161,7 +161,7 @@ function generalizedDistances(
     variables = collect(keys(weightsVars))
     weights = copy(weightsVars);
     if !isempty(weights)
-        SimilarityWeights.normalizeWeightsVariables!(weights);
+        normalizeWeightsVariables!(weights);
     else
         weights = Dict(zip(variables, ones(length(variables))));
     end
@@ -341,20 +341,23 @@ function overallGeneralizedDistances(
     obs_data::Data,
     config_weights::ConfigWeights
 )
-    if obs_data.ids != model_data.ids
-        msg = "model and obs data ids differ!Obs: $obs_ids   Model: $model_ids"
+
+    obs_keys = map(x -> (var = x.variable, stat = x.statistic), obs_data.ids)
+    model_keys = map(x -> (var = x.variable, stat = x.statistic), model_data.ids)
+
+    if obs_keys != model_keys
+        msg = "Variable+Diagnostic combinations are not the same for observational and model data! Obs: $obs_keys , Model: $model_keys"
         throw(ArgumentError(msg))
     end
-    ids = model_data.ids
-    diagnostics = unique(map(x -> x.statistic, ids))
+
+    diagnostics = unique(map(x -> x.stat, obs_keys))
     Di_all = []
     Sij_all = []
     Di = []
     Sij = []
     for diagnostic in diagnostics
-        keys_ids = map(dataID -> dataID.key, filter(x -> x.statistic == diagnostic, ids))
-        models = filter(((k, v),) -> k in keys_ids, model_data.data)
-        obsData = filter(((k, v),) -> k in keys_ids, obs_data.data)
+        models = filter(((k, v),) -> occursin("_" * diagnostic * "_", k), model_data.data)
+        obsData = filter(((k, v),) -> occursin("_" * diagnostic * "_", k), obs_data.data)
 
         weights_perform = filter(((k, v),) -> occursin("_" * diagnostic, k), config_weights.performance)
         weights_indep = filter(((k, v),) -> occursin("_" * diagnostic, k), config_weights.independence)
@@ -492,4 +495,9 @@ function logWeights(metadata_weights)
     model_key = getCMIPModelsKey(metadata_weights);
     @info "Nb included models (without ensemble members): " length(metadata_weights[model_key])
     foreach(m -> @info(m), models)
+end
+
+
+function applyWeights(data::Data, weights::ClimwipWeights)
+    
 end
