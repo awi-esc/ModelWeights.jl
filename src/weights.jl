@@ -344,7 +344,6 @@ function overallGeneralizedDistances(
 
     obs_keys = map(x -> (var = x.variable, stat = x.statistic), obs_data.ids)
     model_keys = map(x -> (var = x.variable, stat = x.statistic), model_data.ids)
-
     if obs_keys != model_keys
         msg = "Variable+Diagnostic combinations are not the same for observational and model data! Obs: $obs_keys , Model: $model_keys"
         throw(ArgumentError(msg))
@@ -461,12 +460,19 @@ function computeWeights(
     weights = weights ./ sum(weights);
     weights.metadata["name_ref_period"] = config_weights.ref_period
     
+    wP = performances ./ sum(performances)
+    wI = independences ./ sum(independences)
+    #w = wP./wI # just for sanity check
+
     return ClimwipWeights(
         performance_all = Di_all, 
         independence_all = Sij_all, 
-        performance = Di,
-        independence = Sij,
-        overall=weights
+        Di = Di,
+        Sij = Sij,
+        wP = wP,
+        wI = wI,
+        w =  weights
+        #overall = w./sum(w), # just for sanity check
     )
 end
 

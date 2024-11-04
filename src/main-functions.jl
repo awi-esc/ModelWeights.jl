@@ -47,7 +47,7 @@ function getOverallWeights(
 )::ClimwipWeights
 
     weights = computeWeights(model_data, obs_data, config);
-    logWeights(weights.overall.metadata);
+    logWeights(weights.w.metadata);
     if !isempty(config.target_dir)
         saveWeights(weights, config.target_dir)
     end

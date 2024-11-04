@@ -43,9 +43,12 @@ end
 @kwdef struct ClimwipWeights
     performance_all::DimArray
     independence_all::DimArray
-    performance::DimArray #normalize
-    independence::DimArray #normalize
-    overall::DimArray #weights
+    Di::DimArray # generalized distances each model wrt performance
+    Sij::DimArray # generalized distances between pairs of models
+    wP::DimArray # normalized
+    wI::DimArray # normalized
+    w::DimArray # normalized
+    #overall::DimArray # same as w, just for sanity check
 end
 
 
@@ -158,7 +161,9 @@ function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any})
     for keys_uniq in [keys_uniq_m1, keys_uniq_m2]
         for k in keys_uniq
             v = get(meta1, k, nothing)
+            in_meta1 = true
             if isnothing(v)
+                in_meta1 = false
                 v = meta2[k]
                 n_added = n1
                 n = n2
@@ -167,10 +172,19 @@ function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any})
                 n = n1
             end
             v_added = repeat([missing], outer=n_added)
+            # be sure to add vectors in correct order (because v may refer to value of meta1 or meta2!)
             if isa(v, String)
-                meta[k] = vcat(repeat([v], outer=n), v_added)
+                if in_meta1
+                    meta[k] = vcat(repeat([v], outer=n), v_added)
+                else
+                    meta[k] = vcat(v_added, repeat([v], outer=n))
+                end
             else
-                meta[k] = vcat(v, v_added)
+                if in_meta1
+                    meta[k] = vcat(v, v_added)
+                else
+                    meta[k] = vcat(v_added, v)
+                end
             end
         end
     end
