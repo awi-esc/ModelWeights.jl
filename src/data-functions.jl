@@ -309,8 +309,6 @@ function loadData(
             filter!(x -> endswith(x, "_" * id.variable), path_to_subdirs)
             if length(path_to_subdirs) > 1
                 @warn "There are several subdirectories for given variable and experiment:" path_to_subdirs
-                #path_to_subdirs = path_to_subdirs[1:1]
-                #@warn "First is chosen: " path_to_subdirs[1]
             end
         end
         for path_dir in path_to_subdirs

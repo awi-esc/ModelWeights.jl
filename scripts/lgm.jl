@@ -30,9 +30,6 @@ obs_data = sw.loadData(
     )
 )
 
-m1 = lgm_data.data[""]
-
-
 config_weights = sw.ConfigWeights(
     performance = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     independence = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
@@ -43,6 +40,8 @@ config_weights = sw.ConfigWeights(
 
 
 weights = sw.getOverallWeights(lgm_data, obs_data, config_weights)
+Array(weights.wP)
+
 
 lgm_cmip5 = sw.loadData(
     base_path,
