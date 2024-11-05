@@ -141,16 +141,16 @@ end
         obsData::Dict{String, DimArray}
     )
 
-Compute a performance weight for each model and climate variable in 'modelData'.
-The weights are the average weighted root mean squared errors between each model and the observational data.
+Compute the generalized distance for each model and climate variable in 'modelData' with respect to another model (dist_type="independence") or
+to observational data (dist_type = "performance").
 
 # Arguments
-- `modelData`: keys are climate variables, values are DimArrays with dimensions 'lon', 'lat', 'model' 
+- `modelData`: keys are climate variables, values are DimArrays with dimensions 'lon', 'lat' and 'model' (dist_type=performance) or 'model1' and 'model2' (dist_type=independence) 
 - `obsData`:  keys are climate variables, values are DimArrays with dimensions 'lon', 'lat', 'model'
-- `weightsVars`: keys are climate variables, values are the weight of how much the respective variable contributes to the computed performanceWeight
+- `weightsVars`: keys are climate variables, values are the weight of how much the respective variable contributes to the computed weight
 
 # Returns 
-- `weightsByVar::DimArray`: performance weights for each considered variable
+- `weightsByVar::DimArray`: performance or independence weights for each considered variable
 """
 function generalizedDistances(
     modelData::Dict{String, DimArray}, 
@@ -172,28 +172,30 @@ function generalizedDistances(
         modelDict = filter(((k,v),) -> startswith(k, climVar * "_"), modelData)
         obsDataDict = filter(((k,v),) -> startswith(k, climVar * "_"), obsData)
         if length(modelDict) > 1
-            @warn "more than one dataset for computing generalizedDistances, first is taken!"
+            @warn "more than one dataset for computing generalizedDistances for climate variable $climVar in model data, first is taken!"
         end
         model = first(values(modelDict))
         
         if dist_type == "performance"
+            if length(obsDataDict) > 1
+                @warn "more than one dataset for computing generalizedDistances for climate variable $climVar in observational data, first is taken!"
+            end
             obs = first(values(obsDataDict))
             distances = getModelDataDist(model, obs)
         elseif dist_type == "independence"
             distances = getModelDistances(model)
         else
-            throw(ArgumentError("generalizedDsitancesPerformance can be computed for dist_type='performance' or 'independence'!"))
+            throw(ArgumentError("Argument 'dist_type' in generalizedDistances must be one of: 'performance', 'independence'."))
         end
         weightedNormalizedDistances = normalizeAndWeightDistances(distances, weights[climVar]);
         push!(weightedDistMatrices, weightedNormalizedDistances);
 
         metadata = deepcopy(model.metadata);
-        meta_shared = getSharedMetadataAndModelNames(metadata);
+        meta_shared = getMetadataSharedAcrossModelsAndModelNames(metadata);
         meta_shared["variables"] = climVar
         meta = mergewith(appendValuesDicts, meta, meta_shared);
     end
     weightsByVar = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
-    meta["indices_map"] = getIndicesMapping(collect(variables))
     weightsByVar = rebuild(weightsByVar; metadata = meta);
     return weightsByVar
 end
@@ -208,8 +210,8 @@ ensemble members of that model.
 # Arguments:
 - `data`: a DimArray with dimension 'model' and possibly 'variable'
 - `updateMeta`: set true if the vectors in the metadata refer to different models. 
-If true attribute indices_map is set in metadata. Set to false if vectors refer to 
-different variables for instance. 
+If true attribute ensemble_indices_map is set in metadata.
+Set to false if vectors refer to different variables for instance. 
 
 # Return:
 - DimArray with dimensions 'model' and possibly 'variable'
@@ -256,8 +258,8 @@ given variable.
 # Arguments:
 - `data`: DimArray with dimensions 'model1', 'model2' and possibly 'variable'
 - `updateMeta`: set true if the vectors in the metadata refer to different models. 
-If true attribute indices_map is set in metadata. Set to false if vectors refer to 
-different variables for instance. 
+If true attribute ensemble_indices_map is set in metadata. 
+Set to false if vectors refer to different variables for instance. 
 """
 function averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
     data = renameModelDimsFromMemberToEnsemble(data, ["model1", "model2"])
@@ -498,8 +500,7 @@ end
 
 function logWeights(metadata_weights)
     models = metadata_weights["full_model_names"];
-    model_key = getCMIPModelsKey(metadata_weights);
-    @info "Nb included models (without ensemble members): " length(metadata_weights[model_key])
+    @info "Nb included models (without ensemble members): " length(metadata_weights["ensemble_names"])
     foreach(m -> @info(m), models)
 end
 

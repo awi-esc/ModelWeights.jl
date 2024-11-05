@@ -35,7 +35,8 @@ config_weights = sw.ConfigWeights(
     independence = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     sigma_independence = 0.5,
     sigma_performance = 0.5,
-    ref_period = "1980-2014"
+    ref_period = "1980-2014",
+    target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
 );
 
 

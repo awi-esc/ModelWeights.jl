@@ -117,12 +117,18 @@ function updateMetadata!(
         meta["full_model_names"] = getUniqueModelIds(meta, included_models)
         # add mapping from model (ensemble) names to indices in metadata arrays
         meta["ensemble_names"] = included_models
-        meta["indices_map"] = getIndicesMapping(included_models)
+        meta["ensemble_indices_map"] = getIndicesMapping(included_models)
     end
     return nothing
 end
 
+"""
+    joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any})
 
+Join the metadata of data to be joint (e.g. when loading data for tos for
+CMIP5 and CMIP6 from different locations). If keys are present in 'meta1' or 
+'meta2' but not the other, missing values are added.
+"""
 function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any})
     meta = Dict{String, Any}()
     n1 = length(meta1["full_model_names"])
@@ -134,26 +140,33 @@ function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any})
     keys_uniq_m2 = filter(x -> !(x in keys_shared), keys_meta2)
 
     for k in keys_shared
-        if k == "map_indices"
-            continue
-        end
-        v1 = meta1[k]
-        v2 = meta2[k]
-        if isa(v1, String)
-            if isa(v2, String)
-                if v1 == v2
-                    meta[k] = v1
-                else
-                    meta[k] = vcat(repeat([v1], outer=n1), repeat([v2], outer=n2))
-                end
-            else
-                meta[k] = vcat(repeat([v1], outer=n1), v2)
+        if k == "ensemble_map_indices"
+            meta["ensemble_indices_map"] = Dict()
+            for (k,vals) in meta2["ensemble_indices_map"]
+                meta["ensemble_indices_map"][k] = vals .+ n1
             end
-        elseif isa(v1, Vector)
-            if isa(v2, String)
-                meta[k] = vcat(v1, repeat([v2], outer=n2))
-            elseif isa(v2, Vector)
-                meta[k] = vcat(v1, v2)
+            for (k, vals) in meta1["ensemble_indices_map"]
+                meta["ensemble_indices_map"][k] = deepcopy(vals)
+            end
+        else
+            v1 = meta1[k]
+            v2 = meta2[k]
+            if isa(v1, String)
+                if isa(v2, String)
+                    if v1 == v2
+                        meta[k] = v1
+                    else
+                        meta[k] = vcat(repeat([v1], outer=n1), repeat([v2], outer=n2))
+                    end
+                else
+                    meta[k] = vcat(repeat([v1], outer=n1), v2)
+                end
+            elseif isa(v1, Vector)
+                if isa(v2, String)
+                    meta[k] = vcat(v1, repeat([v2], outer=n2))
+                elseif isa(v2, Vector)
+                    meta[k] = vcat(v1, v2)
+                end
             end
         end
     end
@@ -188,13 +201,6 @@ function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any})
             end
         end
     end
-    meta["indices_map"] = Dict()
-    for (k,vals) in meta2["indices_map"]
-        meta["indices_map"][k] = vals .+ n1
-    end
-    for (k, vals) in meta1["indices_map"]
-        meta["indices_map"][k] = deepcopy(vals)
-    end
     return meta
 end
 
@@ -212,8 +218,8 @@ into one big Vector.
 - `val2`: a Vector, a Dictionary or a single value (e.g. String, Number, etc.)
 """
 function appendValuesDicts(val1, val2)
-    if isa(val1, Vector) && isa(val2, Vector) & !(isempty(val1) || isempty(val2))
-        if val1 != val2 
+    if isa(val1, Vector) && isa(val2, Vector) #&& (!(isempty(val1) || isempty(val2)))
+        if collect(skipmissing(val1)) != collect(skipmissing(val2)) 
             @warn "Two arrays merged that weren't identical! (usuallly in metadata)"
             @warn val1
             @warn val2
@@ -228,7 +234,7 @@ function appendValuesDicts(val1, val2)
 
     elseif isa(val1, Dict) && isa(val2, Dict)
         if val1 != val2
-            @warn "Two different dictionaries (check indices_map)"
+            @warn "Two different dictionaries (check ensemble_indices_map)"
             @warn val1 
             @warn val2
             return vcat(val1, val2)
@@ -240,6 +246,9 @@ function appendValuesDicts(val1, val2)
         @warn val1 
         @warn val2
         throw(ArgumentError("Dictionary merged with something else!"))
+
+    elseif isa(val1, String) && isa(val2, String) && val1 == val2
+        return val1
     else
         return [val1, val2]
     end
@@ -276,7 +285,7 @@ function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.Dim
     attribs_diff_across_members = [];
     for key in attributes
         for model in dims(grouped_data, :model)
-            indices = meta["indices_map"][model]
+            indices = meta["ensemble_indices_map"][model]
             vals = get!(meta_new, key, [])       
             val_ensemble = unique(meta[key][indices]);
             if length(val_ensemble) != 1

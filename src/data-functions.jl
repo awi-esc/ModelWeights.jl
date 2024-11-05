@@ -80,27 +80,26 @@ function getModelSubset(data::DimArray, shared_models::Vector{String})
     @assert length(indices) == length(shared_models)
     keepMetadataSubset!(data.metadata, indices);
     data = data[model = indices];
-    data.metadata["indices_map"] = getIndicesMapping(data.metadata["ensemble_names"])
+    data.metadata["ensemble_indices_map"] = getIndicesMapping(data.metadata["ensemble_names"])
     return data
 end
 
 
 """
-    getSharedMetadataAndModelNames(metadata::Dict)
+    getMetadataSharedAcrossModelsAndModelNames(metadata::Dict)
 
 Return a new metadata dictionary which contains all attributes that were
 identical across models (therefore these are single values, not Vectors). 
-Further, model names and full_model_names are added. When combining this new 
-metadata dict with another, e.g. when combining data for different variables, 
-these must be identical (which is checked in function appendValuesDicts).
-Ignores indices_map (mapping models to indices in metadata arrays), since the 
-shared data may be combined differently.
+Further, model names (i.e. ensemble_names), full_model_names and mip_era 
+are retained. When combining this new metadata dict with another, e.g. when
+combining data for different variables, these must be identical (which is 
+checked in function appendValuesDicts).
 """
-function getSharedMetadataAndModelNames(metadata::Dict)
-    models_key = getCMIPModelsKey(metadata);
-    meta_shared = filter(((k,v),) -> isa(v, String), metadata);
+function getMetadataSharedAcrossModelsAndModelNames(metadata::Dict)
+    meta_shared = filter(((k,v),) -> isa(v, String), metadata);    
     meta_shared["full_model_names"] = deepcopy(metadata)["full_model_names"];
-    meta_shared[models_key] = unique(metadata[models_key]);
+    meta_shared["mip_era"] = deepcopy(metadata)["mip_era"]
+    meta_shared["ensemble_names"] = deepcopy(metadata)["ensemble_names"]
     return meta_shared
 end
 
