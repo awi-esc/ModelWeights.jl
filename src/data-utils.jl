@@ -48,7 +48,6 @@ end
     wP::DimArray # normalized
     wI::DimArray # normalized
     w::DimArray # normalized
-    #overall::DimArray # same as w, just for sanity check
 end
 
 

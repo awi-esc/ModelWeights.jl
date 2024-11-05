@@ -13,6 +13,11 @@ function plotPerformanceWeights(
     figures = [];
     models = Array(dims(wP, :model));
     variables = dims(wP, :variable);
+    if isnothing(variables)
+        variables = ["variables combined"]
+        wP_reshaped = reshape(wP, (size(wP)..., 1))
+        wP = DimArray(wP_reshaped, (dims(wP)..., Dim{:variable}(variables)))
+    end
     xs = 1:length(models);
     if isBarPlot
         for var in variables
@@ -90,12 +95,15 @@ function plotWeightContributions(independence::DimArray, performance::DimArray)
         fig[1,1], 
         xlabel =  L"Performance\n $e^{-(D_i/\sigma_D)^2}$", 
         ylabel = L"Independence\n\n $1 + \sum_{j≠i}^M e^{-(S_{ij}/\sigma_S)^2}$", 
-        title="(Unnormalized) Performance vs. independence contributions to overall weights",
+        title="Normalized Performance vs. independence contributions to overall weights",
         xlabelsize = 24,
         ylabelsize = 24
     )
 
     scatter!(ax, Array(independence), Array(performance))
+    m = maximum([maximum(independence), maximum(performance)])
+    extra = 0.0005
+    lines!(ax, [0, m+extra], [0, m+extra], color=:gray)
     text!(
         Array(independence), 
         Array(performance), 

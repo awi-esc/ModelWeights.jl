@@ -466,13 +466,12 @@ end
 
 
 """
-    loadWeightsAsDimArray(path_to_file::String)
+    loadWeightsAsDimArray(path_to_file::String, key_weights::String)
 """
-function loadWeightsAsDimArray(path_to_file::String)
-    data = NCDataset(path_to_file)
+function loadWeightsAsDimArray(data::NCDataset, key_weights::String)
     models = Array(data["model"])
     arr = DimArray(
-        Array(data["weight"]), 
+        Array(data[key_weights]), 
         (Dim{:model}(models)), metadata = Dict(data.attrib)
     )
     return arr

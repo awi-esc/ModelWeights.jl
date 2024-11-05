@@ -1,4 +1,5 @@
 import SimilarityWeights as sw
+using NCDatasets
 
 base_path =  "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/";
 config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/lgm-cmip5-cmip6";
@@ -45,12 +46,29 @@ weights = sw.getOverallWeights(lgm_data, obs_data, config_weights);
 
 # or save weights seperately afterwards
 target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
-sw.saveWeights(weights, target_dir; target_fn = "lgm-weights.nc")
+target_fn = "lgm-weights.nc"
+sw.saveWeights(weights, target_dir; target_fn = target_fn)
+
+
+# 4. Plot weights
+path_weights = joinpath(target_dir, "lgm-weights.nc")
+weights = NCDataset(path_weights)
+
+wP = sw.loadWeightsAsDimArray(weights, "wP")
+figs = sw.plotPerformanceWeights(wP; isBarPlot=false)
+
+wI = sw.loadWeightsAsDimArray(weights, "wI")
+f = sw.plotWeightContributions(wI, wP)
+
+
+w = sw.loadWeightsAsDimArray(weights, "w")
+fw = sw.plotWeights(w)
+#TODO: also save generalized distances besides normalized weights
+#Sij = sw.loadWeightsAsDimArray(weights, "Sij")
+#figs = sw.plotIndependenceWeights(wI)
 
 
 
-# 4. Apply weights
-# TODO
 
 
 
