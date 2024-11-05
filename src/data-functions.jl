@@ -419,40 +419,46 @@ end
 - `target_fn`:
 """
 function saveWeights(
-    weights::DimVector,
+    weights::ClimwipWeights,
     target_dir::String;
-    target_fn::String="weights.nc"
+    target_fn::String=""
 )
     if !isdir(target_dir)
         mkpath(target_dir)
     end
-    path_to_target = joinpath(target_dir, target_fn);
-    if isfile(path_to_target)
-        msg1 = "File: " * path_to_target * " already exists!";
-        path_to_target = joinpath(target_dir, join([getCurrentTime(), target_fn], "_"))
-        msg2 = "Weights saved as: " * path_to_target
-        @warn msg1 * msg2
+    if isempty(target_fn)
+       path_to_target = joinpath(target_dir, join(["weights", getCurrentTime(), ".nc"], "_", ""))
+    else
+        path_to_target = joinpath(target_dir, target_fn);
+        if isfile(path_to_target)
+            msg1 = "File: " * path_to_target * " already exists!";
+            path_to_target = joinpath(target_dir, join([getCurrentTime(), target_fn], "_"))
+            msg2 = "Weights saved as: " * path_to_target
+            @warn msg1 * msg2
+        end
     end
     ds = NCDataset(path_to_target, "c")
 
-    models = dims(weights, :model)
+    models = dims(weights.w, :model)
     defDim(ds, "model", length(models))
     # Add a new variable to store the model names
     v_model_names = defVar(ds, "model", String, ("model",))
     v_model_names[:] = Array(models)
 
     # global attributes
-    for (k, v) in weights.metadata
-        if isa(v, Dict)
-            ds.attrib[k] = [dk * "_" * string(dv) for (dk, dv) in v]
-        elseif isa(v, String)
-            ds.attrib[k] = v
-        else
-            ds.attrib[k] = Vector{String}(v)
+    for (k, v) in weights.w.metadata
+        ds.attrib[k] = deepcopy(v)
+    end
+
+    # Add actual weights
+    for name in fieldnames(ClimwipWeights)
+        if String(name) in ["w", "wP", "wI"]
+            print(name)
+            v = defVar(ds, String(name), Float64, ("model",))
+            data = getfield(weights, name)
+            v[:] = Array(data)
         end
     end
-    v = defVar(ds, "weight", Float64, ("model",))
-    v[:] = Array(weights)
     close(ds)
 
     @info "saved data to " path_to_target

@@ -1,12 +1,10 @@
 import SimilarityWeights as sw
 
-path_lgm_data =  "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/";
-
-#target_dir = "recipe_cmip6_lgm_tas" #"recipe_lgm_20241021_061102";
+base_path =  "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/";
 config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/lgm-cmip5-cmip6";
 
-base_path = path_lgm_data;# * target_dir;
 
+# 1. Load model data
 lgm_data = sw.loadData(
     base_path,
     config_path;
@@ -18,6 +16,7 @@ lgm_data = sw.loadData(
     )
 );
 
+# 2. Load observational data
 obs_data = sw.loadData(
     "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical",
     "/albedo/home/brgrus001/SimilarityWeights/configs/recipe_configs_historical/";
@@ -30,18 +29,30 @@ obs_data = sw.loadData(
     )
 )
 
+# 3. Compute weights
 config_weights = sw.ConfigWeights(
     performance = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     independence = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     sigma_independence = 0.5,
     sigma_performance = 0.5,
-    ref_period = "1980-2014",
-    target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
-);
+    ref_period = "1980-2014"#,
+    #target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
+    );
+    
+# if target_dir is provided within config_weights, the weights will directly 
+# be saved and written to a file
+weights = sw.getOverallWeights(lgm_data, obs_data, config_weights);
+
+# or save weights seperately afterwards
+target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
+sw.saveWeights(weights, target_dir; target_fn = "lgm-weights.nc")
 
 
-weights = sw.getOverallWeights(lgm_data, obs_data, config_weights)
-Array(weights.wP)
+
+# 4. Apply weights
+# TODO
+
+
 
 
 lgm_cmip5 = sw.loadData(
