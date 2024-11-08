@@ -145,7 +145,6 @@ If true attribute ensemble_indices_map is set in metadata.
 Set to false if vectors refer to different variables for instance. 
 """
 function averageEnsembleVector(data::DimArray, updateMeta::Bool)
-    grouped = nothing;
     data = renameModelDimsFromMemberToEnsemble(data, ["model"])
     
     grouped = groupby(data, :model=>identity);
@@ -159,7 +158,14 @@ function averageEnsembleVector(data::DimArray, updateMeta::Bool)
         meta = data.metadata
     end
     combined = rebuild(combined; metadata = meta);
-    return combined;
+    
+    l = Lookups.Categorical(
+        sort(models);
+        order=Lookups.ForwardOrdered()
+    )
+    combined = combined[model=At(sort(models))]
+    combined = DimensionalData.Lookups.set(combined, model=l)
+    return combined
 end
 
 
@@ -179,7 +185,7 @@ function averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
     data = renameModelDimsFromMemberToEnsemble(data, ["model1", "model2"])
     
     models = collect(unique(dims(data, :model1)))
- 
+
     grouped = groupby(data, :model2=>identity)
     averages = map(entry -> mapslices(Statistics.mean, entry, dims=:model2), grouped)
     combined = cat(averages..., dims=(Dim{:model2}(models)))
@@ -197,6 +203,13 @@ function averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
         meta = data.metadata
     end
     combined = rebuild(combined; metadata = meta);
+
+    l = Lookups.Categorical(
+        sort(models);
+        order=Lookups.ForwardOrdered()
+    )
+    combined = combined[model1=At(sort(models)), model2=At(sort(models))]
+    combined = DimensionalData.Lookups.set(combined, model1=l, model2=l)
     return combined
 end
 
@@ -376,8 +389,8 @@ function computeWeights(
         dims=(:variable, :diagnostic)
     )
 
-    performances = performanceParts(Di, config_weights.sigma_performance);
-    independences = independenceParts(Sij, config_weights.sigma_independence);
+    performances = performanceParts(Di, config_weights.sigma_performance)
+    independences = independenceParts(Sij, config_weights.sigma_independence)
     weights = performances ./ independences;
     weights = weights ./ sum(weights);
     # TODO: add metadata
