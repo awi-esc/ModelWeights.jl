@@ -1,4 +1,5 @@
 using DimensionalData
+using NCDatasets
 
 """
     getUniqueModelIds(meta::Dict, model_names::Vector{String})

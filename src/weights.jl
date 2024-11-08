@@ -34,9 +34,9 @@ end
 
 
 """
-    getModelDistMatrix(modelData::DimArray)
+    getModelDistances(modelData::DimArray)
 
-Computes the area weighted root mean squared error between model predictions for each pair of models. 
+Compute the area weighted root mean squared error between model predictions for each pair of models. 
 
 # Arguments:
 - `modelData` has dimensions 'lon', 'lat', 'model' and contains the data for a single climate variable.
@@ -65,38 +65,14 @@ function getModelDistances(modelData::DimArray)
     # make symmetrical matrix
     symDistMatrix = matrixS .+ matrixS';
     dim = Array(dims(modelData, :model));
-    return DimArray(symDistMatrix, (Dim{:model1}(dim), Dim{:model2}(dim)))
-end
-
-
-"""
-    normalizeAndWeightDistances(distMatrix::Union{DimVector, DimArray}, weight::T=1) where T<:Real
-
-Normalize 'distMatrix' by its median and multiplies each entry by 'weight'.
-"""
-function normalizeAndWeightDistances(distMatrix::Union{DimVector, DimArray}, weight::T=1) where T<:Real
-    distMatrix = distMatrix ./ median(distMatrix); 
-    return weight .* distMatrix;
-end
-
-
-"""
-    normalizeWeightsVariables!(weightsVars::Dict{String, Number})
-
-Modify weights for each variable by normalizing them s.t. they sum up to 1.
-"""
-function normalizeWeightsVariables!(weights::Dict{String, Number})
-    total = sum(values(weights))
-    for key in keys(weights)
-        weights[key] /= total 
-    end
+    return DimArray(symDistMatrix, (Dim{:model1}(dim), Dim{:model2}(dim)), metadata=modelData.metadata)
 end
 
 
 """
     getModelDataDist(models::DimArray, observations::DimArray)
 
-Compute the distance (area-weighted rmse) between model predictions and observations. 
+Compute the distance (area-weighted RMSE) between model predictions and observations. 
 
 """
 function getModelDataDist(models::DimArray, observations::DimArray)      
@@ -104,7 +80,7 @@ function getModelDataDist(models::DimArray, observations::DimArray)
     models = deepcopy(models);
     observations = deepcopy(observations);
     distances = [];
-    model_names = [];
+    model_names = Vector{String}();
     for (i, model_i) in enumerate(eachslice(models; dims=:model))
         model_name = dims(models, :model)[i]  # Access the name of the current model
         maskNbMissing = (ismissing.(observations) + ismissing.(model_i)) .> 0; # observations or model is missing (or both)
@@ -122,82 +98,37 @@ end
 
 
 """
-    reduceGeneralizedDistancesVars(normalizedWeightedDistsByVar::DimArray)
+    getNormalizedWeightsVariables(weightsVars::Dict{String, Number})
 
-Compute the generalized distance as the sum across normalized and weighted
-values for each variable (and diagnostic). 
+Normalize weights for each combination of variable and diagnostic, s.t. weights 
+sum up to 1.
+
+# Arguments:
+- `weights_dict`: maps from VARIABLE_DIAGNOSTIC (e.g. tas_CLIM) to weights
+
+# Return:
+DimArray with dimensions 'variable' and 'diagnostic' containig the normalized 
+weights.
 """
-function reduceGeneralizedDistancesVars(normalizedWeightedDistsByVar::DimArray)
-    generalizedDist = reduce(+, normalizedWeightedDistsByVar, dims=:variable)
-    return dropdims(generalizedDist, dims=:variable)
-end
+function getNormalizedWeightsVariables(weights_dict::Dict{String, Number})
+    total = sum(values(weights_dict))
+    normalized_weights = Dict{String, Number}()
+    for key in keys(weights_dict)
+        normalized_weights[key] = weights_dict[key] / total 
+    end
+    weights = map(x -> split(x, "_"), collect(keys(weights_dict)))
+    variables = unique(map(first, weights))
+    diagnostics = unique(map(x -> x[2], weights))
 
-
-"""
-    generalizedDistances(
-        modelData::Dict{String, DimArray},
-        dist_type::String;
-        weightsVars::Dict{String, Number}=Dict{String, Number}(),
-        obsData::Dict{String, DimArray}
+    w = DimArray(
+        zeros(length(variables), length(diagnostics)),
+        (Dim{:variable}(variables), Dim{:diagnostic}(diagnostics))
     )
-
-Compute the generalized distance for each model and climate variable in 'modelData' with respect to another model (dist_type="independence") or
-to observational data (dist_type = "performance").
-
-# Arguments
-- `modelData`: keys are climate variables, values are DimArrays with dimensions 'lon', 'lat' and 'model' (dist_type=performance) or 'model1' and 'model2' (dist_type=independence) 
-- `obsData`:  keys are climate variables, values are DimArrays with dimensions 'lon', 'lat', 'model'
-- `weightsVars`: keys are climate variables, values are the weight of how much the respective variable contributes to the computed weight
-
-# Returns 
-- `weightsByVar::DimArray`: performance or independence weights for each considered variable
-"""
-function generalizedDistances(
-    modelData::Dict{String, DimArray}, 
-    dist_type::String;
-    weightsVars::Dict{String, Number}=Dict{String, Number}(),
-    obsData::Dict{String, DimArray}=Dict{String, DimArray}()
-)
-    variables = collect(keys(weightsVars))
-    weights = copy(weightsVars);
-    if !isempty(weights)
-        normalizeWeightsVariables!(weights);
-    else
-        weights = Dict(zip(variables, ones(length(variables))));
+    for (var, diag) in weights
+        k = var * "_" * diag
+        w[variable=At(var), diagnostic=At(diag)] = normalized_weights[k]
     end
-    weightedDistMatrices = [];
-
-    meta = Dict{String, Union{String, Array, Dict}}();
-    for climVar in variables
-        modelDict = filter(((k,v),) -> startswith(k, climVar * "_"), modelData)
-        obsDataDict = filter(((k,v),) -> startswith(k, climVar * "_"), obsData)
-        if length(modelDict) > 1
-            @warn "more than one dataset for computing generalizedDistances for climate variable $climVar in model data, first is taken!"
-        end
-        model = first(values(modelDict))
-        
-        if dist_type == "performance"
-            if length(obsDataDict) > 1
-                @warn "more than one dataset for computing generalizedDistances for climate variable $climVar in observational data, first is taken!"
-            end
-            obs = first(values(obsDataDict))
-            distances = getModelDataDist(model, obs)
-        elseif dist_type == "independence"
-            distances = getModelDistances(model)
-        else
-            throw(ArgumentError("Argument 'dist_type' in generalizedDistances must be one of: 'performance', 'independence'."))
-        end
-        weightedNormalizedDistances = normalizeAndWeightDistances(distances, weights[climVar]);
-        push!(weightedDistMatrices, weightedNormalizedDistances);
-
-        metadata = deepcopy(model.metadata);
-        meta_shared = getMetadataSharedAcrossModelsAndModelNames(metadata);
-        meta_shared["variables"] = climVar
-        meta = mergewith(appendValuesDicts, meta, meta_shared);
-    end
-    weightsByVar = cat(weightedDistMatrices..., dims = Dim{:variable}(collect(variables)));
-    weightsByVar = rebuild(weightsByVar; metadata = meta);
-    return weightsByVar
+    return w
 end
 
 
@@ -212,32 +143,15 @@ ensemble members of that model.
 - `updateMeta`: set true if the vectors in the metadata refer to different models. 
 If true attribute ensemble_indices_map is set in metadata.
 Set to false if vectors refer to different variables for instance. 
-
-# Return:
-- DimArray with dimensions 'model' and possibly 'variable'
 """
 function averageEnsembleVector(data::DimArray, updateMeta::Bool)
     grouped = nothing;
     data = renameModelDimsFromMemberToEnsemble(data, ["model"])
     
-    if !hasdim(data, :variable)
-        grouped = groupby(data, :model=>identity);
-        averages = map(d -> mean(d, dims=:model), grouped);
-        models = Array(dims(averages, :model));
-        combined = cat(averages..., dims=(Dim{:model}(models)));
-    else
-        variables = Array(dims(data, :variable));
-        results = [];
-        for climVar in variables
-            grouped = groupby(data[variable = Where(x -> x == climVar)], :model=>identity);
-            averages = map(d->mean(d, dims=:model), grouped);
-            models = Array(dims(averages, :model));
-            avg = cat(averages..., dims=(Dim{:model}(models)));
-            push!(results, avg);
-        end
-        models = unique(Array(dims(data, :model)));
-        combined = cat(results...; dims=(Dim{:variable}(variables)));
-    end
+    grouped = groupby(data, :model=>identity);
+    models = collect(dims(grouped, :model))
+    averages = map(entry -> mapslices(Statistics.mean, entry, dims=:model), grouped)
+    combined = cat(averages..., dims=(Dim{:model}(models)));
 
     if updateMeta
         meta = updateGroupedDataMetadata(data.metadata, grouped)
@@ -263,23 +177,19 @@ Set to false if vectors refer to different variables for instance.
 """
 function averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
     data = renameModelDimsFromMemberToEnsemble(data, ["model1", "model2"])
-    if !hasdim(data, :variable)
-        grouped = groupby(data, :model1 => identity, :model2 => identity);
-        averages = map(d -> mean(mean(d, dims=:model2), dims=:model1)[1,1], grouped);
-        averages[LinearAlgebra.diagind(averages)] .= 0;
-        combined = averages;
-    else
-        variables = Array(dims(data, :variable));
-        results = [];
-        for climVar in variables
-            distances = data[variable=Where(x -> x == climVar)];
-            grouped = groupby(distances[variable=At(climVar)], :model1 => identity, :model2=>identity);
-            averages = map(d-> mean(mean(d, dims=:model2), dims=:model1)[1,1], grouped);
-            # Note: set all comparisons of same model to itself to 0, may differ from zero for those models with several ensemble members
-            averages[LinearAlgebra.diagind(averages)] .= 0;
-            push!(results, averages)
-        end
-        combined = cat(results..., dims=Dim{:variable}(variables));
+    
+    models = collect(unique(dims(data, :model1)))
+ 
+    grouped = groupby(data, :model2=>identity)
+    averages = map(entry -> mapslices(Statistics.mean, entry, dims=:model2), grouped)
+    combined = cat(averages..., dims=(Dim{:model2}(models)))
+
+    grouped = groupby(combined, :model1=>identity)
+    averages = map(entry -> mapslices(Statistics.mean, entry, dims=:model1), grouped)
+    combined = cat(averages..., dims=(Dim{:model1}(models)));
+    
+    for m in models
+        combined[model1=At(m), model2=At(m)] .= 0
     end
     if updateMeta
         meta = updateGroupedDataMetadata(data.metadata, grouped)
@@ -291,30 +201,17 @@ function averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
 end
 
 
-function averageEnsembleMembers(generalizedDistances::DimArray, updateMeta::Bool)
-    if hasdim(generalizedDistances, Symbol("model1"))
-        distances = averageEnsembleMatrix(generalizedDistances, updateMeta);
-    else 
-        distances = averageEnsembleVector(generalizedDistances, updateMeta);
-    end
-    return distances
-end
-
-
-
 """
     performanceParts(generalizedDistances::DimArray, sigmaD::Number)
 
 Compute the performance part (numerator) of the overall weight for each model.
 
 # Arguments:
-- `generalizedDistances`: has a single dimension 'model' and contains D_i for 
-each model i
+- `generalizedDistances`: contains generalized distances Di for each model
 - `sigmaD`: free model parameter for impact of performance weights
 """
 function performanceParts(generalizedDistances::DimArray, sigmaD::Number)
-    distances = averageEnsembleMembers(generalizedDistances, false);
-    return exp.(-(distances ./ sigmaD).^2);
+    return exp.(-(generalizedDistances ./ sigmaD).^2);
 end
 
 
@@ -324,72 +221,16 @@ end
 Compute the independence part (denominator) of the overall weight for each model.
 
 # Arguments:
-- `generalizedDistances`: has two dimensions, 'model1' and 'model2' and
-contains S_{i,j} for each model pair 
+- `generalizedDistances`: contains generalized distances S_{i,j} for each model
+pair has two dimensions, 'model1' and 'model2'
 - `sigmaS`: free model parameter for impact of independence weights
 """
 function independenceParts(generalizedDistances::DimArray, sigmaS::Number)
-    distances = averageEnsembleMembers(generalizedDistances, false);
     # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
-    indep_parts = sum(exp.(-(distances ./ sigmaS).^2), dims=:model2);
+    indep_parts = sum(exp.(-(generalizedDistances ./ sigmaS).^2), dims=:model2);
     indep_parts = dropdims(indep_parts, dims=:model2)
     indep_parts = set(indep_parts, :model1 => :model);
     return indep_parts
-end
-
-
-function overallGeneralizedDistances(
-    model_data::Data, 
-    obs_data::Data,
-    config_weights::ConfigWeights
-)
-
-    obs_keys = map(x -> (var = x.variable, stat = x.statistic), obs_data.ids)
-    model_keys = map(x -> (var = x.variable, stat = x.statistic), model_data.ids)
-    if obs_keys != model_keys
-        msg = "Variable+Diagnostic combinations are not the same for observational and model data! Obs: $obs_keys , Model: $model_keys"
-        throw(ArgumentError(msg))
-    end
-
-    diagnostics = unique(map(x -> x.stat, obs_keys))
-    Di_all = []
-    Sij_all = []
-    Di = []
-    Sij = []
-    for diagnostic in diagnostics
-        models = filter(((k, v),) -> occursin("_" * diagnostic * "_", k), model_data.data)
-        obsData = filter(((k, v),) -> occursin("_" * diagnostic * "_", k), obs_data.data)
-
-        weights_perform = filter(((k, v),) -> occursin("_" * diagnostic, k), config_weights.performance)
-        weights_indep = filter(((k, v),) -> occursin("_" * diagnostic, k), config_weights.independence)
-        # weights dictionary for this particular diagnostic shall map just from variable to value
-        wP = Dict{String, Number}()
-        wI = Dict{String, Number}()
-        for key in keys(weights_perform)
-            wP[split(key, "_")[1]] = weights_perform[key]
-            wI[split(key, "_")[1]] = weights_indep[key]
-        end
-        generalizedDistsPerform  = generalizedDistances(
-            models, "performance"; weightsVars=wP, obsData=obsData
-        )
-        push!(Di_all, generalizedDistsPerform)
-        push!(Di, reduceGeneralizedDistancesVars(generalizedDistsPerform))
-
-        generalizedDistsIndep = generalizedDistances(models, "independence"; weightsVars=wI);
-        push!(Sij_all, generalizedDistsIndep)
-        push!(Sij, reduceGeneralizedDistancesVars(generalizedDistsIndep))
-    end
-    # put into DimArray
-    Di_all = cat(Di_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
-    Sij_all = cat(Sij_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
-    
-    # summarized across variables (done in for loop) and diagnostics
-    Di = cat(Di..., dims = Dim{:diagnostic}(collect(diagnostics)));
-    Sij = cat(Sij..., dims = Dim{:diagnostic}(collect(diagnostics)));
-    Di = dropdims(reduce(+, Di, dims=:diagnostic), dims=:diagnostic)
-    Sij = dropdims(reduce(+, Sij, dims=:diagnostic), dims=:diagnostic)
-
-    return (Di_all, Sij_all, Di, Sij)
 end
 
 
@@ -401,12 +242,13 @@ by weights 'w'. Members of the same ensemble are averaged before. If no weight
 vector is provided, unweighted average is computed.
 
 # Arguments:
-- `data`: DimArray with dimensions lon, lat, model
-- `w`: DimArray with dimension 'model'
+- `data`: has dimensions lon, lat, model
+- `w`: weights for ensembles (not individual members); has dimension 'model'
 """
 function computeWeightedAvg(
     data::DimArray; weights::Union{DimArray, Nothing}=nothing
 )
+    #makeWeightPerEnsembleMember(weights);
     data = deepcopy(data)
     if isnothing(weights)
         # make sure that the number of ensemble members per model is considered
@@ -428,7 +270,7 @@ function computeWeightedAvg(
         # weights may have been computed wrt a different set of variables as we use here, 
         # so the list of models for which weights have been computed may be shorter 
         # than the models of the given data (for the same reference period).
-        if sort(dims(weights, :model)) != sort(models)
+        if sort(collect(dims(weights, :model))) != sort(collect(dims(data, :model)))
             @warn "Mismatch between models that weights were computed for and models in the data."
         end
         data = data[model = Where(m -> m in dims(weights, :model))]
@@ -453,22 +295,100 @@ end
 function computeWeights(
     model_data::Data, obs_data::Data, config_weights::ConfigWeights
 )
-    Di_all, Sij_all, Di, Sij = overallGeneralizedDistances(
-        model_data, obs_data, config_weights
-    );
+    obs_keys = map(x -> (var = x.variable, stat = x.statistic), obs_data.ids)
+    model_keys = map(x -> (var = x.variable, stat = x.statistic), model_data.ids)
+    if sort(obs_keys) != sort(model_keys)
+        msg = "Variable+Diagnostic combinations are not the same for observational and model data! Obs: $obs_keys , Model: $model_keys"
+        throw(ArgumentError(msg))
+    end
+    # make sure that weights (for diagnostic+variables) are normalized
+    weights_perform = getNormalizedWeightsVariables(config_weights.performance)
+    weights_indep = getNormalizedWeightsVariables(config_weights.independence)
+
+    # compute performance/independence distances for all models and ensemble members
+    diagnostics = unique(map(x -> x.stat, obs_keys))
+    Di = []
+    Sij = []
+    distances_perform_all = []
+    distances_indep_all = []
+    for diagnostic in diagnostics
+        distances_perform = []
+        distances_indep = []
+        variables = unique(map(x -> x.var, model_keys))
+        for var in variables
+            k = var * "_" * diagnostic
+            models_dict = filter(((key, val),) -> occursin(k, key), model_data.data)
+            # check that only one dataset for combination of variable + diagnostic
+            if length(models_dict) > 1
+                @warn "more than one dataset for $var and $diagnostic in model data, first is taken!"
+            end
+            models = first(values(models_dict))
+            
+            obs_dict = filter(((key, val),) -> occursin(k, key), obs_data.data)
+            if length(obs_dict) > 1
+                @warn "more than one dataset for $var and $diagnostic in observational data, first is taken!"
+            end
+            observations = first(values(obs_dict))
+
+            distsIndep = getModelDistances(models)
+            push!(distances_indep, distsIndep)
+            distsPerform = getModelDataDist(models, observations)
+            push!(distances_perform, distsPerform)
+        end
+        distances_perform = cat(distances_perform..., dims = Dim{:variable}(collect(variables)));
+        distances_indep = cat(distances_indep..., dims = Dim{:variable}(collect(variables)));
+        push!(distances_perform_all, distances_perform)
+        push!(distances_indep_all, distances_indep)
+    end
+    # put into DimArray
+    distances_perform_all = cat(distances_perform_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
+    distances_indep_all = cat(distances_indep_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
+    
+    # get normalizations for each diagnostic,variable combination: median across all models
+    norm_perform = mapslices(Statistics.median, distances_perform_all, dims=:model)
+    distances_perform = DimArray(
+        distances_perform_all ./ norm_perform, 
+        dims(distances_perform_all), 
+        metadata = distances_perform_all.metadata
+    )
+    norm_indep = mapslices(Statistics.median, distances_indep_all, dims=(:model1, :model2))
+    distances_indep = DimArray(
+        distances_indep_all ./ norm_indep, 
+        dims(distances_indep_all),
+        metadata = distances_indep_all.metadata
+    )
+
+    #  take mean diagnostic per model (averaging ensemble members)
+    distances_perform = averageEnsembleVector(distances_perform, false)
+    distances_indep = averageEnsembleMatrix(distances_indep, false)
+    
+    # compute generalized distances Di, Sij (weighted average over computed distances)
+    distances_perform = mapslices(x -> x .* weights_perform, 
+        distances_perform, dims=(:variable, :diagnostic)
+    )
+    distances_indep = mapslices(x -> x .* weights_indep, 
+        distances_indep, dims=(:variable, :diagnostic)
+    )
+    Di = dropdims(sum(distances_perform, dims=(:variable, :diagnostic)),
+        dims=(:variable, :diagnostic)
+    )
+    Sij =  dropdims(sum(distances_indep, dims=(:variable, :diagnostic)),
+        dims=(:variable, :diagnostic)
+    )
+
     performances = performanceParts(Di, config_weights.sigma_performance);
     independences = independenceParts(Sij, config_weights.sigma_independence);
     weights = performances ./ independences;
     weights = weights ./ sum(weights);
-    weights.metadata["name_ref_period"] = config_weights.ref_period
-    
+    # TODO: add metadata
+    #weights.metadata["name_ref_period"] = config_weights.ref_period  
     wP = performances ./ sum(performances)
     wI = independences ./ sum(independences)
     #w = wP./wI # just for sanity check
 
     return ClimwipWeights(
-        performance_all = Di_all, 
-        independence_all = Sij_all, 
+        performance_distances = distances_perform_all,
+        independence_distances = distances_indep_all, 
         Di = Di,
         Sij = Sij,
         wP = wP,
@@ -478,7 +398,11 @@ function computeWeights(
     )
 end
 
+"""
+    makeWeightPerEnsembleMember(weights::DimArray)
 
+
+"""
 function makeWeightPerEnsembleMember(weights::DimArray)
     full_model_names = weights.metadata["full_model_names"]
     models = weights.metadata[getCMIPModelsKey(weights.metadata)]

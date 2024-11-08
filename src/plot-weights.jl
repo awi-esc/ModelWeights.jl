@@ -1,19 +1,21 @@
 """
-    plotPerformanceWeights(wP::DimArray; wP_combined::Union{DimArray, Nothing}=nothing, isBarPlot::Bool=true)
+    plotPerformanceWeights(
+    wP::DimArray; label::String="Performance Weight", isBarPlot::Bool=true
+)
 
 # Arguments:
 - `wP`: performanceWeights with dimensions: model, variable
-- `wP_combined`: performanceWeights across variables combined into single weight 
-per model
-- `isBarPlot`: 
+- `isBarPlot`: if true barplot, else scatter plot returned
 """
 function plotPerformanceWeights(
-    wP::DimArray; wP_combined::Union{DimArray, Nothing}=nothing, isBarPlot::Bool=true
+    wP::DimArray; label::String="Performance Weight", isBarPlot::Bool=true
 )
     figures = [];
     models = Array(dims(wP, :model));
     variables = dims(wP, :variable);
+    hasDimVariable = true
     if isnothing(variables)
+        hasDimVariable = false
         variables = ["variables combined"]
         wP_reshaped = reshape(wP, (size(wP)..., 1))
         wP = DimArray(wP_reshaped, (dims(wP)..., Dim{:variable}(variables)))
@@ -26,7 +28,7 @@ function plotPerformanceWeights(
                 xticks = (xs, models), 
                 xticklabelrotation = pi/4,
                 xlabel = "Models", 
-                ylabel = "Performance weight",
+                ylabel = label,
                 title = "$var"
             );
             barplot!(ax, xs, Array(wP[variable = At(var)]))
@@ -38,17 +40,15 @@ function plotPerformanceWeights(
             xticks = (xs, models), 
             xticklabelrotation = pi/4,
             xlabel = "Models", 
-            ylabel = "Performance weight",
+            ylabel = label,
         );
         for var in variables
             scatter!(ax, xs, Array(wP[variable = At(var)]))
             lines!(ax, xs, Array(wP[variable = At(var)]), label = "$var")
         end
-        if !isnothing(wP_combined)
-            scatter!(ax, xs, Array(wP_combined))
-            lines!(ax, xs, Array(wP_combined), label = "combined weights all vars")
-        end
-        axislegend(ax) 
+        if hasDimVariable
+            axislegend(ax)
+        end 
         push!(figures, fig)
     end
     return figures
@@ -57,7 +57,7 @@ end
 
 function plotIndependenceWeights(distances::DimArray)
     figures = []
-    models = distances.metadata["full_model_names"]
+    models = collect(dims(distances, :model1))
     if hasdim(distances, :variable)
         for var in dims(distances, :variable)
             fig = plotDistMatrices(
@@ -89,17 +89,19 @@ performance part.
 - independence: (dims:model) numerator exp(-(D_i/sigma_D)^2)
 - performance: (dims:model) denominator 1 + sum_j≠i^M exp(-(S_ij/sigma_S)^2) 
 """
-function plotWeightContributions(independence::DimArray, performance::DimArray)
+function plotWeightContributions(
+    independence::DimArray, performance::DimArray;
+    xlabel::String="Performance", 
+    ylabel::String="Independence",
+    title::String=""
+)
+    #L"Performance\n $e^{-(D_i/\sigma_D)^2}$",
+    #L"Independence\n\n $1 + \sum_{j≠i}^M e^{-(S_{ij}/\sigma_S)^2}$",  
     fig = Figure(size=(800,600), fontsize=16)
     ax = Axis(
-        fig[1,1], 
-        xlabel =  L"Performance\n $e^{-(D_i/\sigma_D)^2}$", 
-        ylabel = L"Independence\n\n $1 + \sum_{j≠i}^M e^{-(S_{ij}/\sigma_S)^2}$", 
-        title="Normalized Performance vs. independence contributions to overall weights",
-        xlabelsize = 24,
-        ylabelsize = 24
+        fig[1,1], xlabel = xlabel, ylabel = ylabel, title=title, 
+        xlabelsize = 24, ylabelsize = 24
     )
-
     scatter!(ax, Array(independence), Array(performance))
     m = maximum([maximum(independence), maximum(performance)])
     extra = 0.0005
@@ -114,14 +116,17 @@ function plotWeightContributions(independence::DimArray, performance::DimArray)
 end
 
 
-function plotWeights(weights::DimArray)
+function plotWeights(weights::DimArray; title::String="")
     fig =  getFigure((16,8), 18);
     models = Array(dims(weights, :model))
     ax = Axis(fig[1,1], 
               xlabel = "Models", 
-              ylabel = "weights", 
+              ylabel = "weights",
+              title = title,
               xticks = (collect(1:length(models)), models), 
-              xticklabelrotation = pi/2);
+              xticklabelrotation = pi/2,
+    );
+    ylims!(ax, 0, 1)
     xs = 1:length(models);
     scatter!(ax, xs, Array(weights))
     lines!(ax, xs, Array(weights))

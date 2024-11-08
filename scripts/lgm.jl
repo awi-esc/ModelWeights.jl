@@ -38,7 +38,7 @@ config_weights = sw.ConfigWeights(
     sigma_performance = 0.5,
     ref_period = "1980-2014"#,
     #target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
-    );
+);
     
 # if target_dir is provided within config_weights, the weights will directly 
 # be saved and written to a file
@@ -52,24 +52,27 @@ sw.saveWeights(weights, target_dir; target_fn = target_fn)
 
 # 4. Plot weights
 path_weights = joinpath(target_dir, "lgm-weights.nc")
-weights = NCDataset(path_weights)
+ds_weights = NCDataset(path_weights)
 
-wP = sw.loadWeightsAsDimArray(weights, "wP")
+wP = sw.loadWeightsAsDimArray(ds_weights, "wP")
 figs = sw.plotPerformanceWeights(wP; isBarPlot=false)
 
-wI = sw.loadWeightsAsDimArray(weights, "wI")
+wI = sw.loadWeightsAsDimArray(ds_weights, "wI")
 f = sw.plotWeightContributions(wI, wP)
 
 
-w = sw.loadWeightsAsDimArray(weights, "w")
+w = sw.loadWeightsAsDimArray(ds_weights, "w")
 fw = sw.plotWeights(w)
 #TODO: also save generalized distances besides normalized weights
 #Sij = sw.loadWeightsAsDimArray(weights, "Sij")
 #figs = sw.plotIndependenceWeights(wI)
 
 
-
-
+# 5. apply weights
+# model weights are for ensembles, not unique ensemble members! Which means 
+# that model predictions also have to be for ensembles, not members!
+means = sw.computeWeightedAvg(lgm_data.data["tas_CLIM_lgm"]; weights=w)
+sw.plotMeansOnMap(means, "mean LGM: tas_CLIM")
 
 
 

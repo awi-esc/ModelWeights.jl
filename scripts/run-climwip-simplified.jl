@@ -46,21 +46,31 @@ config_weights = sw.ConfigWeights(
 weights = sw.getOverallWeights(
     model_data_weights, obs_data_weights, config_weights
 );
+
+
 # make some Plots
-sw.plotWeights(weights.overall)
+sw.plotWeights(weights.w; title="overall weights")
+sw.plotWeights(weights.wP; title="Performance weights")
+sw.plotWeights(weights.wI; title="Independence weights")
 
-wP_by_var = dropdims(reduce(+, weights.performance_all, dims=:diagnostic), dims=:diagnostic)
-figs_performance = sw.plotPerformanceWeights(wP_by_var)
+sw.plotWeightContributions(weights.wI, weights.wP)
 
-figs_Di = sw.plotPerformanceWeights(wP_by_var; wP_combined=weights.performance, isBarPlot=false);
-f_Di = sw.plotPerformanceWeights(wP_by_var; isBarPlot=false)
+di_var = dropdims(
+    reduce(+, weights.performance_distances, dims=:diagnostic), 
+    dims=:diagnostic
+)
+figs_performance = sw.plotPerformanceWeights(di_var; label="Model-Data distances");
+figs_Di = sw.plotPerformanceWeights(
+    weights.Di; label="Generalized distances Di", isBarPlot=false
+);
 
-figs_Sij = sw.plotIndependenceWeights(weights.independence)
-wI_by_var = dropdims(reduce(+, weights.independence_all, dims=:diagnostic), dims=:diagnostic)
-figs_wI = sw.plotIndependenceWeights(wI_by_var)
+figs_Sij = sw.plotIndependenceWeights(weights.Sij);
+sij_var = dropdims(reduce(+, weights.independence_distances, dims=:diagnostic), dims=:diagnostic)
+figs_sij = sw.plotIndependenceWeights(sij_var);
 
 
 
+# TODO: the following is outdated!
 # 2. apply computed weights - Temperature map plots
 data_temp_map_future = sw.loadData(
     config_path,

@@ -61,8 +61,8 @@ function getPerformanceWeights(
     weights_variables::Dict{String, Number}=Dict{String, Number}(),
     summarize_variables::Bool=false
 )
-    wP = generalizedDistances(
-        modelData, "performance"; weights_variables, obsData
+    wP = computeDistances(
+        modelData, "performance", weights_variables; obsData
     )
     if summarize_variables
         wP = reduceGeneralizedDistancesVars(wP)
@@ -76,7 +76,7 @@ function getIndependenceWeights(
     weights_variables::Dict{String, Number}=Dict{String, Number}(), 
     summarize_variables::Bool=false
 )
-    wI = generalizedDistances(modelData, "independence"; weights_variables);
+    wI = computeDistances(modelData, "independence", weights_variables);
     if summarize_variables
         wI = reduceGeneralizedDistancesVars(wI)
     end
