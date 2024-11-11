@@ -2,24 +2,25 @@ using DimensionalData
 using NCDatasets
 
 """
-    getUniqueModelIds(meta::Dict, model_names::Vector{String})
+    getUniqueModelIds(meta::Dict, ensemble_names::Vector{String})
 
+Combine name of the ensemble with the id of the respective ensemble members.
 
 # Arguments:
 - `meta`: for CMIP5 data, must have keys: 'mip_era', 'realization', 'initialization_method',
 'physics_version'. For CMIP6 data must have keys: 'variant_label', 'grid_label'
-- `model_names`:
+- `ensemble_names`: Vector of strings containing the names of the model ensembles.
 """
 function getUniqueModelIds(
     meta::Dict,
-    model_names::Vector{String}
+    ensemble_names::Vector{String}
 )
     meta_subdict = Dict{String, Vector}()
     keys_model_ids = [
         "realization", "physics_version", "initialization_method", 
         "mip_era", "grid_label", "variant_label"
     ]
-    n = length(model_names)
+    n = length(ensemble_names)
     for key in filter(k -> k in keys_model_ids, keys(meta))
         val = meta[key]
         if isa(val, String)
@@ -31,7 +32,7 @@ function getUniqueModelIds(
     mip_eras = meta_subdict["mip_era"]
     indices_cmip5 = findall(x -> !ismissing(x) && x == "CMIP5", mip_eras)
     indices_cmip6 = findall(x -> !ismissing(x) && x == "CMIP6", mip_eras)
-    models = Vector{String}(undef, length(model_names))
+    models = Vector{String}(undef, length(ensemble_names))
 
     if !isempty(indices_cmip5)
         variants = buildCMIP5EnsembleMember(
@@ -41,7 +42,7 @@ function getUniqueModelIds(
         )
         models[indices_cmip5] =  map(
             x -> join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM), 
-            zip(model_names[indices_cmip5], variants)
+            zip(ensemble_names[indices_cmip5], variants)
         )
         @debug "For CMIP5, full model names dont include grid."
     end
@@ -50,7 +51,7 @@ function getUniqueModelIds(
         grids = meta_subdict["grid_label"][indices_cmip6]
         models[indices_cmip6] = map(
             x->join(x, MODEL_MEMBER_DELIM, "_"), 
-            zip(model_names[indices_cmip6], variants, grids)
+            zip(ensemble_names[indices_cmip6], variants, grids)
         );
     end
     return models
@@ -355,11 +356,11 @@ end
 """
     getCommonModelsAcrossVars(modelData::Data)
 
-Return only those models for which there is data for all variables.
-TODO: add checks that model dimensions are identical everywhere!
+Return only those models (on level of ensemble members) for which there is 
+data for all variables.
 
 # Arguments
-- `modelData`
+- `modelData`:
 """
 function getCommonModelsAcrossVars(modelData::Data)
     data_all = deepcopy(modelData.data);
@@ -368,10 +369,8 @@ function getCommonModelsAcrossVars(modelData::Data)
     for var in variables
         modelDict = filter(((k,v),)-> occursin(var, k), modelData.data)
         # iterate over all combinations (of diagnostics/statistics) with current variable
-        for (k, data_var) in modelDict
-            meta = data_var.metadata;
-            models = getUniqueModelIds(meta, Array(dims(data_var, :model)))
-            data_all[k].metadata["full_model_names"] = models
+        for (_, data_var) in modelDict
+            models = Array(dims(data_var, :model))
             if isnothing(shared_models)
                 shared_models = models
             else
@@ -379,11 +378,12 @@ function getCommonModelsAcrossVars(modelData::Data)
             end
         end
     end
-
     for id in map(id -> id.key, modelData.ids)
         data_all[id] = getModelSubset(data_all[id], shared_models);
     end
-    result = Data(base_path = modelData.base_path, ids = modelData.ids, data = data_all)
+    result = Data(
+        base_path = modelData.base_path, ids = modelData.ids, data = data_all
+    )
     alignIDsFilteredData!(result)
     return result
 end

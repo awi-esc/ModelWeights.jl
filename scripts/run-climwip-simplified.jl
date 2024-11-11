@@ -81,7 +81,7 @@ data_temp_map_reference = sw.loadData(
     base_path,
     config_path, 
     dir_per_var=false,
-    common_models_across_vars=false,
+    common_models_across_vars=true,
     subset = Dict("aliases" => ["weighted_temperature_map_reference"])
 );
                 
