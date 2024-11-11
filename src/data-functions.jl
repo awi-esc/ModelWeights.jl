@@ -25,7 +25,7 @@ function getUniqueModelIds(
         if isa(val, String)
             meta_subdict[key] = repeat([val], outer=n)
         else
-            meta_subdict[key] = val
+            meta_subdict[key] = deepcopy(val)
         end
     end
     mip_eras = meta_subdict["mip_era"]

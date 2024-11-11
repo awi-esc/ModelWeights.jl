@@ -70,28 +70,25 @@ figs_sij = sw.plotIndependenceWeights(sij_var, dimname="model1");
 
 
 
-# TODO: the following is outdated!
 # 2. apply computed weights - Temperature map plots
 data_temp_map_future = sw.loadData(
+    base_path,
     config_path,
-    base_path, 
     dir_per_var=false,
-    constraints = sw.DataConstraint(
-        tasks = ["weighted_temperature_map_future"]
-    )
+    subset = Dict("aliases" => ["weighted_temperature_map_future"])
 );
 data_temp_map_reference = sw.loadData(
-    config_path,
-    base_path, 
+    base_path,
+    config_path, 
     dir_per_var=false,
-    constraints = sw.DataConstraint(
-        tasks = ["weighted_temperature_map_reference"]
-    )
+    common_models_across_vars=false,
+    subset = Dict("aliases" => ["weighted_temperature_map_reference"])
 );
-
+                
+# TODO: the following is outdated!
 # compute weighted averages and plot results
 # make sure that same models for reference and time period of interest are used
-sw.keepSharedModelData!(data_temp_map_future.models, data_temp_map_reference.models)
+sw.keepSharedModelData!(data_temp_map_future.data, data_temp_map_reference.data)
 
 data_ref = data_temp_map_reference.models["historical-rcp85_CLIM_tas_1995-2014#weighted_temperature_map_reference"]
 data_future = data_temp_map_future.models["historical-rcp85_CLIM_tas_2081-2100#weighted_temperature_map_future"]
