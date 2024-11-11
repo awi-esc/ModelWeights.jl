@@ -76,6 +76,7 @@ figs = sw.plotIndependenceWeights(Sij);
 # 5. apply weights
 # model weights are for ensembles, not unique ensemble members! Which means 
 # that model predictions also have to be for ensembles, not members!
+lgm_tas_data = sw.averageEnsembleVector(lgm_data.data["tas_CLIM_lgm"], true)
 means = sw.computeWeightedAvg(lgm_data.data["tas_CLIM_lgm"]; weights=w)
 sw.plotMeansOnMap(means, "mean LGM: tas_CLIM")
 

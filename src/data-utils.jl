@@ -93,9 +93,12 @@ end
     )
 
 Update metadata 'meta' s.t. data of ignored files is removed and attributes
-that were only present in some files/models are set to missing. Further the key 
-'full_model_names' is added which contains for every file/model the unique 
-identifier consisting of variant_label, grid_label (for CMIP6) and model_name. 
+that were only present in some files/models are set to missing. Further keys
+are added: 'full_model_names' contains for every file/model the unique 
+identifier consisting of variant_label, grid_label (for CMIP6) and model_name, 
+'ensemble_names' contains the names of the included models without the ensemble 
+member identifiers and 'ensemble_indices_map' is a dictionary mapping from 
+ensemble names to the indices of the respective ensemble members.
 """
 function updateMetadata!(
     meta::Dict{String, Any}, 
@@ -273,29 +276,36 @@ end
 """
     updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
 
-Vectors in metadata 'meta' have to refer to different models. These are now summarized such that
-each vector only contains N entries where N is the number of Ensembles/Models (i.e. without the unique ensemble members).
-If the metadata for the ensemble members of a Model/Ensemble differ across the members, the respective 
-entry in the vector will be a vector itself. 
+Vectors in metadata 'meta' refer to different models (ensemble members). 
+These are now summarized such that each vector only contains N entries where N
+is the number of Ensembles (i.e. without the unique ensemble members).
+If the metadata for the ensemble members of a Model/Ensemble differ across the
+members, the respective entry in the vector will be a vector itself. 
 """
 function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
-    meta_new = filter(((k,v),) -> !(v isa Vector), meta);    
-    attributes = filter(x -> meta[x] isa Vector, keys(meta));
+    meta_new = filter(((k,v),) -> !(v isa Vector), meta)
+    meta_new["ensemble_indices_map"] = Dict{String, Number}()
+    attributes = filter(x -> meta[x] isa Vector, keys(meta))
     attribs_diff_across_members = [];
+    # iterate over attributes that are vectors, thus different for the different 
+    # models or ensembles
     for key in attributes
-        for model in dims(grouped_data, :model)
+        for (i, model) in enumerate(dims(grouped_data, :model))
             indices = meta["ensemble_indices_map"][model]
             vals = get!(meta_new, key, [])       
-            val_ensemble = unique(meta[key][indices]);
-            if length(val_ensemble) != 1
+            val_ensemble = meta[key][indices]
+            if length(unique(val_ensemble)) != 1
                 push!(vals, val_ensemble)
                 push!(attribs_diff_across_members, key)
             else
+                # members of current ensemble all share the same value
                 push!(vals, val_ensemble[1])
             end
+            meta_new["ensemble_indices_map"][model] = i
         end
     end
     if !isempty(attribs_diff_across_members)
+        # TODO ignore those that are defenitely expected to differ
         @warn "metadata attributes that differ across ensemble members (ok for some!)" unique(attribs_diff_across_members)
     end
     return meta_new
