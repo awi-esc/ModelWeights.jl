@@ -305,112 +305,6 @@ function computeWeightedAvg(
 end
 
 
-function computeWeights(
-    model_data::Data, obs_data::Data, config_weights::ConfigWeights
-)
-    obs_keys = map(x -> (var = x.variable, stat = x.statistic), obs_data.ids)
-    model_keys = map(x -> (var = x.variable, stat = x.statistic), model_data.ids)
-    if sort(obs_keys) != sort(model_keys)
-        msg = "Variable+Diagnostic combinations are not the same for observational and model data! Obs: $obs_keys , Model: $model_keys"
-        throw(ArgumentError(msg))
-    end
-    # make sure that weights (for diagnostic+variables) are normalized
-    weights_perform = getNormalizedWeightsVariables(config_weights.performance)
-    weights_indep = getNormalizedWeightsVariables(config_weights.independence)
-
-    # compute performance/independence distances for all models and ensemble members
-    diagnostics = unique(map(x -> x.stat, obs_keys))
-    Di = []
-    Sij = []
-    distances_perform_all = []
-    distances_indep_all = []
-    for diagnostic in diagnostics
-        distances_perform = []
-        distances_indep = []
-        variables = unique(map(x -> x.var, model_keys))
-        for var in variables
-            k = var * "_" * diagnostic
-            models_dict = filter(((key, val),) -> occursin(k, key), model_data.data)
-            # check that only one dataset for combination of variable + diagnostic
-            if length(models_dict) > 1
-                @warn "more than one dataset for $var and $diagnostic in model data, first is taken!"
-            end
-            models = first(values(models_dict))
-            
-            obs_dict = filter(((key, val),) -> occursin(k, key), obs_data.data)
-            if length(obs_dict) > 1
-                @warn "more than one dataset for $var and $diagnostic in observational data, first is taken!"
-            end
-            observations = first(values(obs_dict))
-
-            distsIndep = getModelDistances(models)
-            push!(distances_indep, distsIndep)
-            distsPerform = getModelDataDist(models, observations)
-            push!(distances_perform, distsPerform)
-        end
-        distances_perform = cat(distances_perform..., dims = Dim{:variable}(collect(variables)));
-        distances_indep = cat(distances_indep..., dims = Dim{:variable}(collect(variables)));
-        push!(distances_perform_all, distances_perform)
-        push!(distances_indep_all, distances_indep)
-    end
-    # put into DimArray
-    distances_perform_all = cat(distances_perform_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
-    distances_indep_all = cat(distances_indep_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
-    
-    # get normalizations for each diagnostic,variable combination: median across all models
-    norm_perform = mapslices(Statistics.median, distances_perform_all, dims=:model)
-    distances_perform = DimArray(
-        distances_perform_all ./ norm_perform, 
-        dims(distances_perform_all), 
-        metadata = distances_perform_all.metadata
-    )
-    norm_indep = mapslices(Statistics.median, distances_indep_all, dims=(:model1, :model2))
-    distances_indep = DimArray(
-        distances_indep_all ./ norm_indep, 
-        dims(distances_indep_all),
-        metadata = distances_indep_all.metadata
-    )
-
-    #  take mean diagnostic per model (averaging ensemble members)
-    distances_perform = averageEnsembleVector(distances_perform, false)
-    distances_indep = averageEnsembleMatrix(distances_indep, false)
-    
-    # compute generalized distances Di, Sij (weighted average over computed distances)
-    distances_perform = mapslices(x -> x .* weights_perform, 
-        distances_perform, dims=(:variable, :diagnostic)
-    )
-    distances_indep = mapslices(x -> x .* weights_indep, 
-        distances_indep, dims=(:variable, :diagnostic)
-    )
-    Di = dropdims(sum(distances_perform, dims=(:variable, :diagnostic)),
-        dims=(:variable, :diagnostic)
-    )
-    Sij =  dropdims(sum(distances_indep, dims=(:variable, :diagnostic)),
-        dims=(:variable, :diagnostic)
-    )
-
-    performances = performanceParts(Di, config_weights.sigma_performance)
-    independences = independenceParts(Sij, config_weights.sigma_independence)
-    weights = performances ./ independences;
-    weights = weights ./ sum(weights);
-    # TODO: add metadata
-    #weights.metadata["name_ref_period"] = config_weights.ref_period  
-    wP = performances ./ sum(performances)
-    wI = independences ./ sum(independences)
-    #w = wP./wI # just for sanity check
-
-    return ClimwipWeights(
-        performance_distances = distances_perform_all,
-        independence_distances = distances_indep_all, 
-        Di = Di,
-        Sij = Sij,
-        wP = wP,
-        wI = wI,
-        w =  weights
-        #overall = w./sum(w), # just for sanity check
-    )
-end
-
 """
     makeWeightPerEnsembleMember(weights::DimArray)
 
@@ -439,6 +333,86 @@ function logWeights(metadata_weights)
     models = metadata_weights["full_model_names"];
     @info "Nb included models (without ensemble members): " length(metadata_weights["ensemble_names"])
     foreach(m -> @info(m), models)
+end
+
+
+"""
+    saveWeights(
+        weights::DimVector,
+        target_dir::String;
+        target_fn::String="weights.nc"
+    )
+
+# Arguments:
+- `weights`:
+- `target_dir`:
+- `target_fn`:
+"""
+function saveWeights(
+    weights::ClimwipWeights,
+    target_dir::String;
+    target_fn::String=""
+)
+    if !isdir(target_dir)
+        mkpath(target_dir)
+    end
+    if isempty(target_fn)
+       path_to_target = joinpath(target_dir, join(["weights", getCurrentTime(), ".nc"], "_", ""))
+    else
+        path_to_target = joinpath(target_dir, target_fn);
+        if isfile(path_to_target)
+            msg1 = "File: " * path_to_target * " already exists!";
+            path_to_target = joinpath(target_dir, join([getCurrentTime(), target_fn], "_"))
+            msg2 = "Weights saved as: " * path_to_target
+            @warn msg1 * msg2
+        end
+    end
+    ds = NCDataset(path_to_target, "c")
+
+    ensembles = map(x -> string(x), dims(weights.w, :model))
+    defDim(ds, "ensemble", length(ensembles))
+    # Add a new variable to store the model names
+    defVar(ds, "ensemble", Array(ensembles), ("ensemble",))
+    
+    function addNCDatasetVar!(ds, dimensions, name)
+        defDim(ds, name, length(dimensions))
+        defVar(ds, name, Array(dimensions), (name,))
+        return nothing  
+    end
+
+    # add dimension variables
+    addNCDatasetVar!(ds, dims(weights.performance_distances, :model), "model")
+    addNCDatasetVar!(ds, dims(weights.performance_distances, :variable), "variable")
+    addNCDatasetVar!(ds, dims(weights.performance_distances, :diagnostic), "diagnostic")
+
+    # global attributes
+    # TODO: check metadata, standard_name shouldnt be present!
+    for (k, v) in weights.w.metadata
+        if isa(v, String) # doesnt work for complex types like vectors or dicts!
+            ds.attrib[k] = v
+        end
+    end
+
+    # Add actual data weights
+    for name in fieldnames(ClimwipWeights)
+        if String(name) in ["w", "wP", "wI", "Di"]
+            v = defVar(ds, String(name), Float64, ("ensemble",))
+            data = getfield(weights, name)
+            v[:] = Array(data)
+        elseif String(name) == "independence_distances"
+            v = defVar(ds, String(name), Float64, ("model", "model", "variable", "diagnostic"))
+            v[:,:,:,:] =  Array(weights.independence_distances)
+        elseif String(name) == "Sij"
+            v = defVar(ds, String(name), Float64, ("ensemble", "ensemble"))
+            v[:,:] = Array(weights.Sij)
+        elseif String(name) == "performance_distances"
+            v = defVar(ds, String(name), Float64, ("model", "variable", "diagnostic"))
+            v[:,:,:] = Array(weights.performance_distances)
+       end 
+    end
+    close(ds)
+
+    @info "saved data to " path_to_target
 end
 
 

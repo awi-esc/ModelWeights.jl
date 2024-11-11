@@ -4,14 +4,14 @@
 )
 
 # Arguments:
-- `wP`: performanceWeights with dimensions: model, variable
+- `wP`: performanceWeights with dimensions: ensemble, variable
 - `isBarPlot`: if true barplot, else scatter plot returned
 """
 function plotPerformanceWeights(
     wP::DimArray; label::String="Performance Weight", isBarPlot::Bool=true
 )
     figures = [];
-    models = Array(dims(wP, :model));
+    models = Array(dims(wP, :ensemble));
     variables = dims(wP, :variable);
     hasDimVariable = true
     if isnothing(variables)
@@ -57,19 +57,19 @@ end
 
 function plotIndependenceWeights(distances::DimArray)
     figures = []
-    models = collect(dims(distances, :model1))
+    ensembles = collect(dims(distances, :ensemble))
     if hasdim(distances, :variable)
         for var in dims(distances, :variable)
             fig = plotDistMatrices(
                 Array(distances[variable = At(var)]), 
                 var, 
-                models,
-                models
+                ensembles,
+                ensembles
             )
             push!(figures, fig)
         end
     else
-        fig = plotDistMatrices(Array(distances), "across variables", models, models)
+        fig = plotDistMatrices(Array(distances), "across variables", ensembles, ensembles)
         push!(figures, fig)
     end
     return figures
@@ -79,18 +79,15 @@ end
 """
     plotWeightContributions(independence::DimArray, performance::DimArray)
 
-Make plot of independence vs. performance part of overall weight that combines 
-both weights.
-
-The overall weight is computed by dividing the independence part by the 
-performance part.
+Plot performance against independence weights.
 
 # Arguments: 
-- independence: (dims:model) numerator exp(-(D_i/sigma_D)^2)
-- performance: (dims:model) denominator 1 + sum_j≠i^M exp(-(S_ij/sigma_S)^2) 
+- independence: (dims:ensemble) numerator exp(-(D_i/sigma_D)^2)
+- performance: (dims:ensemble) denominator 1 + sum_j≠i^M exp(-(S_ij/sigma_S)^2) 
 """
 function plotWeightContributions(
-    independence::DimArray, performance::DimArray;
+    independence::DimArray,
+    performance::DimArray;
     xlabel::String="Performance", 
     ylabel::String="Independence",
     title::String=""
@@ -102,23 +99,30 @@ function plotWeightContributions(
         fig[1,1], xlabel = xlabel, ylabel = ylabel, title=title, 
         xlabelsize = 24, ylabelsize = 24
     )
-    scatter!(ax, Array(independence), Array(performance))
+    scatter!(ax, Array(performance), Array(independence))
     m = maximum([maximum(independence), maximum(performance)])
     extra = 0.0005
     lines!(ax, [0, m+extra], [0, m+extra], color=:gray)
     text!(
-        Array(independence), 
         Array(performance), 
-        text = Array(dims(performance, :model)), 
+        Array(independence), 
+        text = Array(dims(performance, :ensemble)), 
         align = (:center, :top)
     )
     return fig
 end
 
 
+"""
+    plotWeights(weights::DimArray; title::String="")
+
+# Arguments:
+- `weights`: overall weights, one for each ensemble
+- `title`: plot title
+"""
 function plotWeights(weights::DimArray; title::String="")
     fig =  getFigure((16,8), 18);
-    models = Array(dims(weights, :model))
+    models = Array(dims(weights, :ensemble))
     ax = Axis(fig[1,1], 
               xlabel = "Models", 
               ylabel = "weights",

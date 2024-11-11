@@ -408,72 +408,19 @@ end
 
 
 """
-    saveWeights(
-        weights::DimVector,
-        target_dir::String;
-        target_fn::String="weights.nc"
-    )
+    loadWeightsAsDimArray(path_to_file::String, key_weights::String)
 
 # Arguments:
-- `weights`:
-- `target_dir`:
-- `target_fn`:
-"""
-function saveWeights(
-    weights::ClimwipWeights,
-    target_dir::String;
-    target_fn::String=""
-)
-    if !isdir(target_dir)
-        mkpath(target_dir)
-    end
-    if isempty(target_fn)
-       path_to_target = joinpath(target_dir, join(["weights", getCurrentTime(), ".nc"], "_", ""))
-    else
-        path_to_target = joinpath(target_dir, target_fn);
-        if isfile(path_to_target)
-            msg1 = "File: " * path_to_target * " already exists!";
-            path_to_target = joinpath(target_dir, join([getCurrentTime(), target_fn], "_"))
-            msg2 = "Weights saved as: " * path_to_target
-            @warn msg1 * msg2
-        end
-    end
-    ds = NCDataset(path_to_target, "c")
-
-    models = dims(weights.w, :model)
-    defDim(ds, "model", length(models))
-    # Add a new variable to store the model names
-    v_model_names = defVar(ds, "model", String, ("model",))
-    v_model_names[:] = Array(models)
-
-    # global attributes
-    for (k, v) in weights.w.metadata
-        ds.attrib[k] = deepcopy(v)
-    end
-
-    # Add actual weights
-    for name in fieldnames(ClimwipWeights)
-        if String(name) in ["w", "wP", "wI"]
-            print(name)
-            v = defVar(ds, String(name), Float64, ("model",))
-            data = getfield(weights, name)
-            v[:] = Array(data)
-        end
-    end
-    close(ds)
-
-    @info "saved data to " path_to_target
-end
-
-
-"""
-    loadWeightsAsDimArray(path_to_file::String, key_weights::String)
+- `data`: NCDataset containing weights, which have a single dimension
+- `key_weights`: name of weights to load; 'wP' (performance weights), 'wI'
+(independence weights), 'w' (overall weights)
 """
 function loadWeightsAsDimArray(data::NCDataset, key_weights::String)
-    models = Array(data["model"])
+    src_name = dimnames(data[key_weights])[1]
+    sources = Array(data[src_name])
     arr = DimArray(
         Array(data[key_weights]), 
-        (Dim{:model}(models)), metadata = Dict(data.attrib)
+        (Dim{Symbol(src_name)}(sources)), metadata = Dict(data.attrib)
     )
     return arr
 end

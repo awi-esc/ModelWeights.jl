@@ -43,7 +43,7 @@ config_weights = sw.ConfigWeights(
 );
 
 
-weights = sw.getOverallWeights(
+weights = sw.computeWeights(
     model_data_weights, obs_data_weights, config_weights
 );
 

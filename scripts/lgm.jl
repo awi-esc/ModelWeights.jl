@@ -4,7 +4,6 @@ using NCDatasets
 base_path =  "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/";
 config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/lgm-cmip5-cmip6";
 
-
 # 1. Load model data
 lgm_data = sw.loadData(
     base_path,
@@ -28,44 +27,50 @@ obs_data = sw.loadData(
         "data_type" => ["ERA5"],
         "aliases" => ["historical"]
     )
-)
+);
 
 # 3. Compute weights
+# if target_dir is provided within config_weights, the weights will directly 
+# be saved and written to a file
 config_weights = sw.ConfigWeights(
     performance = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     independence = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     sigma_independence = 0.5,
     sigma_performance = 0.5,
     ref_period = "1980-2014"#,
-    #target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
+    # target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
 );
-    
-# if target_dir is provided within config_weights, the weights will directly 
-# be saved and written to a file
-weights = sw.getOverallWeights(lgm_data, obs_data, config_weights);
+ 
+weights = sw.computeWeights(lgm_data, obs_data, config_weights);
 
-# or save weights seperately afterwards
+# weights can also be  saved seperately:
 target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
 target_fn = "lgm-weights.nc"
 sw.saveWeights(weights, target_dir; target_fn = target_fn)
 
 
-# 4. Plot weights
-path_weights = joinpath(target_dir, "lgm-weights.nc")
-ds_weights = NCDataset(path_weights)
+# 4. Plot weights/generalized distances
+path_weights = joinpath(target_dir, "2024-11-11_09_35_lgm-weights.nc")
+ds_weights = NCDataset(path_weights);
 
-wP = sw.loadWeightsAsDimArray(ds_weights, "wP")
-figs = sw.plotPerformanceWeights(wP; isBarPlot=false)
+wP = sw.loadWeightsAsDimArray(ds_weights, "wP");
+figs = sw.plotPerformanceWeights(wP; isBarPlot=false);
 
-wI = sw.loadWeightsAsDimArray(ds_weights, "wI")
+wI = sw.loadWeightsAsDimArray(ds_weights, "wI");
 f = sw.plotWeightContributions(wI, wP)
 
-
-w = sw.loadWeightsAsDimArray(ds_weights, "w")
+w = sw.loadWeightsAsDimArray(ds_weights, "w");
 fw = sw.plotWeights(w)
-#TODO: also save generalized distances besides normalized weights
-#Sij = sw.loadWeightsAsDimArray(weights, "Sij")
-#figs = sw.plotIndependenceWeights(wI)
+
+ds_Sij = ds_weights["Sij"];
+src_names = dimnames(Sij);
+sources = [Array(ds_Sij[src_names[1]]), Array(ds_Sij[src_names[1]])];
+Sij = DimArray(
+    Array(ds_Sij),
+    (Dim{Symbol(src_names[1])}(sources[1]), Dim{Symbol(src_names[2])}(sources[2])), 
+    metadata = Dict(ds_Sij.attrib)
+);
+figs = sw.plotIndependenceWeights(Sij);
 
 
 # 5. apply weights
