@@ -59,14 +59,14 @@ di_var = dropdims(
     reduce(+, weights.performance_distances, dims=:diagnostic), 
     dims=:diagnostic
 )
-figs_performance = sw.plotPerformanceWeights(di_var; label="Model-Data distances");
+figs_performance = sw.plotPerformanceWeights(di_var; label="Model-Data distances", dimname="model");
 figs_Di = sw.plotPerformanceWeights(
     weights.Di; label="Generalized distances Di", isBarPlot=false
 );
 
-figs_Sij = sw.plotIndependenceWeights(weights.Sij);
+figs_Sij = sw.plotIndependenceWeights(weights.Sij, dimname="ensemble1");
 sij_var = dropdims(reduce(+, weights.independence_distances, dims=:diagnostic), dims=:diagnostic)
-figs_sij = sw.plotIndependenceWeights(sij_var);
+figs_sij = sw.plotIndependenceWeights(sij_var, dimname="model1");
 
 
 
