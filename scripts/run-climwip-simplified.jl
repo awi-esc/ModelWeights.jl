@@ -90,19 +90,19 @@ data_temp_map_reference = sw.loadData(
 # make sure that same models for reference and time period of interest are used
 sw.keepSharedModelData!(data_temp_map_future.data, data_temp_map_reference.data)
 
-data_ref = data_temp_map_reference.models["historical-rcp85_CLIM_tas_1995-2014#weighted_temperature_map_reference"]
-data_future = data_temp_map_future.models["historical-rcp85_CLIM_tas_2081-2100#weighted_temperature_map_future"]
+data_ref = data_temp_map_reference.data["tas_CLIM_weighted_temperature_map_reference"]
+data_future = data_temp_map_future.data["tas_CLIM_weighted_temperature_map_future"]
 # to align with original data
 data_ref = data_ref[lat = Where(x -> x <= 68.75)];
 data_future = data_future[lat = Where(x -> x <= 68.75)];
 
-weights_all_members = sw.makeWeightPerEnsembleMember(weights.overall);
-weighted_ref = sw.computeWeightedAvg(data_ref, weights_all_members)
-weighted_future = sw.computeWeightedAvg(data_future, weights_all_members)
+weights_all_members = sw.makeWeightPerEnsembleMember(weights.w);
+weighted_ref = sw.computeWeightedAvg(data_ref; weights=weights_all_members)
+weighted_future = sw.computeWeightedAvg(data_future; weights=weights_all_members)
 diff_ww = weighted_future .- weighted_ref;
-diff_ww = sw.sortLongitudesWest2East(diff_ww)
+diff_ww = sw.sortLongitudesWest2East(diff_ww);
 
-f1 = sw.plotMeansOnMap(diff_ww, "Weighted mean temp. change 2081-2100 - 1995-2014", ColorSchemes.Reds.colors)
+f1 = sw.plotMeansOnMap(diff_ww, "Weighted mean temp. change 2081-2100 - 1995-2014"; ColorSchemes.Reds.colors)
 
 
 
@@ -119,9 +119,13 @@ begin
     data_ww_orig = data_orig["__xarray_dataarray_variable__"][:,:];
     compareToOrigData(diff_ww, data_ww_orig)
     d = DimArray(data_ww_orig, (Dim{:lon}(Array(dims(diff_ww, :lon))), Dim{:lat}(Array(dims(diff_ww, :lat)))))
-    sw.plotMeansOnMap(d, "Weighted mean temp. change 2081-2100 - 1995-2014", ColorSchemes.Reds.colors);
+    sw.plotMeansOnMap(d, "Weighted mean temp. change 2081-2100 - 1995-2014"; ColorSchemes.Reds.colors);
 end
 
+####### DOESNT WORK YET ########
+# data_ref = sw.averageEnsembleVector(data_ref, true)
+# data_future = sw.averageEnsembleVector(data_future, true)
+# 
 unweighted_ref = sw.computeWeightedAvg(data_ref);
 unweighted_future = sw.computeWeightedAvg(data_future);
 diff_uu = unweighted_future .- unweighted_ref;
@@ -130,7 +134,7 @@ diff = diff_ww .- diff_uu
 
 f2 = sw.plotMeansOnMap(
     diff,
-    "Weighted minus unweighted mean temp. change: 2081-2100 minus 1995-2014",
+    "Weighted minus unweighted mean temp. change: 2081-2100 minus 1995-2014";
     ColorSchemes.Reds.colors
 )
 
@@ -140,22 +144,20 @@ begin
     data_wu_orig = data_orig["__xarray_dataarray_variable__"][:,:];
     compareToOrigData(diff, data_wu_orig)
 end
+####### DOESNT WORK YET ########
 
 
 # 3. Apply computed weights - Temperature graph plots
 data_temp_graph = sw.loadData(
-    config_path,
     base_path, 
+    config_path,
     dir_per_var=false,
-    constraints = sw.DataConstraint(
-        tasks = ["weighted_temperature_graph"]
-    )
+    subset = Dict("aliases" => ["weighted_temperature_graph"])
 );
-data_graph = data_temp_graph.models["historical-rcp85_ANOM_tas_1960-2100#weighted_temperature_graph"];
-#data_graph = sw.averageEnsembleVector(data_graph, true);
+data_graph = data_temp_graph.data["tas_ANOM_weighted_temperature_graph"];
 
 uncertainties = sw.getUncertaintyRanges(data_graph, weights_all_members);
-weighted_avg = sw.computeWeightedAvg(data_graph, weights_all_members);
+weighted_avg = sw.computeWeightedAvg(data_graph; weights=weights_all_members);
 unweighted_avg = sw.computeWeightedAvg(data_graph);
 
 f3 = sw.plotTempGraph(
@@ -174,7 +176,6 @@ tas_orig = NCDataset("/albedo/home/brgrus001/SimilarityWeights/reproduce-climwip
 # bnu_ref_orig = NCDataset("/albedo/home/brgrus001/SimilarityWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/preproc/weighted_temperature_map/tas_CLIM_reference/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc")["tas"];
 # bnu_future_orig[:,:] .=== bnu_future.data
 # bnu_ref_orig .=== bnu_ref.data
-
 
 # TODO: Plot ensemble spread for some models with >1 ensemble member
 # data = modelDataRef["CLIM"]["tas"]

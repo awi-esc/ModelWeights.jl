@@ -150,7 +150,7 @@ function averageEnsembleVector(data::DimArray, updateMeta::Bool)
     
     grouped = groupby(data, :model=>identity);
     ensembles = collect(dims(grouped, :model))
-    averages = map(entry -> mapslices(Statistics.mean, entry, dims=:model), grouped)
+    averages = map(entry -> mapslices(x -> Statistics.mean(skipmissing(x)), entry, dims=:model), grouped)
     combined = cat(averages..., dims=(Dim{:model}(ensembles)));
     combined = set(combined, :model => :ensemble)
 
@@ -264,8 +264,13 @@ vector is provided, unweighted average is computed.
 function computeWeightedAvg(
     data::DimArray; weights::Union{DimArray, Nothing}=nothing
 )
-    #makeWeightPerEnsembleMember(weights);
     data = deepcopy(data)
+    sources = dims(data, :model)
+    dimname = "model"
+    if isnothing(sources)
+        sources = dims(data, :ensemble)
+        dimname = "ensemble"
+    end
     if isnothing(weights)
         # make sure that the number of ensemble members per model is considered
         ensemble_names = data.metadata["ensemble_names"]
@@ -281,16 +286,25 @@ function computeWeightedAvg(
                 push!(w, (1/n_ensembles) *  (1/n_members))
             end
         end
-        weights = DimArray(w, Dim{:ensemble}(Array(dims(data, :ensemble))))
+        if dimname == "model"
+            weights = DimArray(w, Dim{:model}(Array(dims(data, :model))))
+        else
+            weights = DimArray(w, Dim{:ensemble}(Array(dims(data, :ensemble))))
+        end
     else
         # weights may have been computed wrt a different set of variables as we use here, 
         # so the list of models for which weights have been computed may be shorter 
-        # than the models of the given data (for the same reference period).
-        if sort(collect(dims(weights, :ensemble))) != sort(collect(dims(data, :ensemble)))
+        # than the models of the given data.
+        if sort(collect(sources)) != sort(collect(dims(weights, Symbol(dimname))))
             @warn "Mismatch between models that weights were computed for and models in the data."
         end
-        data = data[ensemble = Where(m -> m in dims(weights, :ensemble))]
-        n_models_data = length(dims(data, :ensemble))
+
+        if dimname == "model"
+            data = data[model = Where(m -> m in dims(weights, :model))]
+        else
+            data = data[ensemble = Where(m -> m in dims(weights, :ensemble))]
+        end
+        n_models_data = length(sources)
         n_weights = length(weights)
         if n_models_data != n_weights
             msg = "nb of models for observational and model predictions does not match: ";
@@ -299,11 +313,17 @@ function computeWeightedAvg(
         end
     end
     @assert isapprox(sum(weights), 1; atol=10^-4)
-    for m in dims(data, :ensemble)
-        data[ensemble = At(m)] = data[ensemble = At(m)] .* weights[ensemble = At(m)]
+    
+    if dimname == "model"
+        for m in sources
+            data[model = At(m)] = data[model = At(m)] .* weights[model = At(m)]
+        end
+    else
+        for m in dims(data, :ensemble)
+            data[ensemble = At(m)] = data[ensemble = At(m)] .* weights[ensemble = At(m)]
+        end
     end
-
-    weighted_avg = dropdims(reduce(+, data, dims=:ensemble), dims=:ensemble)
+    weighted_avg = dropdims(reduce(+, data, dims=Symbol(dimname)), dims=Symbol(dimname))
     return weighted_avg
 end
 
@@ -311,14 +331,18 @@ end
 """
     makeWeightPerEnsembleMember(weights::DimArray)
 
-
+Equally distribute weight for each ensemble over its members. Metadata is used
+to access the individual ensemble members the computed weights were based on.
+    
+# Arguments:
+- `weights`: contains weights for each ensemble, has dimension 'ensemble'.
 """
 function makeWeightPerEnsembleMember(weights::DimArray)
     full_model_names = weights.metadata["full_model_names"]
-    models = weights.metadata[getCMIPModelsKey(weights.metadata)]
+    ensembles = weights.metadata["ensemble_names"]
     nb_ensemble_members = [];
-    for model in models
-        n = count(member -> startswith(member, model), full_model_names)
+    for ensemble in ensembles
+        n = count(member -> split(member, "#")[1] == ensemble, full_model_names)
         push!(nb_ensemble_members, n)
     end
     weights_all_members = []
