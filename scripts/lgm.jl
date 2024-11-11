@@ -50,11 +50,12 @@ sw.saveWeights(weights, target_dir; target_fn = target_fn)
 
 
 # 4. Plot weights/generalized distances
-path_weights = joinpath(target_dir, "2024-11-11_09_35_lgm-weights.nc")
+path_weights = joinpath(target_dir, "2024-11-11_12_08_lgm-weights.nc")
 ds_weights = NCDataset(path_weights);
 
 wP = sw.loadWeightsAsDimArray(ds_weights, "wP");
 figs = sw.plotPerformanceWeights(wP; isBarPlot=false);
+figs[1]
 
 wI = sw.loadWeightsAsDimArray(ds_weights, "wI");
 f = sw.plotWeightContributions(wI, wP)
@@ -63,7 +64,7 @@ w = sw.loadWeightsAsDimArray(ds_weights, "w");
 fw = sw.plotWeights(w)
 
 ds_Sij = ds_weights["Sij"];
-src_names = dimnames(Sij);
+src_names = dimnames(ds_Sij);
 sources = [Array(ds_Sij[src_names[1]]), Array(ds_Sij[src_names[1]])];
 Sij = DimArray(
     Array(ds_Sij),
@@ -71,14 +72,20 @@ Sij = DimArray(
     metadata = Dict(ds_Sij.attrib)
 );
 figs = sw.plotIndependenceWeights(Sij);
-
+figs[1]
 
 # 5. apply weights
 # model weights are for ensembles, not unique ensemble members! Which means 
 # that model predictions also have to be for ensembles, not members!
 lgm_tas_data = sw.averageEnsembleVector(lgm_data.data["tas_CLIM_lgm"], true)
-means = sw.computeWeightedAvg(lgm_data.data["tas_CLIM_lgm"]; weights=w)
-sw.plotMeansOnMap(means, "mean LGM: tas_CLIM")
+weighted_means = sw.computeWeightedAvg(lgm_tas_data; weights=w)
+means = sw.computeWeightedAvg(lgm_tas_data)
+sw.plotMeansOnMap(means, "unweighted average LGM: tas_CLIM")
+sw.plotMeansOnMap(weighted_means, "weighted means LGM: tas_CLIM")
+
+# weighted and unweighted means should be different:
+Array(weighted_means) .== Array(means)
+
 
 
 
