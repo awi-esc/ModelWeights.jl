@@ -98,7 +98,7 @@ end
 
 
 """
-    getNormalizedWeightsVariables(weightsVars::Dict{String, Number})
+    normalizeWeightsVariables(weightsVars::Dict{String, Number})
 
 Normalize weights for each combination of variable and diagnostic, s.t. weights 
 sum up to 1.
@@ -110,7 +110,8 @@ sum up to 1.
 DimArray with dimensions 'variable' and 'diagnostic' containig the normalized 
 weights.
 """
-function getNormalizedWeightsVariables(weights_dict::Dict{String, Number})
+function normalizeWeightsVariables(weights_dict::Dict{String, Number})
+    filter!(((k,v),) -> v != 0, weights_dict)
     total = sum(values(weights_dict))
     normalized_weights = Dict{String, Number}()
     for key in keys(weights_dict)
@@ -304,6 +305,7 @@ function computeWeightedAvg(
         else
             data = data[ensemble = Where(m -> m in dims(weights, :ensemble))]
         end
+
         n_models_data = length(sources)
         n_weights = length(weights)
         if n_models_data != n_weights
@@ -444,5 +446,7 @@ end
 
 
 function applyWeights(data::Data, weights::ClimwipWeights)
+   
     
+
 end

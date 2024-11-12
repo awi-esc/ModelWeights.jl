@@ -428,3 +428,67 @@ function alignIDsFilteredData!(data::Data)
     actual_data = keys(data.data)
     filter!(x -> x.key in actual_data, data.ids)
 end
+
+
+function indexData(data::Data, var_diagnostic_key::String)
+    data_dict = filter(((k, v),) -> occursin(var_diagnostic_key, k), data.data)
+    # check that only one dataset for combination of variable + diagnostic
+    if length(data_dict) > 1
+        var, diagnostic = split(var_diagnostic_key, "_")
+        key = first(keys(data_dict))
+        @warn "more than one dataset for $var and $diagnostic in model data, $key is taken!"
+    end
+    data = first(values(data_dict))
+    return data
+end
+
+
+function computeDistancesAllDiagnostics(model_data::Data, obs_data::Data, config::Dict{String, Number}, forPerformance::Bool)
+    # compute performance/independence distances for all models and ensemble members
+    keys_weights =  collect(keys(config))
+    diagnostics = unique(map(x -> split(x, "_")[2], keys_weights))
+    distances_all = []
+    for diagnostic in diagnostics
+        distances = []
+        diagnostic_keys = filter(x -> endswith(x, "_" * diagnostic), keys_weights)
+        variables = map(x -> split(x, "_")[1], diagnostic_keys)
+        for var in variables
+            k = var * "_" * diagnostic
+            models = indexData(model_data, k)
+            
+            if forPerformance
+                observations = indexData(obs_data, k)
+                dists = getModelDataDist(models, observations)
+            else
+                dists = getModelDistances(models)
+            end
+            push!(distances, dists)
+        end
+        distances = cat(distances..., dims = Dim{:variable}(collect(variables)));
+        push!(distances_all, distances)
+    end
+    return cat(distances_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
+end
+
+function computeGeneralizedDistances(distances_all::DimArray, weights::DimArray, forPerformance::Bool)
+    if forPerformance
+        dimensions = (:model,)
+    else 
+        dimensions = (:model1, :model2)
+    end
+    norm = mapslices(Statistics.median, distances_all, dims=dimensions)
+    normalized_distances =  DimArray(
+        distances_all ./ norm, dims(distances_all), metadata = distances_all.metadata
+    )
+    if forPerformance
+        distances = averageEnsembleVector(normalized_distances, false)
+    else
+        distances = averageEnsembleMatrix(normalized_distances, false)
+    end
+
+    distances = mapslices(x -> x .* weights, distances, dims=(:variable, :diagnostic))
+    return dropdims(
+        sum(distances, dims=(:variable, :diagnostic)), dims=(:variable, :diagnostic)
+    )
+end
+

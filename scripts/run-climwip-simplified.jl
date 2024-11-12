@@ -8,7 +8,7 @@ base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/cl
 config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/climwip_config";
 
 # specify which data to load (default: all data will be loaded if compatible)
-model_data_weights = sw.loadData(
+model_data = sw.loadData(
     base_path,
     config_path;
     dir_per_var=false,
@@ -22,7 +22,7 @@ model_data_weights = sw.loadData(
     )
 );
 
-obs_data_weights = sw.loadData(
+obs_data = sw.loadData(
     base_path,
     config_path;
     dir_per_var=false,
@@ -39,13 +39,10 @@ config_weights = sw.ConfigWeights(
     independence = Dict("tas_CLIM"=>0.5, "pr_CLIM"=>0.25, "psl_CLIM"=>0),
     sigma_independence = 0.5,
     sigma_performance = 0.5,
-    ref_period = "1995-2014"
+    #ref_period = "1995-2014"
 );
 
-
-weights = sw.computeWeights(
-    model_data_weights, obs_data_weights, config_weights
-);
+weights = sw.computeWeights(model_data, obs_data, config_weights);
 
 
 # make some Plots

@@ -46,86 +46,24 @@ combination of variable and diagnostic.
 function computeWeights(
     model_data::Data, obs_data::Data, config_weights::ConfigWeights
 )
-    obs_keys = map(x -> (var = x.variable, stat = x.statistic), obs_data.ids)
-    model_keys = map(x -> (var = x.variable, stat = x.statistic), model_data.ids)
-    if sort(obs_keys) != sort(model_keys)
-        msg = "Variable+Diagnostic combinations are not the same for observational and model data! Obs: $obs_keys , Model: $model_keys"
+    # only the observational data is used for which there is also model data
+    obs_ids = filter(x -> x in model_data.ids, obs_data.ids)
+    # and only those models are used for which there is observational data too
+    model_ids = filter(x -> x in obs_ids, model_data.ids)
+    # TODO: ids are not necessarily in same order, ordering should be defined
+    if obs_ids != model_ids && !isempty(obs_ids)
+        msg = "Model and observational data ids do not match! Obs: $obs_ids , Model: $model_ids"
         throw(ArgumentError(msg))
     end
+
     # make sure that weights (for diagnostic+variables) are normalized
-    weights_perform = getNormalizedWeightsVariables(config_weights.performance)
-    weights_indep = getNormalizedWeightsVariables(config_weights.independence)
+    weights_perform = normalizeWeightsVariables(config_weights.performance)    
+    weights_indep = normalizeWeightsVariables(config_weights.independence)
 
-    # compute performance/independence distances for all models and ensemble members
-    diagnostics = unique(map(x -> x.stat, obs_keys))
-    Di = []
-    Sij = []
-    distances_perform_all = []
-    distances_indep_all = []
-    for diagnostic in diagnostics
-        distances_perform = []
-        distances_indep = []
-        variables = unique(map(x -> x.var, model_keys))
-        for var in variables
-            k = var * "_" * diagnostic
-            models_dict = filter(((key, val),) -> occursin(k, key), model_data.data)
-            # check that only one dataset for combination of variable + diagnostic
-            if length(models_dict) > 1
-                @warn "more than one dataset for $var and $diagnostic in model data, first is taken!"
-            end
-            models = first(values(models_dict))
-            
-            obs_dict = filter(((key, val),) -> occursin(k, key), obs_data.data)
-            if length(obs_dict) > 1
-                @warn "more than one dataset for $var and $diagnostic in observational data, first is taken!"
-            end
-            observations = first(values(obs_dict))
-
-            distsIndep = getModelDistances(models)
-            push!(distances_indep, distsIndep)
-            distsPerform = getModelDataDist(models, observations)
-            push!(distances_perform, distsPerform)
-        end
-        distances_perform = cat(distances_perform..., dims = Dim{:variable}(collect(variables)));
-        distances_indep = cat(distances_indep..., dims = Dim{:variable}(collect(variables)));
-        push!(distances_perform_all, distances_perform)
-        push!(distances_indep_all, distances_indep)
-    end
-    # put into DimArray
-    distances_perform_all = cat(distances_perform_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
-    distances_indep_all = cat(distances_indep_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
-    
-    # get normalizations for each diagnostic,variable combination: median across all models
-    norm_perform = mapslices(Statistics.median, distances_perform_all, dims=:model)
-    distances_perform = DimArray(
-        distances_perform_all ./ norm_perform, 
-        dims(distances_perform_all), 
-        metadata = distances_perform_all.metadata
-    )
-    norm_indep = mapslices(Statistics.median, distances_indep_all, dims=(:model1, :model2))
-    distances_indep = DimArray(
-        distances_indep_all ./ norm_indep, 
-        dims(distances_indep_all),
-        metadata = distances_indep_all.metadata
-    )
-
-    #  take mean diagnostic per model (averaging ensemble members)
-    distances_perform = averageEnsembleVector(distances_perform, false)
-    distances_indep = averageEnsembleMatrix(distances_indep, false)
-    
-    # compute generalized distances Di, Sij (weighted average over computed distances)
-    distances_perform = mapslices(x -> x .* weights_perform, 
-        distances_perform, dims=(:variable, :diagnostic)
-    )
-    distances_indep = mapslices(x -> x .* weights_indep, 
-        distances_indep, dims=(:variable, :diagnostic)
-    )
-    Di = dropdims(sum(distances_perform, dims=(:variable, :diagnostic)),
-        dims=(:variable, :diagnostic)
-    )
-    Sij =  dropdims(sum(distances_indep, dims=(:variable, :diagnostic)),
-        dims=(:variable, :diagnostic)
-    )
+    distances_perform_all = computeDistancesAllDiagnostics(model_data, obs_data, config_weights.performance, true)
+    distances_indep_all = computeDistancesAllDiagnostics(model_data, obs_data, config_weights.independence, false)
+    Di = computeGeneralizedDistances(distances_perform_all, weights_perform, true)
+    Sij = computeGeneralizedDistances(distances_indep_all, weights_indep, false)
 
     performances = performanceParts(Di, config_weights.sigma_performance)
     independences = independenceParts(Sij, config_weights.sigma_independence)
