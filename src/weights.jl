@@ -134,7 +134,7 @@ end
 
 
 """ 
-    averageEnsembleVector(data::DimArray, updateMeta::Bool)
+    summarizeEnsembleMembersVector(data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean)
 
 For each model and variable (if several given), compute the mean across all
 ensemble members of that model. Instead of 'model', the returned DimArray has
@@ -146,12 +146,12 @@ dimension 'ensemble'.
 If true attribute ensemble_indices_map is set in metadata.
 Set to false if vectors refer to different variables for instance. 
 """
-function averageEnsembleVector(data::DimArray, updateMeta::Bool)
+function summarizeEnsembleMembersVector(data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean)
     data = renameModelDimsFromMemberToEnsemble(data, ["model"])
     
     grouped = groupby(data, :model=>identity);
     ensembles = collect(dims(grouped, :model))
-    averages = map(entry -> mapslices(x -> Statistics.mean(skipmissing(x)), entry, dims=:model), grouped)
+    averages = map(entry -> mapslices(x -> fn(skipmissing(x)), entry, dims=:model), grouped)
     combined = cat(averages..., dims=(Dim{:model}(ensembles)));
     combined = set(combined, :model => :ensemble)
 
@@ -252,15 +252,15 @@ end
 
 
 """
-    computeWeightedAvg(data::DimArray, w::Union{DimArray, Nothing}=nothing)
+    computeWeightedAvg(data::DimArray; weights::Union{DimArray, Nothing}=nothing)
 
 Compute the average values for each (lon,lat) grid point in 'data_var', weighted
-by weights 'w'. Members of the same ensemble are averaged before. If no weight
-vector is provided, unweighted average is computed.
+by weights 'weights'. Members of the same ensemble are averaged before. If no 
+weight vector is provided, unweighted average is computed.
 
 # Arguments:
-- `data`: has dimensions lon, lat, ensemble
-- `w`: weights for ensembles (not individual members); has dimension 'ensemble'
+- `data`: has dimensions lon, lat, ensemble/model
+- `weights`: weights for ensembles or individual members; has dimension ensemble/model
 """
 function computeWeightedAvg(
     data::DimArray; weights::Union{DimArray, Nothing}=nothing
@@ -445,8 +445,49 @@ function saveWeights(
 end
 
 
-function applyWeights(data::Data, weights::ClimwipWeights)
-   
-    
 
+""" 
+    applyWeights(model_data::DimArray, weights::DimArray)
+
+Compute the weighted average of model data 'data' with given weights 'weights'.
+If the weights were computed for a subset of the models in 'data', they are normalized
+and applied to the subset. Only weights per ensemble (not ensemble members) are considered
+for now, in the future, ensemble members should be considered too.
+
+# Arguments:
+- `model_data`: model predictions. If given for ensemble members, the predictions of 
+each ensemble are considered the average value of all members of the respective ensemble.
+- `weights`: if given for each ensemble member, these will be summed up to yield one
+value per ensemble.
+"""
+function applyWeights(model_data::DimArray, weights::DimArray)
+    if hasdim(weights, :model)
+        weights = summarizeEnsembleMembersVector(weights, true; fn=sum)
+    end
+    if hasdim(model_data, :model)
+        # take average over model predictions of members of same ensemble
+        model_data = summarizeEnsembleMembersVector(model_data, true; fn=Statistics.mean)
+    end
+    models_weights = dims(weights, :ensemble)
+    models = dims(model_data, :ensemble)
+    shared_models = intersect(models_weights, models)
+
+    if length(shared_models) == 0
+        throw(ArgumentError("No models given for which weights had been computed!"))
+    else 
+        data_out = model_data[ensemble = Where(x -> !(x in shared_models))]
+        model_data = model_data[ensemble = Where(x -> x in shared_models)]
+        weights = weights[ensemble = Where(x -> x in shared_models)]
+        weights = weights ./ sum(weights)
+        models_out = dims(data_out, :ensemble)
+        if length(models_out) > 0
+            @warn "No weights had been computed for $models_out"
+        end
+        if length(shared_models) < length(models_weights)
+            # interested in less models than the weights were computed for -> recompute weights?!
+            @warn "Weights were computed for a subset of the models of the given data. They are renormalized, but you may consider to recompute the weights for the subset only."
+        end
+    end
+
+    return computeWeightedAvg(model_data; weights)
 end

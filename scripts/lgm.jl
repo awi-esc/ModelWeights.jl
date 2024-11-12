@@ -11,8 +11,8 @@ lgm_data = sw.loadData(
     dir_per_var = true,
     common_models_across_vars = true,
     subset = Dict(
-        "statistics" => ["CLIM"],
-        "data_type" => ["CMIP"]
+        "statistics" => ["CLIM", "STD"],
+        "data_type" => ["CMIP6"]
     )
 );
 
@@ -25,6 +25,7 @@ obs_data = sw.loadData(
     subset = Dict(
         "variables" => ["tas", "tos"], 
         "data_type" => ["ERA5"],
+        #"timeranges" => ["1980-2014"]
         "aliases" => ["historical"]
     )
 );
@@ -40,7 +41,6 @@ config_weights = sw.ConfigWeights(
     ref_period = "1980-2014"#,
     # target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
 );
- 
 weights = sw.computeWeights(lgm_data, obs_data, config_weights);
 
 # weights can also be  saved seperately:
@@ -77,8 +77,8 @@ figs[1]
 # 5. apply weights
 # model weights are for ensembles, not unique ensemble members! Which means 
 # that model predictions also have to be for ensembles, not members!
-lgm_tas_data = sw.averageEnsembleVector(lgm_data.data["tas_CLIM_lgm"], true)
-weighted_means = sw.computeWeightedAvg(lgm_tas_data; weights=w)
+lgm_tas_data = sw.summarizeEnsembleMembersVector(lgm_data.data["tas_CLIM_lgm"], true)
+weighted_means = sw.computeWeightedAvg(lgm_tas_data; weights=weights.w)
 means = sw.computeWeightedAvg(lgm_tas_data)
 sw.plotMeansOnMap(means, "unweighted average LGM: tas_CLIM")
 sw.plotMeansOnMap(weighted_means, "weighted means LGM: tas_CLIM")
@@ -88,26 +88,7 @@ Array(weighted_means) .== Array(means)
 
 
 
-
-lgm_cmip5 = sw.loadData(
-    base_path,
-    config_path;
-    dir_per_var = true,
-    subset = Dict(
-        "statistics" => ["CLIM"],
-       "data_type" => ["CMIP5"]
-    )
-);
-
-lgm_cmip6 = sw.loadData(
-    base_path,
-    config_path;
-    dir_per_var = true,
-    subset = Dict(
-        "statistics" => ["CLIM"],
-       "data_type" => ["CMIP6"]
-    )
-);
+# apply weights
 
 historical_model_data = sw.loadData(
     "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical",
@@ -122,3 +103,37 @@ historical_model_data = sw.loadData(
 
 means = sw.computeWeightedAvg(data.data["tas_CLIM_lgm"])
 sw.plotMeansOnMap(means, "mean LGM: tas_CLIM")
+
+
+
+
+# Examples just load cmip5 or cmip6 or both
+# load just cmip5 / cmip6
+lgm_cmip5 = sw.loadData(
+    base_path,
+    config_path;
+    dir_per_var = true,
+    subset = Dict(
+        "statistics" => ["CLIM"],
+       "data_type" => ["CMIP5"]
+    )
+);
+lgm_cmip6 = sw.loadData(
+    base_path,
+    config_path;
+    dir_per_var = true,
+    subset = Dict(
+        "statistics" => ["CLIM"],
+       "data_type" => ["CMIP6"]
+    )
+);
+#  load both, cmip5+cmip6
+lgm_cmip = sw.loadData(
+    base_path,
+    config_path;
+    dir_per_var = true,
+    subset = Dict(
+        "statistics" => ["CLIM"],
+        "data_type" => ["CMIP"]
+    )
+);

@@ -481,7 +481,7 @@ function computeGeneralizedDistances(distances_all::DimArray, weights::DimArray,
         distances_all ./ norm, dims(distances_all), metadata = distances_all.metadata
     )
     if forPerformance
-        distances = averageEnsembleVector(normalized_distances, false)
+        distances = summarizeEnsembleMembersVector(normalized_distances, false)
     else
         distances = averageEnsembleMatrix(normalized_distances, false)
     end

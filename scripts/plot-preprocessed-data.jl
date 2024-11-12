@@ -18,7 +18,7 @@ function getData(
     modelData =  sw.loadPreprocData(varToPath; included=["CMIP6"]);
     data = modelData[diagnostic][climVar];
     if avgEnsembleMembers
-        data = sw.averageEnsembleVector(data, true)
+        data = sw.summarizeEnsembleMembersVector(data, true)
     end
     return data
 end

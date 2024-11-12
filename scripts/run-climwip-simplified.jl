@@ -43,7 +43,7 @@ config_weights = sw.ConfigWeights(
 );
 
 weights = sw.computeWeights(model_data, obs_data, config_weights);
-
+weights_all_members = sw.makeWeightPerEnsembleMember(weights.w);
 
 # make some Plots
 sw.plotWeights(weights.w; title="overall weights")
@@ -82,7 +82,6 @@ data_temp_map_reference = sw.loadData(
     subset = Dict("aliases" => ["weighted_temperature_map_reference"])
 );
                 
-# TODO: the following is outdated!
 # compute weighted averages and plot results
 # make sure that same models for reference and time period of interest are used
 sw.keepSharedModelData!(data_temp_map_future.data, data_temp_map_reference.data)
@@ -93,15 +92,12 @@ data_future = data_temp_map_future.data["tas_CLIM_weighted_temperature_map_futur
 data_ref = data_ref[lat = Where(x -> x <= 68.75)];
 data_future = data_future[lat = Where(x -> x <= 68.75)];
 
-weights_all_members = sw.makeWeightPerEnsembleMember(weights.w);
 weighted_ref = sw.computeWeightedAvg(data_ref; weights=weights_all_members)
 weighted_future = sw.computeWeightedAvg(data_future; weights=weights_all_members)
 diff_ww = weighted_future .- weighted_ref;
 diff_ww = sw.sortLongitudesWest2East(diff_ww);
 
 f1 = sw.plotMeansOnMap(diff_ww, "Weighted mean temp. change 2081-2100 - 1995-2014"; ColorSchemes.Reds.colors)
-
-
 
 function compareToOrigData(data, data_orig)
     mat = isapprox.(data, data_orig, atol=10^-4);
@@ -120,8 +116,8 @@ begin
 end
 
 ####### DOESNT WORK YET ########
-# data_ref = sw.averageEnsembleVector(data_ref, true)
-# data_future = sw.averageEnsembleVector(data_future, true)
+# data_ref = sw.summarizeEnsembleMembersVector(data_ref, true)
+# data_future = sw.summarizeEnsembleMembersVector(data_future, true)
 # 
 unweighted_ref = sw.computeWeightedAvg(data_ref);
 unweighted_future = sw.computeWeightedAvg(data_future);
@@ -153,10 +149,13 @@ data_temp_graph = sw.loadData(
 );
 data_graph = data_temp_graph.data["tas_ANOM_weighted_temperature_graph"];
 
-uncertainties = sw.getUncertaintyRanges(data_graph, weights_all_members);
+# this will compute the weighted avg based on each ensemble
+weighted_avg = sw.applyWeights(data_graph, weights_all_members);
+# this will compute the weighted avg based on each ensemble's average across its members
 weighted_avg = sw.computeWeightedAvg(data_graph; weights=weights_all_members);
 unweighted_avg = sw.computeWeightedAvg(data_graph);
 
+uncertainties = sw.getUncertaintyRanges(data_graph, weights_all_members);
 f3 = sw.plotTempGraph(
     data_graph, 
     (weighted=weighted_avg, unweighted=unweighted_avg),
