@@ -83,4 +83,13 @@ Temporary Items
 
 slurm-*.out
 
-scripts/check-data.jl
+# Auto generated documentation files
+build/
+
+# Log files
+logs/
+
+# generated output files
+output/
+
+plots*/
