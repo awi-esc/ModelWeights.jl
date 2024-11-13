@@ -146,7 +146,9 @@ dimension 'ensemble'.
 If true attribute ensemble_indices_map is set in metadata.
 Set to false if vectors refer to different variables for instance. 
 """
-function summarizeEnsembleMembersVector(data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean)
+function summarizeEnsembleMembersVector(
+    data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean
+)
     data = renameModelDimsFromMemberToEnsemble(data, ["model"])
     
     grouped = groupby(data, :model=>identity);
@@ -484,8 +486,7 @@ function applyWeights(model_data::DimArray, weights::DimArray)
             @warn "No weights had been computed for $models_out"
         end
         if length(shared_models) < length(models_weights)
-            # interested in less models than the weights were computed for -> recompute weights?!
-            @warn "Weights were computed for a subset of the models of the given data. They are renormalized, but you may consider to recompute the weights for the subset only."
+            @warn "Weights were computed for a subset of the models of the given data. Weights were renormalized."
         end
     end
 
