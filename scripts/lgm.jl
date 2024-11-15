@@ -9,12 +9,16 @@ lgm_data = sw.loadData(
     base_path,
     config_path;
     dir_per_var = true,
-    common_models_across_vars = true,
+    common_models_across_vars = false,
     subset = Dict(
-        "statistics" => ["CLIM", "STD"],
-        "data_type" => ["CMIP6"]
+        "statistic" => ["CLIM"],
+        "variable" => ["tas", "tos"],
+        "projects" => ["CMIP5"],
+        "models" => Vector{String}()
     )
 );
+
+# TODO: look at getCommonModelsAcrossVars!
 
 # 2. Load observational data
 obs_data = sw.loadData(
@@ -24,7 +28,7 @@ obs_data = sw.loadData(
     isModelData = false,
     subset = Dict(
         "variables" => ["tas", "tos"], 
-        "data_type" => ["ERA5"],
+        "projects" => ["ERA5"],
         #"timeranges" => ["1980-2014"]
         "aliases" => ["historical"]
     )
@@ -115,7 +119,7 @@ lgm_cmip5 = sw.loadData(
     dir_per_var = true,
     subset = Dict(
         "statistics" => ["CLIM"],
-       "data_type" => ["CMIP5"]
+       "projects" => ["CMIP5"]
     )
 );
 lgm_cmip6 = sw.loadData(
@@ -124,7 +128,7 @@ lgm_cmip6 = sw.loadData(
     dir_per_var = true,
     subset = Dict(
         "statistics" => ["CLIM"],
-       "data_type" => ["CMIP6"]
+       "projects" => ["CMIP6"]
     )
 );
 #  load both, cmip5+cmip6
@@ -134,6 +138,6 @@ lgm_cmip = sw.loadData(
     dir_per_var = true,
     subset = Dict(
         "statistics" => ["CLIM"],
-        "data_type" => ["CMIP"]
+        "projects" => ["CMIP"]
     )
 );

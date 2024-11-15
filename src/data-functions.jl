@@ -109,39 +109,36 @@ end
 """
     loadPreprocData(
         path_data_dir::String;
-        included_all::Vector{String}=Vector{String}(),
-        included_any::Vector{String}=Vector{String}(),
+        subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}(),
         isModelData::Bool=true
     )
 
 # Arguments:
 - `path_data_dir`: base path to directory that contains subdirectory with name
 of the respective experiment (see TODO for assumed data structure)
-- `included_all`: only data is loaded whose filenames contain ALL elements within 'included_all'
-- `included_any`: only data is loaded whose filenames containy ANY element within 'included_any'
+- `subset`: only data is loaded whose filenames containy ANY
 - `isModelData`: observational and model data loaded seperately, if true modelData, else observational data
 
 # Returns: DimArray or nothing
 """
 function loadPreprocData(
     path_data_dir::String; 
-    included_all::Vector{String}=Vector{String}(),
-    included_any::Vector{String}=Vector{String}(),
+    subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}(),
     isModelData::Bool=true
 )
     if !isdir(path_data_dir)
         throw(ArgumentError(path_data_dir * " does not exist!"))
     end
-    # set default values for model data
-    if isempty(included_all)
+
+    if isnothing(get(subset, "projects", nothing))
         if isModelData
-            included_all = ["CMIP"]
+            subset["projects"] = ["CMIP"]
         else
-            included_all = ["ERA5"]
+            subset["projects"] = ["ERA5"]
         end
     end
     data = []
-    meta = Dict{String, Any}()# Dict{String, Union{String, Vector, Dict}}()
+    meta = Dict{String, Any}()
     ncFiles = filter(
         x -> isfile(x) && endswith(x, ".nc"), 
         readdir(path_data_dir; join=true)
@@ -152,13 +149,14 @@ function loadPreprocData(
     for (i, file) in enumerate(ncFiles)
         addFile = true;
         # constrain files that will be loaded
-        if length(included_all) != 0
-            if !all([occursin(name, file) for name in included_all])
-                addFile = false;
-            end
+        if !any([occursin(name, file) for name in subset["projects"]])
+            @debug "exclude $file because of projects subset"
+            addFile = false;
         end
-        if length(included_any) != 0
-            if !any([occursin(name, file) for name in included_any])
+        model_constraints = get(subset, "models", Vector{String}())
+        if !isempty(model_constraints)
+            if !any([occursin(name, file) for name in model_constraints])
+                @debug "exclude $file because of models subset"
                 addFile = false;
             end
         end
@@ -297,19 +295,21 @@ function loadData(
 )
     ids = buildDataIDsFromConfigs(config_path)
     applyDataConstraints!(ids, subset)
+    # further constraints wrt models and projects applied when loading data
+    constraints = filter(((k,v),) -> k in ["models", "projects"] , subset)
 
     data_all = Dict{String, DimArray}()
     for id in ids
+        path_to_subdirs = [base_path]
         # if dir_per_var is true, directory at base_path has subdirectories, 
-        # one for each variable (they must end with _ and the name of the variable),
+        # one for each variable (they must contain '_VAR', e.g. '_tas'),
         # otherwise base_path is the path to the directory that contains 
         # a subdirectory 'preproc'
-        path_to_subdirs = [base_path]
         if dir_per_var
             path_to_subdirs = filter(isdir, readdir(base_path, join=true))
-            filter!(x -> endswith(x, "_" * id.variable), path_to_subdirs)
+            filter!(x -> occursin("_" * id.variable, x), path_to_subdirs)
             if length(path_to_subdirs) > 1
-                @warn "There are several subdirectories for given variable and experiment:" path_to_subdirs
+                @info "Data for variable $(id.variable) considered from subdirectories:" path_to_subdirs
             end
         end
         for path_dir in path_to_subdirs
@@ -322,10 +322,7 @@ function loadData(
             end
             #print("processing...: " * path_data_dir)
             data = loadPreprocData(
-                path_data_dir; 
-                included_all = get(subset, "data_type", Vector{String}()),
-                included_any = get(subset, "models", Vector{String}()),
-                isModelData = isModelData
+                path_data_dir; subset = constraints, isModelData = isModelData
             )
             if !isnothing(data)
                 previously_added_data = get(data_all, id.key, nothing)
@@ -346,8 +343,8 @@ function loadData(
     if isModelData && common_models_across_vars
         @info "only retain models shared across all variables"
         result = getCommonModelsAcrossVars(result)
-    else
-        alignIDsFilteredData!(result)
+    # else
+    #     alignIDsFilteredData!(result)
     end
     return result
 end

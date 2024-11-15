@@ -393,34 +393,34 @@ function buildDataIDsFromConfigs(config_path::String)
                     statistic=statistic,
                     alias=alias,
                     exp=experiment, 
-                    timerange=timerange)
+                    timerange=timerange
+                )
                 push!(ids, dataID)
             end
         end
     end
-    return ids
+    return unique(ids)
 end
 
+"""
+    applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{String}})
 
+Subset model ids so that only those with properties specified in 'subset' remain.
+
+# Arguments
+- `ids`: Vector of DataID instances.
+- `subset`: Mapping from fieldnames of 'DataID' struct to Vector specifiying the
+properties of which at least one must be present for an id to be retained.
+"""
 function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{String}})   
-    if !isempty(get(subset, "variables", Vector{String}()))
-        keepVar(id::DataID) = any(var -> id.variable == var, subset["variables"])
-        filter!(keepVar, ids)
+    for field in fieldnames(DataID)
+        constraints = get(subset, string(field), Vector{String}()) # e.g. [historical, historical0]
+        if !isempty(constraints)
+            fn(id::DataID) = any(x -> getproperty(id, field) == x, constraints)
+            filter!(fn, ids)
+        end
     end
-    if !isempty(get(subset, "aliases", Vector{String}()))
-        keepTasks(id::DataID) = any(name -> id.alias == name, subset["aliases"])
-        filter!(keepTasks, ids)
-    end
-
-    if !isempty(get(subset, "statistics", Vector{String}()))
-        keepStats(id::DataID) = any(stat -> id.statistic == stat, subset["statistics"])
-        filter!(keepStats, ids)
-    end
-
-    if !isempty(get(subset, "timeranges", Vector{String}()))
-        keepTimeRange(id::DataID) = any(tr -> id.timerange == tr, subset["timeranges"])
-        filter!(keepTimeRange, ids)
-    end
+    return nothing
 end
 
 
@@ -443,14 +443,15 @@ function indexData(data::Data, var_diagnostic_key::String)
 end
 
 
-function computeDistancesAllDiagnostics(model_data::Data, obs_data::Data, config::Dict{String, Number}, forPerformance::Bool)
+function computeDistancesAllDiagnostics(
+    model_data::Data, obs_data::Data, var_diagnostic_keys::Vector{String}, forPerformance::Bool
+)
     # compute performance/independence distances for all models and ensemble members
-    keys_weights =  collect(keys(config))
-    diagnostics = unique(map(x -> split(x, "_")[2], keys_weights))
+    diagnostics = unique(map(x -> split(x, "_")[2], var_diagnostic_keys))
     distances_all = []
     for diagnostic in diagnostics
         distances = []
-        diagnostic_keys = filter(x -> endswith(x, "_" * diagnostic), keys_weights)
+        diagnostic_keys = filter(x -> endswith(x, "_" * diagnostic), var_diagnostic_keys)
         variables = map(x -> split(x, "_")[1], diagnostic_keys)
         for var in variables
             k = var * "_" * diagnostic

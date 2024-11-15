@@ -60,8 +60,12 @@ function computeWeights(
     weights_perform = normalizeWeightsVariables(config_weights.performance)    
     weights_indep = normalizeWeightsVariables(config_weights.independence)
 
-    distances_perform_all = computeDistancesAllDiagnostics(model_data, obs_data, config_weights.performance, true)
-    distances_indep_all = computeDistancesAllDiagnostics(model_data, obs_data, config_weights.independence, false)
+    distances_perform_all = computeDistancesAllDiagnostics(
+        model_data, obs_data, collect(keys(config_weights.performance)), true
+    )
+    distances_indep_all = computeDistancesAllDiagnostics(
+        model_data, obs_data, collect(keys(config_weights.independence)), false
+    )
     Di = computeGeneralizedDistances(distances_perform_all, weights_perform, true)
     Sij = computeGeneralizedDistances(distances_indep_all, weights_indep, false)
 
