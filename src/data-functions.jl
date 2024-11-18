@@ -78,10 +78,7 @@ Return data in 'data' only from the models specified in `shared_models`.
 Takes care of metadata.
 """
 function subsetModelData(data::DimArray, shared_models::Vector{String})
-    dim_symbol = :model
-    if !hasdim(data, :model)
-        dim_symbol = :member
-    end
+    dim_symbol = !hasdim(data, :model) ? :member : :model
     indices = findall(m -> m in shared_models, collect(dims(data, dim_symbol)))
     @assert length(indices) == length(shared_models)
     keepMetadataSubset!(data.metadata, indices);
@@ -141,11 +138,7 @@ function loadPreprocData(
     end
 
     if isnothing(get(subset, "projects", nothing))
-        if isModelData
-            subset["projects"] = ["CMIP"]
-        else
-            subset["projects"] = ["ERA5"]
-        end
+        subset["projects"] = isModelData ? ["CMIP"] : ["ERA5"]
     end
     data = []
     meta = Dict{String, Any}()

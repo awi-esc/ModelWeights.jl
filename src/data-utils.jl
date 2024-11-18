@@ -475,20 +475,14 @@ function computeDistancesAllDiagnostics(
 end
 
 function computeGeneralizedDistances(distances_all::DimArray, weights::DimArray, forPerformance::Bool)
-    if forPerformance
-        dimensions = (:model,)
-    else 
-        dimensions = (:model1, :model2)
-    end
+    dimensions = forPerformance ? (:model,) : (:model1, :model2)
     norm = mapslices(Statistics.median, distances_all, dims=dimensions)
     normalized_distances =  DimArray(
         distances_all ./ norm, dims(distances_all), metadata = distances_all.metadata
     )
-    if forPerformance
-        distances = summarizeEnsembleMembersVector(normalized_distances, false)
-    else
-        distances = averageEnsembleMatrix(normalized_distances, false)
-    end
+    distances = forPerformance ? 
+        summarizeEnsembleMembersVector(normalized_distances, false) :
+        averageEnsembleMatrix(normalized_distances, false);
 
     distances = mapslices(x -> x .* weights, distances, dims=(:variable, :diagnostic))
     return dropdims(
