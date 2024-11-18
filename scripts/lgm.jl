@@ -9,7 +9,7 @@ lgm_data = sw.loadData(
     base_path,
     config_path;
     dir_per_var = true,
-    common_models_across_vars = false,
+    common_models_across_vars = true,
     subset = Dict(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
@@ -18,19 +18,18 @@ lgm_data = sw.loadData(
     )
 );
 
-# TODO: look at getCommonModelsAcrossVars!
-
 # 2. Load observational data
 obs_data = sw.loadData(
     "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical",
     "/albedo/home/brgrus001/SimilarityWeights/configs/recipe_configs_historical/";
     dir_per_var = true,
     isModelData = false,
+    common_models_across_vars = false,
     subset = Dict(
-        "variables" => ["tas", "tos"], 
+        "variable" => ["tas", "tos"],
         "projects" => ["ERA5"],
         #"timeranges" => ["1980-2014"]
-        "aliases" => ["historical"]
+        "alias" => ["historical"]
     )
 );
 

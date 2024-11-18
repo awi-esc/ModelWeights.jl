@@ -96,9 +96,14 @@ Update metadata 'meta' s.t. data of ignored files is removed and attributes
 that were only present in some files/models are set to missing. Further keys
 are added: 'full_model_names' contains for every file/model the unique 
 identifier consisting of variant_label, grid_label (for CMIP6) and model_name, 
-'ensemble_names' contains the names of the included models without the ensemble 
-member identifiers and 'ensemble_indices_map' is a dictionary mapping from 
-ensemble names to the indices of the respective ensemble members.
+'model_names' contains the names of the included models without the ensemble 
+member identifiers and 'model_to_member_indices' is a dictionary mapping from 
+model names to the indices of the respective ensemble members.
+
+Arguments:
+- `meta`:
+- `source_names`: 
+- `isModelData`:
 """
 function updateMetadata!(
     meta::Dict{String, Any}, 
@@ -114,27 +119,29 @@ function updateMetadata!(
             meta[key] = string(values[1])
         end
     end
+    included_data = Array{String}(source_names[indices])
     if isModelData
-        included_models = Array{String}(source_names[indices])
-        meta["full_model_names"] = getUniqueModelIds(meta, included_models)
+        meta["member_names"] = getUniqueModelIds(meta, included_data)
         # add mapping from model (ensemble) names to indices in metadata arrays
-        meta["ensemble_names"] = included_models
-        meta["ensemble_indices_map"] = getIndicesMapping(included_models)
+        meta["model_names"] = included_data
+        meta["model_to_member_indices"] = getIndicesMapping(included_data)
+    else 
+        meta["source_names"] = included_data
     end
     return nothing
 end
 
 """
-    joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any})
+    joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any}, isModelData::Bool)
 
 Join the metadata of data to be joint (e.g. when loading data for tos for
 CMIP5 and CMIP6 from different locations). If keys are present in 'meta1' or 
 'meta2' but not the other, missing values are added.
 """
-function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any})
+function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any}, isModelData::Bool)
     meta = Dict{String, Any}()
-    n1 = length(meta1["full_model_names"])
-    n2 = length(meta2["full_model_names"])
+    n1 = isModelData ? length(meta1["member_names"]) : length(meta1["source_names"])
+    n2 = isModelData ? length(meta2["member_names"]) : length(meta2["source_names"])
     keys_meta1 = keys(meta1)
     keys_meta2 = keys(meta2)
     keys_shared = collect(intersect(keys_meta1, keys_meta2))
@@ -142,13 +149,13 @@ function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any})
     keys_uniq_m2 = filter(x -> !(x in keys_shared), keys_meta2)
 
     for k in keys_shared
-        if k == "ensemble_map_indices"
-            meta["ensemble_indices_map"] = Dict()
-            for (k,vals) in meta2["ensemble_indices_map"]
-                meta["ensemble_indices_map"][k] = vals .+ n1
+        if k == "model_to_member_indices"
+            meta["model_to_member_indices"] = Dict()
+            for (k,vals) in meta2["model_to_member_indices"]
+                meta["model_to_member_indices"][k] = vals .+ n1
             end
-            for (k, vals) in meta1["ensemble_indices_map"]
-                meta["ensemble_indices_map"][k] = deepcopy(vals)
+            for (k, vals) in meta1["model_to_member_indices"]
+                meta["model_to_member_indices"][k] = deepcopy(vals)
             end
         else
             v1 = meta1[k]
@@ -236,7 +243,7 @@ function appendValuesDicts(val1, val2)
 
     elseif isa(val1, Dict) && isa(val2, Dict)
         if val1 != val2
-            @warn "Two different dictionaries (check ensemble_indices_map)"
+            @warn "Two different dictionaries (check model_to_member_indices)"
             @warn val1 
             @warn val2
             return vcat(val1, val2)
@@ -269,6 +276,8 @@ function keepMetadataSubset!(meta::Dict, indices::Vector{Int64})
     for key in attributes
         meta[key] = meta[key][indices];
     end
+    meta["model_to_member_indices"] = getIndicesMapping(meta["member_names"])
+    return nothing
 end
 
 
@@ -276,7 +285,7 @@ end
 """
     updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
 
-Vectors in metadata 'meta' refer to different models (ensemble members). 
+Vectors in metadata 'meta' refer to different models (members). 
 These are now summarized such that each vector only contains N entries where N
 is the number of Ensembles (i.e. without the unique ensemble members).
 If the metadata for the ensemble members of a Model/Ensemble differ across the
@@ -284,29 +293,29 @@ members, the respective entry in the vector will be a vector itself.
 """
 function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
     meta_new = filter(((k,v),) -> !(v isa Vector), meta)
-    meta_new["ensemble_indices_map"] = Dict{String, Number}()
+    meta_new["model_to_member_indices"] = Dict{String, Number}()
     attributes = filter(x -> meta[x] isa Vector, keys(meta))
     attribs_diff_across_members = [];
     # iterate over attributes that are vectors, thus different for the different 
     # models or ensembles
     for key in attributes
         for (i, model) in enumerate(dims(grouped_data, :model))
-            indices = meta["ensemble_indices_map"][model]
+            indices = meta["model_to_member_indices"][model]
             vals = get!(meta_new, key, [])       
-            val_ensemble = meta[key][indices]
-            if length(unique(val_ensemble)) != 1
-                push!(vals, val_ensemble)
+            val_model = meta[key][indices]
+            if length(unique(val_model)) != 1
+                push!(vals, val_model)
                 push!(attribs_diff_across_members, key)
             else
                 # members of current ensemble all share the same value
                 push!(vals, val_ensemble[1])
             end
-            meta_new["ensemble_indices_map"][model] = i
+            meta_new["model_to_member_indices"][model] = i
         end
     end
     if !isempty(attribs_diff_across_members)
         # TODO ignore those that are defenitely expected to differ
-        @warn "metadata attributes that differ across ensemble members (ok for some!)" unique(attribs_diff_across_members)
+        @warn "metadata attributes that differ across model members (ok for some!)" unique(attribs_diff_across_members)
     end
     return meta_new
 end
@@ -421,12 +430,6 @@ function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{
         end
     end
     return nothing
-end
-
-
-function alignIDsFilteredData!(data::Data)
-    actual_data = keys(data.data)
-    filter!(x -> x.key in actual_data, data.ids)
 end
 
 

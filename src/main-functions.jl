@@ -13,16 +13,17 @@ Return the data of those models available in both datasets.
 function keepSharedModelData!(
     modelData1::Dict{String, DimArray},
     modelData2::Dict{String, DimArray}
-)    
+)   
+    # TODO: this needs to be done differently
     shared_models = intersect(
-        first(values(modelData1)).metadata["full_model_names"], 
-        first(values(modelData2)).metadata["full_model_names"]
+        first(values(modelData1)).metadata["member_names"], 
+        first(values(modelData2)).metadata["member_names"]
     );
     for id in keys(modelData1)
-        modelData1[id] = getModelSubset(modelData1[id], shared_models)
+        modelData1[id] = subsetModelData(modelData1[id], shared_models)
     end 
     for id in keys(modelData2)       
-        modelData2[id] = getModelSubset(modelData2[id], shared_models);
+        modelData2[id] = subsetModelData(modelData2[id], shared_models);
     end
 end
 

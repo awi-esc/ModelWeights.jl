@@ -2,25 +2,25 @@ using DimensionalData
 using NCDatasets
 
 """
-    getUniqueModelIds(meta::Dict, ensemble_names::Vector{String})
+    getUniqueModelIds(meta::Dict, model_names::Vector{String})
 
 Combine name of the ensemble with the id of the respective ensemble members.
 
 # Arguments:
 - `meta`: for CMIP5 data, must have keys: 'mip_era', 'realization', 'initialization_method',
 'physics_version'. For CMIP6 data must have keys: 'variant_label', 'grid_label'
-- `ensemble_names`: Vector of strings containing the names of the model ensembles.
+- `model_names`: Vector of strings containing the names of the model ensembles.
 """
 function getUniqueModelIds(
     meta::Dict,
-    ensemble_names::Vector{String}
+    model_names::Vector{String}
 )
     meta_subdict = Dict{String, Vector}()
     keys_model_ids = [
         "realization", "physics_version", "initialization_method", 
         "mip_era", "grid_label", "variant_label"
     ]
-    n = length(ensemble_names)
+    n = length(model_names)
     for key in filter(k -> k in keys_model_ids, keys(meta))
         val = meta[key]
         if isa(val, String)
@@ -32,7 +32,7 @@ function getUniqueModelIds(
     mip_eras = meta_subdict["mip_era"]
     indices_cmip5 = findall(x -> !ismissing(x) && x == "CMIP5", mip_eras)
     indices_cmip6 = findall(x -> !ismissing(x) && x == "CMIP6", mip_eras)
-    models = Vector{String}(undef, length(ensemble_names))
+    models = Vector{String}(undef, length(model_names))
 
     if !isempty(indices_cmip5)
         variants = buildCMIP5EnsembleMember(
@@ -42,7 +42,7 @@ function getUniqueModelIds(
         )
         models[indices_cmip5] =  map(
             x -> join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM), 
-            zip(ensemble_names[indices_cmip5], variants)
+            zip(model_names[indices_cmip5], variants)
         )
         @debug "For CMIP5, full model names dont include grid."
     end
@@ -51,19 +51,19 @@ function getUniqueModelIds(
         grids = meta_subdict["grid_label"][indices_cmip6]
         models[indices_cmip6] = map(
             x->join(x, MODEL_MEMBER_DELIM, "_"), 
-            zip(ensemble_names[indices_cmip6], variants, grids)
+            zip(model_names[indices_cmip6], variants, grids)
         );
     end
     return models
 end
 
 """
-    getIndicesMapping(names)
+    getIndicesMapping(names::Vector{String})
 
 # Arguments:
-- `names`:
+- `names`: names of model members
 """
-function getIndicesMapping(names)
+function getIndicesMapping(names::Vector{String})
     mapping = Dict();
     for name in names
         mapping[name] = findall(x -> x == name, names)
@@ -72,17 +72,24 @@ function getIndicesMapping(names)
 end
 
 """
-    getModelSubset(data::Dict{String, DimArray}, shared_models::Vector{String})
+    subsetModelData(data::Dict{String, DimArray}, shared_models::Vector{String})
 
 Return data in 'data' only from the models specified in `shared_models`. 
 Takes care of metadata.
 """
-function getModelSubset(data::DimArray, shared_models::Vector{String})
-    indices = findall(m -> m in shared_models, data.metadata["full_model_names"]);
+function subsetModelData(data::DimArray, shared_models::Vector{String})
+    dim_symbol = :model
+    if !hasdim(data, :model)
+        dim_symbol = :member
+    end
+    indices = findall(m -> m in shared_models, collect(dims(data, dim_symbol)))
     @assert length(indices) == length(shared_models)
     keepMetadataSubset!(data.metadata, indices);
-    data = data[model = indices];
-    data.metadata["ensemble_indices_map"] = getIndicesMapping(data.metadata["ensemble_names"])
+    if dim_symbol == :model
+        data = data[model = indices];
+    else
+        data = data[member = indices];
+    end
     return data
 end
 
@@ -92,42 +99,45 @@ end
 
 Return a new metadata dictionary which contains all attributes that were
 identical across models (therefore these are single values, not Vectors). 
-Further, model names (i.e. ensemble_names), full_model_names and mip_era 
-are retained. When combining this new metadata dict with another, e.g. when
+Further, 'model_names', 'member_names' and 'mip_era' are retained. When
+combining this new metadata dict with another, e.g. when
 combining data for different variables, these must be identical (which is 
 checked in function appendValuesDicts).
 """
 function getMetadataSharedAcrossModelsAndModelNames(metadata::Dict)
     meta_shared = filter(((k,v),) -> isa(v, String), metadata);    
-    meta_shared["full_model_names"] = deepcopy(metadata)["full_model_names"];
+    meta_shared["member_names"] = deepcopy(metadata)["member_names"];
+    meta_shared["model_names"] = deepcopy(metadata)["model_names"]
     meta_shared["mip_era"] = deepcopy(metadata)["mip_era"]
-    meta_shared["ensemble_names"] = deepcopy(metadata)["ensemble_names"]
     return meta_shared
 end
 
 
 """
     loadPreprocData(
-        path_data_dir::String;
+        path_data::String;
         subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}(),
         isModelData::Bool=true
     )
 
 # Arguments:
-- `path_data_dir`: base path to directory that contains subdirectory with name
+- `path_data`: base path to directory that contains subdirectory with name
 of the respective experiment (see TODO for assumed data structure)
-- `subset`: only data is loaded whose filenames containy ANY
-- `isModelData`: observational and model data loaded seperately, if true modelData, else observational data
+- `subset`: dictionary with keys 'projects' and 'models'. Only data is loaded
+whose filenames contain ANY of the strings mapped to. If not specified, default 
+value for projects is ['CMIP'] when isModelData is true, else ['ERA5']. 
+- `isModelData`: observational and model data loaded seperately, 
+if true modelData, else observational data
 
 # Returns: DimArray or nothing
 """
 function loadPreprocData(
-    path_data_dir::String; 
+    path_data::String; 
     subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}(),
     isModelData::Bool=true
 )
-    if !isdir(path_data_dir)
-        throw(ArgumentError(path_data_dir * " does not exist!"))
+    if !isdir(path_data)
+        throw(ArgumentError(path_data * " does not exist!"))
     end
 
     if isnothing(get(subset, "projects", nothing))
@@ -141,7 +151,7 @@ function loadPreprocData(
     meta = Dict{String, Any}()
     ncFiles = filter(
         x -> isfile(x) && endswith(x, ".nc"), 
-        readdir(path_data_dir; join=true)
+        readdir(path_data; join=true)
     )
     nbIgnored = 0
     n_files = length(ncFiles)
@@ -238,15 +248,18 @@ function loadPreprocData(
         else 
             throw(ArgumentError("More than 3 data dimensions not supported."))
         end
+        dimData = DimArray(
+            raw_data, 
+            (dims(data[1])..., Dim{:source}(collect(skipmissing(source_names))))
+        )
         updateMetadata!(meta, source_names, isModelData);
-        dimData = DimArray(raw_data, (dims(data[1])..., Dim{:model}(collect(skipmissing(source_names)))))
         dimData = rebuild(dimData; metadata = meta);
-
-        # set model names in model dimension to full model name which was 
-        # built in updateMetadata! (cannot be done before since missing 
-        # files etc. have to be accounted for first)
-        if !isempty(get(meta, "full_model_names", []))
-            dimData = set(dimData, :model => meta["full_model_names"])
+        if isModelData
+            # set dimension names, member refers to unique model members, 
+            # model refers to 'big combined model', part of member name,
+            # but additionally saved in metadata["model_names"]
+            dimData = set(dimData, :source => :member)
+            dimData = set(dimData, :member => dimData.metadata["member_names"])
         end
         return dimData
     else
@@ -329,10 +342,19 @@ function loadData(
                 if isnothing(previously_added_data)
                     data_all[id.key] = data
                 else
-                    prev_models = collect(dims(previously_added_data, :model))
-                    new_models = collect(dims(data, :model))
-                    joint_data = cat(previously_added_data, data, dims=Dim{:model}(vcat(prev_models, new_models)))
-                    joint_meta = joinMetadata(previously_added_data.metadata, data.metadata)
+                    dim = isModelData ? :member : :source
+                    prev_models = collect(dims(previously_added_data, dim))
+                    new_models = collect(dims(data, dim))
+                    joint_data = cat(
+                        previously_added_data, 
+                        data, 
+                        dims=Dim{dim}(vcat(prev_models, new_models))
+                    )
+                    joint_meta = joinMetadata(
+                        previously_added_data.metadata, 
+                        data.metadata,
+                        isModelData
+                    )
                     data_all[id.key] = rebuild(joint_data; metadata = joint_meta)
                 end
             end
@@ -342,16 +364,17 @@ function loadData(
     @info "The following data was found and loaded: " result.ids
     if isModelData && common_models_across_vars
         @info "only retain models shared across all variables"
-        result = getCommonModelsAcrossVars(result)
-    # else
-    #     alignIDsFilteredData!(result)
+        result = getCommonModelsAcrossVars(result, :member)
+    end
+    if length(result.data) != length(result.ids)
+        @warn "length of data and ids doesnt match!"
     end
     return result
 end
     
 
 """
-    getCommonModelsAcrossVars(modelData::Data)
+    getCommonModelsAcrossVars(modelData::Data, dim::Symbol)
 
 Return only those models (on level of ensemble members) for which there is 
 data for all variables.
@@ -359,15 +382,16 @@ data for all variables.
 # Arguments
 - `modelData`:
 """
-function getCommonModelsAcrossVars(modelData::Data)
-    data_all = deepcopy(modelData.data);
-    variables = map(id -> id.variable, modelData.ids)
+function getCommonModelsAcrossVars(modelData::Data, dim::Symbol)
+    data_all = deepcopy(modelData.data)
+    ids_all = copy(modelData.ids)
+    variables = unique(map(id -> id.variable, ids_all))
     shared_models =  nothing
     for var in variables
-        modelDict = filter(((k,v),)-> occursin(var, k), modelData.data)
+        modelDict = filter(((k,v),)-> occursin(var, k), data_all)
         # iterate over all combinations (of diagnostics/statistics) with current variable
         for (_, data_var) in modelDict
-            models = Array(dims(data_var, :model))
+            models = collect(dims(data_var, dim))
             if isnothing(shared_models)
                 shared_models = models
             else
@@ -375,13 +399,13 @@ function getCommonModelsAcrossVars(modelData::Data)
             end
         end
     end
-    for id in map(id -> id.key, modelData.ids)
-        data_all[id] = getModelSubset(data_all[id], shared_models);
+    for id in map(id -> id.key, ids_all)
+        data_all[id] = subsetModelData(data_all[id], shared_models);
     end
     result = Data(
         base_path = modelData.base_path, ids = modelData.ids, data = data_all
     )
-    alignIDsFilteredData!(result)
+    #alignIDsFilteredData!(result)
     return result
 end
 

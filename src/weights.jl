@@ -143,7 +143,7 @@ dimension 'ensemble'.
 # Arguments:
 - `data`: a DimArray with at least dimension 'model'
 - `updateMeta`: set true if the vectors in the metadata refer to different models. 
-If true attribute ensemble_indices_map is set in metadata.
+If true attribute model_to_member_indices is set in metadata.
 Set to false if vectors refer to different variables for instance. 
 """
 function summarizeEnsembleMembersVector(
@@ -183,7 +183,7 @@ given variable.
 # Arguments:
 - `data`: DimArray with at least dimensions 'model1', 'model2'
 - `updateMeta`: set true if the vectors in the metadata refer to different models. 
-If true attribute ensemble_indices_map is set in metadata. 
+If true attribute model_to_member_indices is set in metadata. 
 Set to false if vectors refer to different variables for instance. 
 """
 function averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
@@ -276,10 +276,10 @@ function computeWeightedAvg(
     end
     if isnothing(weights)
         # make sure that the number of ensemble members per model is considered
-        ensemble_names = data.metadata["ensemble_names"]
+        model_names = data.metadata["model_names"]
         indices = []
-        for model in unique(ensemble_names)
-            push!(indices, findall(x -> x==model, ensemble_names))
+        for model in unique(model_names)
+            push!(indices, findall(x -> x==model, model_names))
         end
         n_ensembles = length(indices)
         w = []
@@ -342,8 +342,8 @@ to access the individual ensemble members the computed weights were based on.
 - `weights`: contains weights for each ensemble, has dimension 'ensemble'.
 """
 function makeWeightPerEnsembleMember(weights::DimArray)
-    full_model_names = weights.metadata["full_model_names"]
-    ensembles = weights.metadata["ensemble_names"]
+    full_model_names = weights.metadata["member_names"]
+    ensembles = weights.metadata["model_names"]
     nb_ensemble_members = [];
     for ensemble in ensembles
         n = count(member -> split(member, "#")[1] == ensemble, full_model_names)
@@ -361,8 +361,8 @@ end
 
 
 function logWeights(metadata_weights)
-    models = metadata_weights["full_model_names"];
-    @info "Nb included models (without ensemble members): " length(metadata_weights["ensemble_names"])
+    models = metadata_weights["member_names"];
+    @info "Nb included models (without ensemble members): " length(metadata_weights["model_names"])
     foreach(m -> @info(m), models)
 end
 
