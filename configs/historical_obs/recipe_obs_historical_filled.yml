@@ -1,0 +1,122 @@
+documentation:
+  title: Get CMIP6 tas-data for historical period.
+  description: The recipe downloads climate data for historical experiments, regrids
+    the data to a 5x5 grid and provides the climatological average for the entire
+    period as well as for four periods within the historical period.
+  authors:
+  - grusdt_britta
+  maintainer:
+  - grusdt_britta
+preprocessors:
+  general:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+  climatological_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: mean
+      period: full
+  climatological_monthly_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: mean
+      period: monthly
+  default: {}
+diagnostics:
+  historical:
+    variables:
+      tas_CLIM:
+        short_name: tas
+        preprocessor: climatological_mean
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+      tos_CLIM:
+        short_name: tos
+        preprocessor: climatological_mean
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+    scripts: null
+  historical1:
+    variables:
+      tas_CLIM:
+        short_name: tas
+        preprocessor: climatological_mean
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1951/1980
+      tos_CLIM:
+        short_name: tos
+        preprocessor: climatological_mean
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1951/1980
+    scripts: null
+  historical2:
+    variables:
+      tas_CLIM:
+        short_name: tas
+        preprocessor: climatological_mean
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1961/1990
+      tos_CLIM:
+        short_name: tos
+        preprocessor: climatological_mean
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1961/1990
+    scripts: null
+historical3:
+  variables:
+    tas_CLIM:
+      short_name: tas
+      preprocessor: climatological_mean
+      variable_long_name: Near-Surface Air Temperature
+      mip: Amon
+      start_year: 1991
+      end_year: 2014
+    tos_CLIM:
+      short_name: tos
+      preprocessor: climatological_mean
+      variable_long_name: Sea Surface Temperature
+      mip: Omon
+      start_year: 1991
+      end_year: 2014
+  scripts: null
+datasets:
+- dataset: ERA5

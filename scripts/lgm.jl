@@ -14,20 +14,21 @@ lgm_data = sw.loadData(
     subset = Dict(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
-        "projects" => ["CMIP5"],
+        "projects" => ["CMIP5", "CMIP6"],
         "models" => Vector{String}(), # same as not setting it
         "subdirs" => ["20241114"] # if dir_per_var is true only subdirs containing any are considered
     )
 );
 
 model_members_lgm = collect(dims(first(values(lgm_data.data)), :member))
+models_lgm  = unique(first(values(lgm_data.data)).metadata["model_names"])
+
 # 2. Load observational data
 obs_data = sw.loadData(
-    "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical",
-    "/albedo/home/brgrus001/SimilarityWeights/configs/recipe_configs_historical/";
-    dir_per_var = true,
+    "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_20241119_110855",
+    "/albedo/home/brgrus001/SimilarityWeights/configs/historical_obs";
+    dir_per_var = false,
     isModelData = false,
-    common_models_across_vars = false,
     subset = Dict(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
