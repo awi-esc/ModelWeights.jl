@@ -1,0 +1,119 @@
+documentation:
+  title: Get CMIP6 tos-data for historical period.
+  description: The recipe downloads climate data for LGM experiments, regrids the
+    data to a 5x5 grid and provides the climatological average and standard deviations
+    for the entire period and for each month.
+  authors:
+  - grusdt_britta
+  maintainer:
+  - grusdt_britta
+preprocessors:
+  general:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+  climatological_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: mean
+      period: full
+  climatological_monthly_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: mean
+      period: monthly
+  standard_dev:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: std_dev
+      period: full
+  standard_dev_monthly:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: std_dev
+      period: monthly
+  default: {}
+diagnostics:
+  lgm:
+    variables:
+      tos_CLIM:
+        short_name: tos
+        preprocessor: climatological_mean
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        mip_era: CMIP6
+        exp: lgm
+        activity: PMIP
+        project: CMIP6
+      tos_CLIM-mon:
+        short_name: tos
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        mip_era: CMIP6
+        exp: lgm
+        activity: PMIP
+        project: CMIP6
+      tos_STD:
+        short_name: tos
+        preprocessor: standard_dev
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        mip_era: CMIP6
+        exp: lgm
+        activity: PMIP
+        project: CMIP6
+      tos_STD-mon:
+        short_name: tos
+        preprocessor: standard_dev_monthly
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        mip_era: CMIP6
+        exp: lgm
+        activity: PMIP
+        project: CMIP6
+    scripts: null
+datasets:
+- dataset: AWI-ESM-1-1-LR
+  ensemble: r1i1p1f1
+  institute: AWI
+  grid: gn
+  version: v20200212
+- dataset: CESM2-FV2
+  ensemble: r1i2p2f1
+  institute: NCAR
+  grid: gn
+  version: v20220915
+- dataset: CESM2-WACCM-FV2
+  ensemble: r1i2p2f1
+  institute: NCAR
+  grid: gn
+  version: v20220915
+- dataset: INM-CM4-8
+  ensemble: r1i1p1f1
+  institute: INM
+  grid: gr1
+  version: v20201112
+- dataset: MIROC-ES2L
+  ensemble: r1i1p1f2
+  institute: MIROC
+  grid: gn
+  version: v20191002
+- dataset: MIROC-ES2L
+  ensemble: r1i1p1f2
+  institute: MIROC
+  grid: gr1
+  version: v20200911
+- dataset: MPI-ESM1-2-LR
+  ensemble: r1i1p1f1
+  institute: MPI-M
+  grid: gn
+  version: v20190710

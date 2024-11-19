@@ -1,0 +1,112 @@
+documentation:
+  title: Get CMIP5 tos-data for historical period.
+  description: The recipe downloads climate data for LGM experiments, regrids the
+    data to a 5x5 grid and provides the climatological average and standard deviations
+    for the entire period and for each month.
+  authors:
+  - grusdt_britta
+  maintainer:
+  - grusdt_britta
+preprocessors:
+  general:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+  climatological_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: mean
+      period: full
+  climatological_monthly_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: mean
+      period: monthly
+  standard_dev:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: std_dev
+      period: full
+  standard_dev_monthly:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: std_dev
+      period: monthly
+  default: {}
+diagnostics:
+  lgm:
+    variables:
+      tos_CLIM:
+        short_name: tos
+        preprocessor: climatological_mean
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: lgm
+        project: CMIP5
+      tos_CLIM-mon:
+        short_name: tos
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: lgm
+        project: CMIP5
+      tos_STD:
+        short_name: tos
+        preprocessor: standard_dev
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: lgm
+        project: CMIP5
+      tos_STD-mon:
+        short_name: tos
+        preprocessor: standard_dev_monthly
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: lgm
+        project: CMIP5
+    scripts: null
+datasets:
+- dataset: CNRM-CM5
+  ensemble: r1i1p1
+  institute: CNRM-CERFACS
+  version: v20120730
+- dataset: FGOALS-g2
+  ensemble: r1i1p1
+  institute: LASG-CESS
+  version: v1
+- dataset: GISS-E2-R
+  ensemble: r1i1p(150:151)
+  institute: NASA-GISS
+  version: v20160510
+- dataset: IPSL-CM5A-LR
+  ensemble: r1i1p1
+  institute: IPSL
+  version: v20120114
+- dataset: MIROC-ESM
+  ensemble: r1i1p1
+  institute: MIROC
+  version: v20130712
+- dataset: MPI-ESM-P
+  ensemble: r1i1p1
+  institute: MPI-M
+  version: v20120625
+- dataset: MPI-ESM-P
+  ensemble: r1i1p2
+  institute: MPI-M
+  version: v20120713
+- dataset: MRI-CGCM3
+  ensemble: r1i1p1
+  institute: MRI
+  version: v20120609
