@@ -314,6 +314,10 @@ function loadData(
         if dir_per_var
             path_to_subdirs = filter(isdir, readdir(base_path, join=true))
             filter!(x -> occursin("_" * id.variable, x), path_to_subdirs)
+            subdirs = get(subset, "subdirs", nothing)
+            if !isnothing(subdirs)
+                filter!(p -> any([occursin(name, p) for name in subdirs]), path_to_subdirs)
+            end
             if length(path_to_subdirs) > 1
                 @info "Data for variable $(id.variable) considered from subdirectories:" path_to_subdirs
             end

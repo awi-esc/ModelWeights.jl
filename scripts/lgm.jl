@@ -1,5 +1,6 @@
 import SimilarityWeights as sw
 using NCDatasets
+using DimensionalData
 
 base_path =  "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/";
 config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/lgm-cmip5-cmip6";
@@ -14,10 +15,12 @@ lgm_data = sw.loadData(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
         "projects" => ["CMIP5"],
-        "models" => Vector{String}()
+        "models" => Vector{String}(), # same as not setting it
+        "subdirs" => ["20241114"] # if dir_per_var is true only subdirs containing any are considered
     )
 );
 
+model_members_lgm = collect(dims(first(values(lgm_data.data)), :member))
 # 2. Load observational data
 obs_data = sw.loadData(
     "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical",
@@ -26,10 +29,11 @@ obs_data = sw.loadData(
     isModelData = false,
     common_models_across_vars = false,
     subset = Dict(
+        "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
-        "projects" => ["ERA5"],
+        "projects" => ["ERA5"] # default value (same as not setting it)
         #"timeranges" => ["1980-2014"]
-        "alias" => ["historical"]
+        #"alias" => ["historical"]
     )
 );
 
