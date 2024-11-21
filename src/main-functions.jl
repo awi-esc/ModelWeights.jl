@@ -47,16 +47,7 @@ combination of variable and diagnostic.
 function computeWeights(
     model_data::Data, obs_data::Data, config_weights::ConfigWeights
 )
-    # only the observational data is used for which there is also model data
-    obs_ids = filter(x -> x in model_data.ids, obs_data.ids)
-    # and only those models are used for which there is observational data too
-    model_ids = filter(x -> x in obs_ids, model_data.ids)
-    # TODO: ids are not necessarily in same order, ordering should be defined
-    if obs_ids != model_ids && !isempty(obs_ids)
-        msg = "Model and observational data ids do not match! Obs: $obs_ids , Model: $model_ids"
-        throw(ArgumentError(msg))
-    end
-
+    # TODO: add check that for model ids there is a matching observational id
     # make sure that weights (for diagnostic+variables) are normalized
     weights_perform = normalizeWeightsVariables(config_weights.performance)    
     weights_indep = normalizeWeightsVariables(config_weights.independence)

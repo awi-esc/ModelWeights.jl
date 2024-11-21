@@ -351,17 +351,25 @@ end
 
 
 """
-    renameModelDimsFromMemberToEnsemble(data::DimArray, dim_names::Vector{String})
+    setLookupsFromMemberToModel(data::DimArray, dim_names::Vector{String})
+
+Change the lookup values for the dimension 'member' to refer to the models, i.e.
+they are not unique anymore. This is done in preparation to group the data by 
+the different models.
 
 # Arguments:
-- `data`
-- `dim_names`: names of dimensions to be changed, e.g. 'model', 'model1', etc.
+- `data`: has at least dimensions in 'dim_names'
+- `dim_names`: names of dimensions to be changed, e.g. 'member', 'member1'
 """
-function renameModelDimsFromMemberToEnsemble(data::DimArray, dim_names::Vector{String})
-    for dim in dim_names
+function setLookupsFromMemberToModel(data::DimArray, dim_names::Vector{String})
+    n_dims = length(dim_names)
+    for (i, dim) in enumerate(dim_names)
         unique_members = dims(data, Symbol(dim))
-        ensembles = map(x -> split(x, MODEL_MEMBER_DELIM)[1], unique_members)
-        data = set(data, Symbol(dim) => ensembles)
+        models = map(x -> split(x, MODEL_MEMBER_DELIM)[1], unique_members)
+        
+        data = set(data, Symbol(dim) => models)
+        new_dim_name = n_dims > 1 ? "model" * string(i) : "model"
+        data = set(data, Symbol(dim) => Symbol(new_dim_name))
     end
     return data
 end
@@ -472,14 +480,15 @@ function computeDistancesAllDiagnostics(
             end
             push!(distances, dists)
         end
-        distances = cat(distances..., dims = Dim{:variable}(collect(variables)));
+        distances = cat(distances..., dims = Dim{:variable}(String.(collect(variables))));
         push!(distances_all, distances)
     end
-    return cat(distances_all..., dims = Dim{:diagnostic}(collect(diagnostics)));
+    return cat(distances_all..., dims = Dim{:diagnostic}(String.(collect(diagnostics))));
 end
 
+
 function computeGeneralizedDistances(distances_all::DimArray, weights::DimArray, forPerformance::Bool)
-    dimensions = forPerformance ? (:model,) : (:model1, :model2)
+    dimensions = forPerformance ? (:member,) : (:member1, :member2)
     norm = mapslices(Statistics.median, distances_all, dims=dimensions)
     normalized_distances =  DimArray(
         distances_all ./ norm, dims(distances_all), metadata = distances_all.metadata

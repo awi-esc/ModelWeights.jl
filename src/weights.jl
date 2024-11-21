@@ -23,11 +23,12 @@ function areaWeightedRMSE(m1::DimArray, m2::DimArray, mask::DimArray)
     areaWeights = DimArray(areaWeights, Dim{:lat}(Array(latitudes)));
 
     sqDiff = (m1 .- m2).^2;
-    weightedValues = areaWeights' .* sqDiff;
+    areaWeightMatrix = repeat(areaWeights', length(DimensionalData.dims(sqDiff, :lon)), 1);  
+    weightedValues = areaWeightMatrix .* sqDiff;
 
-    weightMatrix = repeat(areaWeights', length(DimensionalData.dims(m1, :lon)), 1);  
-    weightMatrix = ifelse.(mask .== 1, 0, weightMatrix); 
-    normalization = sum(weightMatrix);
+    #weightMatrix = repeat(areaWeights', length(DimensionalData.dims(m1, :lon)), 1);  
+    areaWeightMatrix = ifelse.(mask .== 1, 0, areaWeightMatrix); 
+    normalization = sum(areaWeightMatrix);
 
     return sqrt(sum(skipmissing(weightedValues)./normalization));
 end
@@ -48,14 +49,14 @@ function getModelDistances(modelData::DimArray)
     # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
     data = deepcopy(modelData);
     # only take values where none (!) of the models has infinite values!! (Not just the two that are compared to one another)
-    nbModels = length(dims(data, :model));
-    maskMissing = dropdims(any(ismissing, data, dims=:model), dims=:model);
+    nbModels = length(dims(data, :member));
+    maskMissing = dropdims(any(ismissing, data, dims=:member), dims=:member);
 
     matrixS = zeros(nbModels, nbModels);    
-    for (i, model_i) in enumerate(eachslice(data; dims=:model))
+    for (i, model_i) in enumerate(eachslice(data; dims=:member))
         model_i[maskMissing .== 1] .= 0;
         
-        for (j, model_j) in enumerate(eachslice(data[:, :, i+1:end]; dims=:model))
+        for (j, model_j) in enumerate(eachslice(data[:, :, i+1:end]; dims=:member))
             idx = j + i;
             model_j[maskMissing .== 1] .= 0;
             s_ij = areaWeightedRMSE(model_i, model_j, maskMissing);
@@ -64,8 +65,8 @@ function getModelDistances(modelData::DimArray)
     end
     # make symmetrical matrix
     symDistMatrix = matrixS .+ matrixS';
-    dim = Array(dims(modelData, :model));
-    return DimArray(symDistMatrix, (Dim{:model1}(dim), Dim{:model2}(dim)), metadata=modelData.metadata)
+    dim = Array(dims(modelData, :member));
+    return DimArray(symDistMatrix, (Dim{:member1}(dim), Dim{:member2}(dim)), metadata=modelData.metadata)
 end
 
 
@@ -80,20 +81,21 @@ function getModelDataDist(models::DimArray, observations::DimArray)
     models = deepcopy(models);
     observations = deepcopy(observations);
     distances = [];
-    model_names = Vector{String}();
-    for (i, model_i) in enumerate(eachslice(models; dims=:model))
-        model_name = dims(models, :model)[i]  # Access the name of the current model
+    member_names = Vector{String}();
+    for (i, model_i) in enumerate(eachslice(models; dims=:member))
+        name = dims(models, :member)[i]  # Access the name of the current model
         maskNbMissing = (ismissing.(observations) + ismissing.(model_i)) .> 0; # observations or model is missing (or both)
         maskedObs = deepcopy(observations);
-        maskedObs = dropdims(ifelse.(maskNbMissing .> 0, 0, maskedObs), dims=:model);
+        # maskedObs = dropdims(ifelse.(maskNbMissing .> 0, 0, maskedObs), dims=:source);
+        maskedObs = ifelse.(maskNbMissing .> 0, 0, maskedObs)
 
         maskedModel = ifelse.(maskNbMissing .> 0, 0, model_i);
         mse = areaWeightedRMSE(maskedModel, maskedObs, maskNbMissing);
 
-        push!(model_names, model_name);
+        push!(member_names, name);
         push!(distances, mse);
     end
-    return DimArray(distances, (Dim{:model}(model_names)), metadata=models.metadata)
+    return DimArray(distances, (Dim{:member}(member_names)), metadata=models.metadata)
 end
 
 
@@ -137,8 +139,8 @@ end
     summarizeEnsembleMembersVector(data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean)
 
 For each model and variable (if several given), compute the mean across all
-ensemble members of that model. Instead of 'model', the returned DimArray has
-dimension 'ensemble'.
+members of that model. Instead of 'member', the returned DimArray has
+dimension 'model'.
 
 # Arguments:
 - `data`: a DimArray with at least dimension 'model'
@@ -149,27 +151,20 @@ Set to false if vectors refer to different variables for instance.
 function summarizeEnsembleMembersVector(
     data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean
 )
-    data = renameModelDimsFromMemberToEnsemble(data, ["model"])
-    
+    data = setLookupsFromMemberToModel(data, ["member"])
     grouped = groupby(data, :model=>identity);
-    ensembles = collect(dims(grouped, :model))
+    models = String.(collect(dims(grouped, :model)))
     averages = map(entry -> mapslices(x -> fn(skipmissing(x)), entry, dims=:model), grouped)
-    combined = cat(averages..., dims=(Dim{:model}(ensembles)));
-    combined = set(combined, :model => :ensemble)
+    combined = cat(averages..., dims=(Dim{:model}(models)));
 
-    if updateMeta
-        meta = updateGroupedDataMetadata(data.metadata, grouped)
-    else 
-        meta = data.metadata
-    end
+    meta = updateMeta ? updateGroupedDataMetadata(data.metadata, grouped) : data.metadata
     combined = rebuild(combined; metadata = meta);
-    
     l = Lookups.Categorical(
-        sort(ensembles);
+        sort(models);
         order=Lookups.ForwardOrdered()
     )
-    combined = combined[ensemble=At(sort(ensembles))]
-    combined = DimensionalData.Lookups.set(combined, ensemble=l)
+    combined = combined[model=At(sort(models))]
+    combined = DimensionalData.Lookups.set(combined, model=l)
     return combined
 end
 
@@ -177,45 +172,39 @@ end
 """
     averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
 
-Compute the average weights across all members of each model ensemble for each
-given variable.
+Compute the average weights across all members of each model for each given variable.
 
 # Arguments:
-- `data`: DimArray with at least dimensions 'model1', 'model2'
+- `data`: DimArray with at least dimensions 'member1', 'member2'
 - `updateMeta`: set true if the vectors in the metadata refer to different models. 
 If true attribute model_to_member_indices is set in metadata. 
 Set to false if vectors refer to different variables for instance. 
 """
 function averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
-    data = renameModelDimsFromMemberToEnsemble(data, ["model1", "model2"])
-    
-    ensembles = collect(unique(dims(data, :model1)))
+    data = setLookupsFromMemberToModel(data, ["member1", "member2"])
+    models = String.(collect(unique(dims(data, :model1))))
 
     grouped = groupby(data, :model2=>identity)
     averages = map(entry -> mapslices(Statistics.mean, entry, dims=:model2), grouped)
-    combined = cat(averages..., dims=(Dim{:model2}(ensembles)))
+    combined = cat(averages..., dims=(Dim{:model2}(models)))
 
     grouped = groupby(combined, :model1=>identity)
     averages = map(entry -> mapslices(Statistics.mean, entry, dims=:model1), grouped)
-    combined = cat(averages..., dims=(Dim{:model1}(ensembles)));
+    combined = cat(averages..., dims=(Dim{:model1}(models)));
     
-    for m in ensembles
+    for m in models
         combined[model1=At(m), model2=At(m)] .= 0
     end
-    if updateMeta
-        meta = updateGroupedDataMetadata(data.metadata, grouped)
-    else 
-        meta = data.metadata
-    end
+
+    meta = updateMeta ? updateGroupedDataMetadata(data.metadata, grouped) : data.metadata
     combined = rebuild(combined; metadata = meta);
 
     l = Lookups.Categorical(
-        sort(ensembles);
+        sort(models);
         order=Lookups.ForwardOrdered()
     )
-    combined = combined[model1=At(sort(ensembles)), model2=At(sort(ensembles))]
+    combined = combined[model1=At(sort(models)), model2=At(sort(models))]
     combined = DimensionalData.Lookups.set(combined, model1=l, model2=l)
-    combined = set(combined, :model1 => :ensemble1, :model2 => :ensemble2)
     return combined
 end
 
@@ -241,14 +230,14 @@ Compute the independence part (denominator) of the overall weight for each model
 
 # Arguments:
 - `generalizedDistances`: contains generalized distances S_{i,j} for each model 
-(i.e. ensemble, not ensemble members) pair has two dimensions, 'ensemble1' and 'ensemble2'
+(i.e. not model members) pair has two dimensions, 'model1' and 'model2'
 - `sigmaS`: free model parameter for impact of independence weights
 """
 function independenceParts(generalizedDistances::DimArray, sigmaS::Number)
     # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
-    indep_parts = sum(exp.(-(generalizedDistances ./ sigmaS).^2), dims=:ensemble2);
-    indep_parts = dropdims(indep_parts, dims=:ensemble2)
-    indep_parts = set(indep_parts, :ensemble1 => :ensemble);
+    indep_parts = sum(exp.(-(generalizedDistances ./ sigmaS).^2), dims=:model2);
+    indep_parts = dropdims(indep_parts, dims=:model2)
+    indep_parts = set(indep_parts, :model1 => :model);
     return indep_parts
 end
 
@@ -257,43 +246,44 @@ end
     computeWeightedAvg(data::DimArray; weights::Union{DimArray, Nothing}=nothing)
 
 Compute the average values for each (lon,lat) grid point in 'data_var', weighted
-by weights 'weights'. Members of the same ensemble are averaged before. If no 
+by weights 'weights'. Members of the same model are averaged before. If no 
 weight vector is provided, unweighted average is computed.
 
 # Arguments:
-- `data`: has dimensions lon, lat, ensemble/model
-- `weights`: weights for ensembles or individual members; has dimension ensemble/model
+- `data`: has dimensions lon, lat, model/member
+- `weights`: weights for models or individual members; has dimension model/memnber
 """
 function computeWeightedAvg(
     data::DimArray; weights::Union{DimArray, Nothing}=nothing
 )
     data = deepcopy(data)
-    sources = dims(data, :model)
-    dimname = "model"
+    sources = dims(data, :member)
+    dimname = "member"
     if isnothing(sources)
-        sources = dims(data, :ensemble)
-        dimname = "ensemble"
+        sources = dims(data, :model)
+        dimname = "model"
     end
     if isnothing(weights)
-        # make sure that the number of ensemble members per model is considered
+        # make sure that the number of members per model is considered
         model_names = data.metadata["model_names"]
         indices = []
         for model in unique(model_names)
             push!(indices, findall(x -> x==model, model_names))
         end
-        n_ensembles = length(indices)
+        n_models = length(indices)
         w = []
         for positions in indices
             n_members = length(positions)
             for _ in range(1, n_members)
-                push!(w, (1/n_ensembles) *  (1/n_members))
+                push!(w, (1/n_models) *  (1/n_members))
             end
         end
-        if dimname == "model"
-            weights = DimArray(w, Dim{:model}(Array(dims(data, :model))))
-        else
-            weights = DimArray(w, Dim{:ensemble}(Array(dims(data, :ensemble))))
-        end
+        weights = DimArray(w, Dim{Symbol(dimname)}(Array(dims(data, Symbol(dimname)))))
+        # if dimname == "member"
+        #     weights = DimArray(w, Dim{:member}(Array(dims(data, :member))))
+        # else
+        #     weights = DimArray(w, Dim{:model}(Array(dims(data, :model))))
+        # end
     else
         # weights may have been computed wrt a different set of variables as we use here, 
         # so the list of models for which weights have been computed may be shorter 
@@ -302,10 +292,10 @@ function computeWeightedAvg(
             @warn "Mismatch between models that weights were computed for and models in the data."
         end
 
-        if dimname == "model"
-            data = data[model = Where(m -> m in dims(weights, :model))]
+        if dimname == "member"
+            data = data[member = Where(m -> m in dims(weights, Symbol(dimname)))]
         else
-            data = data[ensemble = Where(m -> m in dims(weights, :ensemble))]
+            data = data[model = Where(m -> m in dims(weights, Symbol(dimname)))]
         end
 
         n_models_data = length(sources)
@@ -318,13 +308,13 @@ function computeWeightedAvg(
     end
     @assert isapprox(sum(weights), 1; atol=10^-4)
     
-    if dimname == "model"
+    if dimname == "member"
         for m in sources
-            data[model = At(m)] = data[model = At(m)] .* weights[model = At(m)]
+            data[member = At(m)] = data[member = At(m)] .* weights[member = At(m)]
         end
     else
-        for m in dims(data, :ensemble)
-            data[ensemble = At(m)] = data[ensemble = At(m)] .* weights[ensemble = At(m)]
+        for m in dims(data, :model)
+            data[model = At(m)] = data[model = At(m)] .* weights[model = At(m)]
         end
     end
     weighted_avg = dropdims(reduce(+, data, dims=Symbol(dimname)), dims=Symbol(dimname))
@@ -335,25 +325,25 @@ end
 """
     makeWeightPerEnsembleMember(weights::DimArray)
 
-Equally distribute weight for each ensemble over its members. Metadata is used
-to access the individual ensemble members the computed weights were based on.
+Equally distribute weight for each model over its members. Metadata is used
+to access the individual model members the computed weights were based on.
     
 # Arguments:
-- `weights`: contains weights for each ensemble, has dimension 'ensemble'.
+- `weights`: contains weights for each model, has dimension 'model'.
 """
 function makeWeightPerEnsembleMember(weights::DimArray)
     full_model_names = weights.metadata["member_names"]
-    ensembles = weights.metadata["model_names"]
-    nb_ensemble_members = [];
-    for ensemble in ensembles
-        n = count(member -> split(member, "#")[1] == ensemble, full_model_names)
-        push!(nb_ensemble_members, n)
+    models = weights.metadata["model_names"]
+    nb_members = [];
+    for model in models
+        n = count(member -> split(member, "#")[1] == model, full_model_names)
+        push!(nb_members, n)
     end
     weights_all_members = []
     for (idx, w) in enumerate(weights)
-        n_members = nb_ensemble_members[idx]
-        for _ in range(1, n_members)
-            push!(weights_all_members, w/nb_ensemble_members[idx])
+        n = nb_members[idx]
+        for _ in range(1, n)
+            push!(weights_all_members, w/nb_members[idx])
         end
     end
     return DimArray(weights_all_members, Dim{:model}(full_model_names), metadata = weights.metadata)
@@ -361,9 +351,8 @@ end
 
 
 function logWeights(metadata_weights)
-    models = metadata_weights["member_names"];
-    @info "Nb included models (without ensemble members): " length(metadata_weights["model_names"])
-    foreach(m -> @info(m), models)
+    @info "Nb included models (without members): " length(unique(metadata_weights["model_names"]))
+    foreach(m -> @info(m), metadata_weights["member_names"])
 end
 
 
@@ -400,19 +389,18 @@ function saveWeights(
     end
     ds = NCDataset(path_to_target, "c")
 
-    ensembles = map(x -> string(x), dims(weights.w, :ensemble))
-    defDim(ds, "ensemble", length(ensembles))
+    models = map(x -> string(x), dims(weights.w, :model))
+    defDim(ds, "model", length(models))
     # Add a new variable to store the model names
-    defVar(ds, "ensemble", Array(ensembles), ("ensemble",))
+    defVar(ds, "model", Array(models), ("model",))
     
+    # add dimension variables
     function addNCDatasetVar!(ds, dimensions, name)
         defDim(ds, name, length(dimensions))
         defVar(ds, name, Array(dimensions), (name,))
         return nothing  
     end
-
-    # add dimension variables
-    addNCDatasetVar!(ds, dims(weights.performance_distances, :model), "model")
+    addNCDatasetVar!(ds, dims(weights.performance_distances, :member), "member")
     addNCDatasetVar!(ds, dims(weights.performance_distances, :variable), "variable")
     addNCDatasetVar!(ds, dims(weights.performance_distances, :diagnostic), "diagnostic")
 
@@ -427,22 +415,21 @@ function saveWeights(
     # Add actual data weights
     for name in fieldnames(ClimwipWeights)
         if String(name) in ["w", "wP", "wI", "Di"]
-            v = defVar(ds, String(name), Float64, ("ensemble",))
+            v = defVar(ds, String(name), Float64, ("model",))
             data = getfield(weights, name)
             v[:] = Array(data)
         elseif String(name) == "independence_distances"
-            v = defVar(ds, String(name), Float64, ("model", "model", "variable", "diagnostic"))
+            v = defVar(ds, String(name), Float64, ("member", "member", "variable", "diagnostic"))
             v[:,:,:,:] =  Array(weights.independence_distances)
         elseif String(name) == "Sij"
-            v = defVar(ds, String(name), Float64, ("ensemble", "ensemble"))
+            v = defVar(ds, String(name), Float64, ("model", "model"))
             v[:,:] = Array(weights.Sij)
         elseif String(name) == "performance_distances"
-            v = defVar(ds, String(name), Float64, ("model", "variable", "diagnostic"))
+            v = defVar(ds, String(name), Float64, ("member", "variable", "diagnostic"))
             v[:,:,:] = Array(weights.performance_distances)
        end 
     end
     close(ds)
-
     @info "saved data to " path_to_target
 end
 
@@ -453,35 +440,35 @@ end
 
 Compute the weighted average of model data 'data' with given weights 'weights'.
 If the weights were computed for a subset of the models in 'data', they are normalized
-and applied to the subset. Only weights per ensemble (not ensemble members) are considered
-for now, in the future, ensemble members should be considered too.
+and applied to the subset. Only weights per model (not members) are considered
+for now, in the future, members should be considered too.
 
 # Arguments:
-- `model_data`: model predictions. If given for ensemble members, the predictions of 
-each ensemble are considered the average value of all members of the respective ensemble.
-- `weights`: if given for each ensemble member, these will be summed up to yield one
-value per ensemble.
+- `model_data`: model predictions. If given for model members, the predictions of 
+each model are considered the average value of all members of the respective model.
+- `weights`: if given for each member of a model, these will be summed up to yield one
+value per model.
 """
 function applyWeights(model_data::DimArray, weights::DimArray)
-    if hasdim(weights, :model)
+    if hasdim(weights, :member)
         weights = summarizeEnsembleMembersVector(weights, true; fn=sum)
     end
-    if hasdim(model_data, :model)
-        # take average over model predictions of members of same ensemble
+    if hasdim(model_data, :member)
+        # take average over model predictions of members of same model
         model_data = summarizeEnsembleMembersVector(model_data, true; fn=Statistics.mean)
     end
-    models_weights = dims(weights, :ensemble)
-    models = dims(model_data, :ensemble)
+    models_weights = dims(weights, :model)
+    models = dims(model_data, :model)
     shared_models = intersect(models_weights, models)
 
     if length(shared_models) == 0
         throw(ArgumentError("No models given for which weights had been computed!"))
     else 
-        data_out = model_data[ensemble = Where(x -> !(x in shared_models))]
-        model_data = model_data[ensemble = Where(x -> x in shared_models)]
-        weights = weights[ensemble = Where(x -> x in shared_models)]
+        data_out = model_data[model = Where(x -> !(x in shared_models))]
+        model_data = model_data[model = Where(x -> x in shared_models)]
+        weights = weights[model = Where(x -> x in shared_models)]
         weights = weights ./ sum(weights)
-        models_out = dims(data_out, :ensemble)
+        models_out = dims(data_out, :model)
         if length(models_out) > 0
             @warn "No weights had been computed for $models_out"
         end
@@ -489,6 +476,5 @@ function applyWeights(model_data::DimArray, weights::DimArray)
             @warn "Weights were computed for a subset of the models of the given data. Weights were renormalized."
         end
     end
-
     return computeWeightedAvg(model_data; weights)
 end
