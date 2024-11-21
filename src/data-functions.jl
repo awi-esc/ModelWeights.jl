@@ -158,9 +158,19 @@ function loadPreprocData(
         end
         model_constraints = get(subset, "models", Vector{String}())
         if !isempty(model_constraints)
-            if !any([occursin(name, file) for name in model_constraints])
+            # model constraints may contain individual members
+            model_member_constraints = map(x -> split(x, MODEL_MEMBER_DELIM), model_constraints)
+            any_fullfilled = false
+            for constraints in model_member_constraints
+                constraint_ok = all([occursin(name, file) for name in constraints])
+                if constraint_ok
+                    any_fullfilled = true
+                    break
+                end
+            end
+            if !any_fullfilled
                 @debug "exclude $file because of models subset"
-                addFile = false;
+                addFile = false
             end
         end
         if addFile

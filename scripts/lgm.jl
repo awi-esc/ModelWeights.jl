@@ -20,6 +20,10 @@ model_data_lgm = sw.loadData(
         )
 );
         
+model_members_lgm = Array(dims(first(values(model_data_lgm.data)), :member))
+models_lgm  = unique(first(values(model_data_lgm.data)).metadata["model_names"])
+
+
 base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
 config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/historical";
 model_data_historical = sw.loadData(
@@ -28,19 +32,16 @@ model_data_historical = sw.loadData(
     common_models_across_vars = true,
     subset = Dict(
         "statistic" => ["CLIM"],
-        "variable" => ["tas"],
+        "variable" => ["tas", "tos"],
         "alias" => ["historical"],
-        "projects" => ["CMIP5"],
-        #"models" => ["FIO-ESM"],
-        "subdirs" => ["20241114"] # if dir_per_var is true only subdirs containing any are considered
-        )
+        "projects" => ["CMIP5", "CMIP6"],
+        "models" => model_members_lgm,
+        "subdirs" => ["20241121", "20241118"] # if dir_per_var is true only subdirs containing any are considered
+    )
 );
  
 #model_data_historical = sw.getCommonModelsAcrossVars(model_data_historical, :member)
 
-
-model_members_lgm = collect(dims(first(values(model_data_lgm.data)), :member))
-models_lgm  = unique(first(values(model_data_lgm.data)).metadata["model_names"])
 
 # 2. Load observational data
 obs_data = sw.loadData(
@@ -72,12 +73,12 @@ weights = sw.computeWeights(model_data_historical, obs_data, config_weights);
 
 # weights can also be  saved seperately:
 target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
-target_fn = "lgm-weights.nc"
+target_fn = "weights-lgm-models.nc"
 sw.saveWeights(weights, target_dir; target_fn = target_fn)
 
 
 # 4. Plot weights/generalized distances
-path_weights = joinpath(target_dir, "2024-11-11_12_08_lgm-weights.nc")
+path_weights = joinpath(target_dir, target_fn)
 ds_weights = NCDataset(path_weights);
 
 wP = sw.loadWeightsAsDimArray(ds_weights, "wP");
