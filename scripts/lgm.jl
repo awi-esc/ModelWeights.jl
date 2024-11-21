@@ -2,12 +2,12 @@ import SimilarityWeights as sw
 using NCDatasets
 using DimensionalData
 
-base_path =  "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/";
-config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/lgm-cmip5-cmip6";
 
 # 1. Load model data
-lgm_data = sw.loadData(
-    base_path,
+base_path =  "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/";
+config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/lgm-cmip5-cmip6";
+model_data_lgm = sw.loadData(
+    base_path, 
     config_path;
     dir_per_var = true,
     common_models_across_vars = true,
@@ -17,24 +17,43 @@ lgm_data = sw.loadData(
         "projects" => ["CMIP5", "CMIP6"],
         "models" => Vector{String}(), # same as not setting it
         "subdirs" => ["20241114"] # if dir_per_var is true only subdirs containing any are considered
-    )
+        )
 );
+        
+base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
+config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/historical";
+model_data_historical = sw.loadData(
+    base_path, config_path;
+    dir_per_var = true,
+    common_models_across_vars = true,
+    subset = Dict(
+        "statistic" => ["CLIM"],
+        "variable" => ["tas"],
+        "alias" => ["historical"],
+        "projects" => ["CMIP5"],
+        #"models" => ["FIO-ESM"],
+        "subdirs" => ["20241114"] # if dir_per_var is true only subdirs containing any are considered
+        )
+);
+ 
+#model_data_historical = sw.getCommonModelsAcrossVars(model_data_historical, :member)
 
-model_members_lgm = collect(dims(first(values(lgm_data.data)), :member))
-models_lgm  = unique(first(values(lgm_data.data)).metadata["model_names"])
+
+model_members_lgm = collect(dims(first(values(model_data_lgm.data)), :member))
+models_lgm  = unique(first(values(model_data_lgm.data)).metadata["model_names"])
 
 # 2. Load observational data
 obs_data = sw.loadData(
-    "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_20241119_110855",
+    "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_20241119_124434",
     "/albedo/home/brgrus001/SimilarityWeights/configs/historical_obs";
     dir_per_var = false,
     isModelData = false,
     subset = Dict(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
+        "alias" => ["historical"],
         "projects" => ["ERA5"] # default value (same as not setting it)
         #"timeranges" => ["1980-2014"]
-        #"alias" => ["historical"]
     )
 );
 
@@ -45,11 +64,11 @@ config_weights = sw.ConfigWeights(
     performance = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     independence = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     sigma_independence = 0.5,
-    sigma_performance = 0.5,
-    ref_period = "1980-2014"#,
+    sigma_performance = 0.5#,
+    #ref_period = "1980-2014"#,
     # target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
 );
-weights = sw.computeWeights(lgm_data, obs_data, config_weights);
+weights = sw.computeWeights(model_data_historical, obs_data, config_weights);
 
 # weights can also be  saved seperately:
 target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"

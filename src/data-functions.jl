@@ -253,6 +253,12 @@ function loadPreprocData(
             # but additionally saved in metadata["model_names"]
             dimData = set(dimData, :source => :member)
             dimData = set(dimData, :member => dimData.metadata["member_names"])
+            # Sanity checks that no dataset exists more than once
+            members = dims(dimData, :member)
+            if length(members) != length(unique(members))
+                duplicates = [m for m in members if sum(members .== m) > 1]
+                @warn "Some datasets appear more than once" duplicates
+            end
         end
         return dimData
     else
@@ -319,7 +325,7 @@ function loadData(
                 filter!(p -> any([occursin(name, p) for name in subdirs]), path_to_subdirs)
             end
             if length(path_to_subdirs) > 1
-                @info "Data for variable $(id.variable) considered from subdirectories:" path_to_subdirs
+                @info "Data for variable $(id.key) considered from subdirectories:" path_to_subdirs
             end
         end
         for path_dir in path_to_subdirs
@@ -397,7 +403,8 @@ function getCommonModelsAcrossVars(modelData::Data, dim::Symbol)
         end
     end
     for id in map(id -> id.key, ids_all)
-        data_all[id] = subsetModelData(data_all[id], shared_models);
+        # TODO: only subset if it is necessary at all 
+        data_all[id] = subsetModelData(data_all[id], Array(shared_models));
     end
     result = Data(
         base_path = modelData.base_path, ids = modelData.ids, data = data_all

@@ -462,6 +462,10 @@ function computeDistancesAllDiagnostics(
             
             if forPerformance
                 observations = indexData(obs_data, k)
+                if length(dims(observations, :source)) != 1
+                    @warn "several observational datasets available for computing distances"
+                end
+                observations = observations[source=1]
                 dists = getModelDataDist(models, observations)
             else
                 dists = getModelDistances(models)
