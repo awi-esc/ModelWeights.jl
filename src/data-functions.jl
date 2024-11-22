@@ -359,9 +359,8 @@ function loadData(
                     prev_models = collect(dims(previously_added_data, dim))
                     new_models = collect(dims(data, dim))
                     joint_data = cat(
-                        previously_added_data, 
-                        data, 
-                        dims=Dim{dim}(vcat(prev_models, new_models))
+                        previously_added_data, data;
+                        dims=Dim{dim}(vcat(Array(prev_models), Array(new_models)))
                     )
                     joint_meta = joinMetadata(
                         previously_added_data.metadata, 
