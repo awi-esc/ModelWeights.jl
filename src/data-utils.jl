@@ -430,7 +430,24 @@ Subset model ids so that only those with properties specified in 'subset' remain
 properties of which at least one must be present for an id to be retained.
 """
 function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{String}})   
-    for field in fieldnames(DataID)
+    
+    # check for compatibility of timerange and alias first
+    timerange_constraints = get(subset, "timerange", Vector{String}())
+    timerangeOk(id::DataID) = any(x -> id.timerange == x, timerange_constraints)
+    filter!(timerangeOk, ids)
+    if isempty(ids)
+        throw(ArgumentError("Timeranges $(timerange_constraints) not present in data"))
+    end
+
+    alias_constraints = get(subset, "alias", Vector{String}())
+    aliasOk(id::DataID) = any(x -> id.alias == x, alias_constraints)
+    filter!(aliasOk, ids)
+    if isempty(ids)
+        throw(ArgumentError("Aliases $(alias_constraints) not present or not compatible with given timeranges $(timerange_constraints)"))
+    end
+
+    fields = filter(x -> !(x in [:key, :timerange, :alias]), fieldnames(DataID))
+    for field in fields
         constraints = get(subset, string(field), Vector{String}()) # e.g. [historical, historical0]
         if !isempty(constraints)
             fn(id::DataID) = any(x -> getproperty(id, field) == x, constraints)

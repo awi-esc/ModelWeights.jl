@@ -33,10 +33,10 @@ model_data_historical = sw.loadData(
     subset = Dict(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
-        "alias" => ["historical4"],
+        "alias" => ["historical"],
+        "timerange" => ["full"],
         "projects" => ["CMIP5", "CMIP6"],
         #"models" => model_members_lgm,
-        "timerange" => ["full"],
         "subdirs" => ["20241121", "20241118"] # if dir_per_var is true only subdirs containing any are considered
     )
 );
