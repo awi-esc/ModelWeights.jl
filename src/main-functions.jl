@@ -45,45 +45,47 @@ Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
 combination of variable and diagnostic.
 """
 function computeWeights(
-    model_data::Data, obs_data::Data, config_weights::ConfigWeights
+    model_data::Data, obs_data::Data, config::ConfigWeights
 )
-    # TODO: add check that for model ids there is a matching observational id
-    # make sure that weights (for diagnostic+variables) are normalized
-    weights_perform = normalizeWeightsVariables(config_weights.performance)    
-    weights_indep = normalizeWeightsVariables(config_weights.independence)
+    weights_perform = normalizeWeightsVariables(config.performance)  
+    weights_indep = normalizeWeightsVariables(config.independence)
+    
+    if !dataPresentForConfigWeights(model_data, obs_data, weights_perform) ||
+        !dataPresentForConfigWeights(model_data, obs_data, weights_indep)
+        throw(ArgumentError("Weights provided for combination of variables and diagnostic for which no data is provided!"))
+    end
 
-    distances_perform_all = computeDistancesAllDiagnostics(
-        model_data, obs_data, collect(keys(config_weights.performance)), true
+    dists_perform_all = computeDistancesAllDiagnostics(
+        model_data, obs_data, collect(keys(config.performance)), true
     )
-    distances_indep_all = computeDistancesAllDiagnostics(
-        model_data, obs_data, collect(keys(config_weights.independence)), false
+    dists_indep_all = computeDistancesAllDiagnostics(
+        model_data, obs_data, collect(keys(config.independence)), false
     )
-    Di = computeGeneralizedDistances(distances_perform_all, weights_perform, true)
-    Sij = computeGeneralizedDistances(distances_indep_all, weights_indep, false)
+    Di = computeGeneralizedDistances(dists_perform_all, weights_perform, true)
+    Sij = computeGeneralizedDistances(dists_indep_all, weights_indep, false)
 
-    performances = performanceParts(Di, config_weights.sigma_performance)
-    independences = independenceParts(Sij, config_weights.sigma_independence)
+    performances = performanceParts(Di, config.sigma_performance)
+    independences = independenceParts(Sij, config.sigma_independence)
     weights = performances ./ independences;
     weights = weights ./ sum(weights);
     # TODO: add metadata
-    #weights.metadata["name_ref_period"] = config_weights.ref_period  
+    #weights.metadata["name_ref_period"] = config.ref_period  
     wP = performances ./ sum(performances)
     wI = independences ./ sum(independences)
-    #w = wP./wI # just for sanity check
 
     climwip_weights =  ClimwipWeights(
-        performance_distances = distances_perform_all,
-        independence_distances = distances_indep_all, 
+        performance_distances = dists_perform_all,
+        independence_distances = dists_indep_all, 
         Di = Di,
         Sij = Sij,
         wP = wP,
         wI = wI,
         w =  weights
-        #overall = w./sum(w), # just for sanity check
+        #overall = (wP./wI)./sum(wP./wI), # just for sanity check
     )
     logWeights(weights.metadata);
-    if !isempty(config_weights.target_dir)
-        saveWeights(climwip_weights, config_weights.target_dir)
+    if !isempty(config.target_dir)
+        saveWeights(climwip_weights, config.target_dir)
     end
     return climwip_weights
 end

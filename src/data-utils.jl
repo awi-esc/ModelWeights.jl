@@ -433,17 +433,21 @@ function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{
     
     # check for compatibility of timerange and alias first
     timerange_constraints = get(subset, "timerange", Vector{String}())
-    timerangeOk(id::DataID) = any(x -> id.timerange == x, timerange_constraints)
-    filter!(timerangeOk, ids)
-    if isempty(ids)
-        throw(ArgumentError("Timeranges $(timerange_constraints) not present in data"))
+    if !isempty(timerange_constraints)
+        timerangeOk(id::DataID) = any(x -> id.timerange == x, timerange_constraints)
+        filter!(timerangeOk, ids)
+        if isempty(ids)
+            throw(ArgumentError("Timeranges $(timerange_constraints) not present in data"))
+        end
     end
 
     alias_constraints = get(subset, "alias", Vector{String}())
-    aliasOk(id::DataID) = any(x -> id.alias == x, alias_constraints)
-    filter!(aliasOk, ids)
-    if isempty(ids)
-        throw(ArgumentError("Aliases $(alias_constraints) not present or not compatible with given timeranges $(timerange_constraints)"))
+    if !isempty(alias_constraints)
+        aliasOk(id::DataID) = any(x -> id.alias == x, alias_constraints)
+        filter!(aliasOk, ids)
+        if isempty(ids)
+            throw(ArgumentError("Aliases $(alias_constraints) not present or not compatible with given timeranges $(timerange_constraints)"))
+        end
     end
 
     fields = filter(x -> !(x in [:key, :timerange, :alias]), fieldnames(DataID))
@@ -474,7 +478,7 @@ end
 function computeDistancesAllDiagnostics(
     model_data::Data, obs_data::Data, var_diagnostic_keys::Vector{String}, forPerformance::Bool
 )
-    # compute performance/independence distances for all models and ensemble members
+    # compute performance/independence distances for all model members
     diagnostics = unique(map(x -> split(x, "_")[2], var_diagnostic_keys))
     distances_all = []
     for diagnostic in diagnostics
@@ -520,3 +524,35 @@ function computeGeneralizedDistances(distances_all::DimArray, weights::DimArray,
     )
 end
 
+
+function allcombinations(v...)
+    combis = []
+    for elems in Iterators.product(v...)
+        push!(combis, join(elems, "_"))
+    end
+    return combis
+end
+
+
+"""
+    configWeightsMatchData(
+    model_data::Data, obs_data::Data, weights::DimArray
+)
+
+Check that there is observational and model data for all variable + diagnostic 
+combinations for which there are weights ≠ 0. 
+
+# Arguments:
+- `model_data`:
+- `obs_data`:
+- `weights`: normalized weights that are assumed to be > 0
+"""
+function dataPresentForConfigWeights(
+    model_data::Data, obs_data::Data, weights::DimArray
+)
+    model_ids = map(x -> join([x.variable, x.statistic], "_"), model_data.ids)
+    obs_ids = map(x -> join([x.variable, x.statistic], "_"), obs_data.ids)
+    
+    keys_weights = allcombinations(dims(weights, :variable), dims(weights, :diagnostic))
+    return all(x -> x in model_ids && x in obs_ids, keys_weights)
+end

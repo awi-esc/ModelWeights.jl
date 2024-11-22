@@ -100,9 +100,9 @@ end
 
 
 """
-    normalizeWeightsVariables(weightsVars::Dict{String, Number})
+    normalizeWeightsVariables(weights_dict::Dict{String, Number})
 
-Normalize weights for each combination of variable and diagnostic, s.t. weights 
+Normalize weights for combinations of variable and diagnostic such that they 
 sum up to 1.
 
 # Arguments:
