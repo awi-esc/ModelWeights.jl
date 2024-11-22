@@ -297,7 +297,7 @@ function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.Dim
     attributes = filter(x -> meta[x] isa Vector, keys(meta))
     attribs_diff_across_members = [];
     # iterate over attributes that are vectors, thus different for the different 
-    # models or ensembles
+    # members or models
     for key in attributes
         for (i, model) in enumerate(dims(grouped_data, :model))
             indices = meta["model_to_member_indices"][model]

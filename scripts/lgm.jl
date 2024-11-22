@@ -33,9 +33,10 @@ model_data_historical = sw.loadData(
     subset = Dict(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
-        "alias" => ["historical"],
+        "alias" => ["historical4"],
         "projects" => ["CMIP5", "CMIP6"],
-        "models" => model_members_lgm,
+        #"models" => model_members_lgm,
+        "timerange" => ["full"],
         "subdirs" => ["20241121", "20241118"] # if dir_per_var is true only subdirs containing any are considered
     )
 );
@@ -78,7 +79,7 @@ sw.saveWeights(weights, target_dir; target_fn = target_fn)
 
 
 # 4. Plot weights/generalized distances
-path_weights = joinpath(target_dir, target_fn)
+path_weights = joinpath(target_dir, target_fn);
 ds_weights = NCDataset(path_weights);
 
 wP = sw.loadWeightsAsDimArray(ds_weights, "wP");
@@ -105,7 +106,7 @@ figs[1]
 # 5. apply weights
 # model weights are for ensembles, not unique ensemble members! Which means 
 # that model predictions also have to be for ensembles, not members!
-lgm_tas_data = sw.summarizeEnsembleMembersVector(lgm_data.data["tas_CLIM_lgm"], true)
+lgm_tas_data = sw.summarizeEnsembleMembersVector(model_data_lgm.data["tas_CLIM_lgm"], true)
 weighted_means = sw.computeWeightedAvg(lgm_tas_data; weights=weights.w)
 means = sw.computeWeightedAvg(lgm_tas_data)
 sw.plotMeansOnMap(means, "unweighted average LGM: tas_CLIM")

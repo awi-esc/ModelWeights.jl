@@ -136,7 +136,6 @@ function loadPreprocData(
     if !isdir(path_data)
         throw(ArgumentError(path_data * " does not exist!"))
     end
-
     if isnothing(get(subset, "projects", nothing))
         subset["projects"] = isModelData ? ["CMIP"] : ["ERA5"]
     end
@@ -192,10 +191,10 @@ function loadPreprocData(
                     attributes = merge(attributes, Dict(deepcopy(sector.attrib)));
                 end
             end
-            if warnIfFlawedMetadata(attributes, filename)
-                nbIgnored += 1;
-                continue
-            end
+            # if warnIfFlawedMetadata(attributes, filename)
+            #     nbIgnored += 1;
+            #     continue
+            # end
             # add mip_era for models since it is not provided in CMIP5-models
             name = ""
             if isModelData
@@ -335,7 +334,8 @@ function loadData(
                 filter!(p -> any([occursin(name, p) for name in subdirs]), path_to_subdirs)
             end
             if length(path_to_subdirs) > 1
-                @info "Data for variable $(id.key) considered from subdirectories:" path_to_subdirs
+                fnames = map(basename, path_to_subdirs)
+                @info "Data for variable $(id.key) considered from files:" fnames
             end
         end
         for path_dir in path_to_subdirs

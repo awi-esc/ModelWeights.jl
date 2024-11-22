@@ -8,7 +8,7 @@
 - `isBarPlot`: if true barplot, else scatter plot returned
 """
 function plotPerformanceWeights(
-    wP::DimArray; label::String="Performance Weight", isBarPlot::Bool=true, dimname::String="ensemble"
+    wP::DimArray; label::String="Performance Weight", isBarPlot::Bool=true, dimname::String="model"
 )
     figures = [];
     models = Array(dims(wP, Symbol(dimname)));
@@ -55,7 +55,7 @@ function plotPerformanceWeights(
 end
 
 
-function plotIndependenceWeights(distances::DimArray; dimname::String="ensemble")
+function plotIndependenceWeights(distances::DimArray; dimname::String="model")
     figures = []
     ensembles = collect(dims(distances, Symbol(dimname)))
     if hasdim(distances, :variable)
@@ -106,7 +106,7 @@ function plotWeightContributions(
     text!(
         Array(performance), 
         Array(independence), 
-        text = Array(dims(performance, :ensemble)), 
+        text = Array(dims(performance, :model)), 
         align = (:center, :top)
     )
     return fig
@@ -122,7 +122,7 @@ end
 """
 function plotWeights(weights::DimArray; title::String="")
     fig =  getFigure((16,8), 18);
-    models = Array(dims(weights, :ensemble))
+    models = Array(dims(weights, :model))
     ax = Axis(fig[1,1], 
               xlabel = "Models", 
               ylabel = "weights",
