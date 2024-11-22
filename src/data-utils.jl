@@ -433,21 +433,20 @@ function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{
     
     # check for compatibility of timerange and alias first
     timerange_constraints = get(subset, "timerange", Vector{String}())
-    if !isempty(timerange_constraints)
-        timerangeOk(id::DataID) = any(x -> id.timerange == x, timerange_constraints)
-        filter!(timerangeOk, ids)
-        if isempty(ids)
-            throw(ArgumentError("Timeranges $(timerange_constraints) not present in data"))
-        end
-    end
-
     alias_constraints = get(subset, "alias", Vector{String}())
-    if !isempty(alias_constraints)
-        aliasOk(id::DataID) = any(x -> id.alias == x, alias_constraints)
-        filter!(aliasOk, ids)
+    timerangeOk(id::DataID) = any(x -> id.timerange == x, timerange_constraints)
+    aliasOk(id::DataID) = any(x -> id.alias == x, alias_constraints)
+    
+    if !isempty(timerange_constraints) && !isempty(alias_constraints)
+        filter!(x -> timerangeOk(x) || aliasOk(x), ids)
         if isempty(ids)
-            throw(ArgumentError("Aliases $(alias_constraints) not present or not compatible with given timeranges $(timerange_constraints)"))
+            msg = "Neither timeranges $(timerange_constraints) nor aliases $(alias_constraints) found in data!"
+            throw(ArgumentError(msg))
         end
+    elseif !isempty(timerange_constraints)
+        filter!(timerangeOk, ids)
+    elseif !isempty(alias_constraints)
+        filter!(aliasOk, ids)
     end
 
     fields = filter(x -> !(x in [:key, :timerange, :alias]), fieldnames(DataID))
