@@ -37,380 +37,292 @@ diagnostics:
         mip: Omon
         mip_era: CMIP5
         exp: historical
-      tos_CLIM-mon:
-        short_name: tos
-        preprocessor: climatological_monthly_mean
-        variable_long_name: Sea Surface Temperature
-        mip: Omon
-        mip_era: CMIP5
-        exp: historical
+        project: CMIP5
     scripts: null
     additional_datasets:
     - dataset: ACCESS1-0
       ensemble: r1i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20140305
     - dataset: ACCESS1-0
       ensemble: r3i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20140402
     - dataset: ACCESS1-3
       ensemble: r2i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20121112
     - dataset: ACCESS1-3
       ensemble: r1i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20140305
     - dataset: ACCESS1-3
       ensemble: r3i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v3
     - dataset: CCSM4
       ensemble: r(1:6)i1p1
       institute: NCAR
-      project: CMIP5
       version: v20121128
     - dataset: CESM1-WACCM
       ensemble: r4i1p1
       institute: NSF-DOE-NCAR
-      project: CMIP5
       version: v20120905
     - dataset: CMCC-CESM
       ensemble: r1i1p1
       institute: CMCC
-      project: CMIP5
       version: v20170725
     - dataset: CMCC-CM
       ensemble: r1i1p1
       institute: CMCC
-      project: CMIP5
       version: v20170725
     - dataset: CMCC-CMS
       ensemble: r1i1p1
       institute: CMCC
-      project: CMIP5
       version: v20170725
     - dataset: CNRM-CM5
       ensemble: r(1:10)i1p1
       institute: CNRM-CERFACS
-      project: CMIP5
       version: v20130101
     - dataset: CNRM-CM5-2
       ensemble: r1i1p1
       institute: CNRM-CERFACS
-      project: CMIP5
       version: v20130401
     - dataset: CSIRO-Mk3-6-0
       ensemble: r(1:10)i1p1
       institute: CSIRO-QCCCE
-      project: CMIP5
       version: v20130205
     - dataset: CSIRO-Mk3L-1-2
       ensemble: r(1:3)i2p1
       institute: UNSW
-      project: CMIP5
       version: v20170728
     - dataset: EC-EARTH
       ensemble: r8i1p1
       institute: ICHEC
-      project: CMIP5
       version:
       - v20120502
       - v20130315
     - dataset: EC-EARTH
       ensemble: r1i1p1
       institute: ICHEC
-      project: CMIP5
       version:
       - v20120503
       - v20130315
     - dataset: EC-EARTH
       ensemble: r10i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20121002
     - dataset: EC-EARTH
       ensemble: r12i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20121107
     - dataset: EC-EARTH
       ensemble: r(2:3)i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r(5:6)i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r9i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r11i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r14i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
-    - dataset: ERA5
-      project: native6
-      type: reanaly
-      version: v1
-      tier: 3
     - dataset: FGOALS-g2
       ensemble: r1i1p1
       institute: LASG-CESS
-      project: CMIP5
       version: v20161204
     - dataset: FGOALS-s2
       ensemble: r(1:3)i1p1
       institute: LASG-IAP
-      project: CMIP5
       version: v20161204
     - dataset: FIO-ESM
       ensemble: r(1:3)i1p1
       institute: FIO
-      project: CMIP5
       version: v20120522
     - dataset: GFDL-CM2p1
       ensemble: r(1:10)i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20110601
     - dataset: GFDL-CM3
       ensemble: r(1:5)i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20110601
     - dataset: GFDL-ESM2G
       ensemble: r1i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20120820
     - dataset: GFDL-ESM2M
       ensemble: r1i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20130226
     - dataset: GISS-E2-H
       ensemble: r(1:6)i1p(1:3)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160426
     - dataset: GISS-E2-H-CC
       ensemble: r1i1p1
       institute: NASA-GISS
-      project: CMIP5
       version: v20160426
     - dataset: GISS-E2-R
       ensemble: r1i1p(1:2)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160502
     - dataset: GISS-E2-R
       ensemble: r1i1p(121:128)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160502
     - dataset: GISS-E2-R
       ensemble: r(1:6)i1p3
       institute: NASA-GISS
-      project: CMIP5
       version: v20160503
     - dataset: GISS-E2-R
       ensemble: r(2:6)i1p(1:2)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160503
     - dataset: GISS-E2-R-CC
       ensemble: r1i1p1
       institute: NASA-GISS
-      project: CMIP5
       version: v20160502
     - dataset: HadCM3
       ensemble: r(1:2)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r4i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r(6:7)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r(9:10)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r3i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110905
     - dataset: HadCM3
       ensemble: r5i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110905
     - dataset: HadCM3
       ensemble: r8i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110905
     - dataset: HadGEM2-AO
       ensemble: r1i1p1
       institute: NIMR-KMA
-      project: CMIP5
       version: v20130815
     - dataset: HadGEM2-ES
       ensemble: r5i1p1
       institute: INPE
-      project: CMIP5
       version: v20130312
     - dataset: HadGEM2-ES
       ensemble: r1i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110916
     - dataset: HadGEM2-ES
       ensemble: r2i1p1
       institute: MOHC
-      project: CMIP5
       version: v20111217
     - dataset: HadGEM2-ES
       ensemble: r(3:4)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20111218
     - dataset: IPSL-CM5A-LR
       ensemble: r(1:5)i1p1
       institute: IPSL
-      project: CMIP5
       version: v20111119
     - dataset: IPSL-CM5A-LR
       ensemble: r6i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120526
     - dataset: IPSL-CM5A-MR
       ensemble: r1i1p1
       institute: IPSL
-      project: CMIP5
       version: v20111119
     - dataset: IPSL-CM5A-MR
       ensemble: r2i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120430
     - dataset: IPSL-CM5A-MR
       ensemble: r3i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120804
     - dataset: IPSL-CM5B-LR
       ensemble: r1i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120430
     - dataset: MIROC-ESM
       ensemble: r(1:3)i1p1
       institute: MIROC
-      project: CMIP5
       version: v20130712
     - dataset: MIROC-ESM-CHEM
       ensemble: r1i1p1
       institute: MIROC
-      project: CMIP5
       version: v20140117
     - dataset: MIROC5
       ensemble: r(1:5)i1p1
       institute: MIROC
-      project: CMIP5
       version: v20131009
     - dataset: MPI-ESM-LR
       ensemble: r(1:3)i1p1
       institute: MPI-M
-      project: CMIP5
       version: v20120625
     - dataset: MPI-ESM-MR
       ensemble: r(1:3)i1p1
       institute: MPI-M
-      project: CMIP5
       version: v20120625
     - dataset: MPI-ESM-P
       ensemble: r(1:2)i1p1
       institute: MPI-M
-      project: CMIP5
       version: v20120625
     - dataset: MRI-CGCM3
       ensemble: r(1:3)i1p1
       institute: MRI
-      project: CMIP5
       version: v20120510
     - dataset: MRI-CGCM3
       ensemble: r(4:5)i1p2
       institute: MRI
-      project: CMIP5
       version: v20120510
     - dataset: MRI-ESM1
       ensemble: r1i1p1
       institute: MRI
-      project: CMIP5
       version: v20130307
     - dataset: NorESM1-M
       ensemble: r(1:3)i1p1
       institute: NCC
-      project: CMIP5
       version: v20110901
     - dataset: NorESM1-ME
       ensemble: r1i1p1
       institute: NCC
-      project: CMIP5
       version: v20120225
     - dataset: NorESM1-ME
       ensemble: r1i1p2
       institute: NCC
-      project: CMIP5
       version: v20140327
     - dataset: bcc-csm1-1
       ensemble: r(1:3)i1p1
       institute: BCC
-      project: CMIP5
       version: v20130329
     - dataset: bcc-csm1-1-m
       ensemble: r(1:3)i1p1
       institute: BCC
-      project: CMIP5
       version: v20120709
-    - dataset: fio-esm
-      ensemble: r1i1p1
-      institute: FIO
-      project: CMIP5
-      version:
-      - v20120522
-      - v20130717
     - dataset: inmcm4
       ensemble: r1i1p1
       institute: INM
-      project: CMIP5
       version: v20110323
   historical0:
     variables:
@@ -618,12 +530,6 @@ diagnostics:
       ensemble: r(1:3)i1p1
       institute: BCC
       version: v20120709
-    - dataset: fio-esm
-      ensemble: r1i1p1
-      institute: FIO
-      version:
-      - v20120522
-      - v20130717
     - dataset: inmcm4
       ensemble: r1i1p1
       institute: INM
@@ -637,372 +543,285 @@ diagnostics:
         mip: Omon
         mip_era: CMIP5
         exp: historical
-        timerange: 1951/1980
-      tos_CLIM-mon:
-        short_name: tos
-        preprocessor: climatological_monthly_mean
-        variable_long_name: Sea Surface Temperature
-        mip: Omon
-        mip_era: CMIP5
-        exp: historical
+        project: CMIP5
         timerange: 1951/1980
     scripts: null
     additional_datasets:
     - dataset: ACCESS1-0
       ensemble: r1i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20140305
     - dataset: ACCESS1-0
       ensemble: r3i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20140402
     - dataset: ACCESS1-3
       ensemble: r2i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20121112
     - dataset: ACCESS1-3
       ensemble: r1i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20140305
     - dataset: ACCESS1-3
       ensemble: r3i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v3
     - dataset: CCSM4
       ensemble: r(1:6)i1p1
       institute: NCAR
-      project: CMIP5
       version: v20121128
     - dataset: CMCC-CESM
       ensemble: r1i1p1
       institute: CMCC
-      project: CMIP5
       version: v20170725
     - dataset: CMCC-CM
       ensemble: r1i1p1
       institute: CMCC
-      project: CMIP5
       version: v20170725
     - dataset: CMCC-CMS
       ensemble: r1i1p1
       institute: CMCC
-      project: CMIP5
       version: v20170725
     - dataset: CNRM-CM5
       ensemble: r(1:10)i1p1
       institute: CNRM-CERFACS
-      project: CMIP5
       version: v20130101
     - dataset: CNRM-CM5-2
       ensemble: r1i1p1
       institute: CNRM-CERFACS
-      project: CMIP5
       version: v20130401
     - dataset: CSIRO-Mk3-6-0
       ensemble: r(1:10)i1p1
       institute: CSIRO-QCCCE
-      project: CMIP5
       version: v20130205
     - dataset: CSIRO-Mk3L-1-2
       ensemble: r(1:3)i2p1
       institute: UNSW
-      project: CMIP5
       version: v20170728
     - dataset: EC-EARTH
       ensemble: r8i1p1
       institute: ICHEC
-      project: CMIP5
       version:
       - v20120502
       - v20130315
     - dataset: EC-EARTH
       ensemble: r1i1p1
       institute: ICHEC
-      project: CMIP5
       version:
       - v20120503
       - v20130315
     - dataset: EC-EARTH
       ensemble: r10i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20121002
     - dataset: EC-EARTH
       ensemble: r12i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20121107
     - dataset: EC-EARTH
       ensemble: r(2:3)i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r(5:7)i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r9i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r11i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r14i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
-    - dataset: ERA5
-      project: native6
-      type: reanaly
-      version: v1
-      tier: 3
     - dataset: FGOALS-g2
       ensemble: r1i1p1
       institute: LASG-CESS
-      project: CMIP5
       version: v20161204
     - dataset: FGOALS-s2
       ensemble: r(1:3)i1p1
       institute: LASG-IAP
-      project: CMIP5
       version: v20161204
     - dataset: FIO-ESM
       ensemble: r(1:3)i1p1
       institute: FIO
-      project: CMIP5
       version: v20120522
     - dataset: GFDL-CM2p1
       ensemble: r(1:10)i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20110601
     - dataset: GFDL-CM3
       ensemble: r(1:5)i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20110601
     - dataset: GFDL-ESM2G
       ensemble: r1i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20120820
     - dataset: GFDL-ESM2M
       ensemble: r1i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20130226
     - dataset: GISS-E2-H
       ensemble: r(1:6)i1p(1:3)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160426
     - dataset: GISS-E2-H-CC
       ensemble: r1i1p1
       institute: NASA-GISS
-      project: CMIP5
       version: v20160426
     - dataset: GISS-E2-R
       ensemble: r1i1p(1:2)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160502
     - dataset: GISS-E2-R
       ensemble: r1i1p(121:128)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160502
     - dataset: GISS-E2-R
       ensemble: r(1:6)i1p3
       institute: NASA-GISS
-      project: CMIP5
       version: v20160503
     - dataset: GISS-E2-R
       ensemble: r(2:6)i1p(1:2)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160503
     - dataset: GISS-E2-R-CC
       ensemble: r1i1p1
       institute: NASA-GISS
-      project: CMIP5
       version: v20160502
     - dataset: HadCM3
       ensemble: r(1:2)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r4i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r(6:7)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r(9:10)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r3i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110905
     - dataset: HadCM3
       ensemble: r5i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110905
     - dataset: HadCM3
       ensemble: r8i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110905
     - dataset: HadGEM2-AO
       ensemble: r1i1p1
       institute: NIMR-KMA
-      project: CMIP5
       version: v20130815
     - dataset: HadGEM2-ES
       ensemble: r5i1p1
       institute: INPE
-      project: CMIP5
       version: v20130312
     - dataset: HadGEM2-ES
       ensemble: r1i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110916
     - dataset: HadGEM2-ES
       ensemble: r2i1p1
       institute: MOHC
-      project: CMIP5
       version: v20111217
     - dataset: HadGEM2-ES
       ensemble: r(3:4)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20111218
     - dataset: IPSL-CM5A-LR
       ensemble: r(1:5)i1p1
       institute: IPSL
-      project: CMIP5
       version: v20111119
     - dataset: IPSL-CM5A-LR
       ensemble: r6i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120526
     - dataset: IPSL-CM5A-MR
       ensemble: r1i1p1
       institute: IPSL
-      project: CMIP5
       version: v20111119
     - dataset: IPSL-CM5A-MR
       ensemble: r2i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120430
     - dataset: IPSL-CM5A-MR
       ensemble: r3i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120804
     - dataset: IPSL-CM5B-LR
       ensemble: r1i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120430
     - dataset: MIROC-ESM
       ensemble: r(1:3)i1p1
       institute: MIROC
-      project: CMIP5
       version: v20130712
     - dataset: MIROC-ESM-CHEM
       ensemble: r1i1p1
       institute: MIROC
-      project: CMIP5
       version: v20140117
     - dataset: MIROC5
       ensemble: r(1:5)i1p1
       institute: MIROC
-      project: CMIP5
       version: v20131009
     - dataset: MPI-ESM-LR
       ensemble: r(1:3)i1p1
       institute: MPI-M
-      project: CMIP5
       version: v20120625
     - dataset: MPI-ESM-MR
       ensemble: r(1:3)i1p1
       institute: MPI-M
-      project: CMIP5
       version: v20120625
     - dataset: MPI-ESM-P
       ensemble: r(1:2)i1p1
       institute: MPI-M
-      project: CMIP5
       version: v20120625
     - dataset: MRI-CGCM3
       ensemble: r(1:3)i1p1
       institute: MRI
-      project: CMIP5
       version: v20120510
     - dataset: MRI-CGCM3
       ensemble: r(4:5)i1p2
       institute: MRI
-      project: CMIP5
       version: v20120510
     - dataset: NorESM1-M
       ensemble: r(1:3)i1p1
       institute: NCC
-      project: CMIP5
       version: v20110901
     - dataset: NorESM1-ME
       ensemble: r1i1p1
       institute: NCC
-      project: CMIP5
       version: v20120225
     - dataset: NorESM1-ME
       ensemble: r1i1p2
       institute: NCC
-      project: CMIP5
       version: v20140327
     - dataset: bcc-csm1-1
       ensemble: r(1:3)i1p1
       institute: BCC
-      project: CMIP5
       version: v20130329
     - dataset: bcc-csm1-1-m
       ensemble: r(1:3)i1p1
       institute: BCC
-      project: CMIP5
       version: v20120709
-    - dataset: fio-esm
-      ensemble: r1i1p1
-      institute: FIO
-      project: CMIP5
-      version:
-      - v20120522
-      - v20130717
     - dataset: inmcm4
       ensemble: r1i1p1
       institute: INM
-      project: CMIP5
       version: v20110323
   historical2:
     variables:
@@ -1013,382 +832,293 @@ diagnostics:
         mip: Omon
         mip_era: CMIP5
         exp: historical
-        timerange: 1961/1990
-      tos_CLIM-mon:
-        short_name: tos
-        preprocessor: climatological_monthly_mean
-        variable_long_name: Sea Surface Temperature
-        mip: Omon
-        mip_era: CMIP5
-        exp: historical
+        project: CMIP5
         timerange: 1961/1990
     scripts: null
     additional_datasets:
     - dataset: ACCESS1-0
       ensemble: r1i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20140305
     - dataset: ACCESS1-0
       ensemble: r3i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20140402
     - dataset: ACCESS1-3
       ensemble: r2i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20121112
     - dataset: ACCESS1-3
       ensemble: r1i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v20140305
     - dataset: ACCESS1-3
       ensemble: r3i1p1
       institute: CSIRO-BOM
-      project: CMIP5
       version: v3
     - dataset: CCSM4
       ensemble: r(1:6)i1p1
       institute: NCAR
-      project: CMIP5
       version: v20121128
     - dataset: CESM1-WACCM
       ensemble: r4i1p1
       institute: NSF-DOE-NCAR
-      project: CMIP5
       version: v20120905
     - dataset: CMCC-CESM
       ensemble: r1i1p1
       institute: CMCC
-      project: CMIP5
       version: v20170725
     - dataset: CMCC-CM
       ensemble: r1i1p1
       institute: CMCC
-      project: CMIP5
       version: v20170725
     - dataset: CMCC-CMS
       ensemble: r1i1p1
       institute: CMCC
-      project: CMIP5
       version: v20170725
     - dataset: CNRM-CM5
       ensemble: r(1:10)i1p1
       institute: CNRM-CERFACS
-      project: CMIP5
       version: v20130101
     - dataset: CNRM-CM5-2
       ensemble: r1i1p1
       institute: CNRM-CERFACS
-      project: CMIP5
       version: v20130401
     - dataset: CSIRO-Mk3-6-0
       ensemble: r(1:10)i1p1
       institute: CSIRO-QCCCE
-      project: CMIP5
       version: v20130205
     - dataset: CSIRO-Mk3L-1-2
       ensemble: r(1:3)i2p1
       institute: UNSW
-      project: CMIP5
       version: v20170728
     - dataset: EC-EARTH
       ensemble: r8i1p1
       institute: ICHEC
-      project: CMIP5
       version:
       - v20120502
       - v20130315
     - dataset: EC-EARTH
       ensemble: r1i1p1
       institute: ICHEC
-      project: CMIP5
       version:
       - v20120503
       - v20130315
     - dataset: EC-EARTH
       ensemble: r10i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20121002
     - dataset: EC-EARTH
       ensemble: r12i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20121107
     - dataset: EC-EARTH
       ensemble: r(2:3)i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r(5:7)i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r9i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r11i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
     - dataset: EC-EARTH
       ensemble: r14i1p1
       institute: ICHEC
-      project: CMIP5
       version: v20171115
-    - dataset: ERA5
-      project: native6
-      type: reanaly
-      version: v1
-      tier: 3
     - dataset: FGOALS-g2
       ensemble: r1i1p1
       institute: LASG-CESS
-      project: CMIP5
       version: v20161204
     - dataset: FGOALS-s2
       ensemble: r(1:3)i1p1
       institute: LASG-IAP
-      project: CMIP5
       version: v20161204
     - dataset: FIO-ESM
       ensemble: r(1:3)i1p1
       institute: FIO
-      project: CMIP5
       version: v20120522
     - dataset: GFDL-CM2p1
       ensemble: r(1:10)i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20110601
     - dataset: GFDL-CM3
       ensemble: r(1:5)i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20110601
     - dataset: GFDL-ESM2G
       ensemble: r1i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20120820
     - dataset: GFDL-ESM2M
       ensemble: r1i1p1
       institute: NOAA-GFDL
-      project: CMIP5
       version: v20130226
     - dataset: GISS-E2-H
       ensemble: r(1:6)i1p(1:3)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160426
     - dataset: GISS-E2-H-CC
       ensemble: r1i1p1
       institute: NASA-GISS
-      project: CMIP5
       version: v20160426
     - dataset: GISS-E2-R
       ensemble: r1i1p(1:2)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160502
     - dataset: GISS-E2-R
       ensemble: r1i1p(121:128)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160502
     - dataset: GISS-E2-R
       ensemble: r(1:6)i1p3
       institute: NASA-GISS
-      project: CMIP5
       version: v20160503
     - dataset: GISS-E2-R
       ensemble: r(2:6)i1p(1:2)
       institute: NASA-GISS
-      project: CMIP5
       version: v20160503
     - dataset: GISS-E2-R-CC
       ensemble: r1i1p1
       institute: NASA-GISS
-      project: CMIP5
       version: v20160502
     - dataset: HadCM3
       ensemble: r(1:2)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r4i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r(6:7)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r(9:10)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110728
     - dataset: HadCM3
       ensemble: r3i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110905
     - dataset: HadCM3
       ensemble: r5i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110905
     - dataset: HadCM3
       ensemble: r8i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110905
     - dataset: HadGEM2-AO
       ensemble: r1i1p1
       institute: NIMR-KMA
-      project: CMIP5
       version: v20130815
     - dataset: HadGEM2-ES
       ensemble: r5i1p1
       institute: INPE
-      project: CMIP5
       version: v20130312
     - dataset: HadGEM2-ES
       ensemble: r1i1p1
       institute: MOHC
-      project: CMIP5
       version: v20110916
     - dataset: HadGEM2-ES
       ensemble: r2i1p1
       institute: MOHC
-      project: CMIP5
       version: v20111217
     - dataset: HadGEM2-ES
       ensemble: r(3:4)i1p1
       institute: MOHC
-      project: CMIP5
       version: v20111218
     - dataset: IPSL-CM5A-LR
       ensemble: r(1:5)i1p1
       institute: IPSL
-      project: CMIP5
       version: v20111119
     - dataset: IPSL-CM5A-LR
       ensemble: r6i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120526
     - dataset: IPSL-CM5A-MR
       ensemble: r1i1p1
       institute: IPSL
-      project: CMIP5
       version: v20111119
     - dataset: IPSL-CM5A-MR
       ensemble: r2i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120430
     - dataset: IPSL-CM5A-MR
       ensemble: r3i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120804
     - dataset: IPSL-CM5B-LR
       ensemble: r1i1p1
       institute: IPSL
-      project: CMIP5
       version: v20120430
     - dataset: MIROC-ESM
       ensemble: r(1:3)i1p1
       institute: MIROC
-      project: CMIP5
       version: v20130712
     - dataset: MIROC-ESM-CHEM
       ensemble: r1i1p1
       institute: MIROC
-      project: CMIP5
       version: v20140117
     - dataset: MIROC5
       ensemble: r(1:5)i1p1
       institute: MIROC
-      project: CMIP5
       version: v20131009
     - dataset: MPI-ESM-LR
       ensemble: r(1:3)i1p1
       institute: MPI-M
-      project: CMIP5
       version: v20120625
     - dataset: MPI-ESM-MR
       ensemble: r(1:3)i1p1
       institute: MPI-M
-      project: CMIP5
       version: v20120625
     - dataset: MPI-ESM-P
       ensemble: r(1:2)i1p1
       institute: MPI-M
-      project: CMIP5
       version: v20120625
     - dataset: MRI-CGCM3
       ensemble: r(1:3)i1p1
       institute: MRI
-      project: CMIP5
       version: v20120510
     - dataset: MRI-CGCM3
       ensemble: r(4:5)i1p2
       institute: MRI
-      project: CMIP5
       version: v20120510
     - dataset: MRI-ESM1
       ensemble: r1i1p1
       institute: MRI
-      project: CMIP5
       version: v20130307
     - dataset: NorESM1-M
       ensemble: r(1:3)i1p1
       institute: NCC
-      project: CMIP5
       version: v20110901
     - dataset: NorESM1-ME
       ensemble: r1i1p1
       institute: NCC
-      project: CMIP5
       version: v20120225
     - dataset: NorESM1-ME
       ensemble: r1i1p2
       institute: NCC
-      project: CMIP5
       version: v20140327
     - dataset: bcc-csm1-1
       ensemble: r(1:3)i1p1
       institute: BCC
-      project: CMIP5
       version: v20130329
     - dataset: bcc-csm1-1-m
       ensemble: r(1:3)i1p1
       institute: BCC
-      project: CMIP5
       version: v20120709
-    - dataset: fio-esm
-      ensemble: r1i1p1
-      institute: FIO
-      project: CMIP5
-      version:
-      - v20120522
-      - v20130717
     - dataset: inmcm4
       ensemble: r1i1p1
       institute: INM
-      project: CMIP5
       version: v20110323
   historical3:
     variables:
@@ -1399,25 +1129,29 @@ diagnostics:
         mip: Omon
         mip_era: CMIP5
         exp: historical
+        ensemble: r(1:10)i1p1
+        institute: NOAA-GFDL
+        project: CMIP5
         timerange: 1991/2014
-      tos_CLIM-mon:
+        version: v20110601
+    scripts: null
+    additional_datasets:
+    - dataset: GFDL-CM2p1
+  historical4:
+    variables:
+      tos_CLIM:
         short_name: tos
-        preprocessor: climatological_monthly_mean
+        preprocessor: climatological_mean
         variable_long_name: Sea Surface Temperature
         mip: Omon
         mip_era: CMIP5
         exp: historical
-        timerange: 1991/2014
+        ensemble: r(1:10)i1p1
+        institute: NOAA-GFDL
+        project: CMIP5
+        timerange: 1980/2014
+        version: v20110601
     scripts: null
     additional_datasets:
-    - dataset: ERA5
-      project: native6
-      type: reanaly
-      version: v1
-      tier: 3
     - dataset: GFDL-CM2p1
-      ensemble: r(1:10)i1p1
-      institute: NOAA-GFDL
-      project: CMIP5
-      version: v20110601
 datasets: []
