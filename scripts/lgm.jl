@@ -49,7 +49,7 @@ obs_data = sw.loadData(
     "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_20241119_124434",
     "/albedo/home/brgrus001/SimilarityWeights/configs/historical_obs";
     dir_per_var = false,
-    isModelData = false,
+    is_model_data = false,
     subset = Dict(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],

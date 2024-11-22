@@ -12,7 +12,7 @@ model_data = sw.loadData(
     base_path,
     config_path;
     dir_per_var=false,
-    isModelData=true,
+    is_model_data=true,
     common_models_across_vars=true,
     subset=Dict(
         #"variables" => Vector{String}(),
@@ -26,7 +26,7 @@ obs_data = sw.loadData(
     base_path,
     config_path;
     dir_per_var=false,
-    isModelData=false,
+    is_model_data=false,
     common_models_across_vars=true,
     subset=Dict("aliases" => ["calculate_weights_climwip"])
 );

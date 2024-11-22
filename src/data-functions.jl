@@ -114,7 +114,7 @@ end
     loadPreprocData(
         path_data::String;
         subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}(),
-        isModelData::Bool=true
+        is_model_data::Bool=true
     )
 
 # Arguments:
@@ -122,8 +122,8 @@ end
 of the respective experiment (see TODO for assumed data structure)
 - `subset`: dictionary with keys 'projects' and 'models'. Only data is loaded
 whose filenames contain ANY of the strings mapped to. If not specified, default 
-value for projects is ['CMIP'] when isModelData is true, else ['ERA5']. 
-- `isModelData`: observational and model data loaded seperately, 
+value for projects is ['CMIP'] when is_model_data is true, else ['ERA5']. 
+- `is_model_data`: observational and model data loaded seperately, 
 if true modelData, else observational data
 
 # Returns: DimArray or nothing
@@ -131,13 +131,13 @@ if true modelData, else observational data
 function loadPreprocData(
     path_data::String; 
     subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}(),
-    isModelData::Bool=true
+    is_model_data::Bool=true
 )
     if !isdir(path_data)
         throw(ArgumentError(path_data * " does not exist!"))
     end
     if isnothing(get(subset, "projects", nothing))
-        subset["projects"] = isModelData ? ["CMIP"] : ["ERA5"]
+        subset["projects"] = is_model_data ? ["CMIP"] : ["ERA5"]
     end
     data = []
     meta = Dict{String, Any}()
@@ -197,7 +197,7 @@ function loadPreprocData(
             # end
             # add mip_era for models since it is not provided in CMIP5-models
             name = ""
-            if isModelData
+            if is_model_data
                 model_key = getCMIPModelsKey(Dict(ds.attrib))
                 get!(attributes, "mip_era", "CMIP5")
                 name = ds.attrib[model_key]
@@ -254,9 +254,9 @@ function loadPreprocData(
             raw_data, 
             (dims(data[1])..., Dim{:source}(collect(skipmissing(source_names))))
         )
-        updateMetadata!(meta, source_names, isModelData);
+        updateMetadata!(meta, source_names, is_model_data);
         dimData = rebuild(dimData; metadata = meta);
-        if isModelData
+        if is_model_data
             # set dimension names, member refers to unique model members, 
             # model refers to 'big combined model', part of member name,
             # but additionally saved in metadata["model_names"]
@@ -282,7 +282,7 @@ end
         base_path::String, 
         config_path::String;
         dir_per_var::Bool=true,
-        isModelData::Bool=true,
+        is_model_data::Bool=true,
         common_models_across_vars::Bool=false,
         subset::Dict=Dict(),
     )
@@ -301,7 +301,7 @@ files with the following structure: TODO
 - `dir_per_var`: if true, directory at base_path has subdirectories, one for
 each variable (they must end with _ and the name of the variable), otherwise
 base_path is the path to the directory that contains a subdirectory 'preproc'
-- `isModelData`: set true for CMIP5/6 data, false for observational data
+- `is_model_data`: set true for CMIP5/6 data, false for observational data
 - `common_models_across_vars`:
 - `subset`: dictionary specifying the subset of data to be loaded, has keys
 'variables', 'statistics', 'aliases', each mapping to a vector of Strings
@@ -310,7 +310,7 @@ function loadData(
     base_path::String,
     config_path::String;
     dir_per_var::Bool=true,
-    isModelData::Bool=true,
+    is_model_data::Bool=true,
     common_models_across_vars::Bool=false,
     subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}()
 )
@@ -348,14 +348,14 @@ function loadData(
             end
             #print("processing...: " * path_data_dir)
             data = loadPreprocData(
-                path_data_dir; subset = constraints, isModelData = isModelData
+                path_data_dir; subset = constraints, is_model_data = is_model_data
             )
             if !isnothing(data)
                 previously_added_data = get(data_all, id.key, nothing)
                 if isnothing(previously_added_data)
                     data_all[id.key] = data
                 else
-                    dim = isModelData ? :member : :source
+                    dim = is_model_data ? :member : :source
                     prev_models = collect(dims(previously_added_data, dim))
                     new_models = collect(dims(data, dim))
                     joint_data = cat(
@@ -366,7 +366,7 @@ function loadData(
                     joint_meta = joinMetadata(
                         previously_added_data.metadata, 
                         data.metadata,
-                        isModelData
+                        is_model_data
                     )
                     data_all[id.key] = rebuild(joint_data; metadata = joint_meta)
                 end
@@ -375,7 +375,7 @@ function loadData(
     end
     result =  Data(base_path = base_path, ids = ids, data = data_all)
     @info "The following data was found and loaded: " result.ids
-    if isModelData && common_models_across_vars
+    if is_model_data && common_models_across_vars
         @info "only retain models shared across all variables"
         result = getCommonModelsAcrossVars(result, :member)
     end
