@@ -320,6 +320,7 @@ function loadData(
     constraints = filter(((k,v),) -> k in ["models", "projects"] , subset)
 
     data_all = Dict{String, DimArray}()
+    ids_all = Vector{DataID}()
     for id in ids
         path_to_subdirs = [base_path]
         # if dir_per_var is true, directory at base_path has subdirectories, 
@@ -368,11 +369,12 @@ function loadData(
                         is_model_data
                     )
                     data_all[id.key] = rebuild(joint_data; metadata = joint_meta)
+                    push!(ids_all, id)
                 end
             end
         end
     end
-    result =  Data(base_path = base_path, ids = ids, data = data_all)
+    result =  Data(base_path = base_path, ids = ids_all, data = data_all)
     @info "The following data was found and loaded: " result.ids
     if is_model_data && common_models_across_vars
         @info "only retain models shared across all variables"
