@@ -52,14 +52,15 @@ function computeWeights(
     
     if !dataPresentForConfigWeights(model_data, obs_data, weights_perform) ||
         !dataPresentForConfigWeights(model_data, obs_data, weights_indep)
-        throw(ArgumentError("Weights provided for combination of variables and diagnostic for which no data is provided!"))
+        msg = "Weights provided for combination of variables and diagnostic for which no data is provided!"
+        throw(ArgumentError(msg))
     end
 
     dists_perform_all = computeDistancesAllDiagnostics(
-        model_data, obs_data, collect(keys(config.performance)), true
+        model_data, obs_data, config.performance, config.ref_period, true
     )
     dists_indep_all = computeDistancesAllDiagnostics(
-        model_data, obs_data, collect(keys(config.independence)), false
+        model_data, obs_data, config.independence, config.ref_period, false
     )
     Di = computeGeneralizedDistances(dists_perform_all, weights_perform, true)
     Sij = computeGeneralizedDistances(dists_indep_all, weights_indep, false)

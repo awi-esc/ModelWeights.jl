@@ -463,35 +463,32 @@ function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{
 end
 
 
-function indexData(data::Data, var_diagnostic_key::String)
-    data_dict = filter(((k, v),) -> occursin(var_diagnostic_key, k), data.data)
-    # check that only one dataset for combination of variable + diagnostic
-    if length(data_dict) > 1
-        var, diagnostic = split(var_diagnostic_key, "_")
-        key = first(keys(data_dict))
-        @warn "more than one dataset for $var and $diagnostic in model data, $key is taken!"
-    end
-    data = first(values(data_dict))
-    return data
+function indexData(data::Data, clim_var::String, diagnostic::String, ref_period::String)
+    data_key = join([clim_var, diagnostic, ref_period], "_")
+    return data.data[data_key]
 end
 
 
 function computeDistancesAllDiagnostics(
-    model_data::Data, obs_data::Data, var_diagnostic_keys::Vector{String}, forPerformance::Bool
+    model_data::Data, 
+    obs_data::Data, 
+    config::Dict{String, Number},
+    ref_period::String,
+    forPerformance::Bool
 )
     # compute performance/independence distances for all model members
-    diagnostics = unique(map(x -> split(x, "_")[2], var_diagnostic_keys))
+    var_diagnostic_keys = collect(keys(config))
+    diagnostics = String.(unique(map(x -> split(x, "_")[2], var_diagnostic_keys)))
     distances_all = []
     for diagnostic in diagnostics
         distances = []
         diagnostic_keys = filter(x -> endswith(x, "_" * diagnostic), var_diagnostic_keys)
-        variables = map(x -> split(x, "_")[1], diagnostic_keys)
-        for var in variables
-            k = var * "_" * diagnostic
-            models = indexData(model_data, k)
+        variables = String.(map(x -> split(x, "_")[1], diagnostic_keys))
+        for clim_var in variables
+            models = indexData(model_data, clim_var, diagnostic, ref_period)
             
             if forPerformance
-                observations = indexData(obs_data, k)
+                observations = indexData(obs_data, clim_var, diagnostic, ref_period)
                 if length(dims(observations, :source)) != 1
                     @warn "several observational datasets available for computing distances"
                 end
