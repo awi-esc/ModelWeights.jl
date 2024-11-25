@@ -369,8 +369,8 @@ function loadData(
                         is_model_data
                     )
                     data_all[id.key] = rebuild(joint_data; metadata = joint_meta)
-                    push!(ids_all, id)
                 end
+                push!(ids_all, id)
             end
         end
     end

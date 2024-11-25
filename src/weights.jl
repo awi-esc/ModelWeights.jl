@@ -136,7 +136,9 @@ end
 
 
 """ 
-    summarizeEnsembleMembersVector(data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean)
+    summarizeEnsembleMembersVector(
+        data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean
+)
 
 For each model and variable (if several given), compute the mean across all
 members of that model. Instead of 'member', the returned DimArray has
@@ -165,6 +167,9 @@ function summarizeEnsembleMembersVector(
     )
     combined = combined[model=At(sort(models))]
     combined = DimensionalData.Lookups.set(combined, model=l)
+
+    # the metadata model_to_member_indices dict doesn't make sense anymore
+    combined.metadata["model_to_member_indices"] = nothing
     return combined
 end
 

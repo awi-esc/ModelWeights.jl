@@ -310,7 +310,7 @@ function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.Dim
                 push!(attribs_diff_across_members, key)
             else
                 # members of current ensemble all share the same value
-                push!(vals, val_ensemble[1])
+                push!(vals, val_model[1])
             end
             meta_new["model_to_member_indices"][model] = i
         end
