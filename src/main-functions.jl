@@ -54,24 +54,26 @@ function computeWeights(
     keys_weights_perform = allcombinations(dims(weights_perform, :variable), dims(weights_perform, :diagnostic))
     keys_weights_indep = allcombinations(dims(weights_indep, :variable), dims(weights_indep, :diagnostic))
 
+
+    ref_period_alias = getRefPeriodAsAlias(config.ref_period)
     msg =  x -> "For computation of $x weights: Make sure that data is provided 
     for the given reference period ($(config.ref_period)) and combination of 
         variables and diagnostic for which (balance) weights were specified!"
-    if !isValidDataAndWeightInput(model_data, keys_weights_perform, config.ref_period)
+    if !isValidDataAndWeightInput(model_data, keys_weights_perform, ref_period_alias)
         throw(ArgumentError(msg("performance")))
     end
-    if !isValidDataAndWeightInput(obs_data, keys_weights_perform, config.ref_period)
+    if !isValidDataAndWeightInput(obs_data, keys_weights_perform, ref_period_alias)
         throw(ArgumentError(msg("performance")))
     end
-    if !isValidDataAndWeightInput(model_data, keys_weights_indep, config.ref_period)
+    if !isValidDataAndWeightInput(model_data, keys_weights_indep, ref_period_alias)
         throw(ArgumentError(msg("independence")))
     end
 
     dists_perform_all = computeDistancesAllDiagnostics(
-        model_data, obs_data, config.performance, config.ref_period, true
+        model_data, obs_data, config.performance, ref_period_alias, true
     )
     dists_indep_all = computeDistancesAllDiagnostics(
-        model_data, obs_data, config.independence, config.ref_period, false
+        model_data, obs_data, config.independence, ref_period_alias, false
     )
     Di = computeGeneralizedDistances(dists_perform_all, weights_perform, true)
     Sij = computeGeneralizedDistances(dists_indep_all, weights_indep, false)
@@ -80,10 +82,12 @@ function computeWeights(
     independences = independenceParts(Sij, config.sigma_independence)
     weights = performances ./ independences;
     weights = weights ./ sum(weights);
-    # TODO: add metadata
-    #weights.metadata["name_ref_period"] = config.ref_period  
-    wP = performances ./ sum(performances)
+    setRefPeriodInWeightsMetadata!(weights.metadata, config.ref_period, ref_period_alias)
+    
     wI = independences ./ sum(independences)
+    wP = performances ./ sum(performances)
+    setRefPeriodInWeightsMetadata!(wP.metadata, config.ref_period, ref_period_alias)
+
 
     climwip_weights =  ClimwipWeights(
         performance_distances = dists_perform_all,

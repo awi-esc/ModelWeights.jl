@@ -405,6 +405,11 @@ function buildDataIDsFromConfigs(config_path::String)
                     experiment = join(v["exp"], "-")
                 end
                 timerange = replace(get(v, "timerange", "full"), "/" => "-")
+
+                # save the mapping between timeranges and aliases globally
+                TIMERANGE_TO_ALIAS[timerange] = alias
+                ALIAS_TO_TIMERANGE[alias] = timerange
+
                 id = join([variable, statistic, alias], "_")
                 dataID = DataID(
                     key=id, 
@@ -548,4 +553,22 @@ function isValidDataAndWeightInput(data::Data, keys_weights::Vector{String}, ref
     ids = map(x -> x.key, data.ids)
     keys_data = map(x -> x * "_" * ref_period, keys_weights)
     return all([k in ids for k in keys_data])
+end
+
+
+function getRefPeriodAsAlias(ref_period::String)
+    return ref_period in keys(TIMERANGE_TO_ALIAS) ? TIMERANGE_TO_ALIAS[ref_period] : ref_period
+end
+
+
+function setRefPeriodInWeightsMetadata!(
+    meta::Dict, ref_period_orig::String, ref_period_alias::String
+)
+    meta["ref_period_alias"] = ref_period_alias
+    if ref_period_orig != ref_period_alias
+        meta["ref_period_timerange"] = ref_period_orig
+    else
+        meta["ref_period_timerange"] = ALIAS_TO_TIMERANGE[ref_period_orig]
+    end
+    return nothing
 end

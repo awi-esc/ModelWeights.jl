@@ -1,6 +1,9 @@
 module SimilarityWeights
 
 const MODEL_MEMBER_DELIM = "#"
+TIMERANGE_TO_ALIAS = Dict{String, String}()
+ALIAS_TO_TIMERANGE = Dict{String, String}()
+
 
 include("data-utils.jl")
 include("data-functions.jl")
@@ -9,6 +12,8 @@ include("weights.jl")
 include("plot-weights.jl")
 include("plot-data.jl")
 include("main-functions.jl")
+
+
 
 export loadData, loadPreprocData, computeWeights, getCommonModelsAcrossVars
 
