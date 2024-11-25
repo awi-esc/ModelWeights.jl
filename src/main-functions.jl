@@ -50,10 +50,21 @@ function computeWeights(
     weights_perform = normalizeWeightsVariables(config.performance)  
     weights_indep = normalizeWeightsVariables(config.independence)
     
-    if !dataPresentForConfigWeights(model_data, obs_data, weights_perform) ||
-        !dataPresentForConfigWeights(model_data, obs_data, weights_indep)
-        msg = "Weights provided for combination of variables and diagnostic for which no data is provided!"
-        throw(ArgumentError(msg))
+    # sanity checks for input arguments
+    keys_weights_perform = allcombinations(dims(weights_perform, :variable), dims(weights_perform, :diagnostic))
+    keys_weights_indep = allcombinations(dims(weights_indep, :variable), dims(weights_indep, :diagnostic))
+
+    msg =  x -> "For computation of $x weights: Make sure that data is provided 
+    for the given reference period ($(config.ref_period)) and combination of 
+        variables and diagnostic for which (balance) weights were specified!"
+    if !isValidDataAndWeightInput(model_data, keys_weights_perform, config.ref_period)
+        throw(ArgumentError(msg("performance")))
+    end
+    if !isValidDataAndWeightInput(obs_data, keys_weights_perform, config.ref_period)
+        throw(ArgumentError(msg("performance")))
+    end
+    if !isValidDataAndWeightInput(model_data, keys_weights_indep, config.ref_period)
+        throw(ArgumentError(msg("independence")))
     end
 
     dists_perform_all = computeDistancesAllDiagnostics(

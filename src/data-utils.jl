@@ -524,7 +524,7 @@ end
 
 
 function allcombinations(v...)
-    combis = []
+    combis = Vector{String}()
     for elems in Iterators.product(v...)
         push!(combis, join(elems, "_"))
     end
@@ -533,24 +533,19 @@ end
 
 
 """
-    configWeightsMatchData(
+    verifyDataAndWeightInput(
     model_data::Data, obs_data::Data, weights::DimArray
 )
 
-Check that there is observational and model data for all variable + diagnostic 
-combinations for which there are weights ≠ 0. 
+Check that there is data for all keys of the provided (balance) weights and the given reference period 'ref_period'.
 
 # Arguments:
-- `model_data`:
-- `obs_data`:
-- `weights`: normalized weights that are assumed to be > 0
+- `data`:
+- `keys_weights`:
+- `ref_period`:
 """
-function dataPresentForConfigWeights(
-    model_data::Data, obs_data::Data, weights::DimArray
-)
-    model_ids = map(x -> join([x.variable, x.statistic], "_"), model_data.ids)
-    obs_ids = map(x -> join([x.variable, x.statistic], "_"), obs_data.ids)
-    
-    keys_weights = allcombinations(dims(weights, :variable), dims(weights, :diagnostic))
-    return all(x -> x in model_ids && x in obs_ids, keys_weights)
+function isValidDataAndWeightInput(data::Data, keys_weights::Vector{String}, ref_period::String)
+    ids = map(x -> x.key, data.ids)
+    keys_data = map(x -> x * "_" * ref_period, keys_weights)
+    return all([k in ids for k in keys_data])
 end
