@@ -94,11 +94,13 @@ end
 
 Update metadata 'meta' s.t. data of ignored files is removed and attributes
 that were only present in some files/models are set to missing. Further keys
-are added: 'full_model_names' contains for every file/model the unique 
-identifier consisting of variant_label, grid_label (for CMIP6) and model_name, 
-'model_names' contains the names of the included models without the ensemble 
-member identifiers and 'model_to_member_indices' is a dictionary mapping from 
-model names to the indices of the respective ensemble members.
+are added:
+- 'member_names': contains for every file/model the unique 
+identifier consisting of variant_label, model_name and for CMIP6 models also grid_label.
+- 'model_names': contains the names of the included models without the ensemble 
+member identifiers.
+- 'model_to_member_indices' is a dictionary mapping from 
+model names to vectors containing the indices of the respective model members.
 
 Arguments:
 - `meta`:
@@ -276,7 +278,7 @@ function keepMetadataSubset!(meta::Dict, indices::Vector{Int64})
     for key in attributes
         meta[key] = meta[key][indices];
     end
-    meta["model_to_member_indices"] = getIndicesMapping(meta["member_names"])
+    meta["model_to_member_indices"] = getIndicesMapping(meta["model_names"])
     return nothing
 end
 

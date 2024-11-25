@@ -78,7 +78,7 @@ Return data in 'data' only from the models specified in `shared_models`.
 Takes care of metadata.
 """
 function subsetModelData(data::DimArray, shared_models::Vector{String})
-    dim_symbol = !hasdim(data, :model) ? :member : :model
+    dim_symbol = hasdim(data, :member) ? :member : :model
     indices = findall(m -> m in shared_models, collect(dims(data, dim_symbol)))
     @assert length(indices) == length(shared_models)
     keepMetadataSubset!(data.metadata, indices);
@@ -388,21 +388,21 @@ end
     
 
 """
-    getCommonModelsAcrossVars(modelData::Data, dim::Symbol)
+    getCommonModelsAcrossVars(model_data::Data, dim::Symbol)
 
-Return only those models (on level of ensemble members) for which there is 
-data for all variables.
+Return only those models for which there is data for all variables.
 
 # Arguments
-- `modelData`:
+- `model_data`:
+- `dim`: dimension name referring to level of model predictions; e.g., 'member' or 'model'
 """
-function getCommonModelsAcrossVars(modelData::Data, dim::Symbol)
-    data_all = deepcopy(modelData.data)
-    ids_all = copy(modelData.ids)
+function getCommonModelsAcrossVars(model_data::Data, dim::Symbol)
+    data_all = deepcopy(model_data.data)
+    ids_all = copy(model_data.ids)
     variables = unique(map(id -> id.variable, ids_all))
     shared_models =  nothing
-    for var in variables
-        modelDict = filter(((k,v),)-> occursin(var, k), data_all)
+    for clim_var in variables
+        modelDict = filter(((k,v),)-> occursin(clim_var, k), data_all)
         # iterate over all combinations (of diagnostics/statistics) with current variable
         for (_, data_var) in modelDict
             models = collect(dims(data_var, dim))
@@ -418,7 +418,7 @@ function getCommonModelsAcrossVars(modelData::Data, dim::Symbol)
         data_all[id] = subsetModelData(data_all[id], Array(shared_models));
     end
     result = Data(
-        base_path = modelData.base_path, ids = modelData.ids, data = data_all
+        base_path = model_data.base_path, ids = model_data.ids, data = data_all
     )
     #alignIDsFilteredData!(result)
     return result
