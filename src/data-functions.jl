@@ -370,7 +370,9 @@ function loadData(
                     )
                     data_all[id.key] = rebuild(joint_data; metadata = joint_meta)
                 end
-                push!(ids_all, id)
+                if !(id in ids_all) # when data is loaded from multiple files
+                    push!(ids_all, id)
+                end
             end
         end
     end
