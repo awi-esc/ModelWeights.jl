@@ -1,37 +1,40 @@
 """
-    plotPerformanceWeights(
-    wP::DimArray; label::String="Performance Weight", isBarPlot::Bool=true
+    plotWeights(
+    wP::DimArray; 
+    label::String="weight", isBarPlot::Bool=true, dimname::String="model"
 )
 
 # Arguments:
-- `wP`: performanceWeights with dimensions: ensemble, variable
-- `isBarPlot`: if true barplot, else scatter plot returned
+- `wP`: performanceWeights with dimensions: model/member, variable
+- `isBarPlot`: if false scatter plot returned
 """
-function plotPerformanceWeights(
-    wP::DimArray; label::String="Performance Weight", isBarPlot::Bool=true, dimname::String="model"
+function plotWeights(
+    w::DimArray; 
+    label::String="weight", isBarPlot::Bool=true, dimname::String="model"
 )
     figures = [];
-    models = Array(dims(wP, Symbol(dimname)));
-    variables = dims(wP, :variable);
+    models = Array(dims(w, Symbol(dimname)))
+    n_models = length(models)
+    variables = dims(w, :variable)
     hasDimVariable = true
     if isnothing(variables)
         hasDimVariable = false
         variables = ["variables combined"]
-        wP_reshaped = reshape(wP, (size(wP)..., 1))
-        wP = DimArray(wP_reshaped, (dims(wP)..., Dim{:variable}(variables)))
+        w_reshaped = reshape(w, (size(w)..., 1))
+        w = DimArray(w_reshaped, (dims(w)..., Dim{:variable}(variables)))
     end
-    xs = 1:length(models);
+    xs = 1 : n_models
     if isBarPlot
         for var in variables
             fig=Figure()
             ax = Axis(fig[1,1], 
                 xticks = (xs, models), 
                 xticklabelrotation = pi/4,
-                xlabel = uppercase(dimname),
+                xlabel = dimname,
                 ylabel = label,
                 title = "$var"
             );
-            barplot!(ax, xs, Array(wP[variable = At(var)]))
+            barplot!(ax, xs, Array(w[variable = At(var)]))
             push!(figures, fig)
         end
     else 
@@ -43,11 +46,14 @@ function plotPerformanceWeights(
             ylabel = label,
         );
         for var in variables
-            scatter!(ax, xs, Array(wP[variable = At(var)]))
-            lines!(ax, xs, Array(wP[variable = At(var)]), label = "$var")
+            scatter!(ax, xs, Array(w[variable = At(var)]))
+            lines!(ax, xs, Array(w[variable = At(var)]), label = "$var")
         end
         if hasDimVariable
             axislegend(ax)
+        else
+            # add equal weight for reference
+            lines!(ax, xs, [1/n_models for _ in range(1, n_models)])
         end 
         push!(figures, fig)
     end
@@ -55,7 +61,23 @@ function plotPerformanceWeights(
 end
 
 
-function plotIndependenceWeights(distances::DimArray; dimname::String="model")
+"""
+    plotDistancesPerformance(
+    dists::DimArray; isBarPlot::Bool=true, dimname::String="model"
+)
+"""
+function plotDistancesPerformance(
+    dists::DimArray; isBarPlot::Bool=true, dimname::String="model"
+)
+    figs = plotWeights(
+        dists; label = "Distances performance",
+        isBarPlot=isBarPlot, 
+        dimname = dimname
+    )
+    return figs
+end
+
+function plotDistancesIndependence(distances::DimArray; dimname::String="model")
     figures = []
     ensembles = collect(dims(distances, Symbol(dimname)))
     if hasdim(distances, :variable)
@@ -113,29 +135,29 @@ function plotWeightContributions(
 end
 
 
-"""
-    plotWeights(weights::DimArray; title::String="")
+# """
+#     plotWeights(weights::DimArray; title::String="")
 
-# Arguments:
-- `weights`: overall weights, one for each ensemble
-- `title`: plot title
-"""
-function plotWeights(weights::DimArray; title::String="")
-    fig =  getFigure((16,8), 18);
-    models = Array(dims(weights, :model))
-    ax = Axis(fig[1,1], 
-              xlabel = "Models", 
-              ylabel = "weights",
-              title = title,
-              xticks = (collect(1:length(models)), models), 
-              xticklabelrotation = pi/2,
-    );
-    ylims!(ax, 0, 1)
-    xs = 1:length(models);
-    scatter!(ax, xs, Array(weights))
-    lines!(ax, xs, Array(weights))
-    # add line with value if all weights were equal
-    n = length(models)
-    lines!(ax, xs, [1/n for _ in range(1, n)])
-    return fig
-end
+# # Arguments:
+# - `weights`: overall weights, one for each ensemble
+# - `title`: plot title
+# """
+# function plotWeights(weights::DimArray; title::String="")
+#     fig =  getFigure((16,8), 18);
+#     models = Array(dims(weights, :model))
+#     ax = Axis(fig[1,1], 
+#               xlabel = "Models", 
+#               ylabel = "weights",
+#               title = title,
+#               xticks = (collect(1:length(models)), models), 
+#               xticklabelrotation = pi/2,
+#     );
+#     ylims!(ax, 0, 1)
+#     xs = 1:length(models);
+#     scatter!(ax, xs, Array(weights))
+#     lines!(ax, xs, Array(weights))
+#     # add line with value if all weights were equal
+#     n = length(models)
+#     lines!(ax, xs, [1/n for _ in range(1, n)])
+#     return fig
+# end

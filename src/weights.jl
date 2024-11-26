@@ -258,54 +258,44 @@ function computeWeightedAvg(
 )
     data = deepcopy(data)
     dim_symbol = hasdim(data, :member) ? :member : :model
-    sources = dims(data, dim_symbol)
-
+    models_data = collect(dims(data, dim_symbol))
+    
     if isnothing(weights)
         weights = makeEqualWeights(data.metadata, dim_symbol)
-        # model_names = data.metadata["model_names"]
-        # indices = []
-        # for model in unique(model_names)
-        #     push!(indices, findall(x -> x==model, model_names))
-        # end
-        # n_models = length(indices)
-        # w = []
-        # for positions in indices
-        #     n_members = length(positions)
-        #     for _ in range(1, n_members)
-        #         push!(w, (1/n_models) *  (1/n_members))
-        #     end
-        # end
-        #weights = DimArray(w, Dim{dim_symbol}(Array(dims(data, dim_symbol))))
+        models_weights = collect(dims(weights, dim_symbol))
     else
-        # weights may have been computed wrt a different set of variables as we use here, 
-        # so the list of models for which weights have been computed may be shorter 
-        # than the models of the given data.
-        if sort(collect(sources)) != sort(collect(dims(weights, dim_symbol)))
-            @warn "Mismatch between models that weights were computed for and models in the data."
+        models_weights = collect(dims(weights, dim_symbol))
+        if sort(models_data) != sort(models_weights)
+            # weights may have been computed wrt a different set of variables as we use here, 
+            # so the list of models for which weights have been computed may be shorter 
+            # than the models of the given data. But for all given weights there must be data 
+            # for now.
+            data_no_weights = [model for model in models_data if !(model in models_weights)]           
+            @warn "No weights were computed for these models which are therefore not considered in the weighted average:" data_no_weights
+            if any(x -> !(x in models_data), models_weights)
+                msg = "Data of models missing for which weights have been computed."
+                throw(ArgumentError(msg))
+            end
         end
-
+        # subset data s.t only data that will be weighted is considered
         if dim_symbol == :member
-            data = data[member = Where(m -> m in dims(weights, dim_symbol))]
+            data = data[member = Where(m -> m in models_weights)]
         else
-            data = data[model = Where(m -> m in dims(weights, dim_symbol))]
-        end
-
-        n_models_data = length(sources)
-        n_weights = length(weights)
-        if n_models_data != n_weights
-            msg = "nb of models for observational and model predictions does not match: ";
-            msg2 = "weights: " * string(n_weights) * " , data: " * string(n_models_data);
-            throw(ArgumentError(msg * msg2))
+            data = data[model = Where(m -> m in models_weights)]
         end
     end
     @assert isapprox(sum(weights), 1; atol=10^-4)
+    # there shouldnt be data for which there is no weight since it was filtered out above
+    @assert Array(models_weights) == Array(dims(data, dim_symbol))
     
+    # TODO: the following if-differentiation should not be necessary, find out how to 
+    # index dimarray with variable instead of direct name
     if dim_symbol == :member
-        for m in sources
+        for m in models_weights
             data[member = At(m)] = data[member = At(m)] .* weights[member = At(m)]
         end
     else
-        for m in dims(data, :model)
+        for m in models_weights
             data[model = At(m)] = data[model = At(m)] .* weights[model = At(m)]
         end
     end

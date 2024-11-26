@@ -181,10 +181,16 @@ function loadPreprocData(
         model_constraints = get(subset, "models", Vector{String}())
         if !isempty(model_constraints)
             # model constraints may contain individual members
+            # (e.g. for "CNRM-CM5#r1i1p1", the model name, CNRM-CM5, as well as the 
+            # member id, r1i1p1, have to be part of the filename,
+            # but not with the delimiter # as given here)
             model_member_constraints = map(x -> split(x, MODEL_MEMBER_DELIM), model_constraints)
             any_fullfilled = false
             for constraints in model_member_constraints
-                constraint_ok = all([occursin(name, file) for name in constraints])
+                # adding the suffix "_" is important since otherwise, for instance, 
+                # CNRM-CM5-C2 would remain even if the constraint was a substring like
+                # CNRM-CM5
+                constraint_ok = all([occursin(name * "_", file) for name in constraints])
                 if constraint_ok
                     any_fullfilled = true
                     break

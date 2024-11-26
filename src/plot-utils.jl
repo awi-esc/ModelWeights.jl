@@ -29,8 +29,8 @@ function plotDistMatrices(distMat, climateVar, models, modelRefs)
     xs = 1:length(models)
     ax = Axis(
         fig[1,1],
-        xlabel = "Model ensemble",
-        ylabel = "Model ensemble",
+        xlabel = "Model",
+        ylabel = "Model",
         xticks = (xs, models), 
         yticks = (xs, modelRefs),
         xticklabelrotation = pi/4,

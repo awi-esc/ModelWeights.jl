@@ -27,8 +27,6 @@ function computeWeights(
     # sanity checks for input arguments
     keys_weights_perform = allcombinations(dims(weights_perform, :variable), dims(weights_perform, :diagnostic))
     keys_weights_indep = allcombinations(dims(weights_indep, :variable), dims(weights_indep, :diagnostic))
-
-
     ref_period_alias = getRefPeriodAsAlias(config.ref_period)
     msg =  x -> "For computation of $x weights: Make sure that data is provided 
     for the given reference period ($(config.ref_period)) and combination of 
