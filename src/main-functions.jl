@@ -3,32 +3,6 @@ using DimensionalData
 
 
 """
-    keepSharedModelData(    
-        modelDataFull::Dict{String, DimArray},
-        modelDataRef::Dict{String, DimArray}
-    )
-
-Return the data of those models available in both datasets.
-"""
-function keepSharedModelData!(
-    modelData1::Dict{String, DimArray},
-    modelData2::Dict{String, DimArray}
-)   
-    # TODO: this needs to be done differently
-    shared_models = intersect(
-        first(values(modelData1)).metadata["member_names"], 
-        first(values(modelData2)).metadata["member_names"]
-    );
-    for id in keys(modelData1)
-        modelData1[id] = subsetModelData(modelData1[id], shared_models)
-    end 
-    for id in keys(modelData2)       
-        modelData2[id] = subsetModelData(modelData2[id], shared_models);
-    end
-end
-
-
-"""
     computeWeights(model_data::Data, obs_data::Data, config::ConfigWeights)
 
 Compute weight for each model in multi-model ensemble according to approach

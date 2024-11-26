@@ -2,16 +2,19 @@ using DimensionalData
 using NCDatasets
 
 """
-    getUniqueModelIds(meta::Dict, model_names::Vector{String})
+    getUniqueMemberIds(meta::Dict, model_names::Vector{String})
 
-Combine name of the ensemble with the id of the respective ensemble members.
+Combine name of the model with the id of the respective model members. The
+returned vector has length of the number of models and contains for every model 
+a vector with the unique ids of its members.
 
 # Arguments:
 - `meta`: for CMIP5 data, must have keys: 'mip_era', 'realization', 'initialization_method',
 'physics_version'. For CMIP6 data must have keys: 'variant_label', 'grid_label'
-- `model_names`: Vector of strings containing the names of the model ensembles.
+- `model_names`: Vector of strings containing model names for every model member, i.e.
+length is sum of the number of members over all models
 """
-function getUniqueModelIds(
+function getUniqueMemberIds(
     meta::Dict,
     model_names::Vector{String}
 )
@@ -20,11 +23,13 @@ function getUniqueModelIds(
         "realization", "physics_version", "initialization_method", 
         "mip_era", "grid_label", "variant_label"
     ]
-    n = length(model_names)
+    
+    n_members = length(model_names)
+    members = Vector{String}(undef, n_members)
     for key in filter(k -> k in keys_model_ids, keys(meta))
         val = meta[key]
         if isa(val, String)
-            meta_subdict[key] = repeat([val], outer=n)
+            meta_subdict[key] = repeat([val], outer=n_members)
         else
             meta_subdict[key] = deepcopy(val)
         end
@@ -32,15 +37,13 @@ function getUniqueModelIds(
     mip_eras = meta_subdict["mip_era"]
     indices_cmip5 = findall(x -> !ismissing(x) && x == "CMIP5", mip_eras)
     indices_cmip6 = findall(x -> !ismissing(x) && x == "CMIP6", mip_eras)
-    models = Vector{String}(undef, length(model_names))
-
     if !isempty(indices_cmip5)
         variants = buildCMIP5EnsembleMember(
             meta_subdict["realization"][indices_cmip5], 
             meta_subdict["initialization_method"][indices_cmip5], 
             meta_subdict["physics_version"][indices_cmip5]
         )
-        models[indices_cmip5] =  map(
+        members[indices_cmip5] =  map(
             x -> join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM), 
             zip(model_names[indices_cmip5], variants)
         )
@@ -49,12 +52,22 @@ function getUniqueModelIds(
     if !isempty(indices_cmip6)
         variants = meta_subdict["variant_label"][indices_cmip6]
         grids = meta_subdict["grid_label"][indices_cmip6]
-        models[indices_cmip6] = map(
+        members[indices_cmip6] = map(
             x->join(x, MODEL_MEMBER_DELIM, "_"), 
             zip(model_names[indices_cmip6], variants, grids)
         );
     end
-    return models
+    # from vector of strings of length of sum over members of all models make 
+    # a vector of vectors where each subvector contains the unique ids of the 
+    # respective model's members
+    models_uniq = unique(model_names)
+    n_models = length(models_uniq)
+    result = Vector{Vector{String}}(undef, n_models)
+    for (i, model) in enumerate(models_uniq)
+        indices = findall(x -> x == model, model_names)
+        result[i] = members[indices]
+    end
+    return result
 end
 
 """
@@ -81,12 +94,22 @@ function subsetModelData(data::DimArray, shared_models::Vector{String})
     dim_symbol = hasdim(data, :member) ? :member : :model
     indices = findall(m -> m in shared_models, collect(dims(data, dim_symbol)))
     @assert length(indices) == length(shared_models)
-    keepMetadataSubset!(data.metadata, indices);
     if dim_symbol == :model
         data = data[model = indices];
     else
         data = data[member = indices];
     end
+    # also adjust the metadata
+    attributes = filter(
+        k -> data.metadata[k] isa Vector && k != "member_names", keys(data.metadata)
+    );
+    for key in attributes
+        data.metadata[key] = data.metadata[key][indices]
+    end
+    # member_names is a vector of vectors
+    map(vec -> filter!(x -> x in shared_models, vec), data.metadata["member_names"])
+    # remove models where no member was in shared_models
+    filter!(vec -> !isempty(vec), data.metadata["member_names"])
     return data
 end
 
@@ -261,7 +284,7 @@ function loadPreprocData(
             # model refers to 'big combined model', part of member name,
             # but additionally saved in metadata["model_names"]
             dimData = set(dimData, :source => :member)
-            dimData = set(dimData, :member => dimData.metadata["member_names"])
+            dimData = set(dimData, :member => vcat(dimData.metadata["member_names"]...))
             # Sanity checks that no dataset exists more than once
             members = dims(dimData, :member)
             if length(members) != length(unique(members))

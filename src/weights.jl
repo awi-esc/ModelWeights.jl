@@ -147,7 +147,6 @@ dimension 'model'.
 # Arguments:
 - `data`: a DimArray with at least dimension 'model'
 - `updateMeta`: set true if the vectors in the metadata refer to different models. 
-If true attribute model_to_member_indices is set in metadata.
 Set to false if vectors refer to different variables for instance. 
 """
 function summarizeEnsembleMembersVector(
@@ -168,8 +167,6 @@ function summarizeEnsembleMembersVector(
     combined = combined[model=At(sort(models))]
     combined = DimensionalData.Lookups.set(combined, model=l)
 
-    # the metadata model_to_member_indices dict doesn't make sense anymore
-    combined.metadata["model_to_member_indices"] = nothing
     return combined
 end
 
@@ -182,7 +179,6 @@ Compute the average weights across all members of each model for each given vari
 # Arguments:
 - `data`: DimArray with at least dimensions 'member1', 'member2'
 - `updateMeta`: set true if the vectors in the metadata refer to different models. 
-If true attribute model_to_member_indices is set in metadata. 
 Set to false if vectors refer to different variables for instance. 
 """
 function averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
@@ -250,9 +246,8 @@ end
 """
     computeWeightedAvg(data::DimArray; weights::Union{DimArray, Nothing}=nothing)
 
-Compute the average values for each (lon,lat) grid point in 'data_var', weighted
-by weights 'weights'. Members of the same model are averaged before. If no 
-weight vector is provided, unweighted average is computed.
+Compute the average values for each (lon,lat) grid point in 'data', weighted
+by weights 'weights'. If no weight vector is provided, unweighted average is computed.
 
 # Arguments:
 - `data`: has dimensions lon, lat, model/member
@@ -262,45 +257,37 @@ function computeWeightedAvg(
     data::DimArray; weights::Union{DimArray, Nothing}=nothing
 )
     data = deepcopy(data)
-    sources = dims(data, :member)
-    dimname = "member"
-    if isnothing(sources)
-        sources = dims(data, :model)
-        dimname = "model"
-    end
+    dim_symbol = hasdim(data, :member) ? :member : :model
+    sources = dims(data, dim_symbol)
+
     if isnothing(weights)
-        # make sure that the number of members per model is considered
-        model_names = data.metadata["model_names"]
-        indices = []
-        for model in unique(model_names)
-            push!(indices, findall(x -> x==model, model_names))
-        end
-        n_models = length(indices)
-        w = []
-        for positions in indices
-            n_members = length(positions)
-            for _ in range(1, n_members)
-                push!(w, (1/n_models) *  (1/n_members))
-            end
-        end
-        weights = DimArray(w, Dim{Symbol(dimname)}(Array(dims(data, Symbol(dimname)))))
-        # if dimname == "member"
-        #     weights = DimArray(w, Dim{:member}(Array(dims(data, :member))))
-        # else
-        #     weights = DimArray(w, Dim{:model}(Array(dims(data, :model))))
+        weights = makeEqualWeights(data.metadata, dim_symbol)
+        # model_names = data.metadata["model_names"]
+        # indices = []
+        # for model in unique(model_names)
+        #     push!(indices, findall(x -> x==model, model_names))
         # end
+        # n_models = length(indices)
+        # w = []
+        # for positions in indices
+        #     n_members = length(positions)
+        #     for _ in range(1, n_members)
+        #         push!(w, (1/n_models) *  (1/n_members))
+        #     end
+        # end
+        #weights = DimArray(w, Dim{dim_symbol}(Array(dims(data, dim_symbol))))
     else
         # weights may have been computed wrt a different set of variables as we use here, 
         # so the list of models for which weights have been computed may be shorter 
         # than the models of the given data.
-        if sort(collect(sources)) != sort(collect(dims(weights, Symbol(dimname))))
+        if sort(collect(sources)) != sort(collect(dims(weights, dim_symbol)))
             @warn "Mismatch between models that weights were computed for and models in the data."
         end
 
-        if dimname == "member"
-            data = data[member = Where(m -> m in dims(weights, Symbol(dimname)))]
+        if dim_symbol == :member
+            data = data[member = Where(m -> m in dims(weights, dim_symbol))]
         else
-            data = data[model = Where(m -> m in dims(weights, Symbol(dimname)))]
+            data = data[model = Where(m -> m in dims(weights, dim_symbol))]
         end
 
         n_models_data = length(sources)
@@ -313,7 +300,7 @@ function computeWeightedAvg(
     end
     @assert isapprox(sum(weights), 1; atol=10^-4)
     
-    if dimname == "member"
+    if dim_symbol == :member
         for m in sources
             data[member = At(m)] = data[member = At(m)] .* weights[member = At(m)]
         end
@@ -322,36 +309,36 @@ function computeWeightedAvg(
             data[model = At(m)] = data[model = At(m)] .* weights[model = At(m)]
         end
     end
-    weighted_avg = dropdims(reduce(+, data, dims=Symbol(dimname)), dims=Symbol(dimname))
+    weighted_avg = dropdims(reduce(+, data, dims=dim_symbol), dims=dim_symbol)
     return weighted_avg
 end
 
 
 """
-    makeWeightPerEnsembleMember(weights::DimArray)
+    makeEqualWeights(metadata::Dict, dimension::Symbol)
 
 Equally distribute weight for each model over its members. Metadata is used
 to access the individual model members the computed weights were based on.
     
 # Arguments:
-- `weights`: contains weights for each model, has dimension 'model'.
+- `metadata`: metadata of the data for which weights were computed.
+- `dimension`: level of data, e.g. 'member', 'model'
 """
-function makeWeightPerEnsembleMember(weights::DimArray)
-    full_model_names = weights.metadata["member_names"]
-    models = weights.metadata["model_names"]
-    nb_members = [];
-    for model in models
-        n = count(member -> split(member, "#")[1] == model, full_model_names)
-        push!(nb_members, n)
+function makeEqualWeights(metadata::Dict, dimension::Symbol)
+
+    model_members = metadata["member_names"]
+    n_models = length(model_members) # member_names is a vector of vectors! 
+    if dimension == :member
+        # make sure that the number of members per model is considered
+        w = [repeat([1/n_models * (1/length(members))], length(members)) for members in model_members]
+        w = vcat(w...)
+        dimnames = vcat(model_members...)
+    else
+        w = [1/n_models for _ in range(1, n_models)]
+        dimnames = unique(metadata["model_names"])
     end
-    weights_all_members = []
-    for (idx, w) in enumerate(weights)
-        n = nb_members[idx]
-        for _ in range(1, n)
-            push!(weights_all_members, w/nb_members[idx])
-        end
-    end
-    return DimArray(weights_all_members, Dim{:model}(full_model_names), metadata = weights.metadata)
+    weights = DimArray(w, Dim{dimension}(dimnames), metadata = deepcopy(metadata))
+    return weights
 end
 
 
