@@ -16,18 +16,27 @@ end
 function Base.show(io::IO, x::DataID)
     for field in fieldnames(DataID)
         value = getfield(x, field)        
-        print(io, "$field=$value  ")
+        print(io, "$field=$value ")
     end
 end
 
 
-
 @kwdef struct Data
     base_path::String
+    data_paths::Vector{String}
     ids::Vector{DataID}=[]
     data::Dict{String, DimArray}=Dict()
 end
 
+
+# Pretty print Data instances
+function Base.show(io::IO, x::Data)
+    println(io, "\nBase path of the loaded data: $(x.base_path)\n")
+    println(io, "Data loaded from the following files:\n")
+    for fn in x.data_paths
+        println(io, "$fn")
+    end
+end
 
 
 @kwdef struct ConfigWeights

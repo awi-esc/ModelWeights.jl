@@ -350,6 +350,7 @@ function loadData(
 
     data_all = Dict{String, DimArray}()
     ids_all = Vector{DataID}()
+    paths_all = Vector{String}()
     for id in ids
         path_to_subdirs = [base_path]
         # if dir_per_var is true, directory at base_path has subdirectories, 
@@ -362,10 +363,6 @@ function loadData(
             subdirs = get(subset, "subdirs", nothing)
             if !isnothing(subdirs)
                 filter!(p -> any([occursin(name, p) for name in subdirs]), path_to_subdirs)
-            end
-            if length(path_to_subdirs) > 1
-                fnames = map(basename, path_to_subdirs)
-                @info "Data for variable $(id.key) considered from files:" fnames
             end
         end
         for path_dir in path_to_subdirs
@@ -381,6 +378,7 @@ function loadData(
                 path_data_dir; subset = constraints, is_model_data = is_model_data
             )
             if !isnothing(data)
+                push!(paths_all, String(split(path_data_dir, base_path)[2]))
                 previously_added_data = get(data_all, id.key, nothing)
                 if isnothing(previously_added_data)
                     data_all[id.key] = data
@@ -406,8 +404,13 @@ function loadData(
             end
         end
     end
-    result =  Data(base_path = base_path, ids = ids_all, data = data_all)
-    @info "The following data was found and loaded: " result.ids
+    result =  Data(
+        base_path = base_path, 
+        data_paths = paths_all, 
+        ids = ids_all, 
+        data = data_all
+    )
+    @info "loaded data: " result
     if is_model_data && common_models_across_vars
         @info "only retain models shared across all variables"
         result = getCommonModelsAcrossVars(result, :member)
@@ -450,7 +453,10 @@ function getCommonModelsAcrossVars(model_data::Data, dim::Symbol)
         data_all[id] = subsetModelData(data_all[id], Array(shared_models));
     end
     result = Data(
-        base_path = model_data.base_path, ids = model_data.ids, data = data_all
+        base_path = model_data.base_path, 
+        data_paths = model_data.data_paths, 
+        ids = model_data.ids, 
+        data = data_all
     )
     #alignIDsFilteredData!(result)
     return result
