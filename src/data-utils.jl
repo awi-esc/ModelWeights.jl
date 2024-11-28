@@ -23,7 +23,7 @@ end
 
 
 @kwdef struct Data
-    base_path::String
+    base_paths::Vector{String}
     ids::Vector{DataID}=[]
     data::Dict{String, DimArray}=Dict()
 end
