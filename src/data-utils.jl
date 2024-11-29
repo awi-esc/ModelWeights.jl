@@ -339,11 +339,6 @@ function buildDataIDsFromConfigs(config_paths::Vector{String})
                         experiment = join(v["exp"], "-")
                     end
                     timerange = replace(get(v, "timerange", "full"), "/" => "-")
-
-                    # save the mapping between timeranges and aliases globally
-                    TIMERANGE_TO_ALIAS[timerange] = alias
-                    ALIAS_TO_TIMERANGE[alias] = timerange
-
                     id = join([variable, statistic, alias], "_")
                     dataID = DataID(
                         key=id,

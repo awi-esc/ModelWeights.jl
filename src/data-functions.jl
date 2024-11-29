@@ -133,7 +133,6 @@ function loadPreprocData(
         x -> isfile(x) && endswith(x, ".nc"),
         readdir(path_data; join=true)
     )
-    nbIgnored = 0
     n_files = length(ncFiles)
     source_names = repeat(Union{Missing, String}[missing], outer = n_files)
     for (i, file) in enumerate(ncFiles)
