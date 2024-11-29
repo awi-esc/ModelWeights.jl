@@ -14,10 +14,7 @@ a vector with the unique ids of its members.
 - `model_names`: Vector of strings containing model names for every model member, i.e.
 length is sum of the number of members over all models
 """
-function getUniqueMemberIds(
-    meta::Dict,
-    model_names::Vector{String}
-)
+function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
     meta_subdict = Dict{String, Vector}()
     keys_model_ids = [
         "realization", "physics_version", "initialization_method", 
@@ -70,19 +67,6 @@ function getUniqueMemberIds(
     return result
 end
 
-"""
-    getIndicesMapping(names::Vector{String})
-
-# Arguments:
-- `names`: names of model members
-"""
-function getIndicesMapping(names::Vector{String})
-    mapping = Dict();
-    for name in names
-        mapping[name] = findall(x -> x == name, names)
-    end
-    return mapping
-end
 
 """
     subsetModelData(data::Dict{String, DimArray}, shared_models::Vector{String})
@@ -111,25 +95,6 @@ function subsetModelData(data::DimArray, shared_models::Vector{String})
     # remove models where no member was in shared_models
     filter!(vec -> !isempty(vec), data.metadata["member_names"])
     return data
-end
-
-
-"""
-    getMetadataSharedAcrossModelsAndModelNames(metadata::Dict)
-
-Return a new metadata dictionary which contains all attributes that were
-identical across models (therefore these are single values, not Vectors). 
-Further, 'model_names', 'member_names' and 'mip_era' are retained. When
-combining this new metadata dict with another, e.g. when
-combining data for different variables, these must be identical (which is 
-checked in function appendValuesDicts).
-"""
-function getMetadataSharedAcrossModelsAndModelNames(metadata::Dict)
-    meta_shared = filter(((k,v),) -> isa(v, String), metadata);    
-    meta_shared["member_names"] = deepcopy(metadata)["member_names"];
-    meta_shared["model_names"] = deepcopy(metadata)["model_names"]
-    meta_shared["mip_era"] = deepcopy(metadata)["mip_era"]
-    return meta_shared
 end
 
 
@@ -220,18 +185,12 @@ function loadPreprocData(
                     attributes = merge(attributes, Dict(deepcopy(sector.attrib)));
                 end
             end
-            # if warnIfFlawedMetadata(attributes, filename)
-            #     nbIgnored += 1;
-            #     continue
-            # end
             # add mip_era for models since it is not provided in CMIP5-models
-            name = ""
+            name = filename
             if is_model_data
                 model_key = getCMIPModelsKey(Dict(ds.attrib))
                 get!(attributes, "mip_era", "CMIP5")
                 name = ds.attrib[model_key]
-            else 
-                name = filename
             end
             source_names[i] = name        
             # update metadata-dictionary for all processed files with the 
@@ -428,8 +387,9 @@ end
 Return only those models for which there is data for all variables.
 
 # Arguments
-- `model_data`:
-- `dim`: dimension name referring to level of model predictions; e.g., 'member' or 'model'
+- `model_data`: model predictions
+- `dim`: dimension name referring to level of model predictions; e.g., 
+'member' or 'model'
 """
 function getCommonModelsAcrossVars(model_data::Data, dim::Symbol)
     data_all = deepcopy(model_data.data)
@@ -458,7 +418,6 @@ function getCommonModelsAcrossVars(model_data::Data, dim::Symbol)
         ids = model_data.ids, 
         data = data_all
     )
-    #alignIDsFilteredData!(result)
     return result
 end
 
