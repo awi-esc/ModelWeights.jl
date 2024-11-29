@@ -34,7 +34,7 @@ model_data_historical = sw.loadData(
     subset = Dict(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
-        "alias" => ["historical"],
+        "alias" => ["historical", "historical0"],
         "timerange" => ["full"],
         "projects" => ["CMIP5", "CMIP6"],
         "models" => model_members_lgm,
@@ -85,6 +85,8 @@ sw.saveWeights(weights, target_dir; target_fn = target_fn)
 path_weights = joinpath(target_dir, target_fn);
 ds_weights = NCDataset(path_weights);
 
+
+ds_weights = NCDataset("/albedo/work/projects/p_pool_clim_data/britta/weights/weights_2024-11-27_09_22.nc")
 # Plot performance weights
 wP = sw.loadWeightsAsDimArray(ds_weights, "wP");
 fig_wP, = sw.plotWeights(wP; isBarPlot=false, label="performance weight");
@@ -145,7 +147,7 @@ sw.plotMeansOnMap(weighted_means, "weighted means LGM: tas_CLIM")
 
 
 # weighted and unweighted means should be different:
-Array(weighted_means) .== Array(means)
+Array(weighted_means) .== Array(unweighted_means)
 
 
 

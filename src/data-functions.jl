@@ -330,10 +330,6 @@ function loadData(
                 push!(path_to_subdirs, base_path)
             end
         end
-        if length(path_to_subdirs) > 1
-            fnames = map(basename, path_to_subdirs)
-            @info "Data for variable $(id.key) considered from files:" fnames
-        end
         for path_dir in path_to_subdirs
             path_data_dir = joinpath(
                 path_dir, "preproc", id.alias, join([id.variable, id.statistic], "_")
@@ -347,7 +343,7 @@ function loadData(
                 path_data_dir; subset = constraints, is_model_data = is_model_data
             )
             if !isnothing(data)
-                push!(paths_all, String(split(path_data_dir, base_path)[2]))
+                push!(paths_all, path_data_dir)
                 previously_added_data = get(data_all, id.key, nothing)
                 if isnothing(previously_added_data)
                     data_all[id.key] = data
@@ -423,7 +419,7 @@ function getCommonModelsAcrossVars(model_data::Data, dim::Symbol)
         data_all[id] = subsetModelData(data_all[id], Array(shared_models));
     end
     result = Data(
-        base_path = model_data.base_path, 
+        base_paths = model_data.base_paths, 
         data_paths = model_data.data_paths, 
         ids = model_data.ids, 
         data = data_all

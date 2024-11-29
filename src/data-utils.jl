@@ -31,7 +31,6 @@ end
 
 # Pretty print Data instances
 function Base.show(io::IO, x::Data)
-    println(io, "\nBase path of the loaded data: $(x.base_path)\n")
     println(io, "Data loaded from the following files:\n")
     for fn in x.data_paths
         println(io, "$fn")
