@@ -1,9 +1,6 @@
 module SimilarityWeights
 
 const MODEL_MEMBER_DELIM = "#"
-TIMERANGE_TO_ALIAS = Dict{String, String}()
-ALIAS_TO_TIMERANGE = Dict{String, String}()
-
 
 include("data-utils.jl")
 include("data-functions.jl")

@@ -15,19 +15,28 @@ end
 # Overload the Base.show method to print key-value pairs of DataID instances
 function Base.show(io::IO, x::DataID)
     for field in fieldnames(DataID)
-        value = getfield(x, field)
-        print(io, "$field=$value  ")
+        value = getfield(x, field)        
+        print(io, "$field=$value ")
     end
 end
 
 
-
 @kwdef struct Data
     base_paths::Vector{String}
+    data_paths::Vector{String}
     ids::Vector{DataID}=[]
     data::Dict{String, DimArray}=Dict()
 end
 
+
+# Pretty print Data instances
+function Base.show(io::IO, x::Data)
+    println(io, "\nBase path of the loaded data: $(x.base_path)\n")
+    println(io, "Data loaded from the following files:\n")
+    for fn in x.data_paths
+        println(io, "$fn")
+    end
+end
 
 
 @kwdef struct ConfigWeights
@@ -50,20 +59,19 @@ end
     w::DimArray # normalized
 end
 
+"""
+    buildCMIP5EnsembleMember(
+        realizations::Vector, initializations::Vector, physics::Vector
+    )
 
-function warnIfFlawedMetadata(attributes, filename)
-    isFlawed = false;
-    if "branch_time_in_parent" in keys(attributes) && isa(attributes["branch_time_in_parent"], String)
-        @warn "Branch_time_in_parent is a string, excluded file:" filename
-        isFlawed = true
-    elseif "branch_time_in_child" in keys(attributes) && isa(attributes["branch_time_in_child"], String)
-        @warn "Branch_time_in_child is a string, excluded file:" filename
-        isFlawed = true
-    end
-    return isFlawed
-end
+Concatenate model settings to build ripf-abbreviations for CMIP5 models which 
+do not have it in their metadata.
 
-
+# Arguments
+- `realizations`:
+- `initializations`:
+- `physics`:
+"""
 function buildCMIP5EnsembleMember(
     realizations::Vector, initializations::Vector, physics::Vector
 )
@@ -133,6 +141,7 @@ function updateMetadata!(
     end
     return nothing
 end
+
 
 """
     joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any}, isModelData::Bool)
@@ -204,56 +213,6 @@ function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any}, isMode
         end
     end
     return meta
-end
-
-
-"""
-    appendValuesDicts(val1, val2)
-
-Combine values of two different dictionaries iteratively. If both values are
-Vectors, they should be identical and only one of them is added. If they
-aren't identical, a warning is triggered and both vectors are concatenated
-into one big Vector.
-
-# Arguments:
-- `val1`: a Vector, a Dictionary or a single value (e.g. String, Number, etc.)
-- `val2`: a Vector, a Dictionary or a single value (e.g. String, Number, etc.)
-"""
-function appendValuesDicts(val1, val2)
-    if isa(val1, Vector) && isa(val2, Vector) #&& (!(isempty(val1) || isempty(val2)))
-        if collect(skipmissing(val1)) != collect(skipmissing(val2))
-            @warn "Two arrays merged that weren't identical! (usuallly in metadata)"
-            @warn val1
-            @warn val2
-            return vcat(val1, val2)
-        else
-            return val1
-        end
-    elseif isa(val1, Vector)
-        return push!(val1, val2)
-    elseif isa(val2, Vector)
-        return push!(val2, val1)
-
-    elseif isa(val1, Dict) && isa(val2, Dict)
-        if val1 != val2
-            @warn "Two different dictionaries!"
-            @warn val1
-            @warn val2
-            return vcat(val1, val2)
-        else
-            return val1
-        end
-
-    elseif isa(val1, Dict) || isa(val2, Dict)
-        @warn val1
-        @warn val2
-        throw(ArgumentError("Dictionary merged with something else!"))
-
-    elseif isa(val1, String) && isa(val2, String) && val1 == val2
-        return val1
-    else
-        return [val1, val2]
-    end
 end
 
 
@@ -351,6 +310,9 @@ end
 """
     buildDataIDsFromConfigs(config_paths::Vector{String})
 
+Read config files to determine which data shall be loaded, as defined by the 
+variable, statistic, experiment and timerange. 
+
 # Arguments:
 - `config_paths`: list of paths to directories that contain one or more yaml config
 files. For the assumed structure of the config files, see: TODO.
@@ -398,6 +360,7 @@ function buildDataIDsFromConfigs(config_paths::Vector{String})
     end
     return unique(ids)
 end
+
 
 """
     applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{String}})
@@ -447,9 +410,29 @@ function indexData(data::Data, clim_var::String, diagnostic::String, ref_period:
 end
 
 
+
+"""
+    computeDistancesAllDiagnostics(
+        model_data::Data, 
+        obs_data::Union{Nothing, Data}, 
+        config::Dict{String, Number},
+        ref_period::String,
+        forPerformance::Bool    
+    )
+
+Compute RMSEs between models and observations or between predictions of models.
+
+# Arguments:
+- `model_data`:
+- `obs_data`:
+- `config`:
+- `ref_period`:
+- `for_performance`: true for distances between models and observations, false 
+for distances between model predictions
+"""
 function computeDistancesAllDiagnostics(
-    model_data::Data,
-    obs_data::Data,
+    model_data::Data, 
+    obs_data::Union{Nothing, Data}, 
     config::Dict{String, Number},
     ref_period::String,
     forPerformance::Bool
@@ -484,13 +467,25 @@ function computeDistancesAllDiagnostics(
 end
 
 
-function computeGeneralizedDistances(distances_all::DimArray, weights::DimArray, forPerformance::Bool)
-    dimensions = forPerformance ? (:member,) : (:member1, :member2)
+"""
+    computeGeneralizedDistances(
+    distances_all::DimArray, weights::DimArray, for_performance::Bool
+)
+
+# Arguments:
+- `distances_all`:
+- `weights`:
+- `for_performance`: 
+"""
+function computeGeneralizedDistances(
+    distances_all::DimArray, weights::DimArray, for_performance::Bool
+)
+    dimensions = for_performance ? (:member,) : (:member1, :member2)
     norm = mapslices(Statistics.median, distances_all, dims=dimensions)
     normalized_distances =  DimArray(
         distances_all ./ norm, dims(distances_all), metadata = distances_all.metadata
     )
-    distances = forPerformance ?
+    distances = for_performance ? 
         summarizeEnsembleMembersVector(normalized_distances, false) :
         averageEnsembleMatrix(normalized_distances, false);
 
@@ -501,6 +496,32 @@ function computeGeneralizedDistances(distances_all::DimArray, weights::DimArray,
 end
 
 
+"""
+    allcombinations(v...)
+
+Generate all possible combinations of input vectors, where each combination 
+consists of one element from each input vector, concatenated as a string with
+underscores separating the elements.
+
+# Arguments
+- `v...`: A variable number of input vectors.
+
+# Returns
+A vector of strings, where each string represents a unique combination of
+elements from the input vectors, joined by underscores.
+
+# Example
+```jldoctest
+julia> allcombinations(["tos", "tas"], ["CLIM"])
+
+
+# output
+
+2-element Vector{String}:
+ "tos_CLIM"
+ "tas_CLIM"
+```
+"""
 function allcombinations(v...)
     combis = Vector{String}()
     for elems in Iterators.product(v...)
@@ -511,37 +532,73 @@ end
 
 
 """
-    verifyDataAndWeightInput(
-    model_data::Data, obs_data::Data, weights::DimArray
-)
+    isValidDataAndWeightInput(
+        data::Data, keys_weights::Vector{String}, ref_period::String
+    )
 
-Check that there is data for all keys of the provided (balance) weights and the given reference period 'ref_period'.
+Check that there is data for all keys of the provided (balance) weights and 
+the given reference period 'ref_period'.
 
 # Arguments:
 - `data`:
 - `keys_weights`:
 - `ref_period`:
 """
-function isValidDataAndWeightInput(data::Data, keys_weights::Vector{String}, ref_period::String)
+function isValidDataAndWeightInput(
+    data::Data, keys_weights::Vector{String}, ref_period::String
+)
     ids = map(x -> x.key, data.ids)
     keys_data = map(x -> x * "_" * ref_period, keys_weights)
     return all([k in ids for k in keys_data])
 end
 
+"""
+    getTimerangeAsAlias(data_ids::Vector{DataID}, timerange::String)
 
-function getRefPeriodAsAlias(ref_period::String)
-    return ref_period in keys(TIMERANGE_TO_ALIAS) ? TIMERANGE_TO_ALIAS[ref_period] : ref_period
+Translate given timerange to corresponding alias in 'data_ids'.
+
+# Arguments:
+- `data_ids`:
+- `timerange`:
+"""
+function getTimerangeAsAlias(data_ids::Vector{DataID}, timerange::String)
+    ids = filter(id -> id.timerange == timerange, data_ids)
+    return isempty(ids) ? nothing : ids[1].alias
 end
 
 
-function setRefPeriodInWeightsMetadata!(
-    meta::Dict, ref_period_orig::String, ref_period_alias::String
+"""
+    getAliasAsTimerange(data_ids::Vector{DataID}, alias::String)
+
+Translate given alias to corresponding timerange in 'data_ids'.
+
+# Arguments:
+- `data_ids`:
+- `alias`:
+"""
+function getAliasAsTimerange(data_ids::Vector{DataID}, alias::String)
+    ids = filter(id -> id.alias == alias, data_ids)
+    return isempty(ids) ? nothing : ids[1].timerange
+end
+
+
+function getRefPeriodAsTimerangeAndAlias(
+    model_ids::Vector{DataID}, ref_period::String
 )
-    meta["ref_period_alias"] = ref_period_alias
-    if ref_period_orig != ref_period_alias
-        meta["ref_period_timerange"] = ref_period_orig
-    else
-        meta["ref_period_timerange"] = ALIAS_TO_TIMERANGE[ref_period_orig]
+    alias = getTimerangeAsAlias(model_ids, ref_period) 
+    # true : ref_period given as alias, false: ref_period given as timerange
+    timerange = isnothing(alias) ? getAliasAsTimerange(model_ids, ref_period) : ref_period
+    alias = isnothing(alias) ? ref_period : alias
+
+    if (isnothing(alias) || isnothing(timerange))
+        throw(ArgumentError("ref period $ref_period not given in data!"))
     end
+    return (alias = alias, timerange = timerange)
+end
+
+
+function setRefPeriodInWeightsMetadata!(meta::Dict, alias::String, timerange::String)
+    meta["ref_period_alias"] = alias
+    meta["ref_period_timerange"] = timerange
     return nothing
 end
