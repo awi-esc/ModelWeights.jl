@@ -22,7 +22,7 @@ end
 
 
 @kwdef struct Data
-    base_path::String
+    base_paths::Vector{String}
     data_paths::Vector{String}
     ids::Vector{DataID}=[]
     data::Dict{String, DimArray}=Dict()
@@ -83,7 +83,7 @@ function buildCMIP5EnsembleMember(
     function concat(elem, prefix)
         if !(elem isa Vector)
             return [prefix * string(elem) for _ in range(1, n)]
-        else 
+        else
             return map(x -> prefix * string(x), elem)
         end
     end
@@ -95,7 +95,7 @@ end
 
 """
     updateMetadata!(
-        meta::Dict{String, Union{Array, String}}, 
+        meta::Dict{String, Union{Array, String}},
         source_names::Vector{String},
         isModelData::Bool
     )
@@ -104,29 +104,29 @@ Update metadata 'meta' s.t. data of ignored files is removed and attributes
 that were only present in some files/models are set to missing. Further keys
 are added.
 For model data:
-    - 'member_names': vector that contains for every model a vector with the 
-    unique names of that model's members 
+    - 'member_names': vector that contains for every model a vector with the
+    unique names of that model's members
     identifier consisting of variant_label, model_name and for CMIP6 models also grid_label.
-    - 'model_names': vector whose length is the sum of the number of all models' 
+    - 'model_names': vector whose length is the sum of the number of all models'
     members; it contains the model names for each unique model member, i.e. this
     vector will not unique if any model had several members
 For observational data:
-    - 'source_names': vector of data sources  
+    - 'source_names': vector of data sources
 
 Arguments:
 - `meta`:
-- `source_names`: 
+- `source_names`:
 - `isModelData`:
 """
 function updateMetadata!(
-    meta::Dict{String, Any}, 
+    meta::Dict{String, Any},
     source_names::Vector{Union{Missing, String}},
     isModelData::Bool
 )
     indices = findall(x -> !ismissing(x), source_names)
     for key in keys(meta)
         values = meta[key][indices]
-        meta[key] = values  
+        meta[key] = values
         # if none was missing and all have the same value, just use a string
         if !any(ismissing, values) && length(unique(values)) == 1
             meta[key] = string(values[1])
@@ -136,7 +136,7 @@ function updateMetadata!(
     if isModelData
         meta["member_names"] = getUniqueMemberIds(meta, included_data)
         meta["model_names"] = included_data
-    else 
+    else
         meta["source_names"] = included_data
     end
     return nothing
@@ -147,7 +147,7 @@ end
     joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any}, isModelData::Bool)
 
 Join the metadata of data to be joint (e.g. when loading data for tos for
-CMIP5 and CMIP6 from different locations). If keys are present in 'meta1' or 
+CMIP5 and CMIP6 from different locations). If keys are present in 'meta1' or
 'meta2' but not the other, missing values are added.
 """
 function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any}, isModelData::Bool)
@@ -219,22 +219,22 @@ end
 """
     updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
 
-Vectors in metadata 'meta' refer to different models (members). 
+Vectors in metadata 'meta' refer to different models (members).
 These are now summarized such that each vector only contains N entries where N
 is the number of models (i.e. without the unique members).
-If the metadata for members of a model differ across members, the respective 
-entry in the vector will be a vector itself. 
+If the metadata for members of a model differ across members, the respective
+entry in the vector will be a vector itself.
 """
 function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
     meta_new = filter(((k,v),) -> k=="member_names" || !(v isa Vector), meta)
     attributes = filter(x -> meta[x] isa Vector && x != "member_names", keys(meta))
     attribs_diff_across_members = [];
-    # iterate over attributes that are vectors, thus different for the different 
+    # iterate over attributes that are vectors, thus different for the different
     # members or models
     for key in attributes
         for (i, model) in enumerate(dims(grouped_data, :model))
             indices = findall(x -> x==model, meta["model_names"])
-            vals = get!(meta_new, key, [])       
+            vals = get!(meta_new, key, [])
             val_model = meta[key][indices]
             if length(unique(val_model)) != 1
                 push!(vals, val_model)
@@ -271,13 +271,13 @@ function computeInterpolatedWeightedQuantiles(
     weightedQuantiles = cumsum(weightsSorted) - 0.5 * weightsSorted;
     weightedQuantiles = reshape(weightedQuantiles, length(weightedQuantiles), 1);
     weightedQuantiles = (weightedQuantiles .- minimum(weightedQuantiles)) ./ maximum(weightedQuantiles);
-    
+
     interp_linear = Interpolations.linear_interpolation(
-        vec(weightedQuantiles), 
+        vec(weightedQuantiles),
         vals[indicesSorted],
         extrapolation_bc=Interpolations.Line()
     );
-     
+
     return interp_linear(quantiles)
 end
 
@@ -286,7 +286,7 @@ end
     setLookupsFromMemberToModel(data::DimArray, dim_names::Vector{String})
 
 Change the lookup values for the dimension 'member' to refer to the models, i.e.
-they are not unique anymore. This is done in preparation to group the data by 
+they are not unique anymore. This is done in preparation to group the data by
 the different models.
 
 # Arguments:
@@ -298,7 +298,7 @@ function setLookupsFromMemberToModel(data::DimArray, dim_names::Vector{String})
     for (i, dim) in enumerate(dim_names)
         unique_members = dims(data, Symbol(dim))
         models = map(x -> split(x, MODEL_MEMBER_DELIM)[1], unique_members)
-        
+
         data = set(data, Symbol(dim) => models)
         new_dim_name = n_dims > 1 ? "model" * string(i) : "model"
         data = set(data, Symbol(dim) => Symbol(new_dim_name))
@@ -308,46 +308,53 @@ end
 
 
 """
-    buildDataIDsFromConfigs(config_path::String)
+    buildDataIDsFromConfigs(config_paths::Vector{String})
 
 Read config files to determine which data shall be loaded, as defined by the 
 variable, statistic, experiment and timerange. 
 
 # Arguments:
-- `config_path`: path to directory that contains one or more yaml config
+- `config_paths`: list of paths to directories that contain one or more yaml config
 files. For the assumed structure of the config files, see: TODO.
 """
-function buildDataIDsFromConfigs(config_path::String)
-    paths_to_configs = filter(
-        x -> isfile(x) && endswith(x, ".yml"), 
-        readdir(config_path, join=true)
-    )
+function buildDataIDsFromConfigs(config_paths::Vector{String})
     ids::Vector{DataID} = []
-    for path_config in paths_to_configs
-        config = YAML.load_file(path_config);
-        data_all = config["diagnostics"]
-        aliases = keys(data_all)
-    
-        for alias in aliases
-            data = data_all[alias]["variables"]     
-            for (k,v) in data
-                variable, statistic = split(k, "_")
-                if typeof(v["exp"]) <: String
-                    experiment = v["exp"]
-                else 
-                    experiment = join(v["exp"], "-")
+    for config_path in config_paths
+        paths_to_configs = filter(
+            x -> isfile(x) && endswith(x, ".yml"),
+            readdir(config_path, join=true)
+        )
+        for path_config in paths_to_configs
+            config = YAML.load_file(path_config);
+            data_all = config["diagnostics"]
+            aliases = keys(data_all)
+
+            for alias in aliases
+                data = data_all[alias]["variables"]
+                for (k,v) in data
+                    variable, statistic = split(k, "_")
+                    if typeof(v["exp"]) <: String
+                        experiment = v["exp"]
+                    else
+                        experiment = join(v["exp"], "-")
+                    end
+                    timerange = replace(get(v, "timerange", "full"), "/" => "-")
+
+                    # save the mapping between timeranges and aliases globally
+                    TIMERANGE_TO_ALIAS[timerange] = alias
+                    ALIAS_TO_TIMERANGE[alias] = timerange
+
+                    id = join([variable, statistic, alias], "_")
+                    dataID = DataID(
+                        key=id,
+                        variable=variable,
+                        statistic=statistic,
+                        alias=alias,
+                        exp=experiment,
+                        timerange=timerange
+                    )
+                    push!(ids, dataID)
                 end
-                timerange = replace(get(v, "timerange", "full"), "/" => "-")
-                id = join([variable, statistic, alias], "_")
-                dataID = DataID(
-                    key=id, 
-                    variable=variable,
-                    statistic=statistic,
-                    alias=alias,
-                    exp=experiment, 
-                    timerange=timerange
-                )
-                push!(ids, dataID)
             end
         end
     end
@@ -365,14 +372,14 @@ Subset model ids so that only those with properties specified in 'subset' remain
 - `subset`: Mapping from fieldnames of 'DataID' struct to Vector specifiying the
 properties of which at least one must be present for an id to be retained.
 """
-function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{String}})   
-    
+function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{String}})
+
     # check for compatibility of timerange and alias first
     timerange_constraints = get(subset, "timerange", Vector{String}())
     alias_constraints = get(subset, "alias", Vector{String}())
     timerangeOk(id::DataID) = any(x -> id.timerange == x, timerange_constraints)
     aliasOk(id::DataID) = any(x -> id.alias == x, alias_constraints)
-    
+
     if !isempty(timerange_constraints) && !isempty(alias_constraints)
         filter!(x -> timerangeOk(x) || aliasOk(x), ids)
         if isempty(ids)
@@ -440,7 +447,7 @@ function computeDistancesAllDiagnostics(
         variables = String.(map(x -> split(x, "_")[1], diagnostic_keys))
         for clim_var in variables
             models = indexData(model_data, clim_var, diagnostic, ref_period)
-            
+
             if forPerformance
                 observations = indexData(obs_data, clim_var, diagnostic, ref_period)
                 if length(dims(observations, :source)) != 1

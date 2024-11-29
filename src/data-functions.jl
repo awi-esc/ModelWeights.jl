@@ -5,7 +5,7 @@ using NCDatasets
     getUniqueMemberIds(meta::Dict, model_names::Vector{String})
 
 Combine name of the model with the id of the respective model members. The
-returned vector has length of the number of models and contains for every model 
+returned vector has length of the number of models and contains for every model
 a vector with the unique ids of its members.
 
 # Arguments:
@@ -17,10 +17,10 @@ length is sum of the number of members over all models
 function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
     meta_subdict = Dict{String, Vector}()
     keys_model_ids = [
-        "realization", "physics_version", "initialization_method", 
+        "realization", "physics_version", "initialization_method",
         "mip_era", "grid_label", "variant_label"
     ]
-    
+
     n_members = length(model_names)
     members = Vector{String}(undef, n_members)
     for key in filter(k -> k in keys_model_ids, keys(meta))
@@ -36,12 +36,12 @@ function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
     indices_cmip6 = findall(x -> !ismissing(x) && x == "CMIP6", mip_eras)
     if !isempty(indices_cmip5)
         variants = buildCMIP5EnsembleMember(
-            meta_subdict["realization"][indices_cmip5], 
-            meta_subdict["initialization_method"][indices_cmip5], 
+            meta_subdict["realization"][indices_cmip5],
+            meta_subdict["initialization_method"][indices_cmip5],
             meta_subdict["physics_version"][indices_cmip5]
         )
         members[indices_cmip5] =  map(
-            x -> join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM), 
+            x -> join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM),
             zip(model_names[indices_cmip5], variants)
         )
         @debug "For CMIP5, full model names dont include grid."
@@ -50,12 +50,12 @@ function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
         variants = meta_subdict["variant_label"][indices_cmip6]
         grids = meta_subdict["grid_label"][indices_cmip6]
         members[indices_cmip6] = map(
-            x->join(x, MODEL_MEMBER_DELIM, "_"), 
+            x->join(x, MODEL_MEMBER_DELIM, "_"),
             zip(model_names[indices_cmip6], variants, grids)
         );
     end
-    # from vector of strings of length of sum over members of all models make 
-    # a vector of vectors where each subvector contains the unique ids of the 
+    # from vector of strings of length of sum over members of all models make
+    # a vector of vectors where each subvector contains the unique ids of the
     # respective model's members
     models_uniq = unique(model_names)
     n_models = length(models_uniq)
@@ -71,7 +71,7 @@ end
 """
     subsetModelData(data::Dict{String, DimArray}, shared_models::Vector{String})
 
-Return data in 'data' only from the models specified in `shared_models`. 
+Return data in 'data' only from the models specified in `shared_models`.
 Takes care of metadata.
 """
 function subsetModelData(data::DimArray, shared_models::Vector{String})
@@ -109,15 +109,15 @@ end
 - `path_data`: base path to directory that contains subdirectory with name
 of the respective experiment (see TODO for assumed data structure)
 - `subset`: dictionary with keys 'projects' and 'models'. Only data is loaded
-whose filenames contain ANY of the strings mapped to. If not specified, default 
-value for projects is ['CMIP'] when is_model_data is true, else ['ERA5']. 
-- `is_model_data`: observational and model data loaded seperately, 
+whose filenames contain ANY of the strings mapped to. If not specified, default
+value for projects is ['CMIP'] when is_model_data is true, else ['ERA5'].
+- `is_model_data`: observational and model data loaded seperately,
 if true modelData, else observational data
 
 # Returns: DimArray or nothing
 """
 function loadPreprocData(
-    path_data::String; 
+    path_data::String;
     subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}(),
     is_model_data::Bool=true
 )
@@ -130,7 +130,7 @@ function loadPreprocData(
     data = []
     meta = Dict{String, Any}()
     ncFiles = filter(
-        x -> isfile(x) && endswith(x, ".nc"), 
+        x -> isfile(x) && endswith(x, ".nc"),
         readdir(path_data; join=true)
     )
     nbIgnored = 0
@@ -146,13 +146,13 @@ function loadPreprocData(
         model_constraints = get(subset, "models", Vector{String}())
         if !isempty(model_constraints)
             # model constraints may contain individual members
-            # (e.g. for "CNRM-CM5#r1i1p1", the model name, CNRM-CM5, as well as the 
+            # (e.g. for "CNRM-CM5#r1i1p1", the model name, CNRM-CM5, as well as the
             # member id, r1i1p1, have to be part of the filename,
             # but not with the delimiter # as given here)
             model_member_constraints = map(x -> split(x, MODEL_MEMBER_DELIM), model_constraints)
             any_fullfilled = false
             for constraints in model_member_constraints
-                # adding the suffix "_" is important since otherwise, for instance, 
+                # adding the suffix "_" is important since otherwise, for instance,
                 # CNRM-CM5-C2 would remain even if the constraint was a substring like
                 # CNRM-CM5
                 constraint_ok = all([occursin(name * "_", file) for name in constraints])
@@ -171,13 +171,13 @@ function loadPreprocData(
             parts = splitpath(file)
             filename = split(parts[end], ".nc")[end-1]
             climVar = split(parts[end-1], "_")[1]
-            
+
             ds = NCDataset(file)
             dsVar = ds[climVar]
             # if climVar == "amoc"
             #     dsVar = ds["msftmz"]
             # end
-            
+
             attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)))
             if climVar == "msftmz"
                 sector = get(ds, "sector", nothing)
@@ -192,8 +192,8 @@ function loadPreprocData(
                 get!(attributes, "mip_era", "CMIP5")
                 name = ds.attrib[model_key]
             end
-            source_names[i] = name        
-            # update metadata-dictionary for all processed files with the 
+            source_names[i] = name
+            # update metadata-dictionary for all processed files with the
             # metadata from the current file
             for key in keys(attributes)
                 values = get!(meta, key, repeat(Union{Missing, Any}[missing], outer=n_files));
@@ -216,7 +216,7 @@ function loadPreprocData(
                 else
                     push!(dimensions, Dim{Symbol(d)}(collect(dsVar[d][:])));
                 end
-            end      
+            end
             push!(data, DimArray(Array(dsVar), Tuple(dimensions)));
         end
     end
@@ -235,17 +235,17 @@ function loadPreprocData(
             for idx in 1:n
                 raw_data[:, :, idx] = parent(data[idx])  # Extract and assign the underlying data
             end
-        else 
+        else
             throw(ArgumentError("More than 3 data dimensions not supported."))
         end
         dimData = DimArray(
-            raw_data, 
+            raw_data,
             (dims(data[1])..., Dim{:source}(collect(skipmissing(source_names))))
         )
         updateMetadata!(meta, source_names, is_model_data);
         dimData = rebuild(dimData; metadata = meta);
         if is_model_data
-            # set dimension names, member refers to unique model members, 
+            # set dimension names, member refers to unique model members,
             # model refers to 'big combined model', part of member name,
             # but additionally saved in metadata["model_names"]
             dimData = set(dimData, :source => :member)
@@ -267,42 +267,44 @@ end
 
 """
     loadData(
-        base_path::String, 
-        config_path::String;
+        base_paths::Vector{String},
+        config_paths::Vector{String};
         dir_per_var::Bool=true,
         is_model_data::Bool=true,
         common_models_across_vars::Bool=false,
         subset::Dict=Dict(),
     )
 
-Loads the data from the config files located at 'config_path'. For necessary
+Loads the data from the config files located at 'config_paths'. For necessary
 structure of config files, see TODO. For each variable, experiment, statistic
 and timerange (alias) a different DimArray is loaded.
 
 # Arguments:
-- `base_path`:  if dir_per_var is true, path to directory that contains one or
+- `base_paths`:  if dir_per_var is true, paths to directories that contain one or
 more subdirectories that each contains a directory 'preproc' with the
-preprocessed data. If dir_per_var is false, base_path is the path to a directory
-that contains the 'preproc' subdirectory.
-- `config_path`: path to directory that contains one or more yaml config 
+preprocessed data. If dir_per_var is false, base_paths are the paths to directories
+that contain the 'preproc' subdirectory.
+- `config_paths`: paths to directories that contain one or more yaml config
 files with the following structure: TODO
-- `dir_per_var`: if true, directory at base_path has subdirectories, one for
+- `dir_per_var`: if true, directories at base_paths have subdirectories, one for
 each variable (they must end with _ and the name of the variable), otherwise
-base_path is the path to the directory that contains a subdirectory 'preproc'
+base_paths are the paths to the directories that contain a subdirectory 'preproc'
 - `is_model_data`: set true for CMIP5/6 data, false for observational data
 - `common_models_across_vars`:
 - `subset`: dictionary specifying the subset of data to be loaded, has keys
 'variables', 'statistics', 'aliases', each mapping to a vector of Strings
 """
 function loadData(
-    base_path::String,
-    config_path::String;
+    base_paths::Union{String, Vector{String}},
+    config_paths::Union{String, Vector{String}};
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
     common_models_across_vars::Bool=false,
     subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}()
 )
-    ids = buildDataIDsFromConfigs(config_path)
+    base_paths = isa(base_paths, String) ? [base_paths] : base_paths
+    config_paths = isa(config_paths, String) ? [config_paths] : config_paths
+    ids = buildDataIDsFromConfigs(config_paths)
     applyDataConstraints!(ids, subset)
     # further constraints wrt models and projects applied when loading data
     constraints = filter(((k,v),) -> k in ["models", "projects"] , subset)
@@ -311,18 +313,27 @@ function loadData(
     ids_all = Vector{DataID}()
     paths_all = Vector{String}()
     for id in ids
-        path_to_subdirs = [base_path]
-        # if dir_per_var is true, directory at base_path has subdirectories, 
+        path_to_subdirs = []
+        # if dir_per_var is true, directories at base_paths have subdirectories,
         # one for each variable (they must contain '_VAR', e.g. '_tas'),
-        # otherwise base_path is the path to the directory that contains 
+        # otherwise base_paths are the paths to the directories that contain
         # a subdirectory 'preproc'
-        if dir_per_var
-            path_to_subdirs = filter(isdir, readdir(base_path, join=true))
-            filter!(x -> occursin("_" * id.variable, x), path_to_subdirs)
-            subdirs = get(subset, "subdirs", nothing)
-            if !isnothing(subdirs)
-                filter!(p -> any([occursin(name, p) for name in subdirs]), path_to_subdirs)
+        for base_path in base_paths
+            if dir_per_var
+                subdirs = filter(isdir, readdir(base_path, join=true))
+                filter!(x -> occursin("_" * id.variable, x), subdirs)
+                subset_subdirs = get(subset, "subdirs", nothing)
+                if !isnothing(subset_subdirs)
+                    filter!(p -> any([occursin(name, p) for name in subset_subdirs]), subdirs)
+                end
+                append!(path_to_subdirs, subdirs)
+            else
+                push!(path_to_subdirs, base_path)
             end
+        end
+        if length(path_to_subdirs) > 1
+            fnames = map(basename, path_to_subdirs)
+            @info "Data for variable $(id.key) considered from files:" fnames
         end
         for path_dir in path_to_subdirs
             path_data_dir = joinpath(
@@ -350,7 +361,7 @@ function loadData(
                         dims=Dim{dim}(vcat(Array(prev_models), Array(new_models)))
                     )
                     joint_meta = joinMetadata(
-                        previously_added_data.metadata, 
+                        previously_added_data.metadata,
                         data.metadata,
                         is_model_data
                     )
@@ -364,7 +375,7 @@ function loadData(
         end
     end
     result =  Data(
-        base_path = base_path, 
+        base_paths = base_paths, 
         data_paths = paths_all, 
         ids = ids_all, 
         data = data_all
@@ -379,7 +390,7 @@ function loadData(
     end
     return result
 end
-    
+
 
 """
     getCommonModelsAcrossVars(model_data::Data, dim::Symbol)
@@ -409,7 +420,7 @@ function getCommonModelsAcrossVars(model_data::Data, dim::Symbol)
         end
     end
     for id in map(id -> id.key, ids_all)
-        # TODO: only subset if it is necessary at all 
+        # TODO: only subset if it is necessary at all
         data_all[id] = subsetModelData(data_all[id], Array(shared_models));
     end
     result = Data(
@@ -433,7 +444,7 @@ function getCMIPModelsKey(meta::Dict)
         return "source_id"
     elseif "model_id" in attributes
         return "model_id"
-    else 
+    else
         msg = "Only CMIP6/5 supported (model name keys: source_id/model_id)"
         throw(ArgumentError(msg))
     end
@@ -452,7 +463,7 @@ function loadWeightsAsDimArray(data::NCDataset, key_weights::String)
     src_name = dimnames(data[key_weights])[1]
     sources = Array(data[src_name])
     arr = DimArray(
-        Array(data[key_weights]), 
+        Array(data[key_weights]),
         (Dim{Symbol(src_name)}(sources)), metadata = Dict(data.attrib)
     )
     return arr
@@ -461,7 +472,7 @@ end
 
 """
     getUncertaintyRanges(data::DimArray, w::DimArray; quantiles=[0.167, 0.833]})
-    
+
 # Arguments:
 - `data`: has dimensions 'time', 'model'
 - `w`: has dimension 'model', sum up to 1
