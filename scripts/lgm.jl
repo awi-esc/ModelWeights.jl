@@ -3,23 +3,43 @@ using NCDatasets
 using DimensionalData
 
 ########################### 1. LOADING DATA ###########################
-# Model data, for LGM experiments
-base_path =  "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/";
-config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/lgm-cmip5-cmip6";
-model_data_lgm = sw.loadData(
-    base_path, 
-    config_path;
+# Model data, for experiment lgm and historical
+base_path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool";
+data_paths =  [joinpath(base_path_data, "LGM"), joinpath(base_path_data, "historical")];
+base_path_config = "./configs";
+config_paths = [
+    joinpath(base_path_config, "lgm-cmip5-cmip6"), 
+    joinpath(base_path_config, "historical")
+];
+
+model_data = sw.loadDataFromESMValToolConfigs(
+    data_paths, config_paths;
     dir_per_var = true,
     common_models_across_vars = true,
     subset = Dict(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
+        "alias" => ["historical", "historical0", "lgm"],
         "projects" => ["CMIP5", "CMIP6"],
         "models" => Vector{String}(), # same as not setting it
-        "subdirs" => ["20241114"] # if dir_per_var is true only subdirs containing any are considered
+         # if dir_per_var=true names of data subdirs must contain any of:
+        "subdirs" => ["20241114", "20241121", "20241118"]
         )
 );
-#model_data_lgm_shared = sw.getCommonModelsAcrossVars(model_data_lgm, :member);
+
+
+model_data = sw.loadDataFromYAML(
+    "./configs/example-lgm-historical.yml";
+)
+
+
+
+
+
+
+
+
+
 model_members_lgm = Array(dims(first(values(model_data_lgm.data)), :member))
 models_lgm  = unique(first(values(model_data_lgm.data)).metadata["model_names"])
 

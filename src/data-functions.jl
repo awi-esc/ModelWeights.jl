@@ -1,5 +1,6 @@
 using DimensionalData
 using NCDatasets
+using YAML
 
 """
     getUniqueMemberIds(meta::Dict, model_names::Vector{String})
@@ -262,10 +263,29 @@ function loadPreprocData(
     end
 end
 
+# TODO
+function loadDataFromYAML(
+    config_file::String;
+    dir_per_var::Bool=true,
+    is_model_data::Bool=true,
+    common_models_across_vars::Bool=false,
+    subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}()
+)
+
+    config = YAML.load_file(config_file)
+    datasets = config["datasets"]
+    data_all = Vector{Data}()
+    # for config_data in datasets
+    #     base_path = joinpath()
+    #     data = loadData()
+    # end
+
+    return joint_data
+end
 
 
 """
-    loadData(
+    loadDataFromESMValToolConfigs(
         base_paths::Vector{String},
         config_paths::Vector{String};
         dir_per_var::Bool=true,
@@ -293,35 +313,32 @@ base_paths are the paths to the directories that contain a subdirectory 'preproc
 - `subset`: dictionary specifying the subset of data to be loaded, has keys
 'variables', 'statistics', 'aliases', each mapping to a vector of Strings
 """
-function loadData(
+function loadDataFromESMValToolConfigs(
     base_paths::Union{String, Vector{String}},
     config_paths::Union{String, Vector{String}};
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
     common_models_across_vars::Bool=false,
     subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}()
-)
+)        
     base_paths = isa(base_paths, String) ? [base_paths] : base_paths
     config_paths = isa(config_paths, String) ? [config_paths] : config_paths
-    ids = buildDataIDsFromConfigs(config_paths)
+    ids = buildDataIDsFromESMValToolConfigs(config_paths)
     applyDataConstraints!(ids, subset)
     # further constraints wrt models and projects applied when loading data
-    constraints = filter(((k,v),) -> k in ["models", "projects"] , subset)
+    constraints = filter(((k,v),) -> k in ["models", "projects", "subdirs"] , subset)
 
-    data_all = Dict{String, DimArray}()
-    ids_all = Vector{DataID}()
-    paths_all = Vector{String}()
+    path_to_subdirs = Vector{String}()
+    # if dir_per_var is true, directories at base_paths have subdirectories,
+    # one for each variable (they must contain '_VAR', e.g. '_tas'),
+    # otherwise base_paths are the paths to the directories that contain
+    # a subdirectory 'preproc'
     for id in ids
-        path_to_subdirs = []
-        # if dir_per_var is true, directories at base_paths have subdirectories,
-        # one for each variable (they must contain '_VAR', e.g. '_tas'),
-        # otherwise base_paths are the paths to the directories that contain
-        # a subdirectory 'preproc'
         for base_path in base_paths
             if dir_per_var
                 subdirs = filter(isdir, readdir(base_path, join=true))
                 filter!(x -> occursin("_" * id.variable, x), subdirs)
-                subset_subdirs = get(subset, "subdirs", nothing)
+                subset_subdirs = get(constraints, "subdirs", nothing)
                 if !isnothing(subset_subdirs)
                     filter!(p -> any([occursin(name, p) for name in subset_subdirs]), subdirs)
                 end
@@ -330,58 +347,91 @@ function loadData(
                 push!(path_to_subdirs, base_path)
             end
         end
-        for path_dir in path_to_subdirs
-            path_data_dir = joinpath(
-                path_dir, "preproc", id.alias, join([id.variable, id.statistic], "_")
-            )
-            if !isdir(path_data_dir)
-                @warn "$path_data_dir does not exist"
-                continue
-            end
-            #print("processing...: " * path_data_dir)
-            data = loadPreprocData(
-                path_data_dir; subset = constraints, is_model_data = is_model_data
-            )
-            if !isnothing(data)
-                push!(paths_all, path_data_dir)
-                previously_added_data = get(data_all, id.key, nothing)
-                if isnothing(previously_added_data)
-                    data_all[id.key] = data
-                else
-                    dim = is_model_data ? :member : :source
-                    prev_models = collect(dims(previously_added_data, dim))
-                    new_models = collect(dims(data, dim))
-                    joint_data = cat(
-                        previously_added_data, data;
-                        dims=Dim{dim}(vcat(Array(prev_models), Array(new_models)))
-                    )
-                    joint_meta = joinMetadata(
-                        previously_added_data.metadata,
-                        data.metadata,
-                        is_model_data
-                    )
-                    data_all[id.key] = rebuild(joint_data; metadata = joint_meta)
-                end
-                # only include once if data is loaded from multiple files
-                if !(id in ids_all)
-                    push!(ids_all, id)
-                end
+    end
+
+    data_all = Vector{Data}()
+    for id in ids
+        data = loadData(
+            path_to_subdirs, id, constraints, is_model_data, common_models_across_vars
+        )
+        push!(data_all, data)
+    end
+    joint_data = joinDataObjects(data_all)
+    @info "loaded data: " joint_data.paths
+    @info "only loaded data of models shared across all variables" common_models_across_vars
+    return joint_data
+end
+
+
+function loadData(
+    data_paths::Vector{String}, 
+    id::DataID,
+    constraints::Dict{String, Vector{String}},
+    #dir_per_var::Bool,
+    is_model_data::Bool,
+    common_models_across_vars::Bool
+)
+    # path_to_subdirs = Vector{String}()
+    # if dir_per_var is true, directories at base_paths have subdirectories,
+    # one for each variable (they must contain '_VAR', e.g. '_tas'),
+    # otherwise base_paths are the paths to the directories that contain
+    # a subdirectory 'preproc'
+    # for base_path in base_paths
+    #     if dir_per_var
+    #         subdirs = filter(isdir, readdir(base_path, join=true))
+    #         filter!(x -> occursin("_" * id.variable, x), subdirs)
+    #         subset_subdirs = get(constraints, "subdirs", nothing)
+    #         if !isnothing(subset_subdirs)
+    #             filter!(p -> any([occursin(name, p) for name in subset_subdirs]), subdirs)
+    #         end
+    #         append!(path_to_subdirs, subdirs)
+    #     else
+    #         push!(path_to_subdirs, base_path)
+    #     end
+    # end
+    data_all = Dict{String, DimArray}()
+    paths_all = Vector{String}()
+    for path_dir in data_paths
+        path_data_dir = joinpath(
+            path_dir, "preproc", id.alias, join([id.variable, id.statistic], "_")
+        )
+        if !isdir(path_data_dir)
+            @debug "$path_data_dir does not exist"
+            continue
+        end
+        #print("processing...: " * path_data_dir)
+        data = loadPreprocData(
+            path_data_dir; subset = constraints, is_model_data = is_model_data
+        )
+        if !isnothing(data)
+            push!(paths_all, path_data_dir)
+            previously_added_data = get(data_all, id.key, nothing)
+            if isnothing(previously_added_data)
+                data_all[id.key] = data
+            else
+                dim = is_model_data ? :member : :source
+                prev_models = collect(dims(previously_added_data, dim))
+                new_models = collect(dims(data, dim))
+                joint_data = cat(
+                    previously_added_data, data;
+                    dims=Dim{dim}(vcat(Array(prev_models), Array(new_models)))
+                )
+                joint_meta = joinMetadata(
+                    previously_added_data.metadata,
+                    data.metadata,
+                    is_model_data
+                )
+                data_all[id.key] = rebuild(joint_data; metadata = joint_meta)
             end
         end
     end
     result =  Data(
-        base_paths = base_paths, 
-        data_paths = paths_all, 
-        ids = ids_all, 
+        paths = paths_all, 
+        ids = [id], 
         data = data_all
     )
-    @info "loaded data: " result
     if is_model_data && common_models_across_vars
-        @info "only retain models shared across all variables"
         result = getCommonModelsAcrossVars(result, :member)
-    end
-    if length(result.data) != length(result.ids)
-        @warn "length of data and ids doesnt match!"
     end
     return result
 end
@@ -419,8 +469,7 @@ function getCommonModelsAcrossVars(model_data::Data, dim::Symbol)
         data_all[id] = subsetModelData(data_all[id], Array(shared_models));
     end
     result = Data(
-        base_paths = model_data.base_paths, 
-        data_paths = model_data.data_paths, 
+        paths = model_data.paths, 
         ids = model_data.ids, 
         data = data_all
     )

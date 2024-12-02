@@ -22,8 +22,7 @@ end
 
 
 @kwdef struct Data
-    base_paths::Vector{String}
-    data_paths::Vector{String}
+    paths::Vector{String}
     ids::Vector{DataID}=[]
     data::Dict{String, DimArray}=Dict()
 end
@@ -31,10 +30,28 @@ end
 
 # Pretty print Data instances
 function Base.show(io::IO, x::Data)
-    println(io, "Data loaded from the following files:\n")
-    for fn in x.data_paths
+    for id in x.ids
+        println(io, "$id")
+    end
+    println("")
+    for fn in x.paths
         println(io, "$fn")
     end
+end
+
+
+function joinDataObjects(data::Vector{Data})
+    data_paths_all = Vector{String}()
+    ids_all = Vector{DataID}()
+    data_all = Dict{String, DimArray}()
+    for ds in data
+        append!(data_paths_all, ds.paths)
+        append!(ids_all, ds.ids)
+        for k in keys(ds.data)
+            data_all[k] = copy(ds.data[k])
+        end
+    end
+    return Data(paths = data_paths_all, data = data_all, ids = ids_all)
 end
 
 
@@ -307,7 +324,7 @@ end
 
 
 """
-    buildDataIDsFromConfigs(config_paths::Vector{String})
+    buildDataIDsFromESMValToolConfigs(config_paths::Vector{String})
 
 Read config files to determine which data shall be loaded, as defined by the 
 variable, statistic, experiment and timerange. 
@@ -316,7 +333,7 @@ variable, statistic, experiment and timerange.
 - `config_paths`: list of paths to directories that contain one or more yaml config
 files. For the assumed structure of the config files, see: TODO.
 """
-function buildDataIDsFromConfigs(config_paths::Vector{String})
+function buildDataIDsFromESMValToolConfigs(config_paths::Vector{String})
     ids::Vector{DataID} = []
     for config_path in config_paths
         paths_to_configs = filter(
