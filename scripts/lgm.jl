@@ -3,79 +3,73 @@ using NCDatasets
 using DimensionalData
 
 ########################### 1. LOADING DATA ###########################
-# Model data, for experiment lgm and historical
-base_path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool";
-data_paths =  [joinpath(base_path_data, "LGM"), joinpath(base_path_data, "historical")];
-base_path_config = "./configs";
-config_paths = [
-    joinpath(base_path_config, "lgm-cmip5-cmip6"), 
-    joinpath(base_path_config, "historical")
-];
-
-model_data = sw.loadDataFromESMValToolConfigs(
-    data_paths, config_paths;
-    dir_per_var = true,
-    common_models_across_vars = true,
-    subset = Dict(
+# Model data just for lgm-experiment from ESMValTool recipes
+path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
+path_recipes = "/albedo/home/brgrus001/SimilarityWeights/configs/lgm-cmip5-cmip6";
+lgm_data = sw.loadDataFromESMValToolConfigs(
+    path_data, path_recipes;
+    dir_per_var = true, # true is default value
+    is_model_data = true, # true is default value
+    only_shared_models = true, # false is default value
+    subset = Dict(  # default value is empty dictionary
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
-        "alias" => ["historical", "historical0", "lgm"],
+        "alias" => ["lgm"],
         "projects" => ["CMIP5", "CMIP6"],
         "models" => Vector{String}(), # same as not setting it
          # if dir_per_var=true names of data subdirs must contain any of:
-        "subdirs" => ["20241114", "20241121", "20241118"]
-        )
+        "subdirs" => ["20241114"]
+    )
 );
+model_members_lgm = Array(dims(first(values(lgm_data.data)), :member))
+models_lgm  = unique(first(values(lgm_data.data)).metadata["model_names"])
 
-
-model_data = sw.loadDataFromYAML(
-    "./configs/example-lgm-historical.yml";
-)
-
-
-
-
-
-
-
-
-
-model_members_lgm = Array(dims(first(values(model_data_lgm.data)), :member))
-models_lgm  = unique(first(values(model_data_lgm.data)).metadata["model_names"])
-
-
-# Model data for historical experiments for those models from above that also have lgm - experiments
+# Model data for historical experiment of models with lgm-experiment from above
 base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
 config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/historical";
-model_data_historical = sw.loadData(
+historical_data = sw.loadDataFromESMValToolConfigs(
     base_path, config_path;
-    dir_per_var = true,
-    common_models_across_vars = true,
+    only_shared_models = true,
     subset = Dict(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
-        "alias" => ["historical", "historical0"],
+        "alias" => ["historical"],
         "timerange" => ["full"],
-        "projects" => ["CMIP5", "CMIP6"],
         "models" => model_members_lgm,
         #"models" => models_lgm,
-        "subdirs" => ["20241121", "20241118"] # if dir_per_var is true only subdirs containing any are considered
+        # if dir_per_var=true names of data subdirs must contain any of:
+        "subdirs" => ["20241121", "20241118"]
     )
 );
-#model_data_historical = sw.getCommonModelsAcrossVars(model_data_historical, :member);
 
-# Observational data
-obs_data = sw.loadData(
-    "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_20241119_124434",
-    "/albedo/home/brgrus001/SimilarityWeights/configs/historical_obs";
+# Load model data for experiment lgm and historical in one run from new config file
+path_config = "/albedo/home/brgrus001/SimilarityWeights/configs/examples/example-lgm-historical.yml";
+model_data = sw.loadDataFromYAML(
+    path_config;
+    dir_per_var = true, # true is default value
+    is_model_data=true, # true is default value
+    only_shared_models = true,
+    subset = Dict(
+        "projects" => ["CMIP5", "CMIP6"],
+        "models" => model_members_lgm
+        #"models" => models_lgm
+    )
+);
+
+
+# Load the observational data
+base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_20241119_124434"
+config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/historical_obs"
+obs_data = sw.loadDataFromESMValToolConfigs(
+    base_path, config_path;
     dir_per_var = false,
     is_model_data = false,
     subset = Dict(
         "statistic" => ["CLIM"],
         "variable" => ["tas", "tos"],
-        "alias" => ["historical", "historical3"],
-        "projects" => ["ERA5"] # default value (same as not setting it)
-        #"timeranges" => ["1980-2014"]
+        "alias" => ["historical", "historical2"],
+        "projects" => ["ERA5"], # for observational data default value is ["ERA5"]
+        "timerange" => ["1980-2014"]
     )
 );
 
@@ -88,11 +82,12 @@ config_weights = sw.ConfigWeights(
     independence = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     sigma_independence = 0.5,
     sigma_performance = 0.5,
+    # ref_period can refer to either an alias or a timerange:
     ref_period = "historical", # alias
     #ref_period = "full", # timerange
     target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
 );
-weights = sw.computeWeights(model_data_historical, obs_data, config_weights);
+weights = sw.computeWeights(historical_data, obs_data, config_weights);
 
 # weights can also be  saved separately:
 target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"

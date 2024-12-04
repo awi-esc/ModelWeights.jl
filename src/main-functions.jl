@@ -28,7 +28,9 @@ function computeWeights(
     keys_weights_perform = allcombinations(dims(weights_perform, :variable), dims(weights_perform, :diagnostic))
     keys_weights_indep = allcombinations(dims(weights_indep, :variable), dims(weights_indep, :diagnostic))
     
-    ref_period_alias, ref_period_timerange = getRefPeriodAsTimerangeAndAlias(model_data.ids, config.ref_period)
+    ref_period_alias, ref_period_timerange = getRefPeriodAsTimerangeAndAlias(
+        map(x -> x.attrib, model_data.meta), config.ref_period
+    )
     
     msg =  x -> "For computation of $x weights: Make sure that data is provided 
     for the given reference period ($(config.ref_period)) and combination of 
@@ -77,4 +79,70 @@ function computeWeights(
         saveWeights(climwip_weights, config.target_dir)
     end
     return climwip_weights
+end
+
+"""
+    loadData(
+        base_paths::Vector{String},
+        config_paths::Vector{String};
+        dir_per_var::Bool=true,
+        is_model_data::Bool=true,
+        common_models_across_vars::Bool=false,
+        subset::Dict=Dict(),
+    )
+
+Loads the data from the config files located at 'config_paths'. For necessary
+structure of config files, see TODO. For each variable, experiment, statistic
+and timerange (alias) a different DimArray is loaded.
+
+# Arguments:
+- `base_paths`:  if dir_per_var is true, paths to directories that contain one or
+more subdirectories that each contains a directory 'preproc' with the
+preprocessed data. If dir_per_var is false, base_paths are the paths to directories
+that contain the 'preproc' subdirectory.
+- `config_paths`: paths to directories that contain one or more yaml config
+files with the following structure: TODO
+- `dir_per_var`: if true, directories at base_paths have subdirectories, one for
+each variable (they must end with _ and the name of the variable), otherwise
+base_paths are the paths to the directories that contain a subdirectory 'preproc'
+- `is_model_data`: set true for CMIP5/6 data, false for observational data
+- `common_models_across_vars`:
+- `subset`: dictionary specifying the subset of data to be loaded, has keys
+'variables', 'statistics', 'aliases', each mapping to a vector of Strings
+"""
+function loadDataFromESMValToolConfigs(
+    path_data::String,
+    path_recipes::String;
+    dir_per_var::Bool=true,
+    is_model_data::Bool=true,
+    only_shared_models::Bool=false,
+    subset::Dict{String, Vector{String}}=Dict()
+)
+    attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; subset)
+    meta_data = buildMetaData(
+        attributes, path_data, dir_per_var;
+        subdir_constraints = get(subset, "subdirs", nothing)
+    )
+    # further constraints wrt models and projects applied when loading data
+    data_constraints = filter(((k,v),) -> k in ["models", "projects"] , subset)
+    data = loadDataFromMetadata(
+        meta_data, data_constraints, is_model_data, only_shared_models
+    )
+    return data
+end
+
+
+function loadDataFromYAML(
+    path_config::String;
+    dir_per_var::Bool=true,
+    is_model_data::Bool=true,
+    only_shared_models::Bool=false,
+    subset::Dict{String, Vector{String}}=Dict()
+)
+    meta_data = getMetaDataFromYAML(path_config, dir_per_var; subset)
+    data_constraints = filter(((k,v),) -> k in ["models", "projects"] , subset)
+    data = loadDataFromMetadata(
+        meta_data, data_constraints, is_model_data, only_shared_models
+    );
+    return data
 end

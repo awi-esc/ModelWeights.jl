@@ -1,0 +1,11 @@
+diagnostics:
+  lgm:
+    variables:
+      tas_CLIM:
+        exp: lgm
+      tas_CLIM-mon:
+        exp: lgm
+      tas_STD:
+        exp: lgm
+      tas_STD-mon:
+        exp: lgm

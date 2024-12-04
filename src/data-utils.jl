@@ -3,8 +3,7 @@ using DimensionalData
 using Interpolations
 
 
-@kwdef struct DataID
-    key::String
+@kwdef struct MetaAttrib
     variable::String
     statistic::String
     alias::String
@@ -12,46 +11,61 @@ using Interpolations
     timerange::String
 end
 
-# Overload the Base.show method to print key-value pairs of DataID instances
-function Base.show(io::IO, x::DataID)
-    for field in fieldnames(DataID)
-        value = getfield(x, field)        
+
+# Overload the Base.show method to print key-value pairs of MetaAttrib instances
+function Base.show(io::IO, x::MetaAttrib)
+    for field in fieldnames(MetaAttrib)
+        value = getfield(x, field)
         print(io, "$field=$value ")
     end
 end
 
 
-@kwdef struct Data
+@kwdef struct MetaData
+    id::String
+    attrib::MetaAttrib
     paths::Vector{String}
-    ids::Vector{DataID}=[]
+end
+
+
+# Pretty print MetaData instances
+function Base.show(io::IO, x::MetaData)
+    println(io, "$(x.id) ($(x.attrib.timerange)) from:")
+    for path in x.paths
+        println(io, "\t$path")
+    end
+end
+
+
+@kwdef struct Data
+    meta::Vector{MetaData}=[]
     data::Dict{String, DimArray}=Dict()
 end
 
 
-# Pretty print Data instances
-function Base.show(io::IO, x::Data)
-    for id in x.ids
-        println(io, "$id")
-    end
-    println("")
-    for fn in x.paths
-        println(io, "$fn")
-    end
-end
+"""
+    joinDataObjects(data::Vector{Data})
 
-
+# Return: A single Data-Object with the combined data from all Data-Objects 
+in the input vector.
+"""
 function joinDataObjects(data::Vector{Data})
-    data_paths_all = Vector{String}()
-    ids_all = Vector{DataID}()
+    meta_all = Vector{MetaData}()
     data_all = Dict{String, DimArray}()
+    duplicate_ids = Vector{String}()
     for ds in data
-        append!(data_paths_all, ds.paths)
-        append!(ids_all, ds.ids)
+        append!(meta_all, ds.meta)
         for k in keys(ds.data)
+            if haskey(data_all, k) 
+                push!(duplicate_ids, k)
+                # TODO: handle duplicate ids (e.g, if for same metadata,
+                # (different) data is loaded) 
+                @warn "joint data with same id, one is overwritten!"
+            end
             data_all[k] = copy(ds.data[k])
         end
     end
-    return Data(paths = data_paths_all, data = data_all, ids = ids_all)
+    return Data(data = data_all, meta = meta_all)
 end
 
 
@@ -324,7 +338,12 @@ end
 
 
 """
-    buildDataIDsFromESMValToolConfigs(config_paths::Vector{String})
+    getMetaAttribFromESMValToolConfigs(
+        base_path_data::String,
+        base_path_configs::String, 
+        dir_per_var::Bool,
+        subset::Dict{String, Vector{String}}
+)
 
 Read config files to determine which data shall be loaded, as defined by the 
 variable, statistic, experiment and timerange. 
@@ -333,82 +352,192 @@ variable, statistic, experiment and timerange.
 - `config_paths`: list of paths to directories that contain one or more yaml config
 files. For the assumed structure of the config files, see: TODO.
 """
-function buildDataIDsFromESMValToolConfigs(config_paths::Vector{String})
-    ids::Vector{DataID} = []
-    for config_path in config_paths
-        paths_to_configs = filter(
-            x -> isfile(x) && endswith(x, ".yml"),
-            readdir(config_path, join=true)
-        )
-        for path_config in paths_to_configs
-            config = YAML.load_file(path_config);
-            data_all = config["diagnostics"]
-            aliases = keys(data_all)
+function getMetaAttributesFromESMValToolConfigs(
+    base_path_configs::String;
+    subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
+)
+    paths_configs = filter(
+        x -> isfile(x) && endswith(x, ".yml"),
+        readdir(base_path_configs, join=true)
+    )
+    meta_attrib = Vector{MetaAttrib}()
+    for path_config in paths_configs
+        config = YAML.load_file(path_config)
+        data_all = config["diagnostics"]
+        aliases = keys(data_all)
 
-            for alias in aliases
-                data = data_all[alias]["variables"]
-                for (k,v) in data
-                    variable, statistic = split(k, "_")
-                    if typeof(v["exp"]) <: String
-                        experiment = v["exp"]
-                    else
-                        experiment = join(v["exp"], "-")
-                    end
-                    timerange = replace(get(v, "timerange", "full"), "/" => "-")
-                    id = join([variable, statistic, alias], "_")
-                    dataID = DataID(
-                        key=id,
-                        variable=variable,
-                        statistic=statistic,
-                        alias=alias,
-                        exp=experiment,
-                        timerange=timerange
-                    )
-                    push!(ids, dataID)
+        for alias in aliases
+            data = data_all[alias]["variables"]
+            for (k,v) in data
+                variable, statistic = String.(split(k, "_"))
+                if typeof(v["exp"]) <: String
+                    experiment = v["exp"]
+                else
+                    experiment = join(v["exp"], "-")
+                end
+                timerange = replace(get(v, "timerange", "full"), "/" => "-")
+                meta = MetaAttrib(
+                    variable = variable, 
+                    statistic = statistic, 
+                    alias = alias, 
+                    exp = experiment,
+                    timerange = timerange
+                )
+                if !(meta in meta_attrib) 
+                    push!(meta_attrib, meta)
                 end
             end
         end
     end
-    return unique(ids)
+    if !isnothing(subset)
+        applyDataConstraints!(meta_attrib, subset)
+    end
+    return meta_attrib
+end
+
+
+
+function getMetaDataFromYAML(
+    path_config::String, 
+    dir_per_var::Bool;
+    subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
+)
+    config = YAML.load_file(path_config)
+    datasets = config["datasets"]
+    base_path = get(config, "path_data", "")
+    timerange_to_alias = config["timerange_to_alias"]
+    meta_data = Vector{MetaData}()
+    for ds in datasets
+        path_data = joinpath(base_path, ds["base_dir"])
+        subdir_constraints = get(ds, "subdirs", nothing) 
+        for clim_var in ds["variables"]
+            for stat in ds["statistics"]
+                experiment = ds["exp"]                
+                timeranges = get(ds, "timeranges", ["full"])
+                for timerange in timeranges
+                    alias = timerange == "full" ? experiment : 
+                        get(timerange_to_alias, timerange, "unknown")
+                    attrib = [MetaAttrib(
+                        variable = clim_var, 
+                        statistic = stat, 
+                        alias = alias, 
+                        exp = experiment,
+                        timerange = timerange
+                    )]
+                    if !isnothing(subset)
+                        applyDataConstraints!(attrib, subset)
+                    end
+                    if !isempty(attrib)
+                        meta = buildMetaData(
+                            attrib[1], path_data, dir_per_var; subdir_constraints
+                        )     
+                        append!(meta_data, meta)
+                    end
+                end
+            end
+        end
+    end
+    return meta_data
+end
+
+
+
+
+function buildMetaData(
+    attrib::Union{MetaAttrib, Vector{MetaAttrib}},
+    base_path_data::String,
+    dir_per_var::Bool;
+    subdir_constraints::Union{Vector{String}, Nothing} = nothing
+)
+    attributes = isa(attrib, MetaAttrib) ? [attrib] : attrib
+    metadata = Vector{MetaData}()
+    for attrib in attributes
+        data_paths = buildPathsForMetaAttrib(
+            base_path_data, attrib, dir_per_var; constraints=subdir_constraints
+        )
+        meta = MetaData(
+            id = join([attrib.variable, attrib.statistic, attrib.alias], "_"),
+            attrib = attrib,
+            paths = data_paths
+        )
+        push!(metadata, meta)
+    end
+    return metadata
+end
+
+# if dir_per_var is true, directories at base_paths have subdirectories,
+# one for each variable (they must contain '_VAR', e.g. '_tas'),
+# otherwise base_paths are the paths to the directories that contain
+# a subdirectory 'preproc'
+function buildPathsForMetaAttrib(
+    base_path::String, 
+    attrib::MetaAttrib,
+    dir_per_var::Bool;
+    constraints::Union{Vector{String}, Nothing}=nothing
+)
+    base_paths = [base_path]
+    if dir_per_var
+        base_paths = filter(isdir, readdir(base_path, join=true))
+        filter!(x -> occursin("_" * attrib.variable, x), base_paths)
+    end
+    if !isnothing(constraints) && !isempty(constraints)
+        filter!(p -> any([occursin(name, p) for name in constraints]), base_paths)
+    end
+    data_paths = Vector{String}()
+    for path in base_paths
+        # Note: particular data structure assumed here!
+        diagnostic = join([attrib.variable, attrib.statistic], "_")
+        path_data = joinpath(path, "preproc", attrib.alias, diagnostic)
+        if !isdir(path_data)
+            @warn "No data found at:" path_data
+        else
+            push!(data_paths, path_data)
+        end
+    end
+    return data_paths
 end
 
 
 """
-    applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{String}})
+    applyDataConstraints!(
+    metadata::Vector{MetaData}, subset::Dict{String, Vector{String}}
+)
 
 Subset model ids so that only those with properties specified in 'subset' remain.
 
 # Arguments
-- `ids`: Vector of DataID instances.
-- `subset`: Mapping from fieldnames of 'DataID' struct to Vector specifiying the
+- `metadata`: Vector of MetaData instances.
+- `subset`: Mapping from fieldnames of 'MetaAttrib' struct to Vector specifiying the
 properties of which at least one must be present for an id to be retained.
 """
-function applyDataConstraints!(ids::Vector{DataID}, subset::Dict{String, Vector{String}})
-
+function applyDataConstraints!(
+    meta_attributes::Vector{MetaAttrib}, subset::Dict{String, Vector{String}}
+)
     # check for compatibility of timerange and alias first
     timerange_constraints = get(subset, "timerange", Vector{String}())
     alias_constraints = get(subset, "alias", Vector{String}())
-    timerangeOk(id::DataID) = any(x -> id.timerange == x, timerange_constraints)
-    aliasOk(id::DataID) = any(x -> id.alias == x, alias_constraints)
+    timerangeOk(attrib::MetaAttrib) = any(x -> attrib.timerange == x, timerange_constraints)
+    aliasOk(attrib::MetaAttrib) = any(x -> attrib.alias == x, alias_constraints)
 
     if !isempty(timerange_constraints) && !isempty(alias_constraints)
-        filter!(x -> timerangeOk(x) || aliasOk(x), ids)
-        if isempty(ids)
+        filter!(x -> timerangeOk(x) || aliasOk(x), meta_attributes)
+        if isempty(meta_attributes)
             msg = "Neither timeranges $(timerange_constraints) nor aliases $(alias_constraints) found in data!"
             throw(ArgumentError(msg))
         end
     elseif !isempty(timerange_constraints)
-        filter!(timerangeOk, ids)
+        filter!(timerangeOk, meta_attributes)
     elseif !isempty(alias_constraints)
-        filter!(aliasOk, ids)
+        filter!(aliasOk, meta_attributes)
     end
 
-    fields = filter(x -> !(x in [:key, :timerange, :alias]), fieldnames(DataID))
+    # constraints wrt remaining attributes
+    fields = filter(x -> !(x in [:timerange, :alias]), fieldnames(MetaAttrib))
     for field in fields
-        constraints = get(subset, string(field), Vector{String}()) # e.g. [historical, historical0]
+        constraints = get(subset, string(field), Vector{String}())
         if !isempty(constraints)
-            fn(id::DataID) = any(x -> getproperty(id, field) == x, constraints)
-            filter!(fn, ids)
+            fn(attrib::MetaAttrib) = any(x -> getproperty(attrib, field) == x, constraints)
+            filter!(fn, meta_attributes)
         end
     end
     return nothing
@@ -558,28 +687,28 @@ the given reference period 'ref_period'.
 function isValidDataAndWeightInput(
     data::Data, keys_weights::Vector{String}, ref_period::String
 )
-    ids = map(x -> x.key, data.ids)
+    ids = map(x -> x.id, data.meta)
     keys_data = map(x -> x * "_" * ref_period, keys_weights)
     return all([k in ids for k in keys_data])
 end
 
 """
-    getTimerangeAsAlias(data_ids::Vector{DataID}, timerange::String)
+    getTimerangeAsAlias(meta_attribs::Vector{MetaAttrib}, timerange::String)
 
 Translate given timerange to corresponding alias in 'data_ids'.
 
 # Arguments:
-- `data_ids`:
+- `meta_attribs`:
 - `timerange`:
 """
-function getTimerangeAsAlias(data_ids::Vector{DataID}, timerange::String)
-    ids = filter(id -> id.timerange == timerange, data_ids)
-    return isempty(ids) ? nothing : ids[1].alias
+function getTimerangeAsAlias(meta_attribs::Vector{MetaAttrib}, timerange::String)
+    attribs = filter(x -> x.timerange == timerange, meta_attribs)
+    return isempty(attribs) ? nothing : attribs[1].alias
 end
 
 
 """
-    getAliasAsTimerange(data_ids::Vector{DataID}, alias::String)
+    getAliasAsTimerange(meta_attribs::Vector{MetaAttrib}, alias::String)
 
 Translate given alias to corresponding timerange in 'data_ids'.
 
@@ -587,18 +716,18 @@ Translate given alias to corresponding timerange in 'data_ids'.
 - `data_ids`:
 - `alias`:
 """
-function getAliasAsTimerange(data_ids::Vector{DataID}, alias::String)
-    ids = filter(id -> id.alias == alias, data_ids)
-    return isempty(ids) ? nothing : ids[1].timerange
+function getAliasAsTimerange(meta_attribs::Vector{MetaAttrib}, alias::String)
+    attribs = filter(x -> x.alias == alias, meta_attribs)
+    return isempty(attribs) ? nothing : attribs[1].timerange
 end
 
 
 function getRefPeriodAsTimerangeAndAlias(
-    model_ids::Vector{DataID}, ref_period::String
+    meta_attribs::Vector{MetaAttrib}, ref_period::String
 )
-    alias = getTimerangeAsAlias(model_ids, ref_period) 
+    alias = getTimerangeAsAlias(meta_attribs, ref_period) 
     # true : ref_period given as alias, false: ref_period given as timerange
-    timerange = isnothing(alias) ? getAliasAsTimerange(model_ids, ref_period) : ref_period
+    timerange = isnothing(alias) ? getAliasAsTimerange(meta_attribs, ref_period) : ref_period
     alias = isnothing(alias) ? ref_period : alias
 
     if (isnothing(alias) || isnothing(timerange))

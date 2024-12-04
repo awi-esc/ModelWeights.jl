@@ -12,6 +12,6 @@ include("main-functions.jl")
 
 
 
-export loadData, loadPreprocData, computeWeights, getCommonModelsAcrossVars
+export loadDataFromMetadata, loadPreprocData, computeWeights, getSharedModels
 
 end
