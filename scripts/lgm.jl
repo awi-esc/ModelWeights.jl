@@ -19,7 +19,8 @@ lgm_data = sw.loadDataFromESMValToolConfigs(
         "models" => Vector{String}(), # same as not setting it
          # if dir_per_var=true names of data subdirs must contain any of:
         "subdirs" => ["20241114"]
-    )
+    ),
+    preview = false # false is default value 
 );
 model_members_lgm = Array(dims(first(values(lgm_data.data)), :member))
 models_lgm  = unique(first(values(lgm_data.data)).metadata["model_names"])

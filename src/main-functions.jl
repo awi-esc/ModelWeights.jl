@@ -123,14 +123,16 @@ function loadDataFromESMValToolConfigs(
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
     only_shared_models::Bool=false,
-    subset::Union{Dict{String, Vector{String}}, Nothing}=nothing
+    subset::Union{Dict{String, Vector{String}}, Nothing}=nothing,
+    preview::Bool=false
 )
     attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; subset)
     meta_data = buildMetaData(
         attributes, path_data, dir_per_var, is_model_data; subset
     )
-    data = loadDataFromMetadata(meta_data, is_model_data, only_shared_models)
-    return data
+    output = preview ? meta_data : 
+        loadDataFromMetadata(meta_data, is_model_data, only_shared_models)
+    return output
 end
 
 
@@ -139,9 +141,11 @@ function loadDataFromYAML(
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
     only_shared_models::Bool=false,
-    subset::Union{Dict{String, Vector{String}}, Nothing}=nothing
+    subset::Union{Dict{String, Vector{String}}, Nothing}=nothing,
+    preview::Bool=false
 )
     meta_data = getMetaDataFromYAML(path_config, dir_per_var, is_model_data; subset)
-    data = loadDataFromMetadata(meta_data, is_model_data, only_shared_models)
-    return data
+    output = preview ? meta_data :
+        loadDataFromMetadata(meta_data, is_model_data, only_shared_models)
+    return output
 end
