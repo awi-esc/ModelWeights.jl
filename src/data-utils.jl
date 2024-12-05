@@ -10,8 +10,6 @@ using Interpolations
     exp::String
     timerange::String
 end
-
-
 # Overload the Base.show method to print key-value pairs of MetaAttrib instances
 function Base.show(io::IO, x::MetaAttrib)
     for field in fieldnames(MetaAttrib)
@@ -26,8 +24,6 @@ end
     attrib::MetaAttrib
     paths::Vector{String}
 end
-
-
 # Pretty print MetaData instances
 function Base.show(io::IO, x::MetaData)
     println(io, "$(x.id) ($(x.attrib.timerange)) from:")
@@ -45,6 +41,12 @@ end
 
 """
     joinDataObjects(data::Vector{Data})
+
+Combine several Data-Objects into a single one, e.g. to combine data from 
+two experiments that had been loaded seperately.
+
+# Arguments.
+- `data`: 
 
 # Return: A single Data-Object with the combined data from all Data-Objects 
 in the input vector.
@@ -151,7 +153,7 @@ Arguments:
 function updateMetadata!(
     meta::Dict{String, Any},
     source_names::Vector{Union{Missing, String}},
-    isModelData::Bool
+    is_model_data::Bool
 )
     indices = findall(x -> !ismissing(x), source_names)
     for key in keys(meta)
@@ -163,7 +165,7 @@ function updateMetadata!(
         end
     end
     included_data = Array{String}(source_names[indices])
-    if isModelData
+    if is_model_data
         meta["member_names"] = getUniqueMemberIds(meta, included_data)
         meta["model_names"] = included_data
     else
@@ -179,11 +181,16 @@ end
 Join the metadata of data to be joint (e.g. when loading data for tos for
 CMIP5 and CMIP6 from different locations). If keys are present in 'meta1' or
 'meta2' but not the other, missing values are added.
+
+# Arguments:
+- `meta1`:
+- `meta2`:
+- `is_model_data`: true for model data, false for observational data
 """
-function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any}, isModelData::Bool)
+function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any}, is_model_data::Bool)
     meta = Dict{String, Any}()
-    n1 = isModelData ? length(vcat(meta1["member_names"]...)) : length(meta1["source_names"])
-    n2 = isModelData ? length(vcat(meta2["member_names"]...)) : length(meta2["source_names"])
+    n1 = is_model_data ? length(vcat(meta1["member_names"]...)) : length(meta1["source_names"])
+    n2 = is_model_data ? length(vcat(meta2["member_names"]...)) : length(meta2["source_names"])
     keys_meta1 = keys(meta1)
     keys_meta2 = keys(meta2)
     keys_shared = collect(intersect(keys_meta1, keys_meta2))
@@ -254,6 +261,10 @@ These are now summarized such that each vector only contains N entries where N
 is the number of models (i.e. without the unique members).
 If the metadata for members of a model differ across members, the respective
 entry in the vector will be a vector itself.
+
+# Arguments:
+- `meta`:
+- `grouped_data`:
 """
 function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
     meta_new = filter(((k,v),) -> k=="member_names" || !(v isa Vector), meta)
@@ -284,9 +295,18 @@ end
 
 
 """
-    computeInterpolatedWeightedQuantiles(quantiles, vals; weights=nothing)
+    computeInterpolatedWeightedQuantiles(
+        quantiles::Vector{<:Number},
+        vals::Vector;
+        weights=nothing    
+    )
 
 This implementation follows the one used by Brunner et al.
+
+# Arguments:
+- `quantiles`: 
+- `vals`:
+- `weights`:
 """
 function computeInterpolatedWeightedQuantiles(
     quantiles::Vector{<:Number},
@@ -307,7 +327,6 @@ function computeInterpolatedWeightedQuantiles(
         vals[indicesSorted],
         extrapolation_bc=Interpolations.Line()
     );
-
     return interp_linear(quantiles)
 end
 
@@ -338,19 +357,21 @@ end
 
 
 """
-    getMetaAttribFromESMValToolConfigs(
-        base_path_data::String,
-        base_path_configs::String, 
-        dir_per_var::Bool,
-        subset::Dict{String, Vector{String}}
+    getMetaAttributesFromESMValToolConfigs(
+        base_path_configs::String;
+        subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
 )
 
-Read config files to determine which data shall be loaded, as defined by the 
-variable, statistic, experiment and timerange. 
+Read config files (ESMValTool recipes) to determine which data shall be loaded
+in general (datapaths are not handled here), as defined by variable, statistic, 
+experiment and timerange/alias.
 
 # Arguments:
-- `config_paths`: list of paths to directories that contain one or more yaml config
-files. For the assumed structure of the config files, see: TODO.
+- `base_path_configs`: paths to directory that contain one or more yaml configs,
+which may be ESMValTool recipes.
+- `subset`:
+
+# Returns: A Vector of `MetaAttrib`-Objects.
 """
 function getMetaAttributesFromESMValToolConfigs(
     base_path_configs::String;
@@ -396,10 +417,24 @@ function getMetaAttributesFromESMValToolConfigs(
 end
 
 
+"""
+    getMetaDataFromYAML(
+    path_config::String,
+    dir_per_var::Bool,
+    is_model_data::Bool
+    subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
+)
 
+# Arguments:
+- `path_config`: path to config yaml file specifying meta attributes and pathes of data
+- `dir_per_var`: true if data for each climate variable is stored in seperate directory 
+- `is_model_data`: true for model data, false for observational data
+- `subset`: TODO
+"""
 function getMetaDataFromYAML(
     path_config::String, 
-    dir_per_var::Bool;
+    dir_per_var::Bool, 
+    is_model_data::Bool;
     subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
 )
     config = YAML.load_file(path_config)
@@ -409,7 +444,6 @@ function getMetaDataFromYAML(
     meta_data = Vector{MetaData}()
     for ds in datasets
         path_data = joinpath(base_path, ds["base_dir"])
-        subdir_constraints = get(ds, "subdirs", nothing) 
         for clim_var in ds["variables"]
             for stat in ds["statistics"]
                 experiment = ds["exp"]                
@@ -429,7 +463,8 @@ function getMetaDataFromYAML(
                     end
                     if !isempty(attrib)
                         meta = buildMetaData(
-                            attrib[1], path_data, dir_per_var; subdir_constraints
+                            attrib[1], path_data, dir_per_var, is_model_data; 
+                            subset
                         )     
                         append!(meta_data, meta)
                     end
@@ -441,24 +476,115 @@ function getMetaDataFromYAML(
 end
 
 
+"""
+    buildPathsToDataFiles(
+        path_data::String,
+        is_model_data::Bool;
+        subset::Union{Dict{String, Vector{String}}, Nothing}=nothing
+    )
+
+# Arguments:
+- `path_data`:
+- `is_model_data`: true for model data false for observational data
+- `subset`:
+
+# Returns: Vector of Strings containing paths to data files in `path_data` 
+that were not filtered out by `subset`.
+"""
+function buildPathsToDataFiles(
+    path_data::String,
+    is_model_data::Bool;
+    subset::Union{Dict{String, Vector{String}}, Nothing}=nothing
+)
+    if !isdir(path_data)
+        throw(ArgumentError(path_data * " does not exist!"))
+    end
+    if isempty(get(subset, "projects", Vector{String}()))
+        subset["projects"] = is_model_data ? ["CMIP"] : ["ERA5"]
+    end
+    ncFiles = filter(
+        x -> isfile(x) && endswith(x, ".nc"),
+        readdir(path_data; join=true)
+    )
+    paths_to_files = Vector{String}()
+    for file in ncFiles
+        # constrain files that will be loaded
+        if !any([occursin(name, file) for name in subset["projects"]])
+            @debug "exclude $file because of projects subset"
+            continue
+        end
+        model_constraints = get(subset, "models", Vector{String}())
+        if !isempty(model_constraints)
+            # model constraints may contain individual members
+            # (e.g. for "CNRM-CM5#r1i1p1", the model name, CNRM-CM5, as well as the
+            # member id, r1i1p1, have to be part of the filename,
+            # but not with the delimiter # as given here)
+            model_member_constraints = map(x -> split(x, MODEL_MEMBER_DELIM), model_constraints)
+            any_fullfilled = false
+            for constraints in model_member_constraints
+                # adding the suffix "_" is important since otherwise, for instance,
+                # CNRM-CM5-C2 would remain even if the constraint was a substring like
+                # CNRM-CM5
+                constraint_ok = all([occursin(name * "_", file) for name in constraints])
+                if constraint_ok
+                    any_fullfilled = true
+                    break
+                end
+            end
+            if !any_fullfilled
+                @debug "exclude $file because of models subset"
+                continue
+            end
+        end
+        push!(paths_to_files, file)
+    end
+    return paths_to_files
+end
 
 
+"""
+    buildMetaData(
+        attrib::Union{MetaAttrib, Vector{MetaAttrib}},
+        base_path_data::String,
+        dir_per_var::Bool,
+        is_model_data::Bool;
+        subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
+    )
+
+Create data paths from assumed underlying data structure and `base_path_data` 
+for every `MetaAttrib`-object in `attrib` and return a Vector of `MetaData`-
+objects.
+
+# Arguments:
+- `attrib`:
+- `base_path_data`:
+- `dir_per_var`:
+- `is_model_data`:
+- `subset`:
+"""
 function buildMetaData(
     attrib::Union{MetaAttrib, Vector{MetaAttrib}},
     base_path_data::String,
-    dir_per_var::Bool;
-    subdir_constraints::Union{Vector{String}, Nothing} = nothing
+    dir_per_var::Bool,
+    is_model_data::Bool;
+    subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
 )
     attributes = isa(attrib, MetaAttrib) ? [attrib] : attrib
     metadata = Vector{MetaData}()
+    subdir_constraints = get(subset, "subdirs", nothing)
     for attrib in attributes
-        data_paths = buildPathsForMetaAttrib(
-            base_path_data, attrib, dir_per_var; constraints=subdir_constraints
+        paths_data = buildPathsForMetaAttrib(
+            base_path_data, attrib, dir_per_var; subdir_constraints
         )
+        paths_to_files = Vector{String}()
+        for path_data in paths_data
+            paths = buildPathsToDataFiles(path_data, is_model_data; subset)
+            append!(paths_to_files, paths)
+        end
         meta = MetaData(
             id = join([attrib.variable, attrib.statistic, attrib.alias], "_"),
             attrib = attrib,
-            paths = data_paths
+            paths = paths_to_files
         )
         push!(metadata, meta)
     end
@@ -469,19 +595,34 @@ end
 # one for each variable (they must contain '_VAR', e.g. '_tas'),
 # otherwise base_paths are the paths to the directories that contain
 # a subdirectory 'preproc'
+"""
+    buildPathsForMetaAttrib(
+        base_path::String, 
+        attrib::MetaAttrib,
+        dir_per_var::Bool;
+        subdir_constraints::Union{Vector{String}, Nothing}=nothing
+    )
+
+# Arguments:
+- `base_path`: base directory of stored data specified in `attrib`.
+- `attrib`: meta attributes of data.
+- `dir_per_var`: true if data of each climate variable is stored in a seperate directory.
+- `subdir_constraints`: if given, paths must contain ANY of the given elements. 
+Existing paths that don't are ignored.
+"""
 function buildPathsForMetaAttrib(
     base_path::String, 
     attrib::MetaAttrib,
     dir_per_var::Bool;
-    constraints::Union{Vector{String}, Nothing}=nothing
+    subdir_constraints::Union{Vector{String}, Nothing}=nothing
 )
     base_paths = [base_path]
     if dir_per_var
         base_paths = filter(isdir, readdir(base_path, join=true))
         filter!(x -> occursin("_" * attrib.variable, x), base_paths)
     end
-    if !isnothing(constraints) && !isempty(constraints)
-        filter!(p -> any([occursin(name, p) for name in constraints]), base_paths)
+    if !isnothing(subdir_constraints) && !isempty(subdir_constraints)
+        filter!(p -> any([occursin(name, p) for name in subdir_constraints]), base_paths)
     end
     data_paths = Vector{String}()
     for path in base_paths
@@ -500,13 +641,13 @@ end
 
 """
     applyDataConstraints!(
-    metadata::Vector{MetaData}, subset::Dict{String, Vector{String}}
+    meta_attributes::Vector{MetaAttrib}, subset::Dict{String, Vector{String}}
 )
 
 Subset model ids so that only those with properties specified in 'subset' remain.
 
 # Arguments
-- `metadata`: Vector of MetaData instances.
+- `meta_attributes`: Vector of `MetaAttrib` instances.
 - `subset`: Mapping from fieldnames of 'MetaAttrib' struct to Vector specifiying the
 properties of which at least one must be present for an id to be retained.
 """
@@ -544,6 +685,9 @@ function applyDataConstraints!(
 end
 
 
+"""
+    indexData(data::Data, clim_var::String, diagnostic::String, ref_period::String)
+"""
 function indexData(data::Data, clim_var::String, diagnostic::String, ref_period::String)
     data_key = join([clim_var, diagnostic, ref_period], "_")
     return data.data[data_key]
@@ -575,7 +719,7 @@ function computeDistancesAllDiagnostics(
     obs_data::Union{Nothing, Data}, 
     config::Dict{String, Number},
     ref_period::String,
-    forPerformance::Bool
+    for_performance::Bool
 )
     # compute performance/independence distances for all model members
     var_diagnostic_keys = collect(keys(config))
@@ -588,7 +732,7 @@ function computeDistancesAllDiagnostics(
         for clim_var in variables
             models = indexData(model_data, clim_var, diagnostic, ref_period)
 
-            if forPerformance
+            if for_performance
                 observations = indexData(obs_data, clim_var, diagnostic, ref_period)
                 if length(dims(observations, :source)) != 1
                     @warn "several observational datasets available for computing distances"
@@ -609,7 +753,7 @@ end
 
 """
     computeGeneralizedDistances(
-    distances_all::DimArray, weights::DimArray, for_performance::Bool
+        distances_all::DimArray, weights::DimArray, for_performance::Bool
 )
 
 # Arguments:
@@ -692,6 +836,7 @@ function isValidDataAndWeightInput(
     return all([k in ids for k in keys_data])
 end
 
+
 """
     getTimerangeAsAlias(meta_attribs::Vector{MetaAttrib}, timerange::String)
 
@@ -710,10 +855,10 @@ end
 """
     getAliasAsTimerange(meta_attribs::Vector{MetaAttrib}, alias::String)
 
-Translate given alias to corresponding timerange in 'data_ids'.
+Translate given alias for every `MetaAttrib` in `meta_attribs`to corresponding timerange.
 
 # Arguments:
-- `data_ids`:
+- `meta_attribs`:
 - `alias`:
 """
 function getAliasAsTimerange(meta_attribs::Vector{MetaAttrib}, alias::String)
@@ -721,7 +866,11 @@ function getAliasAsTimerange(meta_attribs::Vector{MetaAttrib}, alias::String)
     return isempty(attribs) ? nothing : attribs[1].timerange
 end
 
-
+"""
+    getRefPeriodAsTimerangeAndAlias(
+        meta_attribs::Vector{MetaAttrib}, ref_period::String
+    )
+"""
 function getRefPeriodAsTimerangeAndAlias(
     meta_attribs::Vector{MetaAttrib}, ref_period::String
 )
@@ -736,7 +885,9 @@ function getRefPeriodAsTimerangeAndAlias(
     return (alias = alias, timerange = timerange)
 end
 
-
+"""
+    setRefPeriodInWeightsMetadata!(meta::Dict, alias::String, timerange::String)
+"""
 function setRefPeriodInWeightsMetadata!(meta::Dict, alias::String, timerange::String)
     meta["ref_period_alias"] = alias
     meta["ref_period_timerange"] = timerange

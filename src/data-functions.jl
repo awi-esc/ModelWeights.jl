@@ -21,7 +21,6 @@ function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
         "realization", "physics_version", "initialization_method",
         "mip_era", "grid_label", "variant_label"
     ]
-
     n_members = length(model_names)
     members = Vector{String}(undef, n_members)
     for key in filter(k -> k in keys_model_ids, keys(meta))
@@ -70,9 +69,9 @@ end
 
 
 """
-    subsetModelData(data::Dict{String, DimArray}, shared_models::Vector{String})
+    subsetModelData(data::DimArray, shared_models::Vector{String})
 
-Return a subset of DimArray 'data' that contains only data from the models 
+Return a subset of DimArray `data` that contains only data from the models 
 specified in `shared_models`. Takes care of metadata.
 """
 function subsetModelData(data::DimArray, shared_models::Vector{String})
@@ -100,11 +99,7 @@ end
 
 
 """
-    loadPreprocData(
-        path_data::String;
-        subset::Dict{String, Vector{String}}=Dict{String, Vector{String}}(),
-        is_model_data::Bool=true
-    )
+    loadPreprocData(meta_data::MetaData, is_model_data::Bool)
 
 # Arguments:
 - `path_data`: base path to directory that contains subdirectory with name
@@ -117,108 +112,62 @@ if true modelData, else observational data
 
 # Returns: DimArray or nothing
 """
-function loadPreprocData(
-    path_data::String;
-    subset::Dict{String, Vector{String}}=Dict(),
-    is_model_data::Bool=true
-)
-    if !isdir(path_data)
-        throw(ArgumentError(path_data * " does not exist!"))
-    end
-    if isnothing(get(subset, "projects", nothing))
-        subset["projects"] = is_model_data ? ["CMIP"] : ["ERA5"]
-    end
+function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
     data = []
     meta = Dict{String, Any}()
-    ncFiles = filter(
-        x -> isfile(x) && endswith(x, ".nc"),
-        readdir(path_data; join=true)
-    )
-    n_files = length(ncFiles)
+    n_files = length(meta_data.paths)
     source_names = repeat(Union{Missing, String}[missing], outer = n_files)
-    for (i, file) in enumerate(ncFiles)
-        addFile = true;
-        # constrain files that will be loaded
-        if !any([occursin(name, file) for name in subset["projects"]])
-            @debug "exclude $file because of projects subset"
-            addFile = false;
-        end
-        model_constraints = get(subset, "models", Vector{String}())
-        if !isempty(model_constraints)
-            # model constraints may contain individual members
-            # (e.g. for "CNRM-CM5#r1i1p1", the model name, CNRM-CM5, as well as the
-            # member id, r1i1p1, have to be part of the filename,
-            # but not with the delimiter # as given here)
-            model_member_constraints = map(x -> split(x, MODEL_MEMBER_DELIM), model_constraints)
-            any_fullfilled = false
-            for constraints in model_member_constraints
-                # adding the suffix "_" is important since otherwise, for instance,
-                # CNRM-CM5-C2 would remain even if the constraint was a substring like
-                # CNRM-CM5
-                constraint_ok = all([occursin(name * "_", file) for name in constraints])
-                if constraint_ok
-                    any_fullfilled = true
-                    break
-                end
-            end
-            if !any_fullfilled
-                @debug "exclude $file because of models subset"
-                addFile = false
+    for (i, file) in enumerate(meta_data.paths)
+        @debug "processing file.." * file
+        parts = splitpath(file)
+        filename = split(parts[end], ".nc")[end-1]
+        climVar = split(parts[end-1], "_")[1]
+
+        ds = NCDataset(file)
+        dsVar = ds[climVar]
+        # if climVar == "amoc"
+        #     dsVar = ds["msftmz"]
+        # end
+        attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)))
+        if climVar == "msftmz"
+            sector = get(ds, "sector", nothing)
+            if !isnothing(sector)
+                attributes = merge(attributes, Dict(deepcopy(sector.attrib)));
             end
         end
-        if addFile
-            @debug "processing file.." * file
-            parts = splitpath(file)
-            filename = split(parts[end], ".nc")[end-1]
-            climVar = split(parts[end-1], "_")[1]
-
-            ds = NCDataset(file)
-            dsVar = ds[climVar]
-            # if climVar == "amoc"
-            #     dsVar = ds["msftmz"]
-            # end
-
-            attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)))
-            if climVar == "msftmz"
-                sector = get(ds, "sector", nothing)
-                if !isnothing(sector)
-                    attributes = merge(attributes, Dict(deepcopy(sector.attrib)));
-                end
-            end
-            # add mip_era for models since it is not provided in CMIP5-models
-            name = filename
-            if is_model_data
-                model_key = getCMIPModelsKey(Dict(ds.attrib))
-                get!(attributes, "mip_era", "CMIP5")
-                name = ds.attrib[model_key]
-            end
-            source_names[i] = name
-            # update metadata-dictionary for all processed files with the
-            # metadata from the current file
-            for key in keys(attributes)
-                values = get!(meta, key, repeat(Union{Missing, Any}[missing], outer=n_files));
-                values[i] = attributes[key]
-            end
-
-            dimension_names = dimnames(dsVar)
-            dimensions = []
-            for d in dimension_names
-                if d in ["bnds", "string21"]
-                    continue
-                end
-                if d == "time"
-                    times = map(x -> NCDatasets.DateTimeStandard(
-                        Dates.year(x), Dates.month(x), Dates.day(x)
-                        ),
-                        dsVar[d][:]
-                    );
-                    push!(dimensions, Dim{Symbol(d)}(collect(times)));
-                else
-                    push!(dimensions, Dim{Symbol(d)}(collect(dsVar[d][:])));
-                end
-            end
-            push!(data, DimArray(Array(dsVar), Tuple(dimensions)));
+        # add mip_era for models since it is not provided in CMIP5-models
+        name = filename
+        if is_model_data
+            model_key = getCMIPModelsKey(Dict(ds.attrib))
+            get!(attributes, "mip_era", "CMIP5")
+            name = ds.attrib[model_key]
         end
+        source_names[i] = name
+        # update metadata-dictionary for all processed files with the
+        # metadata from the current file
+        for key in keys(attributes)
+            values = get!(meta, key, repeat(Union{Missing, Any}[missing], outer=n_files));
+            values[i] = attributes[key]
+        end
+
+        dimension_names = dimnames(dsVar)
+        dimensions = []
+        for d in dimension_names
+            if d in ["bnds", "string21"]
+                continue
+            end
+            if d == "time"
+                times = map(x -> NCDatasets.DateTimeStandard(
+                    Dates.year(x), Dates.month(x), Dates.day(x)
+                    ),
+                    dsVar[d][:]
+                );
+                push!(dimensions, Dim{Symbol(d)}(collect(times)));
+            else
+                push!(dimensions, Dim{Symbol(d)}(collect(dsVar[d][:])));
+            end
+        end
+        push!(data, DimArray(Array(dsVar), Tuple(dimensions)));
     end
     if length(data) > 0
         #dimData = cat(data..., dims=3) # way too slow!
@@ -264,48 +213,47 @@ function loadPreprocData(
 end
 
 
+"""
+    loadDataFromMetadata(
+        meta_data::Vector{MetaData},
+        is_model_data::Bool,
+        only_shared_models::Bool
+    )
+
+# Arguments:
+- `meta_data`:
+- `is_model_data`: true for model data, false for observational data.
+- `only_shared_models`: if true, only data loaded for models present for all
+ids, i.e. for all variable+statistic+experiment combinations
+"""
 function loadDataFromMetadata(
     meta_data::Vector{MetaData},
-    constraints::Dict{String, Vector{String}},
     is_model_data::Bool,
     only_shared_models::Bool
 )
     results = Vector{Data}()
+    data_all = Dict{String, DimArray}()
     for meta in meta_data
-        data_all = Dict{String, DimArray}()
-        paths_all = Vector{String}()
-        for path_data_dir in meta.paths
-            #print("processing...: " * path_data_dir)
-            data = loadPreprocData(
-                path_data_dir; subset=constraints, is_model_data=is_model_data
+        data = loadPreprocData(meta, is_model_data)
+        previously_added_data = get(data_all, meta.id, nothing)
+        if isnothing(previously_added_data)
+            data_all[meta.id] = data
+        else
+            dim = is_model_data ? :member : :source
+            prev_models = collect(dims(previously_added_data, dim))
+            new_models = collect(dims(data, dim))
+            joint_data = cat(
+                previously_added_data, data;
+                dims=Dim{dim}(vcat(Array(prev_models), Array(new_models)))
             )
-            if !isnothing(data)
-                push!(paths_all, path_data_dir)
-                previously_added_data = get(data_all, meta.id, nothing)
-                if isnothing(previously_added_data)
-                    data_all[meta.id] = data
-                else
-                    dim = is_model_data ? :member : :source
-                    prev_models = collect(dims(previously_added_data, dim))
-                    new_models = collect(dims(data, dim))
-                    joint_data = cat(
-                        previously_added_data, data;
-                        dims=Dim{dim}(vcat(Array(prev_models), Array(new_models)))
-                    )
-                    joint_meta = joinMetadata(
-                        previously_added_data.metadata,
-                        data.metadata,
-                        is_model_data
-                    )
-                    data_all[meta.id] = rebuild(joint_data; metadata = joint_meta)
-                end
-            end
+            joint_meta = sw.joinMetadata(
+                previously_added_data.metadata,
+                data.metadata,
+                is_model_data
+            )
+            data_all[meta.id] = rebuild(joint_data; metadata = joint_meta)
         end
-        result =  Data(
-            meta = [meta], 
-            data = data_all
-        )
-        push!(results, result)
+        push!(results, Data(meta = [meta], data = data_all))
     end
     joint_data = joinDataObjects(results)
     if is_model_data && only_shared_models
@@ -370,7 +318,7 @@ end
 
 
 """
-    loadWeightsAsDimArray(path_to_file::String, key_weights::String)
+    loadWeightsAsDimArray(data::NCDataset, key_weights::String)
 
 # Arguments:
 - `data`: NCDataset containing weights, which have a single dimension
@@ -396,11 +344,7 @@ end
 - `w`: has dimension 'model', sum up to 1
 - `quantiles`: Vector with two entries (btw. 0 and 1) [lower_bound, upper_bound]
 """
-function getUncertaintyRanges(
-    data::DimArray,
-    w::DimArray;
-    quantiles=[0.167, 0.833]
-)
+function getUncertaintyRanges(data::DimArray, w::DimArray; quantiles=[0.167, 0.833])
     unweightedRanges = [];
     weightedRanges = [];
     for t in dims(data, :time)

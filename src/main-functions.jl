@@ -81,14 +81,15 @@ function computeWeights(
     return climwip_weights
 end
 
+
 """
-    loadData(
-        base_paths::Vector{String},
-        config_paths::Vector{String};
+    loadDataFromESMValToolConfigs(
+        path_data::String,
+        path_recipes::String;
         dir_per_var::Bool=true,
         is_model_data::Bool=true,
-        common_models_across_vars::Bool=false,
-        subset::Dict=Dict(),
+        only_shared_models::Bool=false,
+        subset::Union{Dict{String, Vector{String}}, Nothing}=nothing
     )
 
 Loads the data from the config files located at 'config_paths'. For necessary
@@ -96,19 +97,25 @@ structure of config files, see TODO. For each variable, experiment, statistic
 and timerange (alias) a different DimArray is loaded.
 
 # Arguments:
-- `base_paths`:  if dir_per_var is true, paths to directories that contain one or
+- `path_data`:  path to location where preprocessed data is stored; if 
+dir_per_var is true, paths to directories that contain one or
 more subdirectories that each contains a directory 'preproc' with the
-preprocessed data. If dir_per_var is false, base_paths are the paths to directories
-that contain the 'preproc' subdirectory.
-- `config_paths`: paths to directories that contain one or more yaml config
-files with the following structure: TODO
-- `dir_per_var`: if true, directories at base_paths have subdirectories, one for
+preprocessed data. If dir_per_var is false, path_data is path to directory that
+ directly contains the 'preproc' subdirectory.
+- `path_recipes`: path to directory that contains one or ESMValTool recipes 
+used as config files
+- `dir_per_var`: if true, directory at path_data has subdirectories, one for
 each variable (they must end with _ and the name of the variable), otherwise
-base_paths are the paths to the directories that contain a subdirectory 'preproc'
-- `is_model_data`: set true for CMIP5/6 data, false for observational data
-- `common_models_across_vars`:
-- `subset`: dictionary specifying the subset of data to be loaded, has keys
-'variables', 'statistics', 'aliases', each mapping to a vector of Strings
+data_path points to the directory that has a subdirectory 'preproc'.
+- `is_model_data`: set true for model data, false for observational data
+- `only_shared_models`: if true only data loaded from model members shared 
+across all experiments and variables.
+- `subset`: dictionary specifying the subset of data to be loaded, ech key maps 
+to a vector of Strings; the following keys are handled: 
+'variable', 'statistic', 'alias', `timerange`, `exp` (fields of struct 
+`MetaAttrib`), `models` which maps to Vector of specific models or members of
+models (default is empty) and `projects` which maps to Vector of Strings, 
+for instance ["CMIP6"] to load only CMIP6-data.
 """
 function loadDataFromESMValToolConfigs(
     path_data::String,
@@ -116,18 +123,13 @@ function loadDataFromESMValToolConfigs(
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
     only_shared_models::Bool=false,
-    subset::Dict{String, Vector{String}}=Dict()
+    subset::Union{Dict{String, Vector{String}}, Nothing}=nothing
 )
     attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; subset)
     meta_data = buildMetaData(
-        attributes, path_data, dir_per_var;
-        subdir_constraints = get(subset, "subdirs", nothing)
+        attributes, path_data, dir_per_var, is_model_data; subset
     )
-    # further constraints wrt models and projects applied when loading data
-    data_constraints = filter(((k,v),) -> k in ["models", "projects"] , subset)
-    data = loadDataFromMetadata(
-        meta_data, data_constraints, is_model_data, only_shared_models
-    )
+    data = loadDataFromMetadata(meta_data, is_model_data, only_shared_models)
     return data
 end
 
@@ -137,12 +139,9 @@ function loadDataFromYAML(
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
     only_shared_models::Bool=false,
-    subset::Dict{String, Vector{String}}=Dict()
+    subset::Union{Dict{String, Vector{String}}, Nothing}=nothing
 )
-    meta_data = getMetaDataFromYAML(path_config, dir_per_var; subset)
-    data_constraints = filter(((k,v),) -> k in ["models", "projects"] , subset)
-    data = loadDataFromMetadata(
-        meta_data, data_constraints, is_model_data, only_shared_models
-    );
+    meta_data = getMetaDataFromYAML(path_config, dir_per_var, is_model_data; subset)
+    data = loadDataFromMetadata(meta_data, is_model_data, only_shared_models)
     return data
 end
