@@ -68,6 +68,21 @@ function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
 end
 
 
+function subsetPaths(paths::Vector{String}, shared_models::Vector{String})
+    # update metadata paths too, keep only those that contain a model 
+    # in shared_models (NOTE: this doesnt work if the filename does 
+    # not contain the model name, which it should though)
+    subset_paths = Vector{String}()
+    for path in paths
+        keep = applyModelConstraints(path, shared_models)
+        if keep
+            push!(subset_paths, path)
+        end
+    end
+    return subset_paths
+end
+
+
 """
     subsetModelData(data::DimArray, shared_models::Vector{String})
 
@@ -104,13 +119,10 @@ end
 # Arguments:
 - `path_data`: base path to directory that contains subdirectory with name
 of the respective experiment (see TODO for assumed data structure)
-- `subset`: dictionary with keys 'projects' and 'models'. Only data is loaded
-whose filenames contain ANY of the strings mapped to. If not specified, default
-value for projects is ['CMIP'] when is_model_data is true, else ['ERA5'].
 - `is_model_data`: observational and model data loaded seperately,
 if true modelData, else observational data
 
-# Returns: DimArray or nothing
+# Returns: instance of `Data` or nothing
 """
 function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
     data = []
@@ -206,7 +218,7 @@ function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
                 @warn "Some datasets appear more than once" duplicates
             end
         end
-        return dimData
+        return Data(meta = meta_data, data = dimData)
     else
         return nothing
     end
@@ -232,63 +244,48 @@ function loadDataFromMetadata(
     only_shared_models::Bool
 )
     results = Vector{Data}()
-    data_all = Dict{String, DimArray}()
     for meta in meta_data
-        data = loadPreprocData(meta, is_model_data)
-        previously_added_data = get(data_all, meta.id, nothing)
-        if isnothing(previously_added_data)
-            data_all[meta.id] = data
-        else
-            dim = is_model_data ? :member : :source
-            prev_models = collect(dims(previously_added_data, dim))
-            new_models = collect(dims(data, dim))
-            joint_data = cat(
-                previously_added_data, data;
-                dims=Dim{dim}(vcat(Array(prev_models), Array(new_models)))
-            )
-            joint_meta = sw.joinMetadata(
-                previously_added_data.metadata,
-                data.metadata,
-                is_model_data
-            )
-            data_all[meta.id] = rebuild(joint_data; metadata = joint_meta)
-        end
-        push!(results, Data(meta = [meta], data = data_all))
+        push!(results, loadPreprocData(meta, is_model_data))
     end
-    joint_data = joinDataObjects(results)
+    # joint_data = joinDataObjects(results) #TODO: if several same ids in results
     if is_model_data && only_shared_models
-        shared_models = getSharedModels(joint_data, :member)
+        # getSharedModels accesses the models as the dimension of the loaded data!
+        shared_models = getSharedModels(results, :member)
         if isempty(shared_models)
             @warn "No models shared across all loaded data"
         end
-        for id in  map(x -> x.id, joint_data.meta)
-            # TODO: only subset if it is necessary at all
-            joint_data.data[id] = subsetModelData(
-                joint_data.data[id], Array(shared_models)
-            )
+        shared_results = Vector{Data}(undef, length(results))
+        for (i, result) in enumerate(results)
+            take_subset = sort(Array(dims(result.data, :member))) != sort(Array(shared_models))
+            shared_data = take_subset ? subsetModelData(result.data, Array(shared_models)) : result.data
+            shared_paths = take_subset ? subsetPaths(result.meta.paths, Array(shared_models)) : result.meta.paths
+            meta = MetaData(id = result.meta.id, attrib = result.meta.attrib, paths = shared_paths)
+            shared_results[i] = Data(meta = meta, data = shared_data)
         end
+        results = shared_results
     end
-    @info "loaded data: " joint_data.meta
+    loaded_meta = map(x -> x.meta, results) 
+    @info "loaded data: " loaded_meta
     @info "filtered for shared models across all loaded data: " only_shared_models
-    return joint_data
+    return results
 end
 
 
 """
-    getSharedModels(model_data::Data, dim::Symbol)
+    getSharedModels(model_data::Vector{Data}, dim::Symbol)
 
-Return only those models for which there is data for all variables.
+Return only data of models shared across all datasets. Assumes that no id is 
+shared across elements of `model_data`.
 
 # Arguments
-- `model_data`: model predictions
+- `model_data`: model predictions for a set of different variable+experiment combinations
 - `dim`: dimension name referring to level of model predictions; e.g., 
 'member' or 'model'
 """
-function getSharedModels(model_data::Data, dim::Symbol)
+function getSharedModels(model_data::Vector{Data}, dim::Symbol)
     shared_models =  nothing 
-    # iterate over all combinations (of diagnostics/statistics) loaded in data
-    for (_, data_var) in model_data.data
-        models = collect(dims(data_var, dim))
+    for data in model_data
+        models = collect(dims(data.data, dim))
         if isnothing(shared_models)
             shared_models = models
         else

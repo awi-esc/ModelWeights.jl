@@ -34,40 +34,8 @@ end
 
 
 @kwdef struct Data
-    meta::Vector{MetaData}=[]
-    data::Dict{String, DimArray}=Dict()
-end
-
-
-"""
-    joinDataObjects(data::Vector{Data})
-
-Combine several Data-Objects into a single one, e.g. to combine data from 
-two experiments that had been loaded seperately.
-
-# Arguments.
-- `data`: 
-
-# Return: A single Data-Object with the combined data from all Data-Objects 
-in the input vector.
-"""
-function joinDataObjects(data::Vector{Data})
-    meta_all = Vector{MetaData}()
-    data_all = Dict{String, DimArray}()
-    duplicate_ids = Vector{String}()
-    for ds in data
-        append!(meta_all, ds.meta)
-        for k in keys(ds.data)
-            if haskey(data_all, k) 
-                push!(duplicate_ids, k)
-                # TODO: handle duplicate ids (e.g, if for same metadata,
-                # (different) data is loaded) 
-                @warn "joint data with same id, one is overwritten!"
-            end
-            data_all[k] = copy(ds.data[k])
-        end
-    end
-    return Data(data = data_all, meta = meta_all)
+    meta::MetaData
+    data::DimArray
 end
 
 
@@ -90,6 +58,67 @@ end
     wI::DimArray # normalized
     w::DimArray # normalized
 end
+
+
+# """
+#     joinDataObjects(data::Vector{Data})
+
+# TODO: If there are two Data-objects with the same id, these should be merged into 
+# a single Data-object.
+
+# # Arguments.
+# - `data`: 
+# """
+# function joinDataObjects(data::Vector{Data})
+#     ids = map(x -> x.meta.id, data)
+#     if length(ids) != length(unique(ids))
+#         indices = map(x -> findall(id -> id == x, ids), unique(ids))
+
+#     end
+    
+#     meta_all = Vector{MetaData}()
+#     data_all = Dict{String, DimArray}()
+#     duplicate_ids = Vector{String}()
+#     for ds in data
+
+#         # append!(meta_all, ds.meta)
+#         # for k in keys(ds.data)
+#         #     if haskey(data_all, k) 
+#         #         push!(duplicate_ids, k)
+#         #         # TODO: handle duplicate ids (e.g, if for same metadata,
+#         #         # (different) data is loaded) 
+#         #     end
+#         #     data_all[k] = copy(ds.data[k])
+#         # end
+
+#     end
+#     if !isempty(duplicate_ids)
+#         @warn "joint data with same ids, one is overwritten!" duplicate_ids
+#     end
+#     return Data(data = data_all, meta = meta_all)
+# end
+
+## code I had used to merge data from seperate locations into single DimArray 
+# previously_added_data = get(data_all, meta.id, nothing)
+# if isnothing(previously_added_data)
+#     data_all[meta.id] = data
+# else
+#     dim = is_model_data ? :member : :source
+#     prev_models = collect(dims(previously_added_data, dim))
+#     new_models = collect(dims(data, dim))
+#     joint_data = cat(
+#         previously_added_data, data;
+#         dims=Dim{dim}(vcat(Array(prev_models), Array(new_models)))
+#     )
+#     joint_meta = sw.joinMetadata(
+#         previously_added_data.metadata,
+#         data.metadata,
+#         is_model_data
+#     )
+#     data_all[meta.id] = rebuild(joint_data; metadata = joint_meta)
+# end
+# push!(results, Data(meta = [meta], data = data_all))
+
 
 """
     buildCMIP5EnsembleMember(
@@ -476,6 +505,9 @@ function getMetaDataFromYAML(
 end
 
 
+
+
+
 """
     buildPathsToDataFiles(
         path_data::String,
@@ -507,36 +539,19 @@ function buildPathsToDataFiles(
         readdir(path_data; join=true)
     )
     paths_to_files = Vector{String}()
+    # constrain files that will be loaded
+    model_constraints = get(subset, "models", Vector{String}())
     for file in ncFiles
-        # constrain files that will be loaded
-        if !any([occursin(name, file) for name in subset["projects"]])
+        keep = any([occursin(name, file) for name in subset["projects"]])
+        if !keep
             @debug "exclude $file because of projects subset"
             continue
         end
-        model_constraints = get(subset, "models", Vector{String}())
-        if !isempty(model_constraints)
-            # model constraints may contain individual members
-            # (e.g. for "CNRM-CM5#r1i1p1", the model name, CNRM-CM5, as well as the
-            # member id, r1i1p1, have to be part of the filename,
-            # but not with the delimiter # as given here)
-            model_member_constraints = map(x -> split(x, MODEL_MEMBER_DELIM), model_constraints)
-            any_fullfilled = false
-            for constraints in model_member_constraints
-                # adding the suffix "_" is important since otherwise, for instance,
-                # CNRM-CM5-C2 would remain even if the constraint was a substring like
-                # CNRM-CM5
-                constraint_ok = all([occursin(name * "_", file) for name in constraints])
-                if constraint_ok
-                    any_fullfilled = true
-                    break
-                end
-            end
-            if !any_fullfilled
-                @debug "exclude $file because of models subset"
-                continue
-            end
+        keep = !isempty(model_constraints) ? 
+            applyModelConstraints(file, model_constraints) : true
+        if keep
+            push!(paths_to_files, file)
         end
-        push!(paths_to_files, file)
     end
     return paths_to_files
 end
@@ -561,6 +576,8 @@ objects.
 - `dir_per_var`:
 - `is_model_data`:
 - `subset`:
+
+# Return: Vector of `MetaData`-objects.
 """
 function buildMetaData(
     attrib::Union{MetaAttrib, Vector{MetaAttrib}},
@@ -684,6 +701,31 @@ function applyDataConstraints!(
     return nothing
 end
 
+
+function applyModelConstraints(file::String, model_constraints::Vector{String})
+    # model constraints may contain individual members
+    # (e.g. for "CNRM-CM5#r1i1p1", the model name, CNRM-CM5, as well as the
+    # member id, r1i1p1, have to be part of the filename,
+    # but not with the delimiter # as given here)
+    # for CMIP6 models we further added the grid to the member id at the end 
+    # after an underscore, TODO: also consider grid, for not it is just ignored 
+    split_chars = Regex("[$(MODEL_MEMBER_DELIM)_]")
+    model_member_constraints = map(x -> split(x, split_chars), model_constraints)
+    keep_file = true
+    for constraints in model_member_constraints
+        # adding the suffix "_" is important since otherwise, for instance,
+        # CNRM-CM5-C2 would remain even if the constraint was a substring like
+        # CNRM-CM5
+        keep_file = all([occursin(name * "_", file) for name in constraints[1:2]])
+        if keep_file
+            break
+        end
+    end
+    if !keep_file
+        @warn "exclude $file because of models subset"
+    end
+    return keep_file
+end
 
 """
     indexData(data::Data, clim_var::String, diagnostic::String, ref_period::String)
