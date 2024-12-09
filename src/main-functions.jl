@@ -64,7 +64,7 @@ function computeWeights(
     wP = performances ./ sum(performances)
     setRefPeriodInWeightsMetadata!(wP.metadata, ref_period_alias, ref_period_timerange)
     
-    climwip_weights =  ClimwipWeights(
+    model_weights =  ModelWeights(
         performance_distances = dists_perform_all,
         independence_distances = dists_indep_all, 
         Di = Di,
@@ -76,9 +76,9 @@ function computeWeights(
         )
     logWeights(weights.metadata)
     if !isempty(config.target_dir)
-        saveWeights(climwip_weights, config.target_dir)
+        saveWeights(model_weights, config.target_dir)
     end
-    return climwip_weights
+    return model_weights
 end
 
 

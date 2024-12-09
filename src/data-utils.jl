@@ -61,7 +61,7 @@ end
 end
 
 
-@kwdef struct ClimwipWeights
+@kwdef struct ModelWeights
     performance_distances::DimArray
     independence_distances::DimArray
     Di::DimArray # generalized distances each model wrt performance
