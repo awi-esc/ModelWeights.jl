@@ -19,6 +19,17 @@ function Base.show(io::IO, x::MetaAttrib)
 end
 
 
+@kwdef struct Constraint
+    variables::Vector{String} = Vector{String}()
+    statistics::Vector{String} = Vector{String}()
+    aliases::Vector{String} = Vector{String}()
+    timeranges::Vector{String} = Vector{String}()
+    models::Vector{String} = Vector{String}()
+    projects::Vector{String} = Vector{String}()
+    subdirs::Vector{String} = Vector{String}()
+end
+
+
 @kwdef struct MetaData
     id::String
     attrib::MetaAttrib
@@ -26,7 +37,8 @@ end
 end
 # Pretty print MetaData instances
 function Base.show(io::IO, x::MetaData)
-    println(io, "$(x.id) ($(x.attrib.timerange)) from:")
+    # println(io, "$(x.id) ($(x.attrib.timerange)) from:")
+    println(io, "$(x.id) from:")
     for path in x.paths
         println(io, "\t$path")
     end
@@ -404,7 +416,7 @@ which may be ESMValTool recipes.
 """
 function getMetaAttributesFromESMValToolConfigs(
     base_path_configs::String;
-    subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
+    constraint::Union{Constraint, Nothing} = nothing
 )
     paths_configs = filter(
         x -> isfile(x) && endswith(x, ".yml"),
@@ -439,12 +451,28 @@ function getMetaAttributesFromESMValToolConfigs(
             end
         end
     end
-    if !isnothing(subset)
-        applyDataConstraints!(meta_attrib, subset)
+    if !isnothing(constraint)
+        applyDataConstraints!(meta_attrib, constraint)
     end
     return meta_attrib
 end
 
+
+function addMetaData!(meta_dict::Dict{String, MetaData}, meta::MetaData)
+    id = getMetaDataID(meta.attrib)
+    if haskey(meta_dict, id)
+        paths = meta_dict[id].paths
+        append!(paths, meta.paths)
+        meta_dict[id] = MetaData(
+            id = id,
+            attrib = meta.attrib,
+            paths = unique(paths)
+        )
+    else
+        meta_dict[id] = meta
+    end
+    return nothing
+end
 
 """
     getMetaDataFromYAML(
@@ -453,6 +481,10 @@ end
     is_model_data::Bool
     subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
 )
+
+Load data as specified in config file located at `path_config`. Constraints
+that are specified in the config file as well as in the `subset` argument, 
+the values of the latter have precedence over the former. 
 
 # Arguments:
 - `path_config`: path to config yaml file specifying meta attributes and pathes of data
@@ -464,38 +496,91 @@ function getMetaDataFromYAML(
     path_config::String, 
     dir_per_var::Bool, 
     is_model_data::Bool;
-    subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
+    constraint::Union{Constraint, Nothing} = nothing
 )
     config = YAML.load_file(path_config)
     datasets = config["datasets"]
     base_path = get(config, "path_data", "")
     timerange_to_alias = config["timerange_to_alias"]
-    meta_data = Vector{MetaData}()
+
+    """
+    If data is constraint by provided argument when loading, the argument takes
+    precedence over the given value inside the config yaml file.
+    """
+    function getConstraintVal(
+        cs_arg::Union{Constraint, Nothing}, 
+        cs_config::Dict, 
+        field::String;
+        default_val::Vector{String} = Vector{String}()
+    )
+        result = get(cs_config, field, default_val)
+        if !isnothing(cs_arg)
+            value = getfield(cs_arg, Symbol(field))
+            result = isempty(value) ? result : value
+        end
+        return result
+    end
+
+    meta_data = Dict{String, MetaData}()
     for ds in datasets
-        path_data = joinpath(base_path, ds["base_dir"])
-        for clim_var in ds["variables"]
-            for stat in ds["statistics"]
-                experiment = ds["exp"]                
-                timeranges = get(ds, "timeranges", ["full"])
+        data_dir = get(ds, "base_dir", nothing)
+        experiment = get(ds, "exp", nothing)
+        if isnothing(experiment) || isnothing(data_dir)
+            throw(ArgumentError("Config yaml file must specify values for keys 'exp' (experiment) and 'base_dir' (path to data directory)!"))
+        end
+        variables = getConstraintVal(constraint, ds, "variables")
+        statistics = getConstraintVal(constraint, ds, "statistics")
+        if isnothing(variables) || isnothing(statistics)
+            throw(ArgumentError("Config yaml file must specify values for keys 'variables', 'statistics'!"))
+        end
+        path_data = joinpath(base_path, data_dir)
+        # timeranges is optional in config file; they can be subset by aliases provided in constraint argument
+        # in config file only timeranges are provided/considered, not aliases
+        timeranges = getConstraintVal(constraint, ds, "timeranges"; default_val = ["full"])
+        aliases = isnothing(constraint) ? Vector{String}() : constraint.aliases
+        if !isempty(aliases)
+            # use subset of aliases as given by input argument constraint
+            filter!(x -> get(timerange_to_alias, x, nothing) in constraint.aliases, timeranges)
+            if isempty(timeranges)
+                msg = "given aliases in constraint do not match with considered timeranges!"
+                throw(ArgumentError(msg))
+            end
+        end
+        projects = getConstraintVal(constraint, ds, "projects")
+        models = getConstraintVal(constraint, ds, "models")
+        subdirs = getConstraintVal(constraint, ds, "subdirs")
+        cs = Constraint(
+            statistics=statistics, 
+            aliases=aliases, 
+            timeranges=timeranges,
+            models=models, 
+            projects=projects, 
+            subdirs=subdirs
+        )
+
+        for clim_var in variables
+            for stat in statistics
                 for timerange in timeranges
                     alias = timerange == "full" ? experiment : 
                         get(timerange_to_alias, timerange, "unknown")
-                    attrib = [MetaAttrib(
+                    attribs = [MetaAttrib(
                         variable = clim_var, 
                         statistic = stat, 
                         alias = alias, 
                         exp = experiment,
                         timerange = timerange
                     )]
-                    if !isnothing(subset)
-                        applyDataConstraints!(attrib, subset)
+                    # apply constraints if given
+                    constraint_vals = map(x->getfield(cs, x), fieldnames(Constraint))
+                    if any(!isempty, constraint_vals)
+                        applyDataConstraints!(attribs, cs)
                     end
-                    if !isempty(attrib)
+                    if !isempty(attribs)
                         meta = buildMetaData(
-                            attrib[1], path_data, dir_per_var, is_model_data; 
-                            subset
-                        )     
-                        append!(meta_data, meta)
+                            attribs[1], path_data, dir_per_var, is_model_data; 
+                            constraint=cs
+                        )
+                        addMetaData!(meta_data, meta)
                     end
                 end
             end
@@ -503,9 +588,6 @@ function getMetaDataFromYAML(
     end
     return meta_data
 end
-
-
-
 
 
 """
@@ -526,13 +608,14 @@ that were not filtered out by `subset`.
 function buildPathsToDataFiles(
     path_data::String,
     is_model_data::Bool;
-    subset::Union{Dict{String, Vector{String}}, Nothing}=nothing
+    model_constraints::Vector{String} = Vector{String}(),
+    project_constraints::Vector{String} = Vector{String}()
 )
     if !isdir(path_data)
         throw(ArgumentError(path_data * " does not exist!"))
     end
-    if isempty(get(subset, "projects", Vector{String}()))
-        subset["projects"] = is_model_data ? ["CMIP"] : ["ERA5"]
+    if isempty(project_constraints)
+        project_constraints = is_model_data ? ["CMIP"] : ["ERA5"]
     end
     ncFiles = filter(
         x -> isfile(x) && endswith(x, ".nc"),
@@ -540,9 +623,9 @@ function buildPathsToDataFiles(
     )
     paths_to_files = Vector{String}()
     # constrain files that will be loaded
-    model_constraints = get(subset, "models", Vector{String}())
     for file in ncFiles
-        keep = any([occursin(name, file) for name in subset["projects"]])
+        keep = !isempty(project_constraints) ? 
+            any([occursin(name, file) for name in project_constraints]) : true
         if !keep
             @debug "exclude $file because of projects subset"
             continue
@@ -554,6 +637,13 @@ function buildPathsToDataFiles(
         end
     end
     return paths_to_files
+end
+
+
+function getMetaDataID(attrib::MetaAttrib)
+    id=join([getfield(attrib, field) for field in fieldnames(MetaAttrib)], "_")
+    return id
+    # return join([attrib.variable, attrib.statistic, attrib.alias], "_")
 end
 
 
@@ -580,32 +670,30 @@ objects.
 # Return: Vector of `MetaData`-objects.
 """
 function buildMetaData(
-    attrib::Union{MetaAttrib, Vector{MetaAttrib}},
+    attrib::MetaAttrib,
     base_path_data::String,
     dir_per_var::Bool,
     is_model_data::Bool;
-    subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
+    constraint::Union{Constraint, Nothing} = nothing
 )
-    attributes = isa(attrib, MetaAttrib) ? [attrib] : attrib
-    metadata = Vector{MetaData}()
-    subdir_constraints = get(subset, "subdirs", nothing)
-    for attrib in attributes
-        paths_data = buildPathsForMetaAttrib(
-            base_path_data, attrib, dir_per_var; subdir_constraints
+    subdir_constraints = isnothing(constraint) ? nothing : constraint.subdirs
+    paths_data = buildPathsForMetaAttrib(
+        base_path_data, attrib, dir_per_var; subdir_constraints
+    )
+    paths_to_files = Vector{String}()
+    for path_data in paths_data
+        paths = buildPathsToDataFiles(
+            path_data, is_model_data; 
+            model_constraints=constraint.models,
+            project_constraints = constraint.projects
         )
-        paths_to_files = Vector{String}()
-        for path_data in paths_data
-            paths = buildPathsToDataFiles(path_data, is_model_data; subset)
-            append!(paths_to_files, paths)
-        end
-        meta = MetaData(
-            id = join([attrib.variable, attrib.statistic, attrib.alias], "_"),
-            attrib = attrib,
-            paths = paths_to_files
-        )
-        push!(metadata, meta)
+        append!(paths_to_files, paths)
     end
-    return metadata
+    return MetaData(
+        id = getMetaDataID(attrib),
+        attrib = attrib,
+        paths = paths_to_files
+    )    
 end
 
 # if dir_per_var is true, directories at base_paths have subdirectories,
@@ -669,11 +757,11 @@ Subset model ids so that only those with properties specified in 'subset' remain
 properties of which at least one must be present for an id to be retained.
 """
 function applyDataConstraints!(
-    meta_attributes::Vector{MetaAttrib}, subset::Dict{String, Vector{String}}
+    meta_attributes::Vector{MetaAttrib}, constraint::Constraint
 )
     # check for compatibility of timerange and alias first
-    timerange_constraints = get(subset, "timerange", Vector{String}())
-    alias_constraints = get(subset, "alias", Vector{String}())
+    timerange_constraints = getfield(constraint, :timeranges)
+    alias_constraints = getfield(constraint, :aliases)
     timerangeOk(attrib::MetaAttrib) = any(x -> attrib.timerange == x, timerange_constraints)
     aliasOk(attrib::MetaAttrib) = any(x -> attrib.alias == x, alias_constraints)
 
@@ -689,14 +777,16 @@ function applyDataConstraints!(
         filter!(aliasOk, meta_attributes)
     end
 
-    # constraints wrt remaining attributes
-    fields = filter(x -> !(x in [:timerange, :alias]), fieldnames(MetaAttrib))
-    for field in fields
-        constraints = get(subset, string(field), Vector{String}())
-        if !isempty(constraints)
-            fn(attrib::MetaAttrib) = any(x -> getproperty(attrib, field) == x, constraints)
-            filter!(fn, meta_attributes)
-        end
+    # constraints wrt variables and statistics
+    stats_constraints = constraint.statistics
+    vars_constraints = constraint.variables
+    stats_ok(attrib::MetaAttrib) = any(x -> attrib.statistic == x, stats_constraints)
+    vars_ok(attrib::MetaAttrib) = any(x -> attrib.variable == x, vars_constraints)
+    if !isempty(stats_constraints)
+        filter!(stats_ok, meta_attributes)
+    end
+    if !isempty(vars_constraints)
+        filter!(vars_ok, meta_attributes)
     end
     return nothing
 end
@@ -708,7 +798,8 @@ function applyModelConstraints(file::String, model_constraints::Vector{String})
     # member id, r1i1p1, have to be part of the filename,
     # but not with the delimiter # as given here)
     # for CMIP6 models we further added the grid to the member id at the end 
-    # after an underscore, TODO: also consider grid, for not it is just ignored 
+    # after an underscore, i.e. for CMIP6 it is assumed that the filename 
+    # ends with _GRID, e.g. _gn.nc
     split_chars = Regex("[$(MODEL_MEMBER_DELIM)_]")
     model_member_constraints = map(x -> split(x, split_chars), model_constraints)
     keep_file = true
@@ -717,15 +808,19 @@ function applyModelConstraints(file::String, model_constraints::Vector{String})
         # CNRM-CM5-C2 would remain even if the constraint was a substring like
         # CNRM-CM5
         keep_file = all([occursin(name * "_", file) for name in constraints[1:2]])
+        if keep_file && length(constraints) == 3 # CMIP6 with grid
+            keep_file = occursin("_" * constraints[3], file)
+        end
         if keep_file
             break
         end
     end
     if !keep_file
-        @warn "exclude $file because of models subset"
+        @debug "exclude $file because of model constraints (or shared models): $model_constraints"
     end
     return keep_file
 end
+
 
 """
     indexData(data::Data, clim_var::String, diagnostic::String, ref_period::String)
@@ -734,7 +829,6 @@ function indexData(data::Data, clim_var::String, diagnostic::String, ref_period:
     data_key = join([clim_var, diagnostic, ref_period], "_")
     return data.data[data_key]
 end
-
 
 
 """

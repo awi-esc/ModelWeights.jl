@@ -56,8 +56,8 @@ function computeWeights(
 
     performances = performanceParts(Di, config.sigma_performance)
     independences = independenceParts(Sij, config.sigma_independence)
-    weights = performances ./ independences;
-    weights = weights ./ sum(weights);
+    weights = performances ./ independences
+    weights = weights ./ sum(weights)
     setRefPeriodInWeightsMetadata!(weights.metadata, ref_period_alias, ref_period_timerange)
     
     wI = independences ./ sum(independences)
@@ -74,7 +74,7 @@ function computeWeights(
         w =  weights
         #overall = (wP./wI)./sum(wP./wI), # just for sanity check
         )
-    logWeights(weights.metadata);
+    logWeights(weights.metadata)
     if !isempty(config.target_dir)
         saveWeights(climwip_weights, config.target_dir)
     end
@@ -123,13 +123,17 @@ function loadDataFromESMValToolConfigs(
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
     only_shared_models::Bool=false,
-    subset::Union{Dict{String, Vector{String}}, Nothing}=nothing,
+    subset::Union{Constraint, Nothing}=nothing,
     preview::Bool=false
 )
-    attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; subset)
-    meta_data = buildMetaData(
-        attributes, path_data, dir_per_var, is_model_data; subset
-    )
+    attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; constraint=subset)
+    meta_data = Dict{String, MetaData}()
+    for attrib in attributes
+        meta = buildMetaData(
+            attrib, path_data, dir_per_var, is_model_data; constraint=subset
+        )
+        addMetaData!(meta_data, meta)
+    end
     output = preview ? meta_data : 
         loadDataFromMetadata(meta_data, is_model_data, only_shared_models)
     return output
@@ -141,10 +145,12 @@ function loadDataFromYAML(
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
     only_shared_models::Bool=false,
-    subset::Union{Dict{String, Vector{String}}, Nothing}=nothing,
+    subset::Union{Constraint, Nothing}=nothing,
     preview::Bool=false
 )
-    meta_data = getMetaDataFromYAML(path_config, dir_per_var, is_model_data; subset)
+    meta_data = getMetaDataFromYAML(
+        path_config, dir_per_var, is_model_data; constraint=subset
+    )
     output = preview ? meta_data :
         loadDataFromMetadata(meta_data, is_model_data, only_shared_models)
     return output

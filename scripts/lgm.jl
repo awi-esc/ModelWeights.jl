@@ -11,19 +11,18 @@ lgm_data = sw.loadDataFromESMValToolConfigs(
     dir_per_var = true, # true is default value
     is_model_data = true, # true is default value
     only_shared_models = true, # false is default value
-    subset = Dict(  # default value is empty dictionary
-        "statistic" => ["CLIM"],
-        "variable" => ["tas", "tos"],
-        "alias" => ["lgm"],
-        "projects" => ["CMIP5", "CMIP6"],
-        "models" => Vector{String}(), # same as not setting it
-         # if dir_per_var=true names of data subdirs must contain any of:
-        "subdirs" => ["20241114"]
+    subset = sw.Constraint(
+        statistics = ["CLIM"],
+        variables = ["tas", "tos"],
+        aliases = ["lgm"],
+        projects = ["CMIP5", "CMIP6"],
+        models = Vector{String}(),
+        subdirs = ["20241114"]
     ),
     preview = false # default value is false
 );
-model_members_lgm = Array(dims(first(values(lgm_data.data)), :member))
-models_lgm  = unique(first(values(lgm_data.data)).metadata["model_names"])
+model_members_lgm = Array(dims(first(values(lgm_data)).data, :member))
+models_lgm  = unique(first(values(lgm_data)).data.metadata["model_names"])
 
 # Model data for historical experiment of models with lgm-experiment from above
 base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
@@ -31,15 +30,15 @@ config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/historical";
 historical_data = sw.loadDataFromESMValToolConfigs(
     base_path, config_path;
     only_shared_models = true,
-    subset = Dict(
-        "statistic" => ["CLIM"],
-        "variable" => ["tas", "tos"],
-        "alias" => ["historical"],
-        "timerange" => ["full"],
-        "models" => model_members_lgm,
-        #"models" => models_lgm,
+    subset = sw.Constraint(
+        statistics = ["CLIM"],
+        variables = ["tas", "tos"],
+        aliases = ["historical"],
+        timeranges = ["full"],
+        models = model_members_lgm,
+        #models = models_lgm,
         # if dir_per_var=true names of data subdirs must contain any of:
-        "subdirs" => ["20241121", "20241118"]
+        subdirs = ["20241121", "20241118"]
     )
 );
 
@@ -48,13 +47,14 @@ path_config = "/albedo/home/brgrus001/SimilarityWeights/configs/examples/example
 model_data = sw.loadDataFromYAML(
     path_config;
     dir_per_var = true, # true is default value
-    is_model_data=true, # true is default value
+    is_model_data = true, # true is default value
     only_shared_models = true,
-    subset = Dict(
-        "projects" => ["CMIP5", "CMIP6"],
-        "models" => model_members_lgm
-        #"models" => models_lgm
-    )
+    # subset = sw.Constraint(
+    #     projects = ["CMIP5"]
+    #     #"models" => model_members_lgm
+    #     #"models" => models_lgm
+    # ),
+    preview = false
 );
 
 
@@ -65,12 +65,12 @@ obs_data = sw.loadDataFromESMValToolConfigs(
     base_path, config_path;
     dir_per_var = false,
     is_model_data = false,
-    subset = Dict(
-        "statistic" => ["CLIM"],
-        "variable" => ["tas", "tos"],
-        "alias" => ["historical", "historical2"],
-        "projects" => ["ERA5"], # for observational data default value is ["ERA5"]
-        "timerange" => ["1980-2014"]
+    subset = sw.Constraint(
+        statistics = ["CLIM"],
+        variables = ["tas", "tos"],
+        aliases = ["historical", "historical2"],
+        projects = ["ERA5"], # for observational data default value is ["ERA5"]
+        timeranges = ["1980-2014"]
     )
 );
 

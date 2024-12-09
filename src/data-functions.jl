@@ -94,14 +94,14 @@ function subsetModelData(data::DimArray, shared_models::Vector{String})
     indices = findall(m -> m in shared_models, collect(dims(data, dim_symbol)))
     @assert length(indices) == length(shared_models)
     if dim_symbol == :model
-        data = data[model = indices];
+        data = data[model = indices]
     else
-        data = data[member = indices];
+        data = data[member = indices]
     end
     # also adjust the metadata
     attributes = filter(
         k -> data.metadata[k] isa Vector && k != "member_names", keys(data.metadata)
-    );
+    )
     for key in attributes
         data.metadata[key] = data.metadata[key][indices]
     end
@@ -144,7 +144,7 @@ function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
         if climVar == "msftmz"
             sector = get(ds, "sector", nothing)
             if !isnothing(sector)
-                attributes = merge(attributes, Dict(deepcopy(sector.attrib)));
+                attributes = merge(attributes, Dict(deepcopy(sector.attrib)))
             end
         end
         # add mip_era for models since it is not provided in CMIP5-models
@@ -158,7 +158,7 @@ function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
         # update metadata-dictionary for all processed files with the
         # metadata from the current file
         for key in keys(attributes)
-            values = get!(meta, key, repeat(Union{Missing, Any}[missing], outer=n_files));
+            values = get!(meta, key, repeat(Union{Missing, Any}[missing], outer=n_files))
             values[i] = attributes[key]
         end
 
@@ -173,13 +173,13 @@ function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
                     Dates.year(x), Dates.month(x), Dates.day(x)
                     ),
                     dsVar[d][:]
-                );
-                push!(dimensions, Dim{Symbol(d)}(collect(times)));
+                )
+                push!(dimensions, Dim{Symbol(d)}(collect(times)))
             else
-                push!(dimensions, Dim{Symbol(d)}(collect(dsVar[d][:])));
+                push!(dimensions, Dim{Symbol(d)}(collect(dsVar[d][:])))
             end
         end
-        push!(data, DimArray(Array(dsVar), Tuple(dimensions)));
+        push!(data, DimArray(Array(dsVar), Tuple(dimensions)))
     end
     if length(data) > 0
         #dimData = cat(data..., dims=3) # way too slow!
@@ -203,8 +203,8 @@ function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
             raw_data,
             (dims(data[1])..., Dim{:source}(collect(skipmissing(source_names))))
         )
-        updateMetadata!(meta, source_names, is_model_data);
-        dimData = rebuild(dimData; metadata = meta);
+        updateMetadata!(meta, source_names, is_model_data)
+        dimData = rebuild(dimData; metadata = meta)
         if is_model_data
             # set dimension names, member refers to unique model members,
             # model refers to 'big combined model', part of member name,
@@ -239,34 +239,33 @@ end
 ids, i.e. for all variable+statistic+experiment combinations
 """
 function loadDataFromMetadata(
-    meta_data::Vector{MetaData},
+    meta_data::Dict{String, MetaData},
     is_model_data::Bool,
     only_shared_models::Bool
 )
-    results = Vector{Data}()
-    for meta in meta_data
-        push!(results, loadPreprocData(meta, is_model_data))
+    results = Dict{String, Data}()
+    for (id, meta) in meta_data
+        results[id] = loadPreprocData(meta, is_model_data)
     end
-    # joint_data = joinDataObjects(results) #TODO: if several same ids in results
     if is_model_data && only_shared_models
         # getSharedModels accesses the models as the dimension of the loaded data!
-        shared_models = getSharedModels(results, :member)
+        shared_models = getSharedModels(collect(values(results)), :member)
         if isempty(shared_models)
             @warn "No models shared across all loaded data"
         end
-        shared_results = Vector{Data}(undef, length(results))
-        for (i, result) in enumerate(results)
+        shared_results = Dict{String, Data}()
+        for (id, result) in results
             take_subset = sort(Array(dims(result.data, :member))) != sort(Array(shared_models))
             shared_data = take_subset ? subsetModelData(result.data, Array(shared_models)) : result.data
             shared_paths = take_subset ? subsetPaths(result.meta.paths, Array(shared_models)) : result.meta.paths
-            meta = MetaData(id = result.meta.id, attrib = result.meta.attrib, paths = shared_paths)
-            shared_results[i] = Data(meta = meta, data = shared_data)
+            meta = MetaData(id = id, attrib = result.meta.attrib, paths = shared_paths)
+            shared_results[id] = Data(meta = meta, data = shared_data)
         end
         results = shared_results
     end
-    loaded_meta = map(x -> x.meta, results) 
-    @info "loaded data: " loaded_meta
-    @info "filtered for shared models across all loaded data: " only_shared_models
+    loaded_meta = map(x -> x.meta, values(results)) 
+    @debug "loaded data: " loaded_meta
+    @debug "filtered for shared models across all loaded data: " only_shared_models
     return results
 end
 
@@ -302,7 +301,7 @@ end
 Return the respective key to retrieve model names in CMIP6 and CMIP5 data.
 """
 function getCMIPModelsKey(meta::Dict)
-    attributes = keys(meta);
+    attributes = keys(meta)
     if "source_id" in attributes
         return "source_id"
     elseif "model_id" in attributes
@@ -342,17 +341,17 @@ end
 - `quantiles`: Vector with two entries (btw. 0 and 1) [lower_bound, upper_bound]
 """
 function getUncertaintyRanges(data::DimArray, w::DimArray; quantiles=[0.167, 0.833])
-    unweightedRanges = [];
-    weightedRanges = [];
+    unweightedRanges = []
+    weightedRanges = []
     for t in dims(data, :time)
         lower, upper = computeInterpolatedWeightedQuantiles(
             quantiles, Array(data[time = At(t)]); weights=w
-        );
-        push!(weightedRanges, [lower, upper]);
+        )
+        push!(weightedRanges, [lower, upper])
         lower, upper = computeInterpolatedWeightedQuantiles(
             quantiles, Array(data[time = At(t)])
-        );
-        push!(unweightedRanges, [lower, upper]);
+        )
+        push!(unweightedRanges, [lower, upper])
     end
 
     return (weighted=weightedRanges, unweighted=unweightedRanges)
