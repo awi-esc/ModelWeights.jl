@@ -52,39 +52,39 @@ The config file requires the following entries:
 
 - `path_data`: base path to where the preprocessed data is stored. This path will be concatenated with the directories specified for each dataset. It can be omitted if inside datasets (see below), base_dir refers to the entire path.
 
-    ```yaml
-    path_data: "/albedo/work/projects/p_forclima/preproc_data_esmvaltool"
-    ```
+````yaml
+path_data: "/albedo/work/projects/p_forclima/preproc_data_esmvaltool"
+````
 
 - `timerange_to_alias`: mapping from timerange to alias:
 
-    ````yaml
-    timerange_to_alias:
-    "1850-1900": "historical0"
-    "1951-1980": "historical1"
-    ````
+````yaml
+timerange_to_alias:
+"1850-1900": "historical0"
+"1951-1980": "historical1"
+````
 
 - `datasets`: list of each dataset to be loaded: 
 
-    ````yaml
-    datasets: [
-    {
-        base_dir: "LGM", 
-        exp: "lgm", 
-        variables: ["tas", "tos"], 
-        statistics: ["CLIM"], 
-        subdirs: ["20241114"]
-    },
-    {
-        base_dir: "historical", # required String
-        exp: "historical", # required String
-        variables: ["tas", "tos"], # required Vector
-        statistics: ["CLIM"], # required Vector
-        timeranges: ["full"], # optional Vector
-        subdirs: ["20241121", "20241118"] # optional Vector
-    }
-    ]
-    ````
+````yaml
+datasets: [
+{
+    base_dir: "LGM", 
+    exp: "lgm", 
+    variables: ["tas", "tos"], 
+    statistics: ["CLIM"], 
+    subdirs: ["20241114"]
+},
+{
+    base_dir: "historical", # required String
+    exp: "historical", # required String
+    variables: ["tas", "tos"], # required Vector
+    statistics: ["CLIM"], # required Vector
+    timeranges: ["full"], # optional Vector
+    subdirs: ["20241121", "20241118"] # optional Vector
+}
+]
+````
 
 For each given dataset the respective data is loaded from the `base_dir` at
 `path_data`. The keys `exp`, `variables` and `statistics` are required to 
@@ -111,7 +111,7 @@ to filter the data take precedence with respect to what had been specified in
 the yaml file. 
 
 
-```julia
+````julia
 lgm_data = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes;
     subset = mw.Constraint(

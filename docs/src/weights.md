@@ -1,4 +1,4 @@
-# Defintion of weights
+# Computing weights
 
 ## Area-weighted RMSE
 
