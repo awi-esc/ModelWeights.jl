@@ -1,4 +1,4 @@
-module SimilarityWeights
+module ModelWeights
 
 const MODEL_MEMBER_DELIM = "#"
 
@@ -14,4 +14,4 @@ include("main-functions.jl")
 
 export loadDataFromMetadata, loadPreprocData, computeWeights, getSharedModels
 
-end
+end # module ModelWeights

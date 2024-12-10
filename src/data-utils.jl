@@ -61,7 +61,7 @@ end
 end
 
 
-@kwdef struct ModelWeights
+@kwdef struct Weights
     performance_distances::DimArray
     independence_distances::DimArray
     Di::DimArray # generalized distances each model wrt performance
@@ -70,66 +70,6 @@ end
     wI::DimArray # normalized
     w::DimArray # normalized
 end
-
-
-# """
-#     joinDataObjects(data::Vector{Data})
-
-# TODO: If there are two Data-objects with the same id, these should be merged into 
-# a single Data-object.
-
-# # Arguments.
-# - `data`: 
-# """
-# function joinDataObjects(data::Vector{Data})
-#     ids = map(x -> x.meta.id, data)
-#     if length(ids) != length(unique(ids))
-#         indices = map(x -> findall(id -> id == x, ids), unique(ids))
-
-#     end
-    
-#     meta_all = Vector{MetaData}()
-#     data_all = Dict{String, DimArray}()
-#     duplicate_ids = Vector{String}()
-#     for ds in data
-
-#         # append!(meta_all, ds.meta)
-#         # for k in keys(ds.data)
-#         #     if haskey(data_all, k) 
-#         #         push!(duplicate_ids, k)
-#         #         # TODO: handle duplicate ids (e.g, if for same metadata,
-#         #         # (different) data is loaded) 
-#         #     end
-#         #     data_all[k] = copy(ds.data[k])
-#         # end
-
-#     end
-#     if !isempty(duplicate_ids)
-#         @warn "joint data with same ids, one is overwritten!" duplicate_ids
-#     end
-#     return Data(data = data_all, meta = meta_all)
-# end
-
-## code I had used to merge data from seperate locations into single DimArray 
-# previously_added_data = get(data_all, meta.id, nothing)
-# if isnothing(previously_added_data)
-#     data_all[meta.id] = data
-# else
-#     dim = is_model_data ? :member : :source
-#     prev_models = collect(dims(previously_added_data, dim))
-#     new_models = collect(dims(data, dim))
-#     joint_data = cat(
-#         previously_added_data, data;
-#         dims=Dim{dim}(vcat(Array(prev_models), Array(new_models)))
-#     )
-#     joint_meta = sw.joinMetadata(
-#         previously_added_data.metadata,
-#         data.metadata,
-#         is_model_data
-#     )
-#     data_all[meta.id] = rebuild(joint_data; metadata = joint_meta)
-# end
-# push!(results, Data(meta = [meta], data = data_all))
 
 
 """

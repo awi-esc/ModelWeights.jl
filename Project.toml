@@ -1,5 +1,5 @@
-name = "SimilarityWeights"
-uuid = "56efc513-e189-412d-b385-654c510107ef"
+name = "ModelWeights"
+uuid = "933925d5-f025-4d5f-a75f-f973a6ce34d8"
 authors = ["Britta Grusdt <britta.grusdt@awi.de>"]
 version = "0.1.0"
 

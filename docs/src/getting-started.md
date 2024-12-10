@@ -20,7 +20,7 @@ import ModelWeights as mw
 # set path_data to directory where your preprocessed data is stored
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 # set path_recipes: directory where the ESMValTool recipes are stored 
-path_recipes = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/configs-SimilarityWeights/esmvaltool-recipes/lgm-cmip5-cmip6";
+path_recipes = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/configs-ModelWeights/esmvaltool-recipes/lgm-cmip5-cmip6";
 
 lgm_data = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes;

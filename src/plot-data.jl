@@ -20,8 +20,8 @@ function plotMeansOnMap(means::DimArray, title::String; colors=nothing)
     lat = range(lat_min, stop=lat_max, length=length(dims_lat));
 
     # axis ticks
-    lonLabels = SimilarityWeights.longitude2EastWest.(dims_lon);
-    latLabels = SimilarityWeights.latitude2NorthSouth.(dims_lat);
+    lonLabels = ModelWeights.longitude2EastWest.(dims_lon);
+    latLabels = ModelWeights.latitude2NorthSouth.(dims_lat);
     # just use roughly 10 ticks
     step_lon = Int(round(length(lonLabels)/10));
     step_lat = Int(round(length(latLabels)/10));

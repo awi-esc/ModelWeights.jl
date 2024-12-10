@@ -351,7 +351,7 @@ end
 - `target_fn`:
 """
 function saveWeights(
-    weights::ModelWeights,
+    weights::Weights,
     target_dir::String;
     target_fn::String=""
 )
@@ -395,7 +395,7 @@ function saveWeights(
     end
 
     # Add actual data weights
-    for name in fieldnames(ModelWeights)
+    for name in fieldnames(Weights)
         if String(name) in ["w", "wP", "wI", "Di"]
             v = defVar(ds, String(name), Float64, ("model",))
             data = getfield(weights, name)

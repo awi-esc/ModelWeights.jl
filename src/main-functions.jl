@@ -64,7 +64,7 @@ function computeWeights(
     wP = performances ./ sum(performances)
     setRefPeriodInWeightsMetadata!(wP.metadata, ref_period_alias, ref_period_timerange)
     
-    model_weights =  ModelWeights(
+    model_weights =  Weights(
         performance_distances = dists_perform_all,
         independence_distances = dists_indep_all, 
         Di = Di,
@@ -92,9 +92,9 @@ end
         subset::Union{Dict{String, Vector{String}}, Nothing}=nothing
     )
 
-Loads the data from the config files located at 'config_paths'. For necessary
-structure of config files, see TODO. For each variable, experiment, statistic
-and timerange (alias) a different DimArray is loaded.
+Loads the data from the config files (ESMValTool recipes) located at 'path_recipes'.
+For each variable, experiment, statistic and timerange (alias) a different
+DimArray is loaded.
 
 # Arguments:
 - `path_data`:  path to location where preprocessed data is stored; if 
@@ -110,12 +110,12 @@ data_path points to the directory that has a subdirectory 'preproc'.
 - `is_model_data`: set true for model data, false for observational data
 - `only_shared_models`: if true only data loaded from model members shared 
 across all experiments and variables.
-- `subset`: dictionary specifying the subset of data to be loaded, ech key maps 
-to a vector of Strings; the following keys are handled: 
-'variable', 'statistic', 'alias', `timerange`, `exp` (fields of struct 
-`MetaAttrib`), `models` which maps to Vector of specific models or members of
-models (default is empty) and `projects` which maps to Vector of Strings, 
-for instance ["CMIP6"] to load only CMIP6-data.
+- `subset`: specifies the subset of data to be loaded as an instance of type 
+`Constraint`. Its field `models` is used to load only specific set of models 
+or members of models (default is empty). The field `projects` is used to load 
+only data from a given set of projects, e.g. for loading only CMIP5-data.
+- `preview`: used to pre-check which data will be loaded before actually loading
+it. 
 """
 function loadDataFromESMValToolConfigs(
     path_data::String,
@@ -140,6 +140,32 @@ function loadDataFromESMValToolConfigs(
 end
 
 
+"""
+    loadDataFromYAML(
+        path_config::String;
+        dir_per_var::Bool=true,
+        is_model_data::Bool=true,
+        only_shared_models::Bool=false,
+        subset::Union{Constraint, Nothing}=nothing,
+        preview::Bool=false
+    )
+
+    # Arguments:
+- `path_config`: path to yaml config file
+- `dir_per_var`: if true, directory at `path_data`, as specified in config file,
+has subdirectories, one for each variable (they must end with _ and the name 
+of the variable), otherwise `path_data` points to the directory that has a 
+subdirectory 'preproc'.
+- `is_model_data`: set true for model data, false for observational data
+- `only_shared_models`: if true only data loaded from model members shared 
+across all experiments and variables.
+- `subset`: specifies the subset of data to be loaded as an instance of type 
+`Constraint`. Its field `models` is used to load only specific set of models 
+or members of models (default is empty). The field `projects` is used to load 
+only data from a given set of projects, e.g. for loading only CMIP5-data.
+- `preview`: used to pre-check which data will be loaded before actually loading
+it. 
+"""
 function loadDataFromYAML(
     path_config::String;
     dir_per_var::Bool=true,
