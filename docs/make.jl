@@ -1,8 +1,8 @@
-using Documenter, SimilarityWeights
+using Documenter, ModelWeights
 
 makedocs(
-    sitename = "SimilarityWeights.jl",
-    modules = [SimilarityWeights],
+    sitename = "ModelWeights.jl",
+    modules = [ModelWeights],
     format   = Documenter.HTML(; prettyurls = get(ENV, "CI", nothing) == "true"),
     pages = [
         "index.md",
