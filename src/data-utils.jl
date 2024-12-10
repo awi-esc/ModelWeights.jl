@@ -889,11 +889,7 @@ elements from the input vectors, joined by underscores.
 
 # Example
 ```jldoctest
-julia> allcombinations(["tos", "tas"], ["CLIM"])
-
-
-# output
-
+julia> ModelWeights.allcombinations(["tos", "tas"], ["CLIM"])
 2-element Vector{String}:
  "tos_CLIM"
  "tas_CLIM"
