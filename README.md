@@ -1,4 +1,4 @@
-# SimilarityWeights
+# ModelWeights
 
 This repository contains the code for the Julia Package SimilarityWeights, which computes so called **independence** and **performance** weights for each loaded climate model, namely according to the approach from Brunner et al. (2020). 
 The documentation is found here: 
