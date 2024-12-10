@@ -581,9 +581,9 @@ end
 
 
 function getMetaDataID(attrib::MetaAttrib)
-    id=join([getfield(attrib, field) for field in fieldnames(MetaAttrib)], "_")
-    return id
-    # return join([attrib.variable, attrib.statistic, attrib.alias], "_")
+    # id=join([getfield(attrib, field) for field in fieldnames(MetaAttrib)], "_")
+    # return id
+    return join([attrib.variable, attrib.statistic, attrib.alias], "_")
 end
 
 
@@ -763,17 +763,25 @@ end
 
 
 """
-    indexData(data::Data, clim_var::String, diagnostic::String, ref_period::String)
+    indexData(data::Data, clim_var::String, diagnostic::String, alias::String)
 """
-function indexData(data::Data, clim_var::String, diagnostic::String, ref_period::String)
-    data_key = join([clim_var, diagnostic, ref_period], "_")
-    return data.data[data_key]
+function indexData(data::Vector{Data}, clim_var::String, diagnostic::String, alias::String)
+    fn(data::Data) = 
+        data.meta.attrib.variable == clim_var && 
+        data.meta.attrib.statistic == diagnostic &&
+        data.meta.attrib.alias == alias
+    
+    df = filter(fn, data)
+    if length(df) > 1
+        @warn "more than one dataset given for $clima_var, $diagnostic, $alias."
+    end
+    return df[1].data
 end
 
 
 """
     computeDistancesAllDiagnostics(
-        model_data::Data, 
+        model_data::Vector{Data}, 
         obs_data::Union{Nothing, Data}, 
         config::Dict{String, Number},
         ref_period::String,
@@ -791,10 +799,10 @@ Compute RMSEs between models and observations or between predictions of models.
 for distances between model predictions
 """
 function computeDistancesAllDiagnostics(
-    model_data::Data, 
-    obs_data::Union{Nothing, Data}, 
+    model_data::Vector{Data}, 
+    obs_data::Union{Nothing, Vector{Data}}, 
     config::Dict{String, Number},
-    ref_period::String,
+    ref_period_alias::String,
     for_performance::Bool
 )
     # compute performance/independence distances for all model members
@@ -806,10 +814,10 @@ function computeDistancesAllDiagnostics(
         diagnostic_keys = filter(x -> endswith(x, "_" * diagnostic), var_diagnostic_keys)
         variables = String.(map(x -> split(x, "_")[1], diagnostic_keys))
         for clim_var in variables
-            models = indexData(model_data, clim_var, diagnostic, ref_period)
+            models = indexData(model_data, clim_var, diagnostic, ref_period_alias)
 
             if for_performance
-                observations = indexData(obs_data, clim_var, diagnostic, ref_period)
+                observations = indexData(obs_data, clim_var, diagnostic, ref_period_alias)
                 if length(dims(observations, :source)) != 1
                     @warn "several observational datasets available for computing distances"
                 end
@@ -902,14 +910,14 @@ the given reference period 'ref_period'.
 # Arguments:
 - `data`:
 - `keys_weights`:
-- `ref_period`:
+- `ref_period_alias`:
 """
 function isValidDataAndWeightInput(
-    data::Data, keys_weights::Vector{String}, ref_period::String
+    data::Vector{Data}, keys_weights::Vector{String}, ref_period_alias::String
 )
-    ids = map(x -> x.id, data.meta)
-    keys_data = map(x -> x * "_" * ref_period, keys_weights)
-    return all([k in ids for k in keys_data])
+    actual_ids_data = map(x -> x.meta.id, data)
+    required_keys_data = map(x -> x * "_" * ref_period_alias, keys_weights)
+    return all([k in actual_ids_data for k in required_keys_data])
 end
 
 

@@ -26,13 +26,8 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes;
     preview = false # default: false; if true meta data for data to be loaded is returned
 );
-
-julia> lgm_data
-Dict{String, ModelWeights.Data} with 2 entries:
-  "tos_CLIM_lgm_lgm_full" => Data(tos_CLIM_lgm_lgm_full from:…
-  "tas_CLIM_lgm_lgm_full" => Data(tas_CLIM_lgm_lgm_full from:…
 ````
-The loaded data is a dictionary mapping from the data-ids to instances of type `Data`. 
+The loaded data is a Vector containing instances of type `Data`. 
 
 We preprocessed the data with ESMValTool using several recipes so that we get separate directories for (the preprocessed data) for every experiment. Thus, to load data for, say lgm and historical experiments, we would call loadDataFromESMValToolConfigs twice with the respective data- and config paths as arguments.
 
@@ -130,7 +125,7 @@ provide the optional argument `subset` which expects an instance of Type
 
 - `aliases`: like for `statistics`, the names are arbitrary but must be identical to what you used when preprocessing the data; e.g. ["historical", "historical1"].
 
-    An alias should refer to a certain `timerange`, e.g. we call the time period from 1951-1980 'historical1'. To load only this data, it thus does not matter whether you set `timerange=["1951-1980"]` or `alias=["historical1"]` within the `Constraint`-object.
+    An alias should refer to a certain `timerange` of a certain experiment, e.g. we call the time period from 1951-1980 'historical1'. To load only this data, it thus does not matter whether you set `timerange=["1951-1980"]` or `alias=["historical1"]` within the `Constraint`-object.
 
 - `timeranges`: timerange; especially for historical data, you may preprocess data for different timeranges,  e.g. ["full", "1980-2014"]. 
 

@@ -21,8 +21,10 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
     ),
     preview = false # default value is false
 );
-model_members_lgm = Array(dims(first(values(lgm_data)).data, :member))
-models_lgm  = unique(first(values(lgm_data)).data.metadata["model_names"])
+# we set only_shared_models to true, so model members are identical for every 
+# loaded data set 
+model_members_lgm = Array(dims(lgm_data[1].data, :member))
+models_lgm = unique(lgm_data[1].data.metadata["model_names"])
 
 # Model data for historical experiment of models with lgm-experiment from above
 base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
@@ -59,8 +61,8 @@ model_data = mw.loadDataFromYAML(
 
 
 # Load the observational data
-base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_20241119_124434"
-config_path = "/albedo/home/brgrus001/ModelWeights/configs/historical_obs"
+base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_20241119_124434";
+config_path = "/albedo/home/brgrus001/ModelWeights/configs/historical_obs";
 obs_data = mw.loadDataFromESMValToolConfigs(
     base_path, config_path;
     dir_per_var = false,

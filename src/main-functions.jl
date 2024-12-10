@@ -19,7 +19,7 @@ Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
 combination of variable and diagnostic.
 """
 function computeWeights(
-    model_data::Data, obs_data::Data, config::ConfigWeights
+    model_data::Vector{Data}, obs_data::Vector{Data}, config::ConfigWeights
 )
     weights_perform = normalizeWeightsVariables(config.performance)  
     weights_indep = normalizeWeightsVariables(config.independence)
@@ -29,7 +29,7 @@ function computeWeights(
     keys_weights_indep = allcombinations(dims(weights_indep, :variable), dims(weights_indep, :diagnostic))
     
     ref_period_alias, ref_period_timerange = getRefPeriodAsTimerangeAndAlias(
-        map(x -> x.attrib, model_data.meta), config.ref_period
+        map(x -> x.meta.attrib, model_data), config.ref_period
     )
     
     msg =  x -> "For computation of $x weights: Make sure that data is provided 

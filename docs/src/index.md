@@ -12,8 +12,8 @@ The main objects that the package provides are: `Data`, `MetaData` and `ModelWei
 
 The `MetaData` struct defines three fields:
 1. `id::String`: identifier of the type of data; it summarizes the attributes 
-in `attrib` that define the data by joining them into a single String using 
-underscores.
+in `attrib` that define the data by joining `variable`, `statistic` and `alias` into 
+a single String using underscores.
 2. `attrib::MetaAttrib`: explicitly specifies the type of data (e.g., experiment, timerange, etc.). 
 3. `paths::Vector{String}`: Paths from where the data was loaded.
 

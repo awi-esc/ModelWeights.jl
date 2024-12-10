@@ -243,9 +243,9 @@ function loadDataFromMetadata(
     is_model_data::Bool,
     only_shared_models::Bool
 )
-    results = Dict{String, Data}()
+    results = Vector{Data}()
     for (id, meta) in meta_data
-        results[id] = loadPreprocData(meta, is_model_data)
+        push!(results, loadPreprocData(meta, is_model_data))
     end
     if is_model_data && only_shared_models
         # getSharedModels accesses the models as the dimension of the loaded data!
@@ -253,17 +253,18 @@ function loadDataFromMetadata(
         if isempty(shared_models)
             @warn "No models shared across all loaded data"
         end
-        shared_results = Dict{String, Data}()
-        for (id, result) in results
+        shared_results = Vector{Data}()
+        for result in results
             take_subset = sort(Array(dims(result.data, :member))) != sort(Array(shared_models))
             shared_data = take_subset ? subsetModelData(result.data, Array(shared_models)) : result.data
             shared_paths = take_subset ? subsetPaths(result.meta.paths, Array(shared_models)) : result.meta.paths
-            meta = MetaData(id = id, attrib = result.meta.attrib, paths = shared_paths)
-            shared_results[id] = Data(meta = meta, data = shared_data)
+            meta = MetaData(id = result.meta.id, attrib = result.meta.attrib, paths = shared_paths)
+            push!(shared_results, Data(meta = meta, data = shared_data))
         end
         results = shared_results
     end
-    loaded_meta = map(x -> x.meta, values(results)) 
+    #loaded_meta = map(x -> x.meta, values(results)) 
+    loaded_meta = map(x -> x.meta, results)
     @debug "loaded data: " loaded_meta
     @debug "filtered for shared models across all loaded data: " only_shared_models
     return results
