@@ -2,6 +2,7 @@ using NCDatasets
 using DimensionalData
 using Statistics
 using LinearAlgebra
+using JLD2
 
 """
     areaWeightedRMSE(m1::DimArray, m2::DimArray, mask::DimArray)
@@ -339,8 +340,8 @@ end
 
 
 """
-    saveWeights(
-        weights::DimVector,
+    saveWeightsAsNCFile(
+        weights::Weights,
         target_dir::String;
         target_fn::String="weights.nc"
     )
@@ -350,7 +351,7 @@ end
 - `target_dir`:
 - `target_fn`:
 """
-function saveWeights(
+function saveWeightsAsNCFile(
     weights::Weights,
     target_dir::String;
     target_fn::String=""
@@ -416,6 +417,38 @@ function saveWeights(
 end
 
 
+function saveWeightsAsJuliaObj(weights::Weights, target_path::String)
+    jldsave(target_path; weights=weights)
+    return nothing
+end
+
+
+"""
+    loadWeightsAsDimArray(data::NCDataset, key_weights::String)
+
+# Arguments:
+- `data`: NCDataset containing weights, which have a single dimension
+- `key_weights`: name of weights to load; 'wP' (performance weights), 'wI'
+(independence weights), 'w' (overall weights)
+"""
+function loadWeightsAsDimArray(data::NCDataset, key_weights::String)
+    src_name = dimnames(data[key_weights])[1]
+    sources = Array(data[src_name])
+    arr = DimArray(
+        Array(data[key_weights]),
+        (Dim{Symbol(src_name)}(sources)), metadata = Dict(data.attrib)
+    )
+    return arr
+end
+
+function loadWeightsFromJLD2(target_path::String)
+    f = jldopen(target_path, "r")
+    weights = f["weights"]
+    close(f)
+    return weights
+end
+
+
 
 """ 
     applyWeights(model_data::DimArray, weights::DimArray)
@@ -460,3 +493,5 @@ function applyWeights(model_data::DimArray, weights::DimArray)
     end
     return computeWeightedAvg(model_data; weights)
 end
+
+

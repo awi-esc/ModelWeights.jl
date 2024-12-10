@@ -76,7 +76,7 @@ function computeWeights(
         )
     logWeights(weights.metadata)
     if !isempty(config.target_dir)
-        saveWeights(model_weights, config.target_dir)
+        saveWeightsAsNCFile(model_weights, config.target_dir)
     end
     return model_weights
 end

@@ -27,7 +27,18 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
     preview = false # default: false; if true meta data for data to be loaded is returned
 );
 ````
-The loaded data is a Vector containing instances of type `Data`. 
+The loaded data is a Vector containing instances of type `Data`. We provide a function to 
+see the paths from where the data was loaded: 
+
+```julia
+julia> mw.showDataPaths(lgm_data)
+tas_CLIM_historical (timerange: full, experiment: historical)
+        /albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_cmip5_historical_tas_20241121_115637/preproc/historical/tas_CLIM/CMIP5_CNRM-CM5_Amon_historical_r1i1p1_tas.nc
+        /albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_cmip5_historical_tas_20241121_115637/preproc/historical/tas_CLIM/CMIP5_IPSL-CM5A-LR_Amon_historical_r1i1p1_tas.nc
+        ...
+```
+
+
 
 We preprocessed the data with ESMValTool using several recipes so that we get separate directories for (the preprocessed data) for every experiment. Thus, to load data for, say lgm and historical experiments, we would call loadDataFromESMValToolConfigs twice with the respective data- and config paths as arguments.
 

@@ -315,25 +315,6 @@ end
 
 
 """
-    loadWeightsAsDimArray(data::NCDataset, key_weights::String)
-
-# Arguments:
-- `data`: NCDataset containing weights, which have a single dimension
-- `key_weights`: name of weights to load; 'wP' (performance weights), 'wI'
-(independence weights), 'w' (overall weights)
-"""
-function loadWeightsAsDimArray(data::NCDataset, key_weights::String)
-    src_name = dimnames(data[key_weights])[1]
-    sources = Array(data[src_name])
-    arr = DimArray(
-        Array(data[key_weights]),
-        (Dim{Symbol(src_name)}(sources)), metadata = Dict(data.attrib)
-    )
-    return arr
-end
-
-
-"""
     getUncertaintyRanges(data::DimArray, w::DimArray; quantiles=[0.167, 0.833]})
 
 # Arguments:
@@ -356,4 +337,11 @@ function getUncertaintyRanges(data::DimArray, w::DimArray; quantiles=[0.167, 0.8
     end
 
     return (weighted=weightedRanges, unweighted=unweightedRanges)
+end
+
+
+function showDataPaths(data::Union{Data, Vector{Data}})
+    data = isa(data, Vector) ? data : [data]
+    map(x->println(x.meta), data);
+    return nothing
 end

@@ -53,8 +53,7 @@ model_data = mw.loadDataFromYAML(
     only_shared_models = true,
     # subset = mw.Constraint(
     #     projects = ["CMIP5"]
-    #     #"models" => model_members_lgm
-    #     #"models" => models_lgm
+    #     "models" => model_members_lgm
     # ),
     preview = false
 );
@@ -91,11 +90,18 @@ config_weights = mw.ConfigWeights(
     target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
 );
 weights = mw.computeWeights(historical_data, obs_data, config_weights);
+#weights = mw.computeWeights(model_data, obs_data, config_weights);
 
 # weights can also be  saved separately:
-target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
-target_fn = "weights-lgm-models.nc"
-mw.saveWeights(weights, target_dir; target_fn = target_fn)
+target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/";
+target_fn = "weights-lgm-models.nc";
+mw.saveWeightsAsNCFile(weights, target_dir; target_fn = target_fn)
+target_path = joinpath(target_dir, "weights-lgm-models.jld2");
+mw.saveWeightsAsJuliaObj(weights, target_path)
+
+
+#  Load weights from/as Julia object
+weights = mw.loadWeightsFromJLD2(target_path)
 
 
 ########################### 3. PLOTTING ###########################

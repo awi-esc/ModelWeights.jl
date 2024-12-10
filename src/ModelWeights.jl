@@ -12,6 +12,6 @@ include("main-functions.jl")
 
 
 
-export loadDataFromMetadata, loadPreprocData, computeWeights, getSharedModels
+export loadDataFromYAML, loadDataFromESMValToolConfigs, computeWeights, getSharedModels
 
 end # module ModelWeights

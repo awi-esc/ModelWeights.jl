@@ -37,8 +37,7 @@ end
 end
 # Pretty print MetaData instances
 function Base.show(io::IO, x::MetaData)
-    # println(io, "$(x.id) ($(x.attrib.timerange)) from:")
-    println(io, "$(x.id) from:")
+    println(io, "$(x.id) (timerange: $(x.attrib.timerange), experiment: $(x.attrib.exp))")
     for path in x.paths
         println(io, "\t$path")
     end
@@ -49,7 +48,12 @@ end
     meta::MetaData
     data::DimArray
 end
+# Pretty print Data instances
+function Base.show(io::IO, x::Data)
+    #println(io, "$(x.meta.id) ($(x.meta.attrib.timerange), experiment: $(x.meta.attrib.exp))")
+    print(io, x.meta.attrib)
 
+end
 
 @kwdef struct ConfigWeights
     performance::Dict{String, Number}=Dict()
@@ -70,7 +74,12 @@ end
     wI::DimArray # normalized
     w::DimArray # normalized
 end
-
+# Pretty print Weights
+function Base.show(io::IO, x::Weights)
+    for m in dims(x.w, :model)
+        println(io, "$m: $(round(x.w[model = At(m)], digits=3))")
+    end
+end
 
 """
     buildCMIP5EnsembleMember(
