@@ -1,4 +1,4 @@
-# ModelWeights
+# Usage
 
 ```@contents
 ```
@@ -48,7 +48,7 @@ config_weights = mw.ConfigWeights(
 weights = mw.computeWeights(model_data_historical, obs_data, config_weights);
 ````
 
-The `ModelWeights` object has several fields that each store a
+The `Weights` object has several fields that each store a
 DimensionalData.DimArray. Some of them refer to normalized weights, others refer 
 to the distances on the basis of which the weights were computed.
 
