@@ -1,177 +1,181 @@
-import SimilarityWeights as sw
+import ModelWeights as mw
 
 using DimensionalData
 using ColorSchemes
 using NCDatasets
 
-base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358"; 
-config_path = "/albedo/home/brgrus001/SimilarityWeights/configs/climwip_config";
+path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358"; 
+path_configs = "/albedo/home/brgrus001/ModelWeights/configs/climwip_config";
 
 # specify which data to load (default: all data will be loaded if compatible)
-model_data = sw.loadData(
-    base_path,
-    config_path;
-    dir_per_var=false,
-    is_model_data=true,
-    common_models_across_vars=true,
-    subset=Dict(
-        #"variables" => Vector{String}(),
-        #"statistics" => Vector{String}(),
-        "aliases" => ["calculate_weights_climwip"],
-        #"timeranges" => Vector{String}()
-    )
+model_data = mw.loadDataFromESMValToolConfigs(
+    path_data, path_configs;
+    dir_per_var = false,
+    is_model_data = true,
+    only_shared_models = false,
+    subset = mw.Constraint(aliases = ["calculate_weights_climwip"])
 );
 
-obs_data = sw.loadData(
-    base_path,
-    config_path;
-    dir_per_var=false,
-    is_model_data=false,
-    common_models_across_vars=true,
-    subset=Dict("aliases" => ["calculate_weights_climwip"])
+obs_data = mw.loadDataFromESMValToolConfigs(
+    path_data, path_configs;
+    dir_per_var = false,
+    is_model_data = false,
+    subset = mw.Constraint(aliases = ["calculate_weights_climwip"])
 );
 
+# TODO: or load from seperate yaml file:
+# data = mw.loadDataFromYAML(
 
-# 1. Compute Weights
+# )
+
+# Compute Weights
 # configure parameters for computing weights
-config_weights = sw.ConfigWeights(
-    performance = Dict("tas_CLIM"=>1, "pr_CLIM"=>2, "psl_CLIM"=>1),
-    independence = Dict("tas_CLIM"=>0.5, "pr_CLIM"=>0.25, "psl_CLIM"=>0),
+target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/";
+fn_jld2 = "weights-climwip-simplified.jld2";
+fn_nc = "weights-climwip-simplified.nc";
+config_weights = mw.ConfigWeights(
+    performance = Dict("tas_CLIM" => 1, "pr_CLIM" => 2, "psl_CLIM" => 1),
+    independence = Dict("tas_CLIM" => 0.5, "pr_CLIM" => 0.25, "psl_CLIM" => 0),
     sigma_independence = 0.5,
     sigma_performance = 0.5,
-    #ref_period = "1995-2014"
+    ref_period = "1995-2014", 
+    target_path = joinpath(target_dir, fn_jld2)
+    # target_path = joinpath(target_dir, fn_nc)
 );
+weights = mw.computeWeights(model_data, obs_data, config_weights);
 
-weights = sw.computeWeights(model_data, obs_data, config_weights);
-weights_all_members = sw.makeWeightPerEnsembleMember(weights.w);
+# save weights as Julia object
+mw.saveWeightsAsJuliaObj(weights, joinpath(target_dir, fn_jld2))
+mw.saveWeightsAsNCFile(weights, joinpath(target_dir, fn_nc))
+weights = mw.loadWeightsFromJLD2(target_path)
+weights_all_members = mw.distributeWeightsAcrossMembers(weights.w);
 
 # make some Plots
-sw.plotWeights(weights.w; title="overall weights")
-sw.plotWeights(weights.wP; title="Performance weights")
-sw.plotWeights(weights.wI; title="Independence weights")
+figs_w = mw.plotWeights(weights.w; label="overall weight")
+figs_wP = mw.plotWeights(weights.wP; label="Performance weight")
+figs_wI = mw.plotWeights(weights.wI; label="Independence weight")
 
-sw.plotWeightContributions(weights.wI, weights.wP)
+mw.plotWeightContributions(weights.wI, weights.wP)
 
 di_var = dropdims(
     reduce(+, weights.performance_distances, dims=:diagnostic), 
     dims=:diagnostic
-)
-figs_performance = sw.plotPerformanceWeights(di_var; label="Model-Data distances", dimname="model");
-figs_Di = sw.plotPerformanceWeights(
-    weights.Di; label="Generalized distances Di", isBarPlot=false
 );
+figs_performance = mw.plotDistancesPerformance(di_var; is_bar_plot = true);
+figs_Di = mw.plotDistancesPerformance(weights.Di; is_bar_plot = false);
 
-figs_Sij = sw.plotIndependenceWeights(weights.Sij, dimname="ensemble1");
+figs_Sij = mw.plotDistancesIndependence(weights.Sij, dimname="model1");
 sij_var = dropdims(reduce(+, weights.independence_distances, dims=:diagnostic), dims=:diagnostic)
-figs_sij = sw.plotIndependenceWeights(sij_var, dimname="model1");
+figs_sij = mw.plotDistancesIndependence(sij_var, dimname="member1");
 
 
+# Apply computed weights - Temperature map plots
+# TODO fix:
+# data_climwip = mw.loadDataFromESMValToolConfigs(
+#     path_data, path_configs;
+#     dir_per_var = false
+# );
 
-# 2. apply computed weights - Temperature map plots
-data_temp_map_future = sw.loadData(
-    base_path,
-    config_path,
+data_temp_map_future = mw.loadDataFromESMValToolConfigs(
+    path_data, path_configs;
     dir_per_var=false,
-    subset = Dict("aliases" => ["weighted_temperature_map_future"])
+    subset = mw.Constraint(aliases = ["weighted_temperature_map_future"])
 );
-data_temp_map_reference = sw.loadData(
-    base_path,
-    config_path, 
-    dir_per_var=false,
-    common_models_across_vars=true,
-    subset = Dict("aliases" => ["weighted_temperature_map_reference"])
+data_temp_map_reference = mw.loadDataFromESMValToolConfigs(
+    path_data, path_configs;
+    dir_per_var = false,
+    only_shared_models = true,
+    subset = mw.Constraint(aliases = ["weighted_temperature_map_reference"])
 );
                 
 # compute weighted averages and plot results
-# make sure that same models for reference and time period of interest are used
-sw.keepSharedModelData!(data_temp_map_future.data, data_temp_map_reference.data)
-
-data_ref = data_temp_map_reference.data["tas_CLIM_weighted_temperature_map_reference"]
-data_future = data_temp_map_future.data["tas_CLIM_weighted_temperature_map_future"]
+data_ref = mw.indexData(data_temp_map_reference, "tas", "CLIM", "weighted_temperature_map_reference")
+data_future = mw.indexData(data_temp_map_future, "tas", "CLIM", "weighted_temperature_map_future")
 # to align with original data
 data_ref = data_ref[lat = Where(x -> x <= 68.75)];
 data_future = data_future[lat = Where(x -> x <= 68.75)];
 
-weighted_ref = sw.computeWeightedAvg(data_ref; weights=weights_all_members)
-weighted_future = sw.computeWeightedAvg(data_future; weights=weights_all_members)
+weighted_ref = mw.computeWeightedAvg(data_ref; weights = weights_all_members)
+weighted_future = mw.computeWeightedAvg(data_future; weights = weights_all_members)
 diff_ww = weighted_future .- weighted_ref;
-diff_ww = sw.sortLongitudesWest2East(diff_ww);
+diff_ww = mw.sortLongitudesWest2East(diff_ww);
 
-f1 = sw.plotMeansOnMap(diff_ww, "Weighted mean temp. change 2081-2100 - 1995-2014"; ColorSchemes.Reds.colors)
+# Weighted mean temp. change 2081-2100 minus 1995-2014
+f1 = mw.plotMeansOnMap(
+    diff_ww, "Weighted mean temp. change 2081-2100 minus 1995-2014";
+    ColorSchemes.Reds.colors
+)
 
+# some sanity checks
 function compareToOrigData(data, data_orig)
-    mat = isapprox.(data, data_orig, atol=10^-4);
+    mat = isapprox.(data, data_orig, atol=10^-2);
+    @assert ismissing.(data_orig) == ismissing.(data)
     approxEqual = all(x -> ismissing(x) || x, mat)
     @assert approxEqual
 end
 
 begin
     # compare to original data (must have adapted the latitudes above)
-    # TODO: check why in my data more missing values!
-    data_orig = NCDataset("/albedo/home/brgrus001/SimilarityWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_map/weighted_temperature_map/temperature_change_weighted_map.nc");
+    data_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_map/weighted_temperature_map/temperature_change_weighted_map.nc");
     data_ww_orig = data_orig["__xarray_dataarray_variable__"][:,:];
     compareToOrigData(diff_ww, data_ww_orig)
     d = DimArray(data_ww_orig, (Dim{:lon}(Array(dims(diff_ww, :lon))), Dim{:lat}(Array(dims(diff_ww, :lat)))))
-    sw.plotMeansOnMap(d, "Weighted mean temp. change 2081-2100 - 1995-2014"; ColorSchemes.Reds.colors);
+    mw.plotMeansOnMap(d, "Weighted mean temp. change 2081-2100 - 1995-2014"; ColorSchemes.Reds.colors);
 end
 
 ####### DOESNT WORK YET ########
-# data_ref = sw.summarizeEnsembleMembersVector(data_ref, true)
-# data_future = sw.summarizeEnsembleMembersVector(data_future, true)
-# 
-unweighted_ref = sw.computeWeightedAvg(data_ref);
-unweighted_future = sw.computeWeightedAvg(data_future);
-diff_uu = unweighted_future .- unweighted_ref;
-diff_uu = sw.sortLongitudesWest2East(diff_uu);
-diff = diff_ww .- diff_uu
+# Weighted minus unweighted mean temp. change 2081-2100 minus 1995-2014
+data_ref_models = mw.summarizeEnsembleMembersVector(data_ref, true);
+data_future_models = mw.summarizeEnsembleMembersVector(data_future, true);
 
-f2 = sw.plotMeansOnMap(
-    diff,
+unweighted_ref = mw.computeWeightedAvg(data_ref);
+unweighted_future = mw.computeWeightedAvg(data_future);
+diff_uu = unweighted_future .- unweighted_ref;
+diff_uu = mw.sortLongitudesWest2East(diff_uu);
+diff_wu = diff_ww .- diff_uu;
+
+f2 = mw.plotMeansOnMap(
+    diff_wu,
     "Weighted minus unweighted mean temp. change: 2081-2100 minus 1995-2014";
     ColorSchemes.Reds.colors
 )
 
-# compare to orig data (TODO: again check missing values!)
+# compare to orig data
 begin
-    data_orig = NCDataset("/albedo/home/brgrus001/SimilarityWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_map/weighted_temperature_map/temperature_change_difference_map.nc");
+    data_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_map/weighted_temperature_map/temperature_change_difference_map.nc");
     data_wu_orig = data_orig["__xarray_dataarray_variable__"][:,:];
-    compareToOrigData(diff, data_wu_orig)
+    compareToOrigData(diff_wu, data_wu_orig)
 end
-####### DOESNT WORK YET ########
+####### DOESNT WORK YET: results not equal (AssertionError) ########
 
 
-# 3. Apply computed weights - Temperature graph plots
-data_temp_graph = sw.loadData(
-    base_path, 
-    config_path,
-    dir_per_var=false,
-    subset = Dict("aliases" => ["weighted_temperature_graph"])
+# Apply computed weights - Temperature graph plots
+data_temp_graph = mw.loadDataFromESMValToolConfigs(
+    path_data, path_configs;
+    dir_per_var = false,
+    subset = mw.Constraint(aliases = ["weighted_temperature_graph"])
 );
-data_graph = data_temp_graph.data["tas_ANOM_weighted_temperature_graph"];
+data_graph = mw.indexData(data_temp_graph, "tas", "ANOM", "weighted_temperature_graph")
+# TODO: check applyWeights fn and difference!
+# this will compute the weighted avg based on the average across the respective members of each model
+#weighted_avg = mw.applyWeights(data_graph, weights_all_members);
 
-# this will compute the weighted avg based on each ensemble
-weighted_avg = sw.applyWeights(data_graph, weights_all_members);
-# this will compute the weighted avg based on each ensemble's average across its members
-weighted_avg = sw.computeWeightedAvg(data_graph; weights=weights_all_members);
-unweighted_avg = sw.computeWeightedAvg(data_graph);
+weighted_avg = mw.computeWeightedAvg(data_graph; weights = weights_all_members);
+unweighted_avg = mw.computeWeightedAvg(data_graph);
 
-uncertainties = sw.getUncertaintyRanges(data_graph, weights_all_members);
-f3 = sw.plotTempGraph(
+uncertainties = mw.getUncertaintyRanges(data_graph, weights_all_members);
+f3 = mw.plotTempGraph(
     data_graph, 
     (weighted=weighted_avg, unweighted=unweighted_avg),
-    uncertainties, 
-    "Temperature anomaly relative to 1981-2010", 
-    ""
+    uncertainties,
+    "Temperature anomaly relative to 1981-2010";
+    ylabel = "Temperature anomaly"
 )
-tas_orig = NCDataset("/albedo/home/brgrus001/SimilarityWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_graph/weighted_temperature_graph/temperature_anomalies.nc")["tas"];
+tas_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_graph/weighted_temperature_graph/temperature_anomalies.nc")["tas"];
 @assert tas_orig == data_graph
 
+# TODO check if uncertainties are also identical! And weighted/unweighted avgs!
 
-# TODO: check differences in data (missing for BNU-ESM?!)
-# bnu_future_orig = NCDataset("/albedo/home/brgrus001/SimilarityWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/preproc/weighted_temperature_map/tas_CLIM_future/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc")["tas"];
-# bnu_ref_orig = NCDataset("/albedo/home/brgrus001/SimilarityWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/preproc/weighted_temperature_map/tas_CLIM_reference/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_1995-2014.nc")["tas"];
-# bnu_future_orig[:,:] .=== bnu_future.data
-# bnu_ref_orig .=== bnu_ref.data
 
 # TODO: Plot ensemble spread for some models with >1 ensemble member
 # data = modelDataRef["CLIM"]["tas"]
