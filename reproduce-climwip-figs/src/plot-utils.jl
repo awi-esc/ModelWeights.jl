@@ -95,8 +95,8 @@ function plotMeansOnMap(means::DimArray, title::String)
     # ticks and labels
     lonTicks = -180:10:180;
     latTicks = -90:10:90;
-    lonLabels = SimilarityWeights.longitude2EastWest.(lonTicks);
-    latLabels = SimilarityWeights.latitude2NorthSouth.(latTicks);
+    lonLabels = ModelWeights.longitude2EastWest.(lonTicks);
+    latLabels = ModelWeights.latitude2NorthSouth.(latTicks);
 
     # Create the figure and axis
     fig = getFigure((14, 10), 14);
@@ -147,8 +147,8 @@ function plotHistAtPos(data::DimArray, location::Dict, unit::String="")
     data_loc = dropdims(data_loc, dims=:lon)
     data_loc = dropdims(data_loc, dims=:lat)
 
-    grid_lat = SimilarityWeights.latitude2NorthSouth(coords["lat"])
-    grid_lon = SimilarityWeights.longitude2EastWest(coords["lon"])
+    grid_lat = ModelWeights.latitude2NorthSouth(coords["lat"])
+    grid_lon = ModelWeights.longitude2EastWest(coords["lon"])
     t1 = "Variable: " * data.metadata["variable_id"] * " Experiment: " * data.metadata["experiment_id"];
     t2 = "near " * location["name"] * "(" * grid_lat * "," * grid_lon * ")";
     
