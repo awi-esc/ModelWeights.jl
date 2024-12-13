@@ -1,4 +1,5 @@
 using ColorSchemes
+using Dates
 
 """ plotMeansOnMap(means::DimArray, title::String, colors=nothing)
     
@@ -154,8 +155,9 @@ function plotTempGraph(
     data::DimArray, 
     averages::NamedTuple, 
     uncertaintyRanges::NamedTuple,
-    title::String,
-    quantilesLabel::String
+    title::String;
+    ylabel::String="",
+    quantilesLabel::String=""
 )
     f = Figure(); 
     years = Dates.year.(Array(dims(data, :time)))
@@ -165,23 +167,23 @@ function plotTempGraph(
         limits = ((years[1]-10, years[end]+10), (-1, 5)),
         title = title,#"Temperature anomaly relative to " * name_ref_period,
         xlabel = "Year", 
-        ylabel = "Temperature in " * data.metadata["units"]# "Temperature anomaly °C"
+        ylabel = isempty(ylabel) ? "Temperature in " * data.metadata["units"] : ylabel
     );
     # add ranges TODO: make label with fn argument
     lowerUnw = getindex.(uncertaintyRanges.unweighted, 1);
     upperUnw = getindex.(uncertaintyRanges.unweighted, 2);
     band!(ax, years, vec(lowerUnw), vec(upperUnw), color = (:red, 0.2), 
-         label = "Non-weighted 16.7-83.3 perc range");
+          label = "Non-weighted 16.7-83.3 perc range");
     
     lowerWeighted = getindex.(uncertaintyRanges.weighted, 1);
     upperWeighted = getindex.(uncertaintyRanges.weighted, 2);
-    band!(ax, years, vec(lowerWeighted), vec(upperWeighted), color = (:green, 0.2), 
-          label = "Weighted 16.7-83.3perc range");
+    band!(ax, years, vec(lowerWeighted), vec(upperWeighted), 
+          color = (:green, 0.2), label = "Weighted 16.7-83.3perc range");
         
     # add results for each model model seperately
-    for m in dims(data, :model)
-        y = data[model = At(m)] 
-        lines!(ax, years, Array(y), color = :gray80, label = "ensemble members")
+    for m in dims(data, :member)
+        y = data[member = At(m)] 
+        lines!(ax, years, Array(y), color = :gray80, label = "Ensemble members")
     end
     
     lines!(ax, years, vec(averages.unweighted), color = :red, label = "Non-weighted mean")

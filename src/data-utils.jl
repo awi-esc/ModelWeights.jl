@@ -14,7 +14,9 @@ end
 function Base.show(io::IO, x::MetaAttrib)
     for field in fieldnames(MetaAttrib)
         value = getfield(x, field)
-        print(io, "$field=$value ")
+        if !isempty(value)
+            print(io, "$field=$value ")
+        end
     end
 end
 
@@ -52,7 +54,6 @@ end
 function Base.show(io::IO, x::Data)
     #println(io, "$(x.meta.id) ($(x.meta.attrib.timerange), experiment: $(x.meta.attrib.exp))")
     print(io, x.meta.attrib)
-
 end
 
 @kwdef struct ConfigWeights
@@ -61,7 +62,7 @@ end
     sigma_performance::Number=0.5
     sigma_independence::Number=0.5
     ref_period::String=""
-    target_dir::String=""
+    target_path::String=""
 end
 
 
@@ -73,7 +74,9 @@ end
     wP::DimArray # normalized
     wI::DimArray # normalized
     w::DimArray # normalized
+    config::ConfigWeights # metadata
 end
+
 # Pretty print Weights
 function Base.show(io::IO, x::Weights)
     for m in dims(x.w, :model)
@@ -122,8 +125,8 @@ end
         isModelData::Bool
     )
 
-Update metadata 'meta' s.t. data of ignored files is removed and attributes
-that were only present in some files/models are set to missing. Further keys
+Update metadata 'meta' s.t. data of ignored files is removed and attributes 
+that were only present in some files/models are set to missing. Further keys 
 are added.
 For model data:
     - 'member_names': vector that contains for every model a vector with the
@@ -166,10 +169,12 @@ end
 
 
 """
-    joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any}, isModelData::Bool)
+    joinMetadata(
+    meta1::Dict{String, Any}, meta2::Dict{String, Any}, isModelData::Bool
+)
 
 Join the metadata of data to be joint (e.g. when loading data for tos for
-CMIP5 and CMIP6 from different locations). If keys are present in 'meta1' or
+CMIP5 and CMIP6 from different locations). If keys are present in 'meta1' or 
 'meta2' but not the other, missing values are added.
 
 # Arguments:
@@ -177,7 +182,9 @@ CMIP5 and CMIP6 from different locations). If keys are present in 'meta1' or
 - `meta2`:
 - `is_model_data`: true for model data, false for observational data
 """
-function joinMetadata(meta1::Dict{String, Any}, meta2::Dict{String, Any}, is_model_data::Bool)
+function joinMetadata(
+    meta1::Dict{String, Any}, meta2::Dict{String, Any}, is_model_data::Bool
+)
     meta = Dict{String, Any}()
     n1 = is_model_data ? length(vcat(meta1["member_names"]...)) : length(meta1["source_names"])
     n2 = is_model_data ? length(vcat(meta2["member_names"]...)) : length(meta2["source_names"])
@@ -371,7 +378,7 @@ function getMetaAttributesFromESMValToolConfigs(
         x -> isfile(x) && endswith(x, ".yml"),
         readdir(base_path_configs, join=true)
     )
-    meta_attrib = Vector{MetaAttrib}()
+    meta_attribs = Vector{MetaAttrib}()
     for path_config in paths_configs
         config = YAML.load_file(path_config)
         data_all = config["diagnostics"]
@@ -394,16 +401,16 @@ function getMetaAttributesFromESMValToolConfigs(
                     exp = experiment,
                     timerange = timerange
                 )
-                if !(meta in meta_attrib) 
-                    push!(meta_attrib, meta)
+                if !(meta in meta_attribs) 
+                    push!(meta_attribs, meta)
                 end
             end
         end
     end
     if !isnothing(constraint)
-        applyDataConstraints!(meta_attrib, constraint)
+        applyDataConstraints!(meta_attribs, constraint)
     end
-    return meta_attrib
+    return meta_attribs
 end
 
 
@@ -638,6 +645,16 @@ function buildMetaData(
         )
         append!(paths_to_files, paths)
     end
+    # for observational data, experiment doesn't make sense
+    if !is_model_data
+        attrib = MetaAttrib(
+            variable = attrib.variable, 
+            statistic = attrib.statistic,
+            alias = attrib.alias,
+            exp = "",
+            timerange = attrib.timerange
+        )
+    end
     return MetaData(
         id = getMetaDataID(attrib),
         attrib = attrib,
@@ -661,8 +678,7 @@ end
 - `base_path`: base directory of stored data specified in `attrib`.
 - `attrib`: meta attributes of data.
 - `dir_per_var`: true if data of each climate variable is stored in a seperate directory.
-- `subdir_constraints`: if given, paths must contain ANY of the given elements. 
-Existing paths that don't are ignored.
+- `subdir_constraints`: if given, paths must contain ANY of the given elements. Existing paths that don't are ignored.
 """
 function buildPathsForMetaAttrib(
     base_path::String, 
@@ -702,8 +718,9 @@ Subset model ids so that only those with properties specified in 'subset' remain
 
 # Arguments
 - `meta_attributes`: Vector of `MetaAttrib` instances.
-- `subset`: Mapping from fieldnames of 'MetaAttrib' struct to Vector specifiying the
-properties of which at least one must be present for an id to be retained.
+- `subset`: Mapping from fieldnames of 'MetaAttrib' struct to Vector 
+specifiying the properties of which at least one must be present for an id to 
+be retained.
 """
 function applyDataConstraints!(
     meta_attributes::Vector{MetaAttrib}, constraint::Constraint
@@ -781,7 +798,9 @@ function indexData(data::Vector{Data}, clim_var::String, diagnostic::String, ali
         data.meta.attrib.alias == alias
     
     df = filter(fn, data)
-    if length(df) > 1
+    if length(df) == 0
+        throw(ArgumentError("No data contained for $clim_var, $diagnostic, $alias !"))
+    elseif length(df) > 1
         @warn "more than one dataset given for $clima_var, $diagnostic, $alias."
     end
     return df[1].data
@@ -804,8 +823,7 @@ Compute RMSEs between models and observations or between predictions of models.
 - `obs_data`:
 - `config`:
 - `ref_period`:
-- `for_performance`: true for distances between models and observations, false 
-for distances between model predictions
+- `for_performance`: true for distances between models and observations, false for distances between model predictions
 """
 function computeDistancesAllDiagnostics(
     model_data::Vector{Data}, 
@@ -876,16 +894,13 @@ end
 """
     allcombinations(v...)
 
-Generate all possible combinations of input vectors, where each combination 
-consists of one element from each input vector, concatenated as a string with
-underscores separating the elements.
+Generate all possible combinations of input vectors, where each combination consists of one element from each input vector, concatenated as a string with underscores separating the elements.
 
 # Arguments
 - `v...`: A variable number of input vectors.
 
 # Returns
-A vector of strings, where each string represents a unique combination of
-elements from the input vectors, joined by underscores.
+A vector of strings, where each string represents a unique combination of elements from the input vectors, joined by underscores.
 
 # Example
 ```jldoctest
@@ -909,8 +924,7 @@ end
         data::Data, keys_weights::Vector{String}, ref_period::String
     )
 
-Check that there is data for all keys of the provided (balance) weights and 
-the given reference period 'ref_period'.
+Check that there is data for all keys of the provided (balance) weights and the given reference period 'ref_period'.
 
 # Arguments:
 - `data`:

@@ -71,12 +71,20 @@ function computeWeights(
         Sij = Sij,
         wP = wP,
         wI = wI,
-        w =  weights
+        w =  weights,
+        config = config
         #overall = (wP./wI)./sum(wP./wI), # just for sanity check
-        )
+    )
     logWeights(weights.metadata)
-    if !isempty(config.target_dir)
-        saveWeightsAsNCFile(model_weights, config.target_dir)
+    if !isempty(config.target_path)
+        filename = basename(config.target_path)
+        if endswith(filename, ".nc")
+            saveWeightsAsNCFile(model_weights, config.target_path)
+        elseif endswith(filename, ".jld2")
+            saveWeightsAsJuliaObj(model_weights, config.target_path)
+        else
+            @warn "Weights can only be saved as .nc or .jld2 files!"
+        end 
     end
     return model_weights
 end

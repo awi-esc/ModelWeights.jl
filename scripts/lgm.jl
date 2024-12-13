@@ -79,6 +79,8 @@ obs_data = mw.loadDataFromESMValToolConfigs(
 ########################### 2. COMPUTATION WEIGHTS ###########################
 # if target_dir is provided within config_weights, the weights will directly 
 # be saved and written to a file
+target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/";
+target_fn = "weights-lgm.nc";
 config_weights = mw.ConfigWeights(
     performance = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     independence = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
@@ -87,17 +89,13 @@ config_weights = mw.ConfigWeights(
     # ref_period can refer to either an alias or a timerange:
     ref_period = "historical", # alias
     #ref_period = "full", # timerange
-    target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/"
+    target_path = joinpath(target_dir, target_fn) 
 );
 weights = mw.computeWeights(historical_data, obs_data, config_weights);
-#weights = mw.computeWeights(model_data, obs_data, config_weights);
 
-# weights can also be  saved separately:
-target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/";
-target_fn = "weights-lgm-models.nc";
-mw.saveWeightsAsNCFile(weights, target_dir; target_fn = target_fn)
-target_path = joinpath(target_dir, "weights-lgm-models.jld2");
-mw.saveWeightsAsJuliaObj(weights, target_path)
+# weights can also be  saved separately (as julia obj or .nc file):
+#mw.saveWeightsAsNCFile(weights, joinpath(target_dir, target_fn))
+mw.saveWeightsAsJuliaObj(weights, joinpath(target_dir, "weights-lgm.jld2"))
 
 
 #  Load weights from/as Julia object
@@ -113,12 +111,12 @@ ds_weights = NCDataset(path_weights);
 ds_weights = NCDataset("/albedo/work/projects/p_pool_clim_data/britta/weights/weights_2024-11-27_09_22.nc")
 # Plot performance weights
 wP = mw.loadWeightsAsDimArray(ds_weights, "wP");
-fig_wP, = mw.plotWeights(wP; isBarPlot=false, label="performance weight");
+fig_wP, = mw.plotWeights(wP; is_bar_plot = false, label = "performance weight");
 fig_wP
 
 # Plot independence weights
 wI = mw.loadWeightsAsDimArray(ds_weights, "wI");
-fig_wI, = mw.plotWeights(wI; isBarPlot=false, label="independence weight");
+fig_wI, = mw.plotWeights(wI; is_bar_plot=false, label="independence weight");
 fig_wI
 
 # Plot performance and independence weights together
@@ -126,7 +124,7 @@ f = mw.plotWeightContributions(wI, wP)
 
 # Plot overall weights
 w = mw.loadWeightsAsDimArray(ds_weights, "w");
-fw, = mw.plotWeights(w; isBarPlot=false, label = "overall weight");
+fw, = mw.plotWeights(w; is_bar_plot=false, label = "overall weight");
 fw
 
 # Plot generalized distances

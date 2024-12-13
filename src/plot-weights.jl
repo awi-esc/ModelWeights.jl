@@ -1,16 +1,16 @@
 """
     plotWeights(
-    wP::DimArray; 
-    label::String="weight", isBarPlot::Bool=true, dimname::String="model"
+    w::DimArray; 
+    label::String="weight", is_bar_plot::Bool=true, dimname::String="model"
 )
 
 # Arguments:
 - `wP`: performanceWeights with dimensions: model/member, variable
-- `isBarPlot`: if false scatter plot returned
+- `is_bar_plot`: if false scatter plot returned
 """
 function plotWeights(
     w::DimArray; 
-    label::String="weight", isBarPlot::Bool=true, dimname::String="model"
+    label::String="weight", is_bar_plot::Bool=true, dimname::String="model"
 )
     figures = [];
     models = Array(dims(w, Symbol(dimname)))
@@ -24,7 +24,7 @@ function plotWeights(
         w = DimArray(w_reshaped, (dims(w)..., Dim{:variable}(variables)))
     end
     xs = 1 : n_models
-    if isBarPlot
+    if is_bar_plot
         for var in variables
             fig=Figure()
             ax = Axis(fig[1,1], 
@@ -63,16 +63,15 @@ end
 
 """
     plotDistancesPerformance(
-    dists::DimArray; isBarPlot::Bool=true, dimname::String="model"
+    dists::DimArray; is_bar_plot::Bool=true, dimname::String="model"
 )
 """
-function plotDistancesPerformance(
-    dists::DimArray; isBarPlot::Bool=true, dimname::String="model"
-)
+function plotDistancesPerformance(dists::DimArray; is_bar_plot::Bool=true)
+    dimname = hasdim(dists, :model) ? :model : :member
     figs = plotWeights(
         dists; label = "Distances performance",
-        isBarPlot=isBarPlot, 
-        dimname = dimname
+        is_bar_plot = is_bar_plot, 
+        dimname = String(dimname)
     )
     return figs
 end

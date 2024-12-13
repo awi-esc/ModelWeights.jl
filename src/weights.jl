@@ -141,9 +141,9 @@ end
         data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean
 )
 
-For each model and variable (if several given), compute the mean across all
-members of that model. Instead of 'member', the returned DimArray has
-dimension 'model'.
+For each model and variable (if several given), compute a summary statistic 
+(default: mean) across all members of that model. Instead of 'member', the 
+returned DimArray has dimension 'model'.
 
 # Arguments:
 - `data`: a DimArray with at least dimension 'model'
@@ -158,6 +158,7 @@ function summarizeEnsembleMembersVector(
     models = String.(collect(dims(grouped, :model)))
     averages = map(entry -> mapslices(x -> fn(skipmissing(x)), entry, dims=:model), grouped)
     combined = cat(averages..., dims=(Dim{:model}(models)));
+    combined = replace(combined, NaN => missing)
 
     meta = updateMeta ? updateGroupedDataMetadata(data.metadata, grouped) : data.metadata
     combined = rebuild(combined; metadata = meta);
@@ -288,29 +289,49 @@ function computeWeightedAvg(
     @assert isapprox(sum(weights), 1; atol=10^-4)
     # there shouldnt be data for which there is no weight since it was filtered out above
     @assert Array(models_weights) == Array(dims(data, dim_symbol))
+        
+    # readjust weights for missing values, if one model has a missing value, it is ignored in the weighted average for that particular lon,lat-position.
+    not_missing_vals = mapslices(x -> (ismissing.(x).==0), data, dims=(dim_symbol))
+    w_temp = mapslices(x -> (x .* weights) ./ sum(x .* weights), not_missing_vals, dims=(dim_symbol))
+    w_temp = replace(w_temp, NaN => missing)
     
     # TODO: the following if-differentiation should not be necessary, find out how to 
     # index dimarray with variable instead of direct name
     if dim_symbol == :member
         for m in models_weights
-            data[member = At(m)] = data[member = At(m)] .* weights[member = At(m)]
+            data[member = At(m)] = data[member = At(m)] .* w_temp[member = At(m)]
         end
     else
         for m in models_weights
-            data[model = At(m)] = data[model = At(m)] .* weights[model = At(m)]
+            data[model = At(m)] = data[model = At(m)] .* w_temp[model = At(m)]
         end
     end
-    weighted_avg = dropdims(reduce(+, data, dims=dim_symbol), dims=dim_symbol)
-    return weighted_avg
+    
+    weighted_avg = dropdims(mapslices(x -> sum(skipmissing(x)), data, dims=(dim_symbol)), dims=dim_symbol)
+    # set to missing when value was missing for ALL models
+    n_models = length(dims(data, dim_symbol))
+    all_missing = dropdims(
+        mapslices(x -> sum(ismissing.(x)) == n_models, data, dims=(dim_symbol)),
+        dims = dim_symbol
+    )
+    result = weighted_avg
+    if any(ismissing, weighted_avg)
+        result = Array{Union{Number,Missing}}(undef, size(weighted_avg))
+        result[:,:] = weighted_avg
+        result[all_missing] .= missing
+    end
+    return DimArray(result, dims(weighted_avg), metadata=weighted_avg.metadata)
 end
 
 
 """
     makeEqualWeights(metadata::Dict, dimension::Symbol)
 
-Equally distribute weight for each model over its members. Metadata is used
-to access the individual model members the computed weights were based on.
-    
+Create a weight vector, with equal weight for each model. Distribute weight across
+model members if dimension=:member. Metadata is used to access the individual 
+model members the computed weights were based on.
+  
+
 # Arguments:
 - `metadata`: metadata of the data for which weights were computed.
 - `dimension`: level of data, e.g. 'member', 'model'
@@ -318,18 +339,56 @@ to access the individual model members the computed weights were based on.
 function makeEqualWeights(metadata::Dict, dimension::Symbol)
 
     model_members = metadata["member_names"]
-    n_models = length(model_members) # member_names is a vector of vectors! 
+    n_models = length(model_members) # member_names in metadata is a vector of vectors! 
     if dimension == :member
         # make sure that the number of members per model is considered
         w = [repeat([1/n_models * (1/length(members))], length(members)) for members in model_members]
         w = vcat(w...)
         dimnames = vcat(model_members...)
-    else
+    elseif dimension == :model
         w = [1/n_models for _ in range(1, n_models)]
         dimnames = unique(metadata["model_names"])
+    else
+        throw(ArgumentError("dimension must be one of: :model, :member"))
     end
+
+    l = Lookups.Categorical(
+        sort(dimnames);
+        order=Lookups.ForwardOrdered()
+    )
     weights = DimArray(w, Dim{dimension}(dimnames), metadata = deepcopy(metadata))
+    if dimension == :member
+        weights = weights[member = At(sort(dimnames))]
+        weights = DimensionalData.Lookups.set(weights, member=l)
+    else
+        weights = weights[model = At(sort(dimnames))]
+        weights = DimensionalData.Lookups.set(weights, model=l)
+    end
     return weights
+end
+
+
+"""
+    distributeWeightsAcrossMembers(weights::DimArray)
+
+Equally distribute weight for each model over its members. Metadata is used
+to access the individual model members the computed weights were based on.
+
+# Arguments:
+- `weights`
+"""
+function distributeWeightsAcrossMembers(weights::DimArray)
+    models = Array(dims(weights, :model))
+    members = weights.metadata["member_names"]
+    w_members = []
+    for (i, model) in enumerate(models)
+        n_members = length(members[i])
+        w = weights[model = At(model)]
+        for _ in range(1, n_members) 
+            push!(w_members, w/n_members)
+        end
+    end
+    return DimArray(w_members, Dim{:member}(vcat(members...)), metadata=weights.metadata)
 end
 
 
@@ -339,39 +398,40 @@ function logWeights(metadata_weights)
 end
 
 
+function validateTargetPath(target_path::String)
+    target_dir = dirname(target_path)
+    if !isdir(target_dir)
+        mkpath(target_dir)
+    end
+    if isfile(target_path)
+        msg1 = "File at: $target_path already exists! ";
+        target_path = joinpath(
+            target_dir, join([getCurrentTime(), basename(target_path)], "_")
+        )
+        msg2 = "Save as: $(basename(target_path))"
+        @warn msg1 * msg2
+    end
+    return target_path
+end
+
+
+
 """
     saveWeightsAsNCFile(
-        weights::Weights,
-        target_dir::String;
-        target_fn::String="weights.nc"
+        weights::Weights;
+        target_path::String
     )
 
 # Arguments:
 - `weights`:
-- `target_dir`:
-- `target_fn`:
+- `target_path`:
 """
 function saveWeightsAsNCFile(
     weights::Weights,
-    target_dir::String;
-    target_fn::String=""
+    target_path::String
 )
-    if !isdir(target_dir)
-        mkpath(target_dir)
-    end
-    if isempty(target_fn)
-       path_to_target = joinpath(target_dir, join(["weights", getCurrentTime(), ".nc"], "_", ""))
-    else
-        path_to_target = joinpath(target_dir, target_fn);
-        if isfile(path_to_target)
-            msg1 = "File: " * path_to_target * " already exists!";
-            path_to_target = joinpath(target_dir, join([getCurrentTime(), target_fn], "_"))
-            msg2 = "Weights saved as: " * path_to_target
-            @warn msg1 * msg2
-        end
-    end
-    ds = NCDataset(path_to_target, "c")
-
+    target_path = validateTargetPath(target_path)
+    ds = NCDataset(target_path, "c")
     models = map(x -> string(x), dims(weights.w, :model))
     defDim(ds, "model", length(models))
     # Add a new variable to store the model names
@@ -394,7 +454,6 @@ function saveWeightsAsNCFile(
             ds.attrib[k] = v
         end
     end
-
     # Add actual data weights
     for name in fieldnames(Weights)
         if String(name) in ["w", "wP", "wI", "Di"]
@@ -413,12 +472,15 @@ function saveWeightsAsNCFile(
        end 
     end
     close(ds)
-    @info "saved data to " path_to_target
+    @info "saved weights to $target_path"
+    return nothing
 end
 
 
 function saveWeightsAsJuliaObj(weights::Weights, target_path::String)
+    target_path = validateTargetPath(target_path)
     jldsave(target_path; weights=weights)
+    @info "saved weights to: $target_path"
     return nothing
 end
 
@@ -459,10 +521,10 @@ and applied to the subset. Only weights per model (not members) are considered
 for now, in the future, members should be considered too.
 
 # Arguments:
-- `model_data`: model predictions. If given for model members, the predictions of 
-each model are considered the average value of all members of the respective model.
-- `weights`: if given for each member of a model, these will be summed up to yield one
-value per model.
+- `model_data`: model predictions. If given for model members, the predictions 
+of each model are considered the average value of all members of the respective model.
+- `weights`: if given for each member of a model, these will be summed up to 
+yield one value per model.
 """
 function applyWeights(model_data::DimArray, weights::DimArray)
     if hasdim(weights, :member)
