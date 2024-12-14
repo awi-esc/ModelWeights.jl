@@ -256,14 +256,14 @@ by weights 'weights'. If no weight vector is provided, unweighted average is com
 - `weights`: weights for models or individual members; has dimension model/memnber
 """
 function computeWeightedAvg(
-    data::DimArray; weights::Union{DimArray, Nothing}=nothing
+    data::DimArray; weights::Union{DimArray, Nothing}=nothing, use_members::Bool=true
 )
     data = deepcopy(data)
     dim_symbol = hasdim(data, :member) ? :member : :model
     models_data = collect(dims(data, dim_symbol))
     
     if isnothing(weights)
-        weights = makeEqualWeights(data.metadata, dim_symbol)
+        weights = makeEqualWeights(data.metadata, dim_symbol, use_members)
         models_weights = collect(dims(weights, dim_symbol))
     else
         models_weights = collect(dims(weights, dim_symbol))
@@ -290,7 +290,8 @@ function computeWeightedAvg(
     # there shouldnt be data for which there is no weight since it was filtered out above
     @assert Array(models_weights) == Array(dims(data, dim_symbol))
         
-    # readjust weights for missing values, if one model has a missing value, it is ignored in the weighted average for that particular lon,lat-position.
+    # readjust weights for missing values, if one model has a missing value, 
+    # it is ignored in the weighted average for that particular lon,lat-position.
     not_missing_vals = mapslices(x -> (ismissing.(x).==0), data, dims=(dim_symbol))
     w_temp = mapslices(x -> (x .* weights) ./ sum(x .* weights), not_missing_vals, dims=(dim_symbol))
     w_temp = replace(w_temp, NaN => missing)
@@ -307,20 +308,21 @@ function computeWeightedAvg(
         end
     end
     
-    weighted_avg = dropdims(mapslices(x -> sum(skipmissing(x)), data, dims=(dim_symbol)), dims=dim_symbol)
+    weighted_avg = mapslices(x -> sum(skipmissing(x)), data, dims=(dim_symbol))
+    weighted_avg = dropdims(weighted_avg, dims=dim_symbol)
     # set to missing when value was missing for ALL models
     n_models = length(dims(data, dim_symbol))
     all_missing = dropdims(
         mapslices(x -> sum(ismissing.(x)) == n_models, data, dims=(dim_symbol)),
         dims = dim_symbol
     )
-    result = weighted_avg
-    if any(ismissing, weighted_avg)
-        result = Array{Union{Number,Missing}}(undef, size(weighted_avg))
-        result[:,:] = weighted_avg
-        result[all_missing] .= missing
+    result = Array{Union{Float32,Missing}}(undef, size(weighted_avg))
+    result[:,:] = weighted_avg
+    result[all_missing] .= missing
+    if !any(ismissing, result)
+        result = weighted_avg
     end
-    return DimArray(result, dims(weighted_avg), metadata=weighted_avg.metadata)
+    return DimArray(result, dims(weighted_avg), metadata=deepcopy(weighted_avg.metadata))
 end
 
 
@@ -336,15 +338,21 @@ model members the computed weights were based on.
 - `metadata`: metadata of the data for which weights were computed.
 - `dimension`: level of data, e.g. 'member', 'model'
 """
-function makeEqualWeights(metadata::Dict, dimension::Symbol)
+function makeEqualWeights(metadata::Dict, dimension::Symbol, use_members::Bool=true)
 
     model_members = metadata["member_names"]
     n_models = length(model_members) # member_names in metadata is a vector of vectors! 
     if dimension == :member
-        # make sure that the number of members per model is considered
-        w = [repeat([1/n_models * (1/length(members))], length(members)) for members in model_members]
-        w = vcat(w...)
         dimnames = vcat(model_members...)
+        if use_members
+            # make sure that the number of members per model is considered
+            w = [repeat([1/n_models * (1/length(members))], length(members)) 
+                for members in model_members]
+            w = vcat(w...)
+        else
+            n_members = length(dimnames)
+            w = repeat([1/n_members], n_members)
+        end
     elseif dimension == :model
         w = [1/n_models for _ in range(1, n_models)]
         dimnames = unique(metadata["model_names"])

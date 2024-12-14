@@ -100,7 +100,8 @@ function sortLongitudesWest2East(data::DimArray)
     lookup_lon = Lookups.Sampled(
         sorted_lon;
         span=Lookups.Irregular(minimum(lon), maximum(lon)), 
-        order=Lookups.Unordered()
+        # order=Lookups.Unordered()
+        order = Lookups.ForwardOrdered()
     )
     data = data[lon=At(sorted_lon)]
     data = DimensionalData.Lookups.set(data, lon = lookup_lon)
