@@ -183,21 +183,14 @@ function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
     end
     if length(data) > 0
         #dimData = cat(data..., dims=3) # way too slow!
-        # all of the preprocessed model data assumed to have the same lon,lat grid
+        # all of the preprocessed model data assumed to have the same grid!
         # Preallocate a 3D array of respective size
         size_dims = size(data[1])
         n = length(data)
-        raw_data = Array{eltype(parent(data[1]))}(undef, size_dims..., n)
-        if length(size_dims) == 1
-            for idx in 1:n
-                raw_data[:,idx] = parent(data[idx])
-            end
-        elseif length(size_dims) == 2
-            for idx in 1:n
-                raw_data[:, :, idx] = parent(data[idx])  # Extract and assign the underlying data
-            end
-        else
-            throw(ArgumentError("More than 3 data dimensions not supported."))
+        raw_data = Array{eltype(Array(data[1]))}(undef, size_dims..., n)
+        s = repeat([:], length(size_dims))
+        for idx in 1:n
+            raw_data[s..., idx] = Array(data[idx])
         end
         dimData = DimArray(
             raw_data,
@@ -244,7 +237,7 @@ function loadDataFromMetadata(
     only_shared_models::Bool
 )
     results = Vector{Data}()
-    for (id, meta) in meta_data
+    for (_, meta) in meta_data
         push!(results, loadPreprocData(meta, is_model_data))
     end
     if is_model_data && only_shared_models

@@ -145,7 +145,7 @@ data_graph = mw.indexData(data_temp_graph, "tas", "ANOM", "weighted_temperature_
 #weighted_avg = mw.applyWeights(data_graph, weights_all_members);
 
 weighted_avg = mw.computeWeightedAvg(data_graph; weights = weights_all_members);
-unweighted_avg = mw.computeWeightedAvg(data_graph);
+unweighted_avg = mw.computeWeightedAvg(data_graph; use_members = false);
 uncertainties = mw.getUncertaintyRanges(data_graph, weights_all_members);
 
 f3 = mw.plotTempGraph(
@@ -164,12 +164,19 @@ compareToOrigData(unc_unweighted_orig["tas"][:,:][2,:], map(x -> x[2], uncertain
 unc_weighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range_weighted.nc")
 compareToOrigData(unc_weighted_orig["tas"][:,:][1,:], map(x -> x[1], uncertainties.weighted))
 # TODO: only this is not equal for a handful of indices!
-compareToOrigData(unc_weighted_orig["tas"][:,:][2,:], map(x -> x[2], uncertainties.weighted))
+uncertainties_weighted_orig = unc_weighted_orig["tas"][:,:][2,:];
+uncertainties_weighted = map(x -> x[2], uncertainties.weighted);
+diff = uncertainties_weighted .- uncertainties_weighted_orig;
+indices = findall(x -> x>0.0001, diff)
+diff[indices]
+compareToOrigData(uncertainties_weighted_orig, uncertainties_weighted)
+
+# data_graph_models = mw.summarizeEnsembleMembersVector(data_graph, true);
+# uncertainties_models = mw.getUncertaintyRanges(data_graph_models, weights.w);
 
 
 weighted_avg_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/central_estimate_weighted.nc")
 compareToOrigData(weighted_avg_orig["tas"][:], weighted_avg[:])
-# TODO: the following is not identical:!
 unweighted_avg_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/central_estimate.nc")
 compareToOrigData(unweighted_avg_orig["tas"][:], unweighted_avg[:])
 
