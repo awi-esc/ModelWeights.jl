@@ -1,5 +1,5 @@
-using NCDatasets
 using DimensionalData
+using NCDatasets
 using Statistics
 using LinearAlgebra
 using JLD2
@@ -240,32 +240,48 @@ function independenceParts(generalizedDistances::DimArray, sigmaS::Number)
     # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
     indep_parts = sum(exp.(-(generalizedDistances ./ sigmaS).^2), dims=:model2);
     indep_parts = dropdims(indep_parts, dims=:model2)
-    indep_parts = set(indep_parts, :model1 => :model);
+    indep_parts = DimensionalData.set(indep_parts, :model1 => :model);
     return indep_parts
 end
 
 
 """
-    computeWeightedAvg(data::DimArray; weights::Union{DimArray, Nothing}=nothing)
+    computeWeightedAvg(
+        data::DimArray; 
+        weights::Union{DimArray, Nothing}=nothing,
+        use_members_equal_weights::Bool=true
+    )
 
 Compute the average values for each (lon,lat) grid point in 'data', weighted
 by weights 'weights'. If no weight vector is provided, unweighted average is computed.
 
 # Arguments:
 - `data`: has dimensions lon, lat, model/member
-- `weights`: weights for models or individual members; has dimension model/memnber
+- `weights`: weights for models or individual members; has dimension model/member
+- `use_members_equal_weights`:  if `weights` is nothing, all models receive 
+equal weight. If `use_members_equal_weights` is true, the number of members 
+per model is taken into account, s.t. each model receives equal weight, which
+is distributed among the respective members.
 """
 function computeWeightedAvg(
-    data::DimArray; weights::Union{DimArray, Nothing}=nothing, use_members::Bool=true
+    data::DimArray; 
+    weights::Union{DimArray, Nothing}=nothing, 
+    use_members_equal_weights::Bool=true
 )
     data = deepcopy(data)
     dim_symbol = hasdim(data, :member) ? :member : :model
     models_data = collect(dims(data, dim_symbol))
     
     if isnothing(weights)
-        weights = makeEqualWeights(data.metadata, dim_symbol, use_members)
+        weights = makeEqualWeights(
+            data.metadata, dim_symbol, use_members_equal_weights
+        )
         models_weights = collect(dims(weights, dim_symbol))
     else
+        if !hasdim(weights, dim_symbol)
+            msg = "level of weights and data must align (both :member or both :model)!"
+            throw(ArgumentError(msg))
+        end
         models_weights = collect(dims(weights, dim_symbol))
         if sort(models_data) != sort(models_weights)
             # weights may have been computed wrt a different set of variables as we use here, 
@@ -288,7 +304,7 @@ function computeWeightedAvg(
     end
     @assert isapprox(sum(weights), 1; atol=10^-4)
     # there shouldnt be data for which there is no weight since it was filtered out above
-    @assert Array(models_weights) == Array(dims(data, dim_symbol))
+    @assert sort(Array(models_weights)) == sort(Array(dims(data, dim_symbol)))
         
     # readjust weights for missing values, if one model has a missing value, 
     # it is ignored in the weighted average for that particular lon,lat-position.
@@ -338,7 +354,9 @@ model members the computed weights were based on.
 - `metadata`: metadata of the data for which weights were computed.
 - `dimension`: level of data, e.g. 'member', 'model'
 """
-function makeEqualWeights(metadata::Dict, dimension::Symbol, use_members::Bool=true)
+function makeEqualWeights(
+    metadata::Dict, dimension::Symbol, use_members::Bool=true
+)
 
     model_members = metadata["member_names"]
     n_models = length(model_members) # member_names in metadata is a vector of vectors! 
@@ -412,12 +430,9 @@ function validateTargetPath(target_path::String)
         mkpath(target_dir)
     end
     if isfile(target_path)
-        msg1 = "File at: $target_path already exists! ";
         target_path = joinpath(
             target_dir, join([getCurrentTime(), basename(target_path)], "_")
         )
-        msg2 = "Save as: $(basename(target_path))"
-        @warn msg1 * msg2
     end
     return target_path
 end
@@ -438,7 +453,6 @@ function saveWeightsAsNCFile(
     weights::Weights,
     target_path::String
 )
-    target_path = validateTargetPath(target_path)
     ds = NCDataset(target_path, "c")
     models = map(x -> string(x), dims(weights.w, :model))
     defDim(ds, "model", length(models))
@@ -455,13 +469,8 @@ function saveWeightsAsNCFile(
     addNCDatasetVar!(ds, dims(weights.performance_distances, :variable), "variable")
     addNCDatasetVar!(ds, dims(weights.performance_distances, :diagnostic), "diagnostic")
 
-    # global attributes
-    # TODO: check metadata, standard_name shouldnt be present!
-    for (k, v) in weights.w.metadata
-        if isa(v, String) # doesnt work for complex types like vectors or dicts!
-            ds.attrib[k] = v
-        end
-    end
+    # global attributes: ds.attrib[k] = v
+    # since independent entries contain metadata, no global attributes added
     # Add actual data weights
     for name in fieldnames(Weights)
         if String(name) in ["w", "wP", "wI", "Di"]
@@ -480,14 +489,19 @@ function saveWeightsAsNCFile(
        end 
     end
     close(ds)
+    if isfile(target_path)
+        @warn "File at: $target_path is overwritten!";
+    end
     @info "saved weights to $target_path"
     return nothing
 end
 
 
 function saveWeightsAsJuliaObj(weights::Weights, target_path::String)
-    target_path = validateTargetPath(target_path)
     jldsave(target_path; weights=weights)
+    if isfile(target_path)
+        @warn "File at: $target_path is overwritten!";
+    end
     @info "saved weights to: $target_path"
     return nothing
 end
@@ -524,7 +538,7 @@ end
     applyWeights(model_data::DimArray, weights::DimArray)
 
 Compute the weighted average of model data 'data' with given weights 'weights'.
-If the weights were computed for a subset of the models in 'data', they are normalized
+If weights were computed for a superset of the models in 'data', they are normalized
 and applied to the subset. Only weights per model (not members) are considered
 for now, in the future, members should be considered too.
 
@@ -549,10 +563,11 @@ function applyWeights(model_data::DimArray, weights::DimArray)
     if length(shared_models) == 0
         throw(ArgumentError("No models given for which weights had been computed!"))
     else 
-        data_out = model_data[model = Where(x -> !(x in shared_models))]
         model_data = model_data[model = Where(x -> x in shared_models)]
         weights = weights[model = Where(x -> x in shared_models)]
         weights = weights ./ sum(weights)
+        
+        data_out = model_data[model = Where(x -> !(x in shared_models))]
         models_out = dims(data_out, :model)
         if length(models_out) > 0
             @warn "No weights had been computed for $models_out"

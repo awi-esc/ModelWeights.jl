@@ -1,6 +1,6 @@
 import YAML
 using DimensionalData
-
+using Setfield
 
 """
     computeWeights(model_data::Data, obs_data::Data, config::ConfigWeights)
@@ -64,6 +64,11 @@ function computeWeights(
     wP = performances ./ sum(performances)
     setRefPeriodInWeightsMetadata!(wP.metadata, ref_period_alias, ref_period_timerange)
     
+    target_path_updated = validateTargetPath(config.target_path)
+    if target_path_updated != config.target_path
+        config = @set config.target_path = target_path_updated
+    end
+    w_members = distributeWeightsAcrossMembers(weights);
     model_weights =  Weights(
         performance_distances = dists_perform_all,
         independence_distances = dists_indep_all, 
@@ -72,6 +77,7 @@ function computeWeights(
         wP = wP,
         wI = wI,
         w =  weights,
+        w_members = w_members,
         config = config
         #overall = (wP./wI)./sum(wP./wI), # just for sanity check
     )
@@ -83,7 +89,7 @@ function computeWeights(
         elseif endswith(filename, ".jld2")
             saveWeightsAsJuliaObj(model_weights, config.target_path)
         else
-            @warn "Weights can only be saved as .nc or .jld2 files!"
+            @warn "Weights not saved - they can only be saved as .nc or .jld2 files!"
         end 
     end
     return model_weights

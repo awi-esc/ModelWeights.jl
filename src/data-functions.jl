@@ -202,8 +202,8 @@ function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
             # set dimension names, member refers to unique model members,
             # model refers to 'big combined model', part of member name,
             # but additionally saved in metadata["model_names"]
-            dimData = set(dimData, :source => :member)
-            dimData = set(dimData, :member => vcat(dimData.metadata["member_names"]...))
+            dimData = DimensionalData.set(dimData, :source => :member)
+            dimData = DimensionalData.set(dimData, :member => vcat(dimData.metadata["member_names"]...))
             # Sanity checks that no dataset exists more than once
             members = dims(dimData, :member)
             if length(members) != length(unique(members))

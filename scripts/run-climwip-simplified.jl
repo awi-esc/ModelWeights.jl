@@ -112,7 +112,7 @@ weighted_avg = mw.computeWeightedAvg(diff; weights = weights_all_members);
 f1 = mw.plotMeansOnMap(weighted_avg, title_f1; ColorSchemes.Reds.colors)
 
 title_f2 = "Weighted minus unweighted mean temp. change: 2081-2100 minus 1995-2014";
-unweighted_avg = mw.computeWeightedAvg(diff; use_members=false);
+unweighted_avg = mw.computeWeightedAvg(diff; use_members_equal_weights=false);
 #unweighted_avg = mw.sortLongitudesWest2East(unweighted_avg);
 diff_wu = weighted_avg .- unweighted_avg;
 f2 = mw.plotMeansOnMap(diff_wu, title_f2; ColorSchemes.Reds.colors)
@@ -145,7 +145,7 @@ data_graph = mw.indexData(data_temp_graph, "tas", "ANOM", "weighted_temperature_
 #weighted_avg = mw.applyWeights(data_graph, weights_all_members);
 
 weighted_avg = mw.computeWeightedAvg(data_graph; weights = weights_all_members);
-unweighted_avg = mw.computeWeightedAvg(data_graph; use_members = false);
+unweighted_avg = mw.computeWeightedAvg(data_graph; use_members_equal_weights = false);
 uncertainties = mw.getUncertaintyRanges(data_graph, weights_all_members);
 
 f3 = mw.plotTempGraph(

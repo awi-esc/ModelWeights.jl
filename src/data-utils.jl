@@ -53,7 +53,7 @@ end
 # Pretty print Data instances
 function Base.show(io::IO, x::Data)
     #println(io, "$(x.meta.id) ($(x.meta.attrib.timerange), experiment: $(x.meta.attrib.exp))")
-    print(io, x.meta.attrib)
+    print(io, x.meta)
 end
 
 @kwdef struct ConfigWeights
@@ -74,11 +74,13 @@ end
     wP::DimArray # normalized
     wI::DimArray # normalized
     w::DimArray # normalized
+    w_members::DimArray # weights distributed evenly across resp. model members
     config::ConfigWeights # metadata
 end
 
 # Pretty print Weights
 function Base.show(io::IO, x::Weights)
+    println(io, "Performance Distances ():")
     for m in dims(x.w, :model)
         println(io, "$m: $(round(x.w[model = At(m)], digits=3))")
     end
@@ -345,9 +347,9 @@ function setLookupsFromMemberToModel(data::DimArray, dim_names::Vector{String})
         unique_members = dims(data, Symbol(dim))
         models = map(x -> split(x, MODEL_MEMBER_DELIM)[1], unique_members)
 
-        data = set(data, Symbol(dim) => models)
+        data = DimensionalData.set(data, Symbol(dim) => models)
         new_dim_name = n_dims > 1 ? "model" * string(i) : "model"
-        data = set(data, Symbol(dim) => Symbol(new_dim_name))
+        data = DimensionalData.set(data, Symbol(dim) => Symbol(new_dim_name))
     end
     return data
 end
@@ -438,9 +440,11 @@ end
     subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
 )
 
-Load data as specified in config file located at `path_config`. Constraints
+Load data as specified in config file located at `path_config`. For constraints
 that are specified in the config file as well as in the `subset` argument, 
-the values of the latter have precedence over the former. 
+the values of the latter have precedence over the former. The constraints given
+in the argument `subset` are applied to EVERY dataset specified in the config 
+file.
 
 # Arguments:
 - `path_config`: path to config yaml file specifying meta attributes and pathes of data
@@ -482,7 +486,8 @@ function getMetaDataFromYAML(
         data_dir = get(ds, "base_dir", nothing)
         experiment = get(ds, "exp", nothing)
         if isnothing(experiment) || isnothing(data_dir)
-            throw(ArgumentError("Config yaml file must specify values for keys 'exp' (experiment) and 'base_dir' (path to data directory)!"))
+            msg = "Config yaml file must specify values for keys 'exp' (experiment) and 'base_dir' (path to data directory)!"
+            throw(ArgumentError(msg))
         end
         variables = getConstraintVal(constraint, ds, "variables")
         statistics = getConstraintVal(constraint, ds, "statistics")
@@ -498,7 +503,7 @@ function getMetaDataFromYAML(
             # use subset of aliases as given by input argument constraint
             filter!(x -> get(timerange_to_alias, x, nothing) in constraint.aliases, timeranges)
             if isempty(timeranges)
-                msg = "given aliases in constraint do not match with considered timeranges!"
+                msg = "Given aliases in constraint do not match with considered timeranges for dataset: $ds !"
                 throw(ArgumentError(msg))
             end
         end
@@ -855,6 +860,8 @@ function computeDistancesAllDiagnostics(
             end
             push!(distances, dists)
         end
+        # TODO: recheck the metadata here! standard_name should be converted 
+        # to a vector?!
         distances = cat(distances..., dims = Dim{:variable}(String.(collect(variables))));
         push!(distances_all, distances)
     end
