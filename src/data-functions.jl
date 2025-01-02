@@ -124,12 +124,12 @@ if true modelData, else observational data
 
 # Returns: instance of `Data` or nothing
 """
-function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
+function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
     data = []
-    meta = Dict{String, Any}()
-    n_files = length(meta_data.paths)
+    meta_dict = Dict{String, Any}()
+    n_files = length(meta.paths)
     source_names = repeat(Union{Missing, String}[missing], outer = n_files)
-    for (i, file) in enumerate(meta_data.paths)
+    for (i, file) in enumerate(meta.paths)
         @debug "processing file.." * file
         parts = splitpath(file)
         filename = split(parts[end], ".nc")[end-1]
@@ -158,7 +158,7 @@ function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
         # update metadata-dictionary for all processed files with the
         # metadata from the current file
         for key in keys(attributes)
-            values = get!(meta, key, repeat(Union{Missing, Any}[missing], outer=n_files))
+            values = get!(meta_dict, key, repeat(Union{Missing, Any}[missing], outer=n_files))
             values[i] = attributes[key]
         end
 
@@ -189,15 +189,17 @@ function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
         n = length(data)
         raw_data = Array{eltype(Array(data[1]))}(undef, size_dims..., n)
         s = repeat([:], length(size_dims))
-        for idx in 1:n
+        names = collect(skipmissing(source_names))
+        sort_indices = sortperm(names)
+        for idx in sort_indices
             raw_data[s..., idx] = Array(data[idx])
         end
         dimData = DimArray(
             raw_data,
-            (dims(data[1])..., Dim{:source}(collect(skipmissing(source_names))))
+            (dims(data[1])..., Dim{:source}(names[sort_indices]))
         )
-        updateMetadata!(meta, source_names, is_model_data)
-        dimData = rebuild(dimData; metadata = meta)
+        updateMetadata!(meta_dict, source_names, is_model_data)
+        dimData = rebuild(dimData; metadata = meta_dict)
         if is_model_data
             # set dimension names, member refers to unique model members,
             # model refers to 'big combined model', part of member name,
@@ -211,7 +213,7 @@ function loadPreprocData(meta_data::MetaData, is_model_data::Bool=true)
                 @warn "Some datasets appear more than once" duplicates
             end
         end
-        return Data(meta = meta_data, data = dimData)
+        return Data(meta = meta, data = dimData)
     else
         return nothing
     end

@@ -64,10 +64,12 @@ function computeWeights(
     wP = performances ./ sum(performances)
     setRefPeriodInWeightsMetadata!(wP.metadata, ref_period_alias, ref_period_timerange)
     
-    target_path_updated = validateTargetPath(config.target_path)
-    if target_path_updated != config.target_path
-        config = @set config.target_path = target_path_updated
+    if !isempty(config.target_path)
+        target_path = validateConfigTargetPath(config.target_path)
+        # update config accordingly since it is also saved together with the weights
+        config = @set config.target_path = target_path
     end
+    
     w_members = distributeWeightsAcrossMembers(weights);
     model_weights =  Weights(
         performance_distances = dists_perform_all,
@@ -83,11 +85,11 @@ function computeWeights(
     )
     logWeights(weights.metadata)
     if !isempty(config.target_path)
-        filename = basename(config.target_path)
+        filename = basename(target_path)
         if endswith(filename, ".nc")
-            saveWeightsAsNCFile(model_weights, config.target_path)
+            saveWeightsAsNCFile(model_weights, target_path)
         elseif endswith(filename, ".jld2")
-            saveWeightsAsJuliaObj(model_weights, config.target_path)
+            saveWeightsAsJuliaObj(model_weights, target_path)
         else
             @warn "Weights not saved - they can only be saved as .nc or .jld2 files!"
         end 

@@ -12,6 +12,7 @@ using Interpolations
 end
 # Overload the Base.show method to print key-value pairs of MetaAttrib instances
 function Base.show(io::IO, x::MetaAttrib)
+    println(io, "::$(typeof(x)):")
     for field in fieldnames(MetaAttrib)
         value = getfield(x, field)
         if !isempty(value)
@@ -39,6 +40,7 @@ end
 end
 # Pretty print MetaData instances
 function Base.show(io::IO, x::MetaData)
+    println(io, "::$(typeof(x))")
     println(io, "$(x.id) (timerange: $(x.attrib.timerange), experiment: $(x.attrib.exp))")
     for path in x.paths
         println(io, "\t$path")
@@ -52,7 +54,7 @@ end
 end
 # Pretty print Data instances
 function Base.show(io::IO, x::Data)
-    #println(io, "$(x.meta.id) ($(x.meta.attrib.timerange), experiment: $(x.meta.attrib.exp))")
+    println(io, "::$(typeof(x)) with:")
     print(io, x.meta)
 end
 
@@ -128,8 +130,8 @@ end
     )
 
 Update metadata 'meta' s.t. data of ignored files is removed and attributes 
-that were only present in some files/models are set to missing. Further keys 
-are added.
+that were only present in some files/models are set to missing. Further key-value 
+pairs are added concerning the data sources:
 For model data:
     - 'member_names': vector that contains for every model a vector with the
     unique names of that model's members

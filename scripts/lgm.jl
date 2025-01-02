@@ -30,7 +30,6 @@ models_lgm = unique(lgm_data[1].data.metadata["model_names"])
 # Version1: load data from ESMValToolConfigs and subset to lgm_models
 base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
 config_path = "/albedo/home/brgrus001/ModelWeights/configs/historical";
-# TODO: make sure that dimension :model, :member is ForwardOrdered!!
 model_data1 = mw.loadDataFromESMValToolConfigs(
     base_path, config_path;
     only_shared_models = true,
@@ -48,7 +47,6 @@ model_data1 = mw.loadDataFromESMValToolConfigs(
 
 # Version2: Load model data for experiment lgm and historical in one run from new config file
 path_config = "/albedo/home/brgrus001/ModelWeights/configs/examples/example-lgm-historical.yml";
-# TODO: make sure that dimension :model, :member is ForwardOrdered!!
 model_data2 = mw.loadDataFromYAML(
     path_config;
     dir_per_var = true, # default: true
@@ -103,18 +101,16 @@ config_weights = mw.ConfigWeights(
 weights = mw.computeWeights(model_data, obs_data, config_weights);
 
 # weights can also be  saved separately (as julia obj or .nc file):
-#mw.saveWeightsAsNCFile(weights, joinpath(target_dir, "weights-lgm.nc"))
-mw.saveWeightsAsJuliaObj(weights, joinpath(target_dir, "weights-lgm.jld2"))
+target_nc = mw.saveWeightsAsNCFile(weights, joinpath(target_dir, "weights-lgm.nc"));
+target_jld2 = mw.saveWeightsAsJuliaObj(weights, joinpath(target_dir, "weights-lgm.jld2"));
+#  Load weights as Julia object / NCDataset
+weights_from_disk = mw.loadWeightsFromJLD2(target_jld2);
+ds_weights = NCDataset(target_nc);
 
-#  Load weights from/as Julia object
-weights = mw.loadWeightsFromJLD2(joinpath(target_dir, "weights-lgm.jld2"));
-
+@assert target_jld2 == weights_from_disk.config.target_path
 
 ########################### 3. PLOTTING ###########################
 # Plot weights/generalized distances
-path_weights = joinpath(target_dir, target_fn);
-ds_weights = NCDataset(path_weights);
-#ds_weights = NCDataset("/albedo/work/projects/p_pool_clim_data/britta/weights/weights_2024-11-27_09_22.nc")
 
 # Plot performance weights
 wP = mw.loadWeightsAsDimArray(ds_weights, "wP");

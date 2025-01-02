@@ -3,6 +3,7 @@ using NCDatasets
 using Statistics
 using LinearAlgebra
 using JLD2
+using Setfield
 
 """
     areaWeightedRMSE(m1::DimArray, m2::DimArray, mask::DimArray)
@@ -424,15 +425,17 @@ function logWeights(metadata_weights)
 end
 
 
-function validateTargetPath(target_path::String)
+function validateConfigTargetPath(target_path::String)
     target_dir = dirname(target_path)
     if !isdir(target_dir)
         mkpath(target_dir)
     end
     if isfile(target_path)
+        msg = "$target_path already exisits, will use "
         target_path = joinpath(
             target_dir, join([getCurrentTime(), basename(target_path)], "_")
         )
+        @info msg * "$target_path instead."
     end
     return target_path
 end
@@ -440,19 +443,14 @@ end
 
 
 """
-    saveWeightsAsNCFile(
-        weights::Weights;
-        target_path::String
-    )
+    saveWeightsAsNCFile(weights::Weights; target_path::String)
 
 # Arguments:
-- `weights`:
-- `target_path`:
+- `weights`: Weights object to be saved.
+- `target_path`: Path to where weights shall be stored.
 """
-function saveWeightsAsNCFile(
-    weights::Weights,
-    target_path::String
-)
+function saveWeightsAsNCFile(weights::Weights, target_path::String)
+    target_path = validateConfigTargetPath(target_path)
     ds = NCDataset(target_path, "c")
     models = map(x -> string(x), dims(weights.w, :model))
     defDim(ds, "model", length(models))
@@ -469,8 +467,6 @@ function saveWeightsAsNCFile(
     addNCDatasetVar!(ds, dims(weights.performance_distances, :variable), "variable")
     addNCDatasetVar!(ds, dims(weights.performance_distances, :diagnostic), "diagnostic")
 
-    # global attributes: ds.attrib[k] = v
-    # since independent entries contain metadata, no global attributes added
     # Add actual data weights
     for name in fieldnames(Weights)
         if String(name) in ["w", "wP", "wI", "Di"]
@@ -486,24 +482,37 @@ function saveWeightsAsNCFile(
         elseif String(name) == "performance_distances"
             v = defVar(ds, String(name), Float64, ("member", "variable", "diagnostic"))
             v[:,:,:] = Array(weights.performance_distances)
+        elseif String(name) == "config"
+            # configuration is added as global attributes:
+            for config_name in fieldnames(ConfigWeights)
+                config_val = getfield(weights.config, config_name)
+                config_key = String(config_name)
+                if config_key in ["performance", "independence"]
+                    for (k,v) in config_val
+                        ds.attrib["w_" * config_key * "_" * k] = v
+                    end
+                elseif config_key != "target_path"
+                    # if target path was updated, use updated version here, 
+                    # not the one that had been saved in weights!
+                    ds.attrib[config_key] = config_val
+                end
+            end
        end 
     end
     close(ds)
-    if isfile(target_path)
-        @warn "File at: $target_path is overwritten!";
-    end
-    @info "saved weights to $target_path"
-    return nothing
+    @info "saved weights to $(target_path)"
+    return target_path
 end
 
 
 function saveWeightsAsJuliaObj(weights::Weights, target_path::String)
+    target_path = validateConfigTargetPath(target_path)
+    config = weights.config
+    config = @set config.target_path = target_path
+    weights = @set weights.config = config
     jldsave(target_path; weights=weights)
-    if isfile(target_path)
-        @warn "File at: $target_path is overwritten!";
-    end
-    @info "saved weights to: $target_path"
-    return nothing
+    @info "saved weights to: $(target_path)"
+    return target_path
 end
 
 
