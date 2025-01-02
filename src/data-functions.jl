@@ -190,6 +190,9 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
         raw_data = Array{eltype(Array(data[1]))}(undef, size_dims..., n)
         s = repeat([:], length(size_dims))
         names = collect(skipmissing(source_names))
+        updateMetadata!(meta_dict, names, is_model_data)
+
+        # sort the data
         sort_indices = sortperm(names)
         for idx in sort_indices
             raw_data[s..., idx] = Array(data[idx])
@@ -198,7 +201,6 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
             raw_data,
             (dims(data[1])..., Dim{:source}(names[sort_indices]))
         )
-        updateMetadata!(meta_dict, source_names, is_model_data)
         dimData = rebuild(dimData; metadata = meta_dict)
         if is_model_data
             # set dimension names, member refers to unique model members,

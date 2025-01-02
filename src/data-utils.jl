@@ -129,9 +129,8 @@ end
         isModelData::Bool
     )
 
-Update metadata 'meta' s.t. data of ignored files is removed and attributes 
-that were only present in some files/models are set to missing. Further key-value 
-pairs are added concerning the data sources:
+Update metadata 'meta' s.t. attributes that were only present in some files/models 
+are set to missing. Further key-value pairs are added concerning the data sources:
 For model data:
     - 'member_names': vector that contains for every model a vector with the
     unique names of that model's members
@@ -149,19 +148,19 @@ Arguments:
 """
 function updateMetadata!(
     meta::Dict{String, Any},
-    source_names::Vector{Union{Missing, String}},
+    source_names::Vector{String},
     is_model_data::Bool
 )
-    indices = findall(x -> !ismissing(x), source_names)
+    sort_indices = sortperm(source_names)
     for key in keys(meta)
-        values = meta[key][indices]
+        values = meta[key][sort_indices]
         meta[key] = values
         # if none was missing and all have the same value, just use a string
         if !any(ismissing, values) && length(unique(values)) == 1
             meta[key] = string(values[1])
         end
     end
-    included_data = Array{String}(source_names[indices])
+    included_data = Array{String}(source_names[sort_indices])
     if is_model_data
         meta["member_names"] = getUniqueMemberIds(meta, included_data)
         meta["model_names"] = included_data

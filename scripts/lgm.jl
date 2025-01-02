@@ -16,7 +16,6 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
         variables = ["tas", "tos"],
         aliases = ["lgm"],
         projects = ["CMIP5", "CMIP6"],
-        models = Vector{String}(),
         subdirs = ["20241114"]
     ),
     preview = false # default: false
