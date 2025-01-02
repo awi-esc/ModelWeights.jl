@@ -19,7 +19,7 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
         models = Vector{String}(),
         subdirs = ["20241114"]
     ),
-    preview = false # default value is false
+    preview = false # default: false
 );
 # we set only_shared_models to true, so model members are identical for every 
 # loaded data set 
@@ -27,9 +27,11 @@ model_members_lgm = Array(dims(lgm_data[1].data, :member))
 models_lgm = unique(lgm_data[1].data.metadata["model_names"])
 
 # Model data for historical experiment of models with lgm-experiment from above
+# Version1: load data from ESMValToolConfigs and subset to lgm_models
 base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
 config_path = "/albedo/home/brgrus001/ModelWeights/configs/historical";
-historical_data = mw.loadDataFromESMValToolConfigs(
+# TODO: make sure that dimension :model, :member is ForwardOrdered!!
+model_data1 = mw.loadDataFromESMValToolConfigs(
     base_path, config_path;
     only_shared_models = true,
     subset = mw.Constraint(
@@ -44,20 +46,27 @@ historical_data = mw.loadDataFromESMValToolConfigs(
     )
 );
 
-# Load model data for experiment lgm and historical in one run from new config file
+# Version2: Load model data for experiment lgm and historical in one run from new config file
 path_config = "/albedo/home/brgrus001/ModelWeights/configs/examples/example-lgm-historical.yml";
-model_data = mw.loadDataFromYAML(
+# TODO: make sure that dimension :model, :member is ForwardOrdered!!
+model_data2 = mw.loadDataFromYAML(
     path_config;
-    dir_per_var = true, # true is default value
-    is_model_data = true, # true is default value
+    dir_per_var = true, # default: true
+    is_model_data = true, # default: true
     only_shared_models = true,
-    # subset = mw.Constraint(
-    #     projects = ["CMIP5"]
-    #     "models" => model_members_lgm
-    # ),
     preview = false
 );
 
+# some checks that same data is loaded with both versions
+is_tas_historical(ma) = ma.variable == "tas" && ma.exp == "historical"
+tas_data1 = filter(x -> is_tas_historical(x.meta.attrib), model_data1)
+tas_data2 = filter(x -> is_tas_historical(x.meta.attrib), model_data2)
+
+@assert length(tas_data1) == 1
+@assert length(tas_data2) == 1
+@assert tas_data1[1].data == tas_data2[1].data
+
+model_data = model_data1;
 
 # Load the observational data
 base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_20241119_124434";
@@ -89,26 +98,24 @@ config_weights = mw.ConfigWeights(
     # ref_period can refer to either an alias or a timerange:
     ref_period = "historical", # alias
     #ref_period = "full", # timerange
-    target_path = joinpath(target_dir, target_fn) 
+    target_path = joinpath(target_dir, target_fn)
 );
-weights = mw.computeWeights(historical_data, obs_data, config_weights);
+weights = mw.computeWeights(model_data, obs_data, config_weights);
 
 # weights can also be  saved separately (as julia obj or .nc file):
-#mw.saveWeightsAsNCFile(weights, joinpath(target_dir, target_fn))
+#mw.saveWeightsAsNCFile(weights, joinpath(target_dir, "weights-lgm.nc"))
 mw.saveWeightsAsJuliaObj(weights, joinpath(target_dir, "weights-lgm.jld2"))
 
-
 #  Load weights from/as Julia object
-weights = mw.loadWeightsFromJLD2(target_path)
+weights = mw.loadWeightsFromJLD2(joinpath(target_dir, "weights-lgm.jld2"));
 
 
 ########################### 3. PLOTTING ###########################
 # Plot weights/generalized distances
 path_weights = joinpath(target_dir, target_fn);
 ds_weights = NCDataset(path_weights);
+#ds_weights = NCDataset("/albedo/work/projects/p_pool_clim_data/britta/weights/weights_2024-11-27_09_22.nc")
 
-
-ds_weights = NCDataset("/albedo/work/projects/p_pool_clim_data/britta/weights/weights_2024-11-27_09_22.nc")
 # Plot performance weights
 wP = mw.loadWeightsAsDimArray(ds_weights, "wP");
 fig_wP, = mw.plotWeights(wP; is_bar_plot = false, label = "performance weight");
@@ -154,6 +161,30 @@ figs[1]
 
 
 ########################### 4. APPLY WEIGHTS ###########################
+tas_data = mw.indexData(model_data, "tas", "CLIM", "historical")
+# The function applyWeights computes the weighted avg based on the average 
+# across the respective members of each model, if the data is given on the
+# level of model members. It further checks that weights were computed for the 
+# same models as in the provided data, and possibly takes a subset of the data 
+# or models (in that case weights are renormalized)
+weighted_avg_models = mw.applyWeights(tas_data, weights.w);
+# if you want to compute the weighted avg based on the weights for each model 
+# on the level of model members,use the function computeWeightedAvg directly:
+weighted_avg_members = mw.computeWeightedAvg(tas_data; weights=weights.w_members);
+
+
+unweighted_avg = mw.computeWeightedAvg(tas_data; use_members_equal_weights = false);
+uncertainties = mw.getUncertaintyRanges(tas_data, weights.w_members);
+
+f3 = mw.plotTempGraph(
+    data_graph, 
+    (weighted=weighted_avg, unweighted=unweighted_avg),
+    uncertainties,
+    "Temperature anomaly relative to 1981-2010";
+    ylabel = "Temperature anomaly"
+)
+
+
 # simple average across model members
 unweighted_means_members = mw.computeWeightedAvg(model_data_lgm.data["tas_CLIM_lgm"])
 
