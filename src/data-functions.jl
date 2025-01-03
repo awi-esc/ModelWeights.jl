@@ -67,7 +67,13 @@ function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
     return result
 end
 
+"""
+    subsetPaths(paths::Vector{String}, shared_models::Vector{String})
 
+# Arguments:
+- `paths`:
+- `shared_models`: have form 'modelname_memberID[#grid]
+"""
 function subsetPaths(paths::Vector{String}, shared_models::Vector{String})
     # update metadata paths too, keep only those that contain a model 
     # in shared_models (NOTE: this doesnt work if the filename does 
@@ -99,16 +105,10 @@ function subsetModelData(data::DimArray, shared_models::Vector{String})
         data = data[member = indices]
     end
     # also adjust the metadata
-    attributes = filter(
-        k -> data.metadata[k] isa Vector && k != "member_names", keys(data.metadata)
-    )
+    attributes = filter(k -> data.metadata[k] isa Vector, keys(data.metadata))
     for key in attributes
         data.metadata[key] = data.metadata[key][indices]
     end
-    # member_names is a vector of vectors
-    map(vec -> filter!(x -> x in shared_models, vec), data.metadata["member_names"])
-    # remove models where no member was in shared_models
-    filter!(vec -> !isempty(vec), data.metadata["member_names"])
     return data
 end
 
@@ -128,7 +128,7 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
     data = []
     meta_dict = Dict{String, Any}()
     n_files = length(meta.paths)
-    source_names = repeat(Union{Missing, String}[missing], outer = n_files)
+    source_names = repeat([""], outer = n_files)
     for (i, file) in enumerate(meta.paths)
         @debug "processing file.." * file
         parts = splitpath(file)
@@ -152,7 +152,10 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
         if is_model_data
             model_key = getCMIPModelsKey(Dict(ds.attrib))
             get!(attributes, "mip_era", "CMIP5")
-            name = ds.attrib[model_key]
+            name = ds.attrib[model_key] # just the model name, e.g. ACCESS1-0 (not the member's id)
+            if occursin("_", name)
+                @warn "model name as read from metadata of stored .nc file contains underscore: $name; from $file"
+            end
         end
         source_names[i] = name
         # update metadata-dictionary for all processed files with the
@@ -184,14 +187,13 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
     if length(data) > 0
         #dimData = cat(data..., dims=3) # way too slow!
         # all of the preprocessed model data assumed to have the same grid!
-        # Preallocate a 3D array of respective size
+        # Preallocate an n-dimensional array of respective size
         size_dims = size(data[1])
         n = length(data)
         raw_data = Array{eltype(Array(data[1]))}(undef, size_dims..., n)
         s = repeat([:], length(size_dims))
-        names = collect(skipmissing(source_names))
+        names = collect(source_names)
         updateMetadata!(meta_dict, names, is_model_data)
-
         # sort the data
         sort_indices = sortperm(names)
         for idx in sort_indices
@@ -203,11 +205,16 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
         )
         dimData = rebuild(dimData; metadata = meta_dict)
         if is_model_data
-            # set dimension names, member refers to unique model members,
-            # model refers to 'big combined model', part of member name,
-            # but additionally saved in metadata["model_names"]
-            dimData = DimensionalData.set(dimData, :source => :member)
-            dimData = DimensionalData.set(dimData, :member => vcat(dimData.metadata["member_names"]...))
+            indices = sortperm(dimData.metadata["member_names"])
+            for idx in indices
+                raw_data[s..., idx] = Array(data[idx])
+            end
+            dimData = DimArray(
+                raw_data,
+                (dims(data[1])..., Dim{:member}(dimData.metadata["member_names"][indices]))
+            )
+            dimData = rebuild(dimData; metadata = meta_dict) 
+
             # Sanity checks that no dataset exists more than once
             members = dims(dimData, :member)
             if length(members) != length(unique(members))
@@ -240,29 +247,34 @@ function loadDataFromMetadata(
     is_model_data::Bool,
     only_shared_models::Bool
 )
-    results = Vector{Data}()
-    for (_, meta) in meta_data
-        push!(results, loadPreprocData(meta, is_model_data))
+    results = Dict{String, Data}()
+    for (id, meta) in meta_data
+        results[id] = loadPreprocData(meta, is_model_data)
     end
+
+    # The following shouldnt be necessary as metadata should already only contain 
+    # shared models, but the following code retrieves shared models not from the 
+    # filenames but from dimension names, which originate
+    # from the metadata in the stored files. If there was a problem 
+    # (e.g. FGOALS-g2 (correct, like filename) vs. FGOALS_g2 (unlike filename) for tos data)
+    # this data will be excluded here. If it's not, dimension names might not be identical,
+    # which seems to be problematic
     if is_model_data && only_shared_models
-        # getSharedModels accesses the models as the dimension of the loaded data!
-        shared_models = getSharedModels(collect(values(results)), :member)
+        shared_models = getSharedModels(results, :member)
         if isempty(shared_models)
             @warn "No models shared across all loaded data"
         end
-        shared_results = Vector{Data}()
-        for result in results
+        shared_results = Dict{String, Data}()# Vector{Data}()
+        for (id, result) in results
             take_subset = sort(Array(dims(result.data, :member))) != sort(Array(shared_models))
-            shared_data = take_subset ? subsetModelData(result.data, Array(shared_models)) : result.data
-            shared_paths = take_subset ? subsetPaths(result.meta.paths, Array(shared_models)) : result.meta.paths
+            shared_data = take_subset ? subsetModelData(result.data, shared_models) : result.data
+            shared_paths = take_subset ? subsetPaths(result.meta.paths, shared_models) : result.meta.paths
             meta = MetaData(id = result.meta.id, attrib = result.meta.attrib, paths = shared_paths)
-            push!(shared_results, Data(meta = meta, data = shared_data))
+            shared_results[id] = Data(meta = meta, data = shared_data)
         end
         results = shared_results
     end
-    #loaded_meta = map(x -> x.meta, values(results)) 
-    loaded_meta = map(x -> x.meta, results)
-    @debug "loaded data: " loaded_meta
+    @debug "loaded data: $(map(x -> x.meta, values(results)))"
     @debug "filtered for shared models across all loaded data: " only_shared_models
     return results
 end
@@ -279,9 +291,9 @@ shared across elements of `model_data`.
 - `dim`: dimension name referring to level of model predictions; e.g., 
 'member' or 'model'
 """
-function getSharedModels(model_data::Vector{Data}, dim::Symbol)
+function getSharedModels(model_data::Dict{String, Data}, dim::Symbol)
     shared_models =  nothing 
-    for data in model_data
+    for (_, data) in model_data
         models = collect(dims(data.data, dim))
         if isnothing(shared_models)
             shared_models = models
@@ -290,6 +302,95 @@ function getSharedModels(model_data::Vector{Data}, dim::Symbol)
         end
     end
     return shared_models
+end
+
+
+function getModelsFromPaths(all_paths::Vector{String})
+    all_filenames = map(p -> split(basename(p), "_"), vcat(all_paths...))
+    # model names are at predefined position in filenames (ERA_name_mip_exp_id_variable[_grid].nc)
+    all_members = Vector{String}()
+    for fn_parts in all_filenames
+        if fn_parts[1] == "CMIP5"
+            model = join(fn_parts[[2, 5]], "_")
+        else
+            model = join(fn_parts[[2, 5, 7]], "_", MODEL_MEMBER_DELIM)
+            model = split(model, ".nc")[1]
+        end
+        push!(all_members, model)
+    end
+    return unique(all_members)
+end
+
+
+"""
+    searchModelInPaths(model::String, paths::Vector{String})
+
+# Arguments:
+- `model_id`: string with form: modelname_memberID[_grid]
+- `paths`:
+"""
+function searchModelInPaths(model_id::String, paths::Vector{String})
+    model_parts = String.(split(model_id, "_"))
+    model = model_parts[1]
+    has_member = length(model_parts) == 2
+    has_grid = length(split(model_id, MODEL_MEMBER_DELIM)) == 2
+    member = has_member ? split(model_parts[2], MODEL_MEMBER_DELIM)[1] : nothing
+    grid = has_grid ? split(model_id, MODEL_MEMBER_DELIM)[2] : nothing
+
+    is_found = false
+    for (_, meta_path) in enumerate(paths)
+        found_model = occursin("_" * model * "_", meta_path)
+        if !found_model
+            continue
+        else
+            if has_member
+                found_member = occursin("_" * member * "_", meta_path)
+                if found_member
+                    if has_grid
+                        found_grid = occursin("_" * grid, meta_path)
+                        if found_grid
+                            is_found = true
+                            break
+                        else 
+                            continue
+                        end
+                    else
+                        is_found = true
+                        break
+                    end
+                else # member not found -> continue with next path
+                    continue 
+                end
+            else
+                is_found = true
+                break
+            end
+        end
+    end
+    return is_found
+end
+
+
+function getSharedModelsFromPaths(
+    meta_data::Dict{String, MetaData}, all_models::Vector{String}
+)
+    # TODO: so far only shared members considered not (yet) on level of models
+    #  independent of members! it might work, but it wont account for several 
+    # members of the same model though
+    indices_shared = []
+    for (idx, model) in enumerate(all_models)
+        is_found = false
+        for (_, meta) in meta_data
+            is_found = searchModelInPaths(model, meta.paths)
+            if !is_found
+                break
+            end
+        end
+        if is_found
+            push!(indices_shared, idx)
+        end
+    end
+    return all_models[indices_shared]
 end
 
 

@@ -358,11 +358,10 @@ model members the computed weights were based on.
 function makeEqualWeights(
     metadata::Dict, dimension::Symbol, use_members::Bool=true
 )
-
     model_members = metadata["member_names"]
-    n_models = length(model_members) # member_names in metadata is a vector of vectors! 
+    n_models = length(unique(metadata["model_names"]))
     if dimension == :member
-        dimnames = vcat(model_members...)
+        dimnames = model_members
         if use_members
             # make sure that the number of members per model is considered
             w = [repeat([1/n_models * (1/length(members))], length(members)) 
@@ -409,20 +408,20 @@ function distributeWeightsAcrossMembers(weights::DimArray)
     members = weights.metadata["member_names"]
     w_members = []
     for (i, model) in enumerate(models)
-        n_members = length(members[i])
+        n_members = sum(weights.metadata["model_names"] .== model)
         w = weights[model = At(model)]
         for _ in range(1, n_members) 
             push!(w_members, w/n_members)
         end
     end
-    return DimArray(w_members, Dim{:member}(vcat(members...)), metadata=weights.metadata)
+    return DimArray(w_members, Dim{:member}(members), metadata=weights.metadata)
 end
 
 
-function logWeights(metadata_weights)
-    @info "Nb included models (without members): " length(unique(metadata_weights["model_names"]))
-    foreach(m -> @info(m), metadata_weights["member_names"])
-end
+# function logWeights(metadata_weights)
+#     @info "Nb included models (without members): " length(unique(metadata_weights["model_names"]))
+#     foreach(m -> @info(m), metadata_weights["member_names"])
+# end
 
 
 function validateConfigTargetPath(target_path::String)

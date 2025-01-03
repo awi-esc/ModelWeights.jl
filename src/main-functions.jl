@@ -83,7 +83,7 @@ function computeWeights(
         config = config
         #overall = (wP./wI)./sum(wP./wI), # just for sanity check
     )
-    logWeights(weights.metadata)
+    #logWeights(weights.metadata)
     if !isempty(config.target_path)
         filename = basename(target_path)
         if endswith(filename, ".nc")
@@ -149,6 +149,19 @@ function loadDataFromESMValToolConfigs(
             attrib, path_data, dir_per_var, is_model_data; constraint=subset
         )
         addMetaData!(meta_data, meta)
+    end
+    if only_shared_models
+        all_paths = map(p -> p.paths, values(meta_data))
+        all_models = getModelsFromPaths(vcat(all_paths...))
+        shared_models = getSharedModelsFromPaths(meta_data, all_models)
+        if isempty(shared_models)
+            @warn "No models shared across data!"
+        end
+        for (id, meta) in meta_data
+            shared_paths = subsetPaths(meta.paths, shared_models)
+            meta_new = @set meta.paths = shared_paths
+            meta_data[id] = meta_new
+        end
     end
     output = preview ? meta_data : 
         loadDataFromMetadata(meta_data, is_model_data, only_shared_models)

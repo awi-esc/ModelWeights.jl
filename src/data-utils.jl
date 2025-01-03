@@ -54,7 +54,7 @@ end
 end
 # Pretty print Data instances
 function Base.show(io::IO, x::Data)
-    println(io, "::$(typeof(x)) with:")
+    println(io, "::$(typeof(x)):")
     print(io, x.meta)
 end
 
@@ -162,7 +162,8 @@ function updateMetadata!(
     end
     included_data = Array{String}(source_names[sort_indices])
     if is_model_data
-        meta["member_names"] = getUniqueMemberIds(meta, included_data)
+        member_ids = getUniqueMemberIds(meta, included_data)
+        meta["member_names"] = vcat(member_ids...)
         meta["model_names"] = included_data
     else
         meta["source_names"] = included_data
@@ -189,8 +190,8 @@ function joinMetadata(
     meta1::Dict{String, Any}, meta2::Dict{String, Any}, is_model_data::Bool
 )
     meta = Dict{String, Any}()
-    n1 = is_model_data ? length(vcat(meta1["member_names"]...)) : length(meta1["source_names"])
-    n2 = is_model_data ? length(vcat(meta2["member_names"]...)) : length(meta2["source_names"])
+    n1 = is_model_data ? length(meta1["member_names"]) : length(meta1["source_names"])
+    n2 = is_model_data ? length(meta2["member_names"]) : length(meta2["source_names"])
     keys_meta1 = keys(meta1)
     keys_meta2 = keys(meta2)
     keys_shared = collect(intersect(keys_meta1, keys_meta2))
@@ -556,13 +557,15 @@ end
     buildPathsToDataFiles(
         path_data::String,
         is_model_data::Bool;
-        subset::Union{Dict{String, Vector{String}}, Nothing}=nothing
+        model_constraints::Vector{String} = Vector{String}(),
+        project_constraints::Vector{String} = Vector{String}()
     )
 
 # Arguments:
 - `path_data`:
 - `is_model_data`: true for model data false for observational data
-- `subset`:
+- `model_constraints`:
+- `project_constraints`:
 
 # Returns: Vector of Strings containing paths to data files in `path_data` 
 that were not filtered out by `subset`.
