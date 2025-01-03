@@ -70,9 +70,11 @@ end
 """
     subsetPaths(paths::Vector{String}, shared_models::Vector{String})
 
+Return subset of paths in `paths` that point to models in `shared_models`.
+
 # Arguments:
-- `paths`:
-- `shared_models`: have form 'modelname_memberID[#grid]
+- `paths`: paths to model data
+- `shared_models`: have form 'modelname#memberID[_grid]
 """
 function subsetPaths(paths::Vector{String}, shared_models::Vector{String})
     # update metadata paths too, keep only those that contain a model 
@@ -94,6 +96,10 @@ end
 
 Return a subset of DimArray `data` that contains only data from the models 
 specified in `shared_models`. Takes care of metadata.
+
+# Arguments:
+- `data`:
+- `shared_models`: 
 """
 function subsetModelData(data::DimArray, shared_models::Vector{String})
     dim_symbol = hasdim(data, :member) ? :member : :model
@@ -251,7 +257,6 @@ function loadDataFromMetadata(
     for (id, meta) in meta_data
         results[id] = loadPreprocData(meta, is_model_data)
     end
-
     # The following shouldnt be necessary as metadata should already only contain 
     # shared models, but the following code retrieves shared models not from the 
     # filenames but from dimension names, which originate
@@ -305,15 +310,24 @@ function getSharedModels(model_data::Dict{String, Data}, dim::Symbol)
 end
 
 
+
+"""
+    getModelsFromPaths(all_paths::Vector{String})
+
+For every path in `all_paths` returns a string of the form modelname#memberID[_grid]
+that identifies the corresponding model.
+
+# Arguments:
+- `all_paths`:
+"""
 function getModelsFromPaths(all_paths::Vector{String})
     all_filenames = map(p -> split(basename(p), "_"), vcat(all_paths...))
     # model names are at predefined position in filenames (ERA_name_mip_exp_id_variable[_grid].nc)
     all_members = Vector{String}()
     for fn_parts in all_filenames
-        if fn_parts[1] == "CMIP5"
-            model = join(fn_parts[[2, 5]], "_")
-        else
-            model = join(fn_parts[[2, 5, 7]], "_", MODEL_MEMBER_DELIM)
+        model = join(fn_parts[[2, 5]], MODEL_MEMBER_DELIM)
+        if fn_parts[1] != "CMIP5"
+            model = join([model, fn_parts[7]], "_")
             model = split(model, ".nc")[1]
         end
         push!(all_members, model)
@@ -326,16 +340,17 @@ end
     searchModelInPaths(model::String, paths::Vector{String})
 
 # Arguments:
-- `model_id`: string with form: modelname_memberID[_grid]
+- `model_id`: string with form: modelname#memberID[_grid]
 - `paths`:
 """
 function searchModelInPaths(model_id::String, paths::Vector{String})
-    model_parts = String.(split(model_id, "_"))
+    model_parts = String.(split(model_id, MODEL_MEMBER_DELIM))
     model = model_parts[1]
     has_member = length(model_parts) == 2
-    has_grid = length(split(model_id, MODEL_MEMBER_DELIM)) == 2
-    member = has_member ? split(model_parts[2], MODEL_MEMBER_DELIM)[1] : nothing
-    grid = has_grid ? split(model_id, MODEL_MEMBER_DELIM)[2] : nothing
+    member_grid = has_member ? split(model_parts[2], "_") : nothing
+    has_grid = length(member_grid) == 2
+    member = has_member ? member_grid[1] : nothing
+    grid = has_grid ? member_grid[2] : nothing
 
     is_found = false
     for (_, meta_path) in enumerate(paths)
