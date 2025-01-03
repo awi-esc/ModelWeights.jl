@@ -15,7 +15,7 @@ Instead of running ```pkg> activate```, you can also specify the project on star
 julia --project=. scripts/plotting/calculate_weights_climwip.jl
 ```
 
-Then run```pkg> instantiate```. When there is no Manifest.toml file in the project, this will install the latest versions of the dependencies compatible with the project and a Manifest.toml file will be generated (I think this can also be done explicitly by running ```pkg> resolve```). If the project does have a Manifest.toml file, will install the packages in exactly the same state as given by the manifest file. 
+Then run```pkg> instantiate```. When there is no Manifest.toml file in the project, this will install the latest versions of the dependencies compatible with the project and a Manifest.toml file will be generated (I think this can also be done explicitly by running ```pkg> resolve```). If the project does have a Manifest.toml file, it will install the packages in exactly the same state as given by the manifest file.
 
 To update the packages specified in the Manifest.toml file, run ```pkg> update``` and then run ```instantiate``` again. The Manifest.toml file contains the resolved versions of all dependencies.
 
