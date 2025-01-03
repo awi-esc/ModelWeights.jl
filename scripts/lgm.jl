@@ -35,24 +35,24 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
 
 # we set only_shared_models to true, so model members are identical for every 
 # loaded data set 
-model_members_lgm = Array(dims(lgm_data[1].data, :member))
-models_lgm = unique(lgm_data[1].data.metadata["model_names"])
+model_members_lgm = Array(dims(lgm_data["tos_CLIM_lgm"].data, :member))
+models_lgm = unique(lgm_data["tos_CLIM_lgm"].data.metadata["model_names"])
 
 # --------------------------------------------------------------------------- #
 # Model data for historical experiment of models with lgm-experiment from above
 # Version1: load data from ESMValToolConfigs and subset to lgm_models
-base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
-config_path = "/albedo/home/brgrus001/ModelWeights/configs/historical";
+path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
+path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/historical";
 model_data1 = mw.loadDataFromESMValToolConfigs(
-    base_path, config_path;
-    only_shared_models = false, #true,
+    path_data, path_recipes;
+    only_shared_models = true,
     subset = mw.Constraint(
         statistics = ["CLIM"],
         variables = ["tas", "tos"],
         aliases = ["historical"],
         timeranges = ["full"],
         #models = model_members_lgm,
-        #models = models_lgm,
+        models = models_lgm,
         # if dir_per_var=true names of data subdirs must contain any of:
         subdirs = ["20241121", "20241118"]
     ),

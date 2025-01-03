@@ -12,7 +12,6 @@ using Interpolations
 end
 # Overload the Base.show method to print key-value pairs of MetaAttrib instances
 function Base.show(io::IO, x::MetaAttrib)
-    println(io, "::$(typeof(x)):")
     for field in fieldnames(MetaAttrib)
         value = getfield(x, field)
         if !isempty(value)
@@ -704,10 +703,10 @@ function buildPathsForMetaAttrib(
         filter!(p -> any([occursin(name, p) for name in subdir_constraints]), base_paths)
     end
     data_paths = Vector{String}()
-    for path in base_paths
+    for p in base_paths
         # Note: particular data structure assumed here!
         diagnostic = join([attrib.variable, attrib.statistic], "_")
-        path_data = joinpath(path, "preproc", attrib.alias, diagnostic)
+        path_data = joinpath(p, "preproc", attrib.alias, diagnostic)
         if !isdir(path_data)
             @warn "No data found at:" path_data
         else
@@ -767,31 +766,26 @@ function applyDataConstraints!(
 end
 
 
+"""
+    applyModelConstraints(file::String, model_constraints::Vector{String})
+
+Returns true if constraints in `model_constraints` are fulfilled, i.e. if the 
+given path to a model (`file`) contains any model from `model_constraints`,
+false otherwise.
+
+# Arguments:
+- `file`: path to a file storing model data
+- `model_constraints`: strings that may contain only model name, e.g. 'MPI-ESM-P', 
+or model_name and member id, e.g. 'MPI-ESM-P#r1i1p2' or model name, member id and 
+grid, e.g. 'MPI-ESM-P#r1i1p2_gn'
+"""
 function applyModelConstraints(file::String, model_constraints::Vector{String})
-    # model constraints may contain individual members
-    # (e.g. for "CNRM-CM5#r1i1p1", the model name, CNRM-CM5, as well as the
-    # member id, r1i1p1, have to be part of the filename,
-    # but not with the delimiter # as given here)
-    # for CMIP6 models we further added the grid to the member id at the end 
-    # after an underscore, i.e. for CMIP6 it is assumed that the filename 
-    # ends with _GRID, e.g. _gn.nc
-    split_chars = Regex("[$(MODEL_MEMBER_DELIM)_]")
-    model_member_constraints = map(x -> split(x, split_chars), model_constraints)
-    keep_file = true
-    for constraints in model_member_constraints
-        # adding the suffix "_" is important since otherwise, for instance,
-        # CNRM-CM5-C2 would remain even if the constraint was a substring like
-        # CNRM-CM5
-        keep_file = all([occursin(name * "_", file) for name in constraints[1:2]])
-        if keep_file && length(constraints) == 3 # CMIP6 with grid
-            keep_file = occursin("_" * constraints[3], file)
-        end
+    keep_file = false
+    for model in model_constraints
+        keep_file = searchModelInPaths(model, [file])
         if keep_file
             break
         end
-    end
-    if !keep_file
-        @debug "exclude $file because of model constraints (or shared models): $model_constraints"
     end
     return keep_file
 end

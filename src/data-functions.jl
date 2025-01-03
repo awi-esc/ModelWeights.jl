@@ -348,7 +348,7 @@ function searchModelInPaths(model_id::String, paths::Vector{String})
     model = model_parts[1]
     has_member = length(model_parts) == 2
     member_grid = has_member ? split(model_parts[2], "_") : nothing
-    has_grid = length(member_grid) == 2
+    has_grid = !isnothing(member_grid) && length(member_grid) == 2
     member = has_member ? member_grid[1] : nothing
     grid = has_grid ? member_grid[2] : nothing
 
