@@ -263,7 +263,8 @@ function loadDataFromMetadata(
     # from the metadata in the stored files. If there was a problem 
     # (e.g. FGOALS-g2 (correct, like filename) vs. FGOALS_g2 (unlike filename) for tos data)
     # this data will be excluded here. If it's not, dimension names might not be identical,
-    # which seems to be problematic
+    # which seems to be problematic.
+    # TODO: add checks/warnings here
     if is_model_data && only_shared_models
         shared_models = getSharedModels(results, :member)
         if isempty(shared_models)
@@ -312,15 +313,15 @@ end
 
 
 """
-    getModelsFromPaths(all_paths::Vector{String})
+    getModelIDsFromPaths(all_paths::Vector{String})
 
 For every path in `all_paths` returns a string of the form modelname#memberID[_grid]
-that identifies the corresponding model.
+that identifies the corresponding model (on the level of model members!).
 
 # Arguments:
 - `all_paths`:
 """
-function getModelsFromPaths(all_paths::Vector{String})
+function getModelIDsFromPaths(all_paths::Vector{String})
     all_filenames = map(p -> split(basename(p), "_"), vcat(all_paths...))
     # model names are at predefined position in filenames (ERA_name_mip_exp_id_variable[_grid].nc)
     all_members = Vector{String}()
@@ -386,12 +387,20 @@ function searchModelInPaths(model_id::String, paths::Vector{String})
 end
 
 
+"""
+    getSharedModelsFromPaths(
+        meta_data::Dict{String, MetaData}, all_models::Vector{String}
+    )
+     
+    Return a vector of models from `meta_data` that appear in `all_models`.
+
+# Arguments:
+- `meta_data`:
+- `all_models`:
+"""
 function getSharedModelsFromPaths(
     meta_data::Dict{String, MetaData}, all_models::Vector{String}
 )
-    # TODO: so far only shared members considered not (yet) on level of models
-    #  independent of members! it might work, but it wont account for several 
-    # members of the same model though
     indices_shared = []
     for (idx, model) in enumerate(all_models)
         is_found = false

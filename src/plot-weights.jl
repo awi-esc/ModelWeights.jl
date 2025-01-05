@@ -1,16 +1,18 @@
 """
     plotWeights(
     w::DimArray; 
-    label::String="weight", is_bar_plot::Bool=true, dimname::String="model"
+    ylabel::String="weight", is_bar_plot::Bool=true, dimname::String="model"
 )
 
 # Arguments:
-- `wP`: performanceWeights with dimensions: model/member, variable
+- `w`: performanceWeights with dimensions: model/member, variable
+- `ylabel`: y-axis label
 - `is_bar_plot`: if false scatter plot returned
+- `dimname`: dimension name
 """
 function plotWeights(
     w::DimArray; 
-    label::String="weight", is_bar_plot::Bool=true, dimname::String="model"
+    ylabel::String="weight", is_bar_plot::Bool=true, dimname::String="model"
 )
     figures = [];
     models = Array(dims(w, Symbol(dimname)))
@@ -31,10 +33,10 @@ function plotWeights(
                 xticks = (xs, models), 
                 xticklabelrotation = pi/4,
                 xlabel = dimname,
-                ylabel = label,
+                ylabel = ylabel,
                 title = "$var"
             );
-            barplot!(ax, xs, Array(w[variable = At(var)]))
+            barplot!(ax, xs, vec(w[variable = At(var)]))
             push!(figures, fig)
         end
     else 
@@ -43,7 +45,7 @@ function plotWeights(
             xticks = (xs, models), 
             xticklabelrotation = pi/4,
             xlabel = uppercase(dimname), 
-            ylabel = label,
+            ylabel = ylabel,
         );
         for var in variables
             scatter!(ax, xs, Array(w[variable = At(var)]))
@@ -69,7 +71,7 @@ end
 function plotDistancesPerformance(dists::DimArray; is_bar_plot::Bool=true)
     dimname = hasdim(dists, :model) ? :model : :member
     figs = plotWeights(
-        dists; label = "Distances performance",
+        dists; ylabel = "Distances performance",
         is_bar_plot = is_bar_plot, 
         dimname = String(dimname)
     )
@@ -103,14 +105,14 @@ end
 Plot performance against independence weights.
 
 # Arguments: 
-- independence: (dims:ensemble) numerator exp(-(D_i/sigma_D)^2)
-- performance: (dims:ensemble) denominator 1 + sum_j≠i^M exp(-(S_ij/sigma_S)^2) 
+- independence: (dims:model) normalized independence weights
+- performance: (dims:model) normalized performance weights 
 """
 function plotWeightContributions(
     independence::DimArray,
     performance::DimArray;
-    xlabel::String="Performance", 
-    ylabel::String="Independence",
+    xlabel::String="Normalized performance weights", 
+    ylabel::String="Normalized independence weights",
     title::String=""
 )
     #L"Performance\n $e^{-(D_i/\sigma_D)^2}$",

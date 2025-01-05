@@ -3,25 +3,21 @@ using NCDatasets
 using DimensionalData
 
 ########################### 1. LOADING DATA ###########################
+
+# ------------------------ Load the model data ------------------------------ #
 # Model data just for lgm-experiment from ESMValTool recipes
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
 
-statistics = ["CLIM"];
-variables = ["tas", "tos"];
-aliases = ["lgm"];
-projects = ["CMIP5", "CMIP6"];
-subdirs = ["20241114"];
 dir_per_var = true;
 is_model_data = true;
 only_shared_models = true;
+statistics = ["CLIM"];
+variables = ["tas", "tos"];
+projects = ["CMIP5", "CMIP6"];
 subset = mw.Constraint(
-    statistics = ["CLIM"],
-    variables = ["tas", "tos"],
-    aliases = ["lgm"],
-    projects = ["CMIP5", "CMIP6"],
-    #models = Vector{String}(),
-    subdirs = ["20241114"]
+    statistics = statistics, variables = variables, projects = projects,
+    aliases = ["lgm"], subdirs = ["20241114"]
 );
 
 lgm_meta = mw.loadDataFromESMValToolConfigs(
@@ -35,85 +31,107 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
 
 # we set only_shared_models to true, so model members are identical for every 
 # loaded data set 
-model_members_lgm = Array(dims(lgm_data["tos_CLIM_lgm"].data, :member))
-models_lgm = unique(lgm_data["tos_CLIM_lgm"].data.metadata["model_names"])
+model_members_lgm = Array(dims(lgm_data["tos_CLIM_lgm"].data, :member));
+models_lgm = unique(lgm_data["tos_CLIM_lgm"].data.metadata["model_names"]);
 
 # --------------------------------------------------------------------------- #
 # Model data for historical experiment of models with lgm-experiment from above
 # Version1: load data from ESMValToolConfigs and subset to lgm_models
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/historical";
+
+# use same big models (NOT on level of model members)
+model_data0 = mw.loadDataFromESMValToolConfigs(
+    path_data, path_recipes;
+    only_shared_models = true,
+    subset = mw.Constraint(
+        statistics = statistics, variables = variables, projects = projects,
+        aliases = ["historical"], 
+        timeranges=["full"], 
+        subdirs =  ["20241121", "20241118"],
+        models = models_lgm,
+    ),
+    preview = false
+);
+# sanity check: all lgm models are in historical data?
+models_historical = unique(model_data0["tos_CLIM_historical"].data.metadata["model_names"]);
+@assert models_historical == models_lgm
+
+
+# use same model members as in lgm data
 model_data1 = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes;
     only_shared_models = true,
     subset = mw.Constraint(
-        statistics = ["CLIM"],
-        variables = ["tas", "tos"],
-        aliases = ["historical"],
-        timeranges = ["full"],
-        #models = model_members_lgm,
-        models = models_lgm,
-        # if dir_per_var=true names of data subdirs must contain any of:
-        subdirs = ["20241121", "20241118"]
+        statistics = statistics, variables = variables, projects = projects,
+        aliases = ["historical"], 
+        timeranges=["full"], 
+        subdirs =  ["20241121", "20241118"],
+        models = model_members_lgm,
     ),
     preview = false
 );
 
+# sanity check: all lgm models are in historical data?
+model_members_historical = Array(dims(model_data1["tas_CLIM_historical"].data, :member));
+filter(x -> !(x in model_members_historical), model_members_lgm)
+
+
 # Version2: Load model data for experiment lgm and historical in one run from new config file
 path_config = "/albedo/home/brgrus001/ModelWeights/configs/examples/example-lgm-historical.yml";
-model_data2 = mw.loadDataFromYAML(
-    path_config;
-    dir_per_var = true, # default: true
-    is_model_data = true, # default: true
+# yaml config file already contains basic constraints for subset as defined above.
+model_data2 = mw.loadDataFromYAML(path_config; dir_per_var, is_model_data,
     only_shared_models = true,
-    #subset = mw.Constraint(models = model_members_lgm),
+    subset = mw.Constraint(models = model_members_lgm),
+    # subset = mw.Constraint(models = models_lgm),
     preview = false
 );
 
 # some checks that same data is loaded with both versions
-is_tas_historical(ma) = ma.variable == "tas" && ma.exp == "historical"
-tas_data1 = filter(x -> is_tas_historical(x.meta.attrib), model_data1)
-tas_data2 = filter(x -> is_tas_historical(x.meta.attrib), model_data2)
+v = "tas";
+v = "tos";
+missingOrEqual(arr1, arr2) = all(x -> ismissing(x) || x==1, Array(arr1) .== Array(arr2));
+data1 = model_data1[v * "_CLIM_historical"].data;
+data2 = model_data2[v * "_CLIM_historical"].data;
+@assert missingOrEqual(data1, data2)
 
-@assert length(tas_data1) == 1
-@assert length(tas_data2) == 1
-@assert tas_data1[1].data == tas_data2[1].data
-
+# -------------------- Load the observational data -------------------------- #
 model_data = model_data1;
-
-# Load the observational data
 base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_20241119_124434";
 config_path = "/albedo/home/brgrus001/ModelWeights/configs/historical_obs";
+# aliases and timeranges don't have to match, all data will be loaded that 
+# corresponds either to aliases or to timeranges!
 obs_data = mw.loadDataFromESMValToolConfigs(
     base_path, config_path;
     dir_per_var = false,
     is_model_data = false,
-    subset = mw.Constraint(
-        statistics = ["CLIM"],
-        variables = ["tas", "tos"],
+    subset = mw.Constraint(statistics = statistics, variables = variables,
         aliases = ["historical", "historical2"],
         projects = ["ERA5"], # for observational data default value is ["ERA5"]
         timeranges = ["1980-2014"]
     )
 );
 
-
 ########################### 2. COMPUTATION WEIGHTS ###########################
 # if target_dir is provided within config_weights, the weights will directly 
 # be saved and written to a file
 target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/";
 target_fn = "weights-lgm.nc";
+# Note: ref_period can refer to either an alias or a timerange!
 config_weights = mw.ConfigWeights(
     performance = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     independence = Dict("tas_CLIM"=>1, "tos_CLIM"=>1),
     sigma_independence = 0.5,
     sigma_performance = 0.5,
-    # ref_period can refer to either an alias or a timerange:
     ref_period = "historical", # alias
     #ref_period = "full", # timerange
     target_path = joinpath(target_dir, target_fn)
 );
-weights = mw.computeWeights(model_data, obs_data, config_weights);
+weights = mw.computeWeights(collect(values(model_data)), collect(values(obs_data)), config_weights);
+
+# TODO: weights for lgm experiment, with performance weights wrt historical data, but independence 
+# weights wrt lgm experiments
+# weights = mw.computeWeights(collect(values(model_data2)), collect(values(obs_data)), config_weights);
 
 # weights can also be  saved separately (as julia obj or .nc file):
 target_nc = mw.saveWeightsAsNCFile(weights, joinpath(target_dir, "weights-lgm.nc"));
@@ -125,29 +143,29 @@ ds_weights = NCDataset(target_nc);
 @assert target_jld2 == weights_from_disk.config.target_path
 
 ########################### 3. PLOTTING ###########################
+# weights = weights_from_disk
+# if weights loaded from .nc file instead, you can use the following function to load
+# respective weights:
+# wP = mw.loadWeightsAsDimArray(ds_weights, "wP");
 # Plot weights/generalized distances
 
 # Plot performance weights
-wP = mw.loadWeightsAsDimArray(ds_weights, "wP");
-fig_wP, = mw.plotWeights(wP; is_bar_plot = false, label = "performance weight");
+fig_wP, = mw.plotWeights(weights.wP; is_bar_plot = false, label = "performance weight");
 fig_wP
 
 # Plot independence weights
-wI = mw.loadWeightsAsDimArray(ds_weights, "wI");
-fig_wI, = mw.plotWeights(wI; is_bar_plot=false, label="independence weight");
+fig_wI, = mw.plotWeights(weights.wI; is_bar_plot=false, label="independence weight");
 fig_wI
 
 # Plot performance and independence weights together
 f = mw.plotWeightContributions(wI, wP)
 
 # Plot overall weights
-w = mw.loadWeightsAsDimArray(ds_weights, "w");
-fw, = mw.plotWeights(w; is_bar_plot=false, label = "overall weight");
+fw, = mw.plotWeights(weights.w; is_bar_plot=false, label = "overall weight");
 fw
 
 # Plot generalized distances
-Di = mw.loadWeightsAsDimArray(ds_weights, "Di");
-figs = mw.plotDistancesPerformance(Di)
+figs = mw.plotDistancesPerformance(weights.Di)
 figs[1]
 
 ds_Sij = ds_weights["Sij"];
@@ -158,17 +176,17 @@ Sij = DimArray(
     (Dim{Symbol(src_names[1])}(sources[1]), Dim{Symbol(src_names[2])}(sources[2])), 
     metadata = Dict(ds_Sij.attrib)
 );
+# Note for weights.Sij dimension names are 'model1' and 'model2', but fn expects twice 'model'
 figs = mw.plotDistancesIndependence(Sij);
 figs[1]
 
 
+figs_performances = mw.plotDistancesPerformance(weights.performance_distances);
+figs_performances[1]
+figs_performances[2]
 
-# TODO:
-# plot distances for all combinations of diagnostics and variables
-# distances_perform = mw.loadWeightsAsDimArray(ds_weights, "performance_distances");
-# figs = mw.plotDistancesPerformance()
-
-
+# TODO: fix plotting for independence distances, dimension names are 'model1' and 'model2', but fn expects twice 'model'
+#figs = mw.plotDistancesIndependence(weights.independence_distances);
 
 
 ########################### 4. APPLY WEIGHTS ###########################

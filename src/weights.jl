@@ -418,12 +418,6 @@ function distributeWeightsAcrossMembers(weights::DimArray)
 end
 
 
-# function logWeights(metadata_weights)
-#     @info "Nb included models (without members): " length(unique(metadata_weights["model_names"]))
-#     foreach(m -> @info(m), metadata_weights["member_names"])
-# end
-
-
 function validateConfigTargetPath(target_path::String)
     target_dir = dirname(target_path)
     if !isdir(target_dir)

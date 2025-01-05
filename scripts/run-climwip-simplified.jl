@@ -42,7 +42,9 @@ config_weights = mw.ConfigWeights(
     target_path = joinpath(target_dir, fn_jld2)
     # target_path = joinpath(target_dir, fn_nc)
 );
-weights = mw.computeWeights(model_data, obs_data, config_weights);
+weights = mw.computeWeights(
+    collect(values(model_data)), collect(values(obs_data)), config_weights
+);
 
 # save weights as Julia object
 mw.saveWeightsAsJuliaObj(weights, joinpath(target_dir, fn_jld2))

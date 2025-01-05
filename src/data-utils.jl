@@ -81,7 +81,7 @@ end
 
 # Pretty print Weights
 function Base.show(io::IO, x::Weights)
-    println(io, "Performance Distances ():")
+    println(io, "::$(typeof(x)):")
     for m in dims(x.w, :model)
         println(io, "$m: $(round(x.w[model = At(m)], digits=3))")
     end

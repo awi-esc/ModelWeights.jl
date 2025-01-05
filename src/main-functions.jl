@@ -3,7 +3,9 @@ using DimensionalData
 using Setfield
 
 """
-    computeWeights(model_data::Data, obs_data::Data, config::ConfigWeights)
+    computeWeights(
+        model_data::Vector{Data}, obs_data::Vector{Data}, config::ConfigWeights
+    )
 
 Compute weight for each model in multi-model ensemble according to approach
 from Brunner, Lukas, Angeline G. Pendergrass, Flavio Lehner,
@@ -24,15 +26,13 @@ function computeWeights(
     weights_perform = normalizeWeightsVariables(config.performance)  
     weights_indep = normalizeWeightsVariables(config.independence)
     
-    # sanity checks for input arguments
     keys_weights_perform = allcombinations(dims(weights_perform, :variable), dims(weights_perform, :diagnostic))
     keys_weights_indep = allcombinations(dims(weights_indep, :variable), dims(weights_indep, :diagnostic))
-    
     ref_period_alias, ref_period_timerange = getRefPeriodAsTimerangeAndAlias(
         map(x -> x.meta.attrib, model_data), config.ref_period
     )
-    
-    msg =  x -> "For computation of $x weights: Make sure that data is provided 
+    # sanity checks for input arguments
+    msg(x) =  "For computation of $x weights: Make sure that data is provided 
     for the given reference period ($(config.ref_period)) and combination of 
         variables and diagnostic for which (balance) weights were specified!"
     if !isValidDataAndWeightInput(model_data, keys_weights_perform, ref_period_alias)
@@ -60,8 +60,17 @@ function computeWeights(
     weights = weights ./ sum(weights)
     setRefPeriodInWeightsMetadata!(weights.metadata, ref_period_alias, ref_period_timerange)
     
-    wI = independences ./ sum(independences)
+    # consider performance and independence weights independently
+    # for performance weights, we assume that all models have the same degree of dependence
+    # among each other (e.g. all are compeletely independent), i.e. we can 
+    # just consider the performance Parts (the denominator would be the same for all models)
     wP = performances ./ sum(performances)
+
+    # for independence weights, we assume that all models perform equally well, i.e. 
+    # Di = Dj for all models i, j. Thus, the numerator would be the same for all models, 
+    # we just set Di=0 for all models, i.e. the numerator is 1 for all models
+    wI = (1 ./ independences) ./ sum(1 ./ independences)
+
     setRefPeriodInWeightsMetadata!(wP.metadata, ref_period_alias, ref_period_timerange)
     
     if !isempty(config.target_path)
@@ -83,7 +92,7 @@ function computeWeights(
         config = config
         #overall = (wP./wI)./sum(wP./wI), # just for sanity check
     )
-    #logWeights(weights.metadata)
+    @debug weights
     if !isempty(config.target_path)
         filename = basename(target_path)
         if endswith(filename, ".nc")
@@ -152,7 +161,7 @@ function loadDataFromESMValToolConfigs(
     end
     if only_shared_models
         all_paths = map(p -> p.paths, values(meta_data))
-        all_models = getModelsFromPaths(vcat(all_paths...))
+        all_models = getModelIDsFromPaths(vcat(all_paths...))
         shared_models = getSharedModelsFromPaths(meta_data, all_models)
         if isempty(shared_models)
             @warn "No models shared across data!"
