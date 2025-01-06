@@ -28,12 +28,13 @@ function computeWeights(
     
     keys_weights_perform = allcombinations(dims(weights_perform, :variable), dims(weights_perform, :diagnostic))
     keys_weights_indep = allcombinations(dims(weights_indep, :variable), dims(weights_indep, :diagnostic))
+    
     ref_period_alias, ref_period_timerange = getRefPeriodAsTimerangeAndAlias(
-        map(x -> x.meta.attrib, model_data), config.ref_period
+        map(x -> x.meta.attrib, model_data), config.ref_perform_weights
     )
     # sanity checks for input arguments
     msg(x) =  "For computation of $x weights: Make sure that data is provided 
-    for the given reference period ($(config.ref_period)) and combination of 
+    for the given reference period ($(config.ref_perform_weights)) and combination of 
         variables and diagnostic for which (balance) weights were specified!"
     if !isValidDataAndWeightInput(model_data, keys_weights_perform, ref_period_alias)
         throw(ArgumentError(msg("performance")))
@@ -49,7 +50,7 @@ function computeWeights(
         model_data, obs_data, config.performance, ref_period_alias, true
     )
     dists_indep_all = computeDistancesAllDiagnostics(
-        model_data, nothing, config.independence, ref_period_alias, false
+        model_data, nothing, config.independence, config.ref_indep_weights, false
     )
     Di = computeGeneralizedDistances(dists_perform_all, weights_perform, true)
     Sij = computeGeneralizedDistances(dists_indep_all, weights_indep, false)

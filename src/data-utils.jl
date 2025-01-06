@@ -62,7 +62,8 @@ end
     independence::Dict{String, Number}=Dict()
     sigma_performance::Number=0.5
     sigma_independence::Number=0.5
-    ref_period::String=""
+    ref_perform_weights::String=""
+    ref_indep_weights::String=""
     target_path::String=""
 end
 
@@ -815,18 +816,20 @@ end
         model_data::Vector{Data}, 
         obs_data::Union{Nothing, Data}, 
         config::Dict{String, Number},
-        ref_period::String,
+        ref_period_alias::String,
         forPerformance::Bool    
     )
 
-Compute RMSEs between models and observations or between predictions of models.
+Compute RMSEs between models and observations or between predictions of models 
+for all variables and diagnostics for which weights are specified in `config`.
 
 # Arguments:
 - `model_data`:
 - `obs_data`:
-- `config`:
-- `ref_period`:
-- `for_performance`: true for distances between models and observations, false for distances between model predictions
+- `config`: dictionary mapping from string of form VARIABLE_DIAGNOSTIC to respective weight.
+- `ref_period_alias`:
+- `for_performance`: true for distances between models and observations, 
+false for distances between model predictions
 """
 function computeDistancesAllDiagnostics(
     model_data::Vector{Data}, 
@@ -978,6 +981,13 @@ end
     getRefPeriodAsTimerangeAndAlias(
         meta_attribs::Vector{MetaAttrib}, ref_period::String
     )
+
+Return timerange and alias corresponding to `ref_period` which can be either be 
+a timerange or an alias.
+
+# Arguments:
+- `meta_attribs`:
+- `ref_period`: either alias or timerange
 """
 function getRefPeriodAsTimerangeAndAlias(
     meta_attribs::Vector{MetaAttrib}, ref_period::String

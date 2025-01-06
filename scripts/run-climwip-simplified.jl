@@ -38,7 +38,8 @@ config_weights = mw.ConfigWeights(
     independence = Dict("tas_CLIM" => 0.5, "pr_CLIM" => 0.25, "psl_CLIM" => 0),
     sigma_independence = 0.5,
     sigma_performance = 0.5,
-    ref_period = "1995-2014", 
+    ref_perform_weights = "1995-2014",
+    ref_indep_weights = "historical", # TODO: check this in paper!
     target_path = joinpath(target_dir, fn_jld2)
     # target_path = joinpath(target_dir, fn_nc)
 );
