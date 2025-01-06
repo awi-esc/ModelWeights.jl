@@ -39,7 +39,7 @@ config_weights = mw.ConfigWeights(
     sigma_independence = 0.5,
     sigma_performance = 0.5,
     ref_perform_weights = "1995-2014",
-    ref_indep_weights = "historical", # TODO: check this in paper!
+    ref_indep_weights = "calculate_weights_climwip", # TODO: check this in paper!
     target_path = joinpath(target_dir, fn_jld2)
     # target_path = joinpath(target_dir, fn_nc)
 );
@@ -55,9 +55,9 @@ weights = mw.loadWeightsFromJLD2(joinpath(target_dir, fn_jld2));
 weights_all_members = mw.distributeWeightsAcrossMembers(weights.w);
 
 # make some Plots
-figs_w = mw.plotWeights(weights.w; label="overall weight")
-figs_wP = mw.plotWeights(weights.wP; label="Performance weight")
-figs_wI = mw.plotWeights(weights.wI; label="Independence weight")
+figs_w = mw.plotWeights(weights.w; ylabel="overall weight")
+figs_wP = mw.plotWeights(weights.wP; ylabel="Performance weight")
+figs_wI = mw.plotWeights(weights.wI; ylabel="Independence weight")
 
 mw.plotWeightContributions(weights.wI, weights.wP)
 
@@ -93,8 +93,8 @@ data_temp_map_reference = mw.loadDataFromESMValToolConfigs(
 );
                 
 # compute weighted averages and plot results
-data_ref = mw.indexData(data_temp_map_reference, "tas", "CLIM", "weighted_temperature_map_reference");
-data_future = mw.indexData(data_temp_map_future, "tas", "CLIM", "weighted_temperature_map_future");
+data_ref = data_temp_map_reference["tas_CLIM_weighted_temperature_map_reference"].data;
+data_future = data_temp_map_future["tas_CLIM_weighted_temperature_map_future"].data;
 # just to align with original data
 data_ref = data_ref[lat = Where(x -> x <= 68.75)];
 data_future = data_future[lat = Where(x -> x <= 68.75)];
@@ -142,7 +142,7 @@ data_temp_graph = mw.loadDataFromESMValToolConfigs(
     dir_per_var = false,
     subset = mw.Constraint(aliases = ["weighted_temperature_graph"])
 );
-data_graph = mw.indexData(data_temp_graph, "tas", "ANOM", "weighted_temperature_graph");
+data_graph = data_temp_graph["tas_ANOM_weighted_temperature_graph"].data;
 # TODO: check applyWeights fn and difference!
 # this will compute the weighted avg based on the average across the respective members of each model
 #weighted_avg = mw.applyWeights(data_graph, weights_all_members);
@@ -161,10 +161,10 @@ f3 = mw.plotTempGraph(
 tas_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_graph/weighted_temperature_graph/temperature_anomalies.nc")["tas"];
 @assert tas_orig == data_graph
 
-unc_unweighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range.nc")
+unc_unweighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range.nc");
 compareToOrigData(unc_unweighted_orig["tas"][:,:][1,:], map(x -> x[1], uncertainties.unweighted))
 compareToOrigData(unc_unweighted_orig["tas"][:,:][2,:], map(x -> x[2], uncertainties.unweighted))
-unc_weighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range_weighted.nc")
+unc_weighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range_weighted.nc");
 compareToOrigData(unc_weighted_orig["tas"][:,:][1,:], map(x -> x[1], uncertainties.weighted))
 # TODO: only this is not equal for a handful of indices!
 uncertainties_weighted_orig = unc_weighted_orig["tas"][:,:][2,:];
