@@ -2,6 +2,7 @@ import YAML
 using DimensionalData
 using Interpolations
 
+@enum LEVEL MODEL=0 MEMBER=1
 
 @kwdef struct MetaAttrib
     variable::String

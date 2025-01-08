@@ -12,7 +12,7 @@ path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
 
 dir_per_var = true;
 is_model_data = true;
-only_shared_models = true;
+level_shared_models = mw.MEMBER;
 statistics = ["CLIM"];
 variables = ["tas", "tos"];
 projects = ["CMIP5", "CMIP6"];
@@ -22,16 +22,16 @@ subset = mw.Constraint(
 );
 
 lgm_meta = mw.loadDataFromESMValToolConfigs(
-    path_data, path_recipes; dir_per_var, is_model_data, only_shared_models,
+    path_data, path_recipes; dir_per_var, is_model_data, level_shared_models,
     subset, preview = true
 );
 lgm_data = mw.loadDataFromESMValToolConfigs(
-    path_data, path_recipes; dir_per_var, is_model_data, only_shared_models,
+    path_data, path_recipes; dir_per_var, is_model_data, level_shared_models,
     subset, preview = false
 );
 
-# we set only_shared_models to true, so model members are identical for every 
-# loaded data set 
+# we set level_shared_models to mw.MEMBER, so model members are identical for every 
+# loaded data set (variable)
 model_members_lgm = Array(dims(lgm_data["tos_CLIM_lgm"].data, :member));
 models_lgm = unique(lgm_data["tos_CLIM_lgm"].data.metadata["model_names"]);
 
@@ -42,9 +42,9 @@ path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/historical";
 
 # use same big models (NOT on level of model members)
-model_data0 = mw.loadDataFromESMValToolConfigs(
+model_historical = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes;
-    only_shared_models = true,
+    level_shared_models=mw.MODEL,
     subset = mw.Constraint(
         statistics = statistics, variables = variables, projects = projects,
         aliases = ["historical"], 
@@ -55,7 +55,7 @@ model_data0 = mw.loadDataFromESMValToolConfigs(
     preview = false
 );
 # sanity check: all lgm models are in historical data?
-models_historical = unique(model_data0["tos_CLIM_historical"].data.metadata["model_names"]);
+models_historical = unique(model_historical["tos_CLIM_historical"].data.metadata["model_names"]);
 @assert models_historical == models_lgm
 
 
@@ -63,7 +63,7 @@ models_historical = unique(model_data0["tos_CLIM_historical"].data.metadata["mod
 begin
     model_historical = mw.loadDataFromESMValToolConfigs(
         path_data, path_recipes;
-        only_shared_models = true,
+        level_shared_models = nothing,
         subset = mw.Constraint(
             statistics = statistics, variables = variables, projects = projects,
             aliases = ["historical"], 
@@ -75,7 +75,7 @@ begin
     );
 end
 
-# sanity check: all lgm models are in historical data?
+# sanity check: all lgm model members are in historical data?
 model_members_historical = Array(dims(model_historical["tas_CLIM_historical"].data, :member));
 filter(x -> !(x in model_members_historical), model_members_lgm)
 
@@ -84,9 +84,9 @@ begin
     path_config = "/albedo/home/brgrus001/ModelWeights/configs/examples/example-lgm-historical.yml";
     # yaml config file already contains basic constraints for subset as defined above.
     model_historical_lgm = mw.loadDataFromYAML(path_config; dir_per_var, is_model_data,
-        only_shared_models = true,
-        subset = mw.Constraint(models = model_members_lgm),
-        # subset = mw.Constraint(models = models_lgm),
+        level_shared_models,
+        # subset = mw.Constraint(models = model_members_lgm),
+        subset = mw.Constraint(models = models_lgm),
         preview = false
     );
 end
@@ -100,6 +100,7 @@ begin
         @assert missingOrEqual(data1, data2)
     end
 end
+
 
 # -------------------- Load the observational data -------------------------- #
 begin

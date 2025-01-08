@@ -12,6 +12,6 @@ include("main-functions.jl")
 
 
 
-export loadDataFromYAML, loadDataFromESMValToolConfigs, computeWeights, getSharedModels
+export loadDataFromYAML, loadDataFromESMValToolConfigs, computeWeights, getSharedModelsFromDimensions
 
 end # module ModelWeights

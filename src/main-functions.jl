@@ -148,7 +148,7 @@ function loadDataFromESMValToolConfigs(
     path_recipes::String;
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
-    only_shared_models::Bool=false,
+    level_shared_models::Union{LEVEL, Nothing}=nothing,
     subset::Union{Constraint, Nothing}=nothing,
     preview::Bool=false
 )
@@ -160,21 +160,11 @@ function loadDataFromESMValToolConfigs(
         )
         addMetaData!(meta_data, meta)
     end
-    if only_shared_models
-        all_paths = map(p -> p.paths, values(meta_data))
-        all_models = getModelIDsFromPaths(vcat(all_paths...))
-        shared_models = getSharedModelsFromPaths(meta_data, all_models)
-        if isempty(shared_models)
-            @warn "No models shared across data!"
-        end
-        for (id, meta) in meta_data
-            shared_paths = subsetPaths(meta.paths, shared_models)
-            meta_new = @set meta.paths = shared_paths
-            meta_data[id] = meta_new
-        end
+    if !isnothing(level_shared_models)
+        reduceMetaDataSharedModels!(meta_data, level_shared_models)
     end
     output = preview ? meta_data : 
-        loadDataFromMetadata(meta_data, is_model_data, only_shared_models)
+        loadDataFromMetadata(meta_data, is_model_data, level_shared_models)
     return output
 end
 
@@ -209,14 +199,17 @@ function loadDataFromYAML(
     path_config::String;
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
-    only_shared_models::Bool=false,
+    level_shared_models::Union{LEVEL,Nothing}=nothing,
     subset::Union{Constraint, Nothing}=nothing,
     preview::Bool=false
 )
     meta_data = getMetaDataFromYAML(
         path_config, dir_per_var, is_model_data; constraint=subset
     )
+    if !isnothing(level_shared_models)
+        reduceMetaDataSharedModels!(meta_data, level_shared_models)
+    end
     output = preview ? meta_data :
-        loadDataFromMetadata(meta_data, is_model_data, only_shared_models)
+        loadDataFromMetadata(meta_data, is_model_data, level_shared_models)
     return output
 end

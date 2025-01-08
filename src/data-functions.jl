@@ -1,6 +1,7 @@
 using DimensionalData
 using NCDatasets
 using YAML
+using Setfield
 
 """
     getUniqueMemberIds(meta::Dict, model_names::Vector{String})
@@ -103,13 +104,21 @@ specified in `shared_models`. Takes care of metadata.
 """
 function subsetModelData(data::DimArray, shared_models::Vector{String})
     dim_symbol = hasdim(data, :member) ? :member : :model
-    indices = findall(m -> m in shared_models, collect(dims(data, dim_symbol)))
-    @assert length(indices) == length(shared_models)
-    if dim_symbol == :model
-        data = data[model = indices]
-    else
+    dim_names = collect(dims(data, dim_symbol))
+    if dim_symbol == :member
+        models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
+        members = filter(x -> !(x in models), shared_models)
+        indices_members = findall(m -> m in members, dim_names)
+        #models_data = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), collect(dims(data, :member)))
+        models_data = data.metadata["model_names"]
+        indices_models = findall(m -> m in models, models_data)
+        indices = vcat(indices_members, indices_models)
         data = data[member = indices]
+    else 
+        indices = findall(m -> m in shared_models, dim_names)
+        data = data[model = indices]
     end
+    # @assert length(indices) == length(shared_models)
     # also adjust the metadata
     attributes = filter(k -> data.metadata[k] isa Vector, keys(data.metadata))
     for key in attributes
@@ -159,8 +168,8 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
             model_key = getCMIPModelsKey(Dict(ds.attrib))
             get!(attributes, "mip_era", "CMIP5")
             name = ds.attrib[model_key] # just the model name, e.g. ACCESS1-0 (not the member's id)
-            if occursin("_", name)
-                @warn "model name as read from metadata of stored .nc file contains underscore: $name; from $file"
+            if !occursin(name, filename)
+                @warn "model name as read from metadata of stored .nc file ($name) and used as dimension name is not identical to name appearing in its path ($filename)"
             end
         end
         source_names[i] = name
@@ -239,55 +248,46 @@ end
     loadDataFromMetadata(
         meta_data::Vector{MetaData},
         is_model_data::Bool,
-        only_shared_models::Bool
+        level_shared_models::Union{LEVEL, Nothing}
     )
 
 # Arguments:
 - `meta_data`:
 - `is_model_data`: true for model data, false for observational data.
-- `only_shared_models`: if true, only data loaded for models present for all
+- `level_shared_models`: if true, only data loaded for models present for all
 ids, i.e. for all variable+statistic+experiment combinations
 """
 function loadDataFromMetadata(
     meta_data::Dict{String, MetaData},
     is_model_data::Bool,
-    only_shared_models::Bool
+    level_shared_models::Union{LEVEL, Nothing}
 )
     results = Dict{String, Data}()
     for (id, meta) in meta_data
+        # loads data at level of model members
         results[id] = loadPreprocData(meta, is_model_data)
     end
-    # The following shouldnt be necessary as metadata should already only contain 
-    # shared models, but the following code retrieves shared models not from the 
-    # filenames but from dimension names, which originate
-    # from the metadata in the stored files. If there was a problem 
-    # (e.g. FGOALS-g2 (correct, like filename) vs. FGOALS_g2 (unlike filename) for tos data)
-    # this data will be excluded here. If it's not, dimension names might not be identical,
-    # which seems to be problematic.
-    # TODO: add checks/warnings here
-    if is_model_data && only_shared_models
-        shared_models = getSharedModels(results, :member)
-        if isempty(shared_models)
-            @warn "No models shared across all loaded data"
-        end
-        shared_results = Dict{String, Data}()# Vector{Data}()
+
+    if level_shared_models == MEMBER
+        # sanity check: are model dimensions identical?
+        # model dimensions are based on metadata, not the names of the models 
+        # as they appear in the data  paths
+        shared_models = getSharedModelsFromDimensions(results, :member);
         for (id, result) in results
-            take_subset = sort(Array(dims(result.data, :member))) != sort(Array(shared_models))
-            shared_data = take_subset ? subsetModelData(result.data, shared_models) : result.data
-            shared_paths = take_subset ? subsetPaths(result.meta.paths, shared_models) : result.meta.paths
-            meta = MetaData(id = result.meta.id, attrib = result.meta.attrib, paths = shared_paths)
-            shared_results[id] = Data(meta = meta, data = shared_data)
+            diff_dimensions = filter(x -> !(x in shared_models), Array(dims(result.data, :member)))
+            if !isempty(diff_dimensions)
+                @warn "Different model dimensions across dataset ($id): $diff_dimensions"
+            end
         end
-        results = shared_results
     end
     @debug "loaded data: $(map(x -> x.meta, values(results)))"
-    @debug "filtered for shared models across all loaded data: " only_shared_models
+    @debug "filtered for shared models across all loaded data: " level
     return results
 end
 
 
 """
-    getSharedModels(model_data::Vector{Data}, dim::Symbol)
+    getSharedModelsFromDimensions(model_data::Vector{Data}, dim::Symbol)
 
 Return only data of models shared across all datasets. Assumes that no id is 
 shared across elements of `model_data`.
@@ -297,10 +297,18 @@ shared across elements of `model_data`.
 - `dim`: dimension name referring to level of model predictions; e.g., 
 'member' or 'model'
 """
-function getSharedModels(model_data::Dict{String, Data}, dim::Symbol)
+function getSharedModelsFromDimensions(model_data::Dict{String, Data}, dim::Symbol)
     shared_models =  nothing 
     for (_, data) in model_data
-        models = collect(dims(data.data, dim))
+        if hasdim(data.data, :model) && dim == :member
+            @warn "Model data has dimension :model, but subset of models requested to be taken wrt to level of model members! Level of models is used instead."
+            models = collect(dims(data.data, :model))
+        elseif hasdim(data.data, :member) && dim == :model
+            members = collect(dims(data.data, :member))
+            models = unique(map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members))
+        else
+            models = collect(dims(data.data, dim))
+        end
         if isnothing(shared_models)
             shared_models = models
         else
@@ -466,4 +474,24 @@ function showDataPaths(data::Union{Data, Vector{Data}})
     data = isa(data, Vector) ? data : [data]
     map(x->println(x.meta), data);
     return nothing
+end
+
+
+function reduceMetaDataSharedModels!(
+    meta_data::Dict{String, MetaData}, level_shared_models::Union{LEVEL, Nothing}
+)
+    all_paths = map(p -> p.paths, values(meta_data))
+    all_models = getModelIDsFromPaths(vcat(all_paths...))
+    if level_shared_models == MODEL
+        all_models = unique(map(m -> String(split(m, MODEL_MEMBER_DELIM)[1]), all_models))
+    end
+    shared_models = getSharedModelsFromPaths(meta_data, all_models)
+    if isempty(shared_models)
+        @warn "No models shared across data!"
+    end
+    for (id, meta) in meta_data
+        shared_paths = subsetPaths(meta.paths, shared_models)
+        meta_new = @set meta.paths = shared_paths
+        meta_data[id] = meta_new
+    end
 end
