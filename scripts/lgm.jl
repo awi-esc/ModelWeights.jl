@@ -12,7 +12,6 @@ path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
 
 dir_per_var = true;
 is_model_data = true;
-level_shared_models = mw.MEMBER;
 statistics = ["CLIM"];
 variables = ["tas", "tos"];
 projects = ["CMIP5", "CMIP6"];
@@ -22,17 +21,17 @@ subset = mw.Constraint(
 );
 
 lgm_meta = mw.loadDataFromESMValToolConfigs(
-    path_data, path_recipes; dir_per_var, is_model_data, level_shared_models,
-    subset, preview = true
+    path_data, path_recipes; dir_per_var, is_model_data, 
+    level_shared_models=mw.MEMBER, subset, preview = true
 );
 lgm_data = mw.loadDataFromESMValToolConfigs(
-    path_data, path_recipes; dir_per_var, is_model_data, level_shared_models,
-    subset, preview = false
+    path_data, path_recipes; dir_per_var, is_model_data, 
+    level_shared_models=mw.MEMBER, subset, preview = false
 );
 
 # we set level_shared_models to mw.MEMBER, so model members are identical for every 
 # loaded data set (variable)
-model_members_lgm = Array(dims(lgm_data["tos_CLIM_lgm"].data, :member));
+model_members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"].data, :member));
 models_lgm = unique(lgm_data["tos_CLIM_lgm"].data.metadata["model_names"]);
 
 # --------------------------------------------------------------------------- #
@@ -41,10 +40,12 @@ models_lgm = unique(lgm_data["tos_CLIM_lgm"].data.metadata["model_names"]);
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/historical";
 
-# use same big models (NOT on level of model members)
-model_historical = mw.loadDataFromESMValToolConfigs(
+# use same big models (NOT on level of model members) as for the lgm experiment
+# and make sure that across variables, only shared model members are loaded 
+# since we want the exact same simulations for all variables when computing weights
+model_historical_lgm_models = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes;
-    level_shared_models=mw.MODEL,
+    level_shared_models=mw.MEMBER,
     subset = mw.Constraint(
         statistics = statistics, variables = variables, projects = projects,
         aliases = ["historical"], 
@@ -55,13 +56,13 @@ model_historical = mw.loadDataFromESMValToolConfigs(
     preview = false
 );
 # sanity check: all lgm models are in historical data?
-models_historical = unique(model_historical["tos_CLIM_historical"].data.metadata["model_names"]);
+models_historical = unique(model_historical_lgm_models["tos_CLIM_historical"].data.metadata["model_names"]);
 @assert models_historical == models_lgm
 
 
 # load historical data of the same model members as in lgm data
 begin
-    model_historical = mw.loadDataFromESMValToolConfigs(
+    model_historical_lgm_members = mw.loadDataFromESMValToolConfigs(
         path_data, path_recipes;
         level_shared_models = nothing,
         subset = mw.Constraint(
@@ -75,16 +76,18 @@ begin
     );
 end
 
-# sanity check: all lgm model members are in historical data?
-model_members_historical = Array(dims(model_historical["tas_CLIM_historical"].data, :member));
-filter(x -> !(x in model_members_historical), model_members_lgm)
+# sanity check: are there lgm model members that dont appear in historical models?
+members_historical = Array(dims(model_historical_lgm_members["tas_CLIM_historical"].data, :member));
+filter(x -> !(x in members_historical), model_members_lgm)
+
 
 # Version2: Load model data for experiment lgm and historical in one run from new config file
 begin
     path_config = "/albedo/home/brgrus001/ModelWeights/configs/examples/example-lgm-historical.yml";
     # yaml config file already contains basic constraints for subset as defined above.
-    model_historical_lgm = mw.loadDataFromYAML(path_config; dir_per_var, is_model_data,
-        level_shared_models,
+    model_historical_lgm_config = mw.loadDataFromYAML(
+        path_config; dir_per_var, is_model_data,
+        level_shared_models=nothing,
         # subset = mw.Constraint(models = model_members_lgm),
         subset = mw.Constraint(models = models_lgm),
         preview = false
@@ -95,8 +98,8 @@ begin
     # some checks that same data is loaded with both versions
     missingOrEqual(arr1, arr2) = all(x -> ismissing(x) || x==1, Array(arr1) .== Array(arr2));
     for v in ["tas", "tos"]
-        data1 = model_historical[v * "_CLIM_historical"].data;
-        data2 = model_historical_lgm[v * "_CLIM_historical"].data;
+        data1 = model_historical_lgm_models[v * "_CLIM_historical"].data;
+        data2 = model_historical_lgm_config[v * "_CLIM_historical"].data;
         @assert missingOrEqual(data1, data2)
     end
 end
@@ -137,14 +140,17 @@ begin
         ref_indep_weights = "historical", # alias
         target_path = joinpath(target_dir, target_fn)
     );
-    weights = mw.computeWeights(collect(values(model_historical)), collect(values(obs_data)), config_weights);
+    weights = mw.computeWeights(collect(values(model_historical_lgm_models)), collect(values(obs_data)), config_weights);
 end
 
 begin
     # Weights for lgm experiment, with performance weights wrt historical data, but independence 
     # weights wrt lgm experiments
     config_weights_lgm = @set config_weights.ref_indep_weights = "lgm";
-    weights_lgm = mw.computeWeights(collect(values(model_historical_lgm)), collect(values(obs_data)), config_weights_lgm);
+    # TODO: fix saving weights, something goes wrong here when saving weights!
+    config_weights_lgm = @set config_weights_lgm.target_path = "";
+    model_data = merge(model_historical_lgm_models, lgm_data)
+    weights_lgm = mw.computeWeights(collect(values(model_data)), collect(values(obs_data)), config_weights_lgm);
 end
 
 # weights can also be  saved separately (as julia obj or .nc file):

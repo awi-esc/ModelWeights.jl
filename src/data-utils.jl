@@ -2,6 +2,7 @@ import YAML
 using DimensionalData
 using Interpolations
 
+
 @enum LEVEL MODEL=0 MEMBER=1
 
 @kwdef struct MetaAttrib
@@ -161,8 +162,14 @@ function updateMetadata!(
             meta[key] = string(values[1])
         end
     end
-    included_data = Array{String}(source_names[sort_indices])
+    
+    # in some cases, the metadata model names do not match the model names as retrieved from the filenames 
+    included_data = fixModelNamesMetadata(source_names[sort_indices])
     if is_model_data
+        indices_non_missing = findall(map(x -> !ismissing(x), meta["model_id"]))
+        names = String.(meta["model_id"][indices_non_missing])
+        fixed_models = fixModelNamesMetadata(names)
+        meta["model_id"][indices_non_missing] = fixed_models
         member_ids = getUniqueMemberIds(meta, included_data)
         meta["member_names"] = vcat(member_ids...)
         meta["model_names"] = included_data
@@ -1011,4 +1018,16 @@ function setRefPeriodInWeightsMetadata!(meta::Dict, alias::String, timerange::St
     meta["ref_period_alias"] = alias
     meta["ref_period_timerange"] = timerange
     return nothing
+end
+
+
+function fixModelNamesMetadata(names::Vector{String})
+    model_names = copy(names)
+    for m in keys(MODEL_NAME_FIXES)
+        indices = findall(model_names .== m)
+        if !isempty(indices)
+            model_names[indices] .= MODEL_NAME_FIXES[m]
+        end
+    end
+    return model_names
 end

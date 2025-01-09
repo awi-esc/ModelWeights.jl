@@ -162,17 +162,20 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
                 attributes = merge(attributes, Dict(deepcopy(sector.attrib)))
             end
         end
-        # add mip_era for models since it is not provided in CMIP5-models
-        name = filename
         if is_model_data
+            # add mip_era for models since it is not provided in CMIP5-models
             model_key = getCMIPModelsKey(Dict(ds.attrib))
             get!(attributes, "mip_era", "CMIP5")
+            # check model names as retrieved from the metadata for potential inconsistencies wrt filename
             name = ds.attrib[model_key] # just the model name, e.g. ACCESS1-0 (not the member's id)
             if !occursin(name, filename)
                 @warn "model name as read from metadata of stored .nc file ($name) and used as dimension name is not identical to name appearing in its path ($filename)"
             end
+            model_id = getModelIDsFromPaths([file])[1]
+            source_names[i] = split(model_id, MODEL_MEMBER_DELIM)[1]
+        else
+            source_names[i] = filename
         end
-        source_names[i] = name
         # update metadata-dictionary for all processed files with the
         # metadata from the current file
         for key in keys(attributes)
@@ -266,19 +269,6 @@ function loadDataFromMetadata(
     for (id, meta) in meta_data
         # loads data at level of model members
         results[id] = loadPreprocData(meta, is_model_data)
-    end
-
-    if level_shared_models == MEMBER
-        # sanity check: are model dimensions identical?
-        # model dimensions are based on metadata, not the names of the models 
-        # as they appear in the data  paths
-        shared_models = getSharedModelsFromDimensions(results, :member);
-        for (id, result) in results
-            diff_dimensions = filter(x -> !(x in shared_models), Array(dims(result.data, :member)))
-            if !isempty(diff_dimensions)
-                @warn "Different model dimensions across dataset ($id): $diff_dimensions"
-            end
-        end
     end
     @debug "loaded data: $(map(x -> x.meta, values(results)))"
     @debug "filtered for shared models across all loaded data: " level

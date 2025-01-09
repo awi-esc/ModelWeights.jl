@@ -1,6 +1,9 @@
 module ModelWeights
 
 const MODEL_MEMBER_DELIM = "#"
+const MODEL_NAME_FIXES = Dict(
+    "FGOALS_g2" => "FGOALS-g2"
+)
 
 include("data-utils.jl")
 include("data-functions.jl")
