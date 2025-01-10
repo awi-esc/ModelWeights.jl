@@ -17,16 +17,17 @@ variables = ["tas", "tos"];
 projects = ["CMIP5", "CMIP6"];
 subset = mw.Constraint(
     statistics = statistics, variables = variables, projects = projects,
-    aliases = ["lgm"], subdirs = ["20241114"]
+    aliases = ["lgm"], 
+    subdirs = ["20241114"]
 );
 
 lgm_meta = mw.loadDataFromESMValToolConfigs(
-    path_data, path_recipes; dir_per_var, is_model_data, 
-    level_shared_models=mw.MEMBER, subset, preview = true
+    path_data, path_recipes; dir_per_var, is_model_data, subset = subset, 
+    preview = true, level_shared_models = mw.MEMBER
 );
 lgm_data = mw.loadDataFromESMValToolConfigs(
-    path_data, path_recipes; dir_per_var, is_model_data, 
-    level_shared_models=mw.MEMBER, subset, preview = false
+    path_data, path_recipes; dir_per_var, is_model_data, subset = subset,
+    level_shared_models = mw.MEMBER, preview = false
 );
 
 # we set level_shared_models to mw.MEMBER, so model members are identical for every 
@@ -42,10 +43,11 @@ path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/historical";
 
 # use same big models (NOT on level of model members) as for the lgm experiment
 # and make sure that across variables, only shared model members are loaded 
+# (level_shared_models set to mw.MEMBER) 
 # since we want the exact same simulations for all variables when computing weights
-model_historical_lgm_models = mw.loadDataFromESMValToolConfigs(
+historical_data_lgm_models = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes;
-    level_shared_models=mw.MEMBER,
+    level_shared_models = mw.MEMBER,
     subset = mw.Constraint(
         statistics = statistics, variables = variables, projects = projects,
         aliases = ["historical"], 
@@ -56,8 +58,12 @@ model_historical_lgm_models = mw.loadDataFromESMValToolConfigs(
     preview = false
 );
 # sanity check: all lgm models are in historical data?
-models_historical = unique(model_historical_lgm_models["tos_CLIM_historical"].data.metadata["model_names"]);
+models_historical = unique(historical_data_lgm_models["tos_CLIM_historical"].data.metadata["model_names"]);
 @assert models_historical == models_lgm
+
+# post process s.t. physics of included model members are the same as for lgm simulations of the respective models 
+data = mw.alignPhysics(historical_data_lgm_models, model_members_lgm);
+
 
 
 # load historical data of the same model members as in lgm data
@@ -85,21 +91,23 @@ filter(x -> !(x in members_historical), model_members_lgm)
 begin
     path_config = "/albedo/home/brgrus001/ModelWeights/configs/examples/example-lgm-historical.yml";
     # yaml config file already contains basic constraints for subset as defined above.
-    model_historical_lgm_config = mw.loadDataFromYAML(
+    historical_lgm_data_config = mw.loadDataFromYAML(
         path_config; dir_per_var, is_model_data,
-        level_shared_models=nothing,
-        # subset = mw.Constraint(models = model_members_lgm),
+        level_shared_models = nothing,
         subset = mw.Constraint(models = models_lgm),
         preview = false
     );
 end
 
+data = mw.alignPhysics(historical_lgm_data_config, model_members_lgm);
+
+
 begin
     # some checks that same data is loaded with both versions
     missingOrEqual(arr1, arr2) = all(x -> ismissing(x) || x==1, Array(arr1) .== Array(arr2));
     for v in ["tas", "tos"]
-        data1 = model_historical_lgm_models[v * "_CLIM_historical"].data;
-        data2 = model_historical_lgm_config[v * "_CLIM_historical"].data;
+        data1 = historical_data_lgm_models[v * "_CLIM_historical"].data;
+        data2 = historical_lgm_data_config[v * "_CLIM_historical"].data;
         @assert missingOrEqual(data1, data2)
     end
 end
@@ -140,7 +148,7 @@ begin
         ref_indep_weights = "historical", # alias
         target_path = joinpath(target_dir, target_fn)
     );
-    weights = mw.computeWeights(collect(values(model_historical_lgm_models)), collect(values(obs_data)), config_weights);
+    weights = mw.computeWeights(collect(values(historical_data_lgm_models)), collect(values(obs_data)), config_weights);
 end
 
 begin
@@ -149,7 +157,7 @@ begin
     config_weights_lgm = @set config_weights.ref_indep_weights = "lgm";
     # TODO: fix saving weights, something goes wrong here when saving weights!
     config_weights_lgm = @set config_weights_lgm.target_path = "";
-    model_data = merge(model_historical_lgm_models, lgm_data)
+    model_data = merge(historical_data_lgm_models, lgm_data)
     weights_lgm = mw.computeWeights(collect(values(model_data)), collect(values(obs_data)), config_weights_lgm);
 end
 

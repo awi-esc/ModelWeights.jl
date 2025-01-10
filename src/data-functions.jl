@@ -5,10 +5,9 @@ using Setfield
 
 """
     getUniqueMemberIds(meta::Dict, model_names::Vector{String})
-
 Combine name of the model with the id of the respective model members. The
-returned vector has length of the number of models and contains for every model
-a vector with the unique ids of its members.
+returned vector has length of the total number of model members. It contains 
+for every model the unique ids of its members.
 
 # Arguments:
 - `meta`: for CMIP5 data, must have keys: 'mip_era', 'realization', 'initialization_method',
@@ -65,7 +64,7 @@ function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
         indices = findall(x -> x == model, model_names)
         result[i] = members[indices]
     end
-    return result
+    return vcat(result...)
 end
 
 """
@@ -107,18 +106,21 @@ function subsetModelData(data::DimArray, shared_models::Vector{String})
     dim_names = collect(dims(data, dim_symbol))
     if dim_symbol == :member
         models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
-        members = filter(x -> !(x in models), shared_models)
-        indices_members = findall(m -> m in members, dim_names)
-        #models_data = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), collect(dims(data, :member)))
-        models_data = data.metadata["model_names"]
-        indices_models = findall(m -> m in models, models_data)
-        indices = vcat(indices_members, indices_models)
+        # if shared_models is on the level of models, the following should be empty
+        # otherwise, nothing is filtered out, and members is the same as shared_models 
+        members = filter(x -> !(x in models), shared_models)    
+        if !isempty(members) # shared models on level of members
+            indices = findall(m -> m in members, dim_names)
+        else
+            # important not to use dim_names here, since e.g. model=AWI would be found in dim_names where model is actually AWI-X for instance
+            models_data = getModelsFromModelIDs(dim_names) # NOTE: should yield same: models_data = data.metadata["model_names"]
+            indices = findall(m -> m in models, models_data)
+        end
         data = data[member = indices]
     else 
         indices = findall(m -> m in shared_models, dim_names)
         data = data[model = indices]
     end
-    # @assert length(indices) == length(shared_models)
     # also adjust the metadata
     attributes = filter(k -> data.metadata[k] isa Vector, keys(data.metadata))
     for key in attributes
@@ -168,7 +170,7 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
             get!(attributes, "mip_era", "CMIP5")
             # check model names as retrieved from the metadata for potential inconsistencies wrt filename
             name = ds.attrib[model_key] # just the model name, e.g. ACCESS1-0 (not the member's id)
-            if !occursin(name, filename)
+            if !occursin(name, filename) && !(name in keys(MODEL_NAME_FIXES))
                 @warn "model name as read from metadata of stored .nc file ($name) and used as dimension name is not identical to name appearing in its path ($filename)"
             end
             model_id = getModelIDsFromPaths([file])[1]
@@ -295,7 +297,7 @@ function getSharedModelsFromDimensions(model_data::Dict{String, Data}, dim::Symb
             models = collect(dims(data.data, :model))
         elseif hasdim(data.data, :member) && dim == :model
             members = collect(dims(data.data, :member))
-            models = unique(map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members))
+            models = unique(getModelsFromModelIDs(members))
         else
             models = collect(dims(data.data, dim))
         end
@@ -473,7 +475,7 @@ function reduceMetaDataSharedModels!(
     all_paths = map(p -> p.paths, values(meta_data))
     all_models = getModelIDsFromPaths(vcat(all_paths...))
     if level_shared_models == MODEL
-        all_models = unique(map(m -> String(split(m, MODEL_MEMBER_DELIM)[1]), all_models))
+        all_models = unique(getModelsFromModelIDs(all_models))
     end
     shared_models = getSharedModelsFromPaths(meta_data, all_models)
     if isempty(shared_models)
@@ -484,4 +486,38 @@ function reduceMetaDataSharedModels!(
         meta_new = @set meta.paths = shared_paths
         meta_data[id] = meta_new
     end
+end
+
+function getModelsFromModelIDs(members::Vector{String})
+    return map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members)
+end
+
+
+function getPhysicsFromMembers(members::Vector{String})
+    regex = r"(p\d+)(f\d+)?(_.*)?$"
+    return String.(map(x -> match(regex, x).captures[1], members))
+end
+
+function alignPhysics(data::Dict{String, Data}, members::Vector{String})
+    models = unique(getModelsFromModelIDs(members))
+    for model in models
+        # retrieve allowed physics as in members 
+        member_ids = filter(m -> startswith(m, model * MODEL_MEMBER_DELIM), members)
+        physics = getPhysicsFromMembers(member_ids)
+        for (id, model_data) in data
+            ds = model_data.data
+            # filter data s.t. of current model only members with retrieved physics are kept
+            model_indices = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), Array(dims(ds, :member)))
+            indices_out = filter(x -> !(ds.metadata["physics"][x] in physics), model_indices)
+            if !isempty(indices_out)
+                indices_keep = filter(x -> !(x in indices_out), 1:length(dims(ds, :member)))
+                members_kept = ds.metadata["member_names"][indices_keep]
+                meta = model_data.meta
+                meta_updated = @set meta.paths = subsetPaths(meta.paths, members_kept)
+            
+                data[id] = Data(meta = meta_updated, data = subsetModelData(ds, members_kept))
+            end
+        end
+    end
+    return data
 end

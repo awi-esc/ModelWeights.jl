@@ -144,7 +144,7 @@ For observational data:
     - 'source_names': vector of data sources
 
 Arguments:
-- `meta`:
+- `meta`: is the metadata dictionary of a DimArray
 - `source_names`:
 - `isModelData`:
 """
@@ -162,17 +162,19 @@ function updateMetadata!(
             meta[key] = string(values[1])
         end
     end
-    
     # in some cases, the metadata model names do not match the model names as retrieved from the filenames 
     included_data = fixModelNamesMetadata(source_names[sort_indices])
-    if is_model_data
+    if is_model_data        
+        member_ids = getUniqueMemberIds(meta, included_data)
+        meta["member_names"] = member_ids
+        meta["model_names"] = included_data
+        
         indices_non_missing = findall(map(x -> !ismissing(x), meta["model_id"]))
         names = String.(meta["model_id"][indices_non_missing])
         fixed_models = fixModelNamesMetadata(names)
         meta["model_id"][indices_non_missing] = fixed_models
-        member_ids = getUniqueMemberIds(meta, included_data)
-        meta["member_names"] = vcat(member_ids...)
-        meta["model_names"] = included_data
+
+        meta["physics"] = getPhysicsFromMembers(member_ids)
     else
         meta["source_names"] = included_data
     end
