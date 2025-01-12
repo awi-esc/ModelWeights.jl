@@ -4,22 +4,23 @@ using DimensionalData
 using Setfield
 
 ########################### 1. LOADING DATA ###########################
-
-# ------------------------ Load the model data ------------------------------ #
-# Model data just for lgm-experiment from ESMValTool recipes
+# --------------------------- Set configurations --------------------------- #
+begin
+    dir_per_var = true;
+    is_model_data = true;
+    statistics = ["CLIM"];
+    variables = ["tas", "tos"];
+    projects = ["CMIP5", "CMIP6"];
+    subset = mw.Constraint(
+        statistics = statistics, variables = variables, projects = projects,
+        aliases = ["lgm"], 
+        subdirs = ["20241114"]
+    );
+end
+# -------------- Load the model data (from ESMValTool recipes) -------------- #
+# 1. Model data just for lgm-experiment from ESMValTool recipes
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
-
-dir_per_var = true;
-is_model_data = true;
-statistics = ["CLIM"];
-variables = ["tas", "tos"];
-projects = ["CMIP5", "CMIP6"];
-subset = mw.Constraint(
-    statistics = statistics, variables = variables, projects = projects,
-    aliases = ["lgm"], 
-    subdirs = ["20241114"]
-);
 
 lgm_meta = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes; dir_per_var, is_model_data, subset = subset, 
@@ -30,21 +31,20 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
     level_shared_models = mw.MEMBER, preview = false
 );
 
-# we set level_shared_models to mw.MEMBER, so model members are identical for every 
-# loaded data set (variable)
+# we set level_shared_models to mw.MEMBER, so model members are identical for 
+# every loaded data set (variable)
 model_members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"].data, :member));
 models_lgm = unique(lgm_data["tos_CLIM_lgm"].data.metadata["model_names"]);
 
 # --------------------------------------------------------------------------- #
-# Model data for historical experiment of models with lgm-experiment from above
-# Version1: load data from ESMValToolConfigs and subset to lgm_models
+# 2. Model data for historical experiment of models with lgm-experiment
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/historical";
 
-# use same big models (NOT on level of model members) as for the lgm experiment
-# and make sure that across variables, only shared model members are loaded 
-# (level_shared_models set to mw.MEMBER) 
-# since we want the exact same simulations for all variables when computing weights
+# 2.1 use same big models (NOT on level of model members) as for the lgm 
+# experiment and make sure that across variables, only shared model members 
+# are loaded (level_shared_models set to mw.MEMBER) since we want the exact 
+# same simulations for all variables when computing weights
 historical_data_lgm_models = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes;
     level_shared_models = mw.MEMBER,
@@ -61,12 +61,11 @@ historical_data_lgm_models = mw.loadDataFromESMValToolConfigs(
 models_historical = unique(historical_data_lgm_models["tos_CLIM_historical"].data.metadata["model_names"]);
 @assert models_historical == models_lgm
 
-# post process s.t. physics of included model members are the same as for lgm simulations of the respective models 
+# post process s.t. physics of included model members are the same as for lgm 
+# simulations of the respective models 
 data = mw.alignPhysics(historical_data_lgm_models, model_members_lgm);
 
-
-
-# load historical data of the same model members as in lgm data
+# 2.2 load historical data of the same model members as in lgm data
 begin
     model_historical_lgm_members = mw.loadDataFromESMValToolConfigs(
         path_data, path_recipes;
@@ -87,12 +86,15 @@ members_historical = Array(dims(model_historical_lgm_members["tas_CLIM_historica
 filter(x -> !(x in members_historical), model_members_lgm)
 
 
-# Version2: Load model data for experiment lgm and historical in one run from new config file
+# --------------- Load the model data (from yaml config file) --------------- #
+# Load model data for experiment lgm and historical in one run from new config file
 begin
     path_config = "/albedo/home/brgrus001/ModelWeights/configs/examples/example-lgm-historical.yml";
     # yaml config file already contains basic constraints for subset as defined above.
     historical_lgm_data_config = mw.loadDataFromYAML(
-        path_config; dir_per_var, is_model_data,
+        path_config; 
+        dir_per_var = false, 
+        is_model_data,
         level_shared_models = nothing,
         subset = mw.Constraint(models = models_lgm),
         preview = false
