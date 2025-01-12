@@ -252,20 +252,16 @@ end
 """
     loadDataFromMetadata(
         meta_data::Vector{MetaData},
-        is_model_data::Bool,
-        level_shared_models::Union{LEVEL, Nothing}
+        is_model_data::Bool
     )
 
 # Arguments:
 - `meta_data`:
 - `is_model_data`: true for model data, false for observational data.
-- `level_shared_models`: if true, only data loaded for models present for all
-ids, i.e. for all variable+statistic+experiment combinations
 """
 function loadDataFromMetadata(
     meta_data::Dict{String, MetaData},
-    is_model_data::Bool,
-    level_shared_models::Union{LEVEL, Nothing}
+    is_model_data::Bool
 )
     results = Dict{String, Data}()
     for (id, meta) in meta_data

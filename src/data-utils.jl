@@ -149,34 +149,39 @@ Arguments:
 - `isModelData`:
 """
 function updateMetadata!(
-    meta::Dict{String, Any},
+    meta_dict::Dict{String, Any},
     source_names::Vector{String},
     is_model_data::Bool
 )
     sort_indices = sortperm(source_names)
-    for key in keys(meta)
-        values = meta[key][sort_indices]
-        meta[key] = values
+    for key in keys(meta_dict)
+        values = meta_dict[key][sort_indices]
+        meta_dict[key] = values
         # if none was missing and all have the same value, just use a string
         if !any(ismissing, values) && length(unique(values)) == 1
-            meta[key] = string(values[1])
+            meta_dict[key] = string(values[1])
         end
     end
     # in some cases, the metadata model names do not match the model names as retrieved from the filenames 
     included_data = fixModelNamesMetadata(source_names[sort_indices])
     if is_model_data        
-        member_ids = getUniqueMemberIds(meta, included_data)
-        meta["member_names"] = member_ids
-        meta["model_names"] = included_data
+        member_ids = getUniqueMemberIds(meta_dict, included_data)
+        meta_dict["member_names"] = member_ids
+        meta_dict["model_names"] = included_data
         
-        indices_non_missing = findall(map(x -> !ismissing(x), meta["model_id"]))
-        names = String.(meta["model_id"][indices_non_missing])
-        fixed_models = fixModelNamesMetadata(names)
-        meta["model_id"][indices_non_missing] = fixed_models
-
-        meta["physics"] = getPhysicsFromMembers(member_ids)
+        # if just data from one file is loaded, meta_dict["model_id"] is a string
+        # (and we leave it as a string)
+        if isa(meta_dict["model_id"], String)
+            meta_dict["model_id"] = fixModelNamesMetadata([meta_dict["model_id"]])[1]
+        else
+            indices_non_missing = findall(map(x -> !ismissing(x), meta_dict["model_id"]))
+            names = String.(meta_dict["model_id"][indices_non_missing])
+            fixed_models = fixModelNamesMetadata(names)
+            meta_dict["model_id"][indices_non_missing] = fixed_models
+        end
+        meta_dict["physics"] = getPhysicsFromMembers(member_ids)
     else
-        meta["source_names"] = included_data
+        meta_dict["source_names"] = included_data
     end
     return nothing
 end
@@ -506,6 +511,8 @@ function getMetaDataFromYAML(
         if isnothing(variables) || isnothing(statistics)
             throw(ArgumentError("Config yaml file must specify values for keys 'variables', 'statistics'!"))
         end
+        # NOTE: if data_dir is an absolute path, joinpath will ignore base_path
+        # and just use data_dir
         path_data = joinpath(base_path, data_dir)
         # timeranges is optional in config file; they can be subset by aliases provided in constraint argument
         # in config file only timeranges are provided/considered, not aliases
@@ -532,13 +539,13 @@ function getMetaDataFromYAML(
         )
 
         for clim_var in variables
-            for stat in statistics
+            for stats in statistics
                 for timerange in timeranges
                     alias = timerange == "full" ? experiment : 
                         get(timerange_to_alias, timerange, "unknown")
                     attribs = [MetaAttrib(
                         variable = clim_var, 
-                        statistic = stat, 
+                        statistic = stats, 
                         alias = alias, 
                         exp = experiment,
                         timerange = timerange
@@ -596,6 +603,7 @@ function buildPathsToDataFiles(
         x -> isfile(x) && endswith(x, ".nc"),
         readdir(path_data; join=true)
     )
+    @debug "$(map(println, ncFiles))"
     paths_to_files = Vector{String}()
     # constrain files that will be loaded
     for file in ncFiles
@@ -609,6 +617,8 @@ function buildPathsToDataFiles(
             applyModelConstraints(file, model_constraints) : true
         if keep
             push!(paths_to_files, file)
+        else 
+            @warn "exclude $file because of model subset"
         end
     end
     return paths_to_files
@@ -719,7 +729,7 @@ function buildPathsForMetaAttrib(
         diagnostic = join([attrib.variable, attrib.statistic], "_")
         path_data = joinpath(p, "preproc", attrib.alias, diagnostic)
         if !isdir(path_data)
-            @warn "No data found at:" path_data
+            @warn "$path_data is not an existing directory!"
         else
             push!(data_paths, path_data)
         end

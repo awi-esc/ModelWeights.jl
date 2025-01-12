@@ -163,8 +163,7 @@ function loadDataFromESMValToolConfigs(
     if !isnothing(level_shared_models)
         reduceMetaDataSharedModels!(meta_data, level_shared_models)
     end
-    output = preview ? meta_data : 
-        loadDataFromMetadata(meta_data, is_model_data, level_shared_models)
+    output = preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
     return output
 end
 
@@ -209,7 +208,6 @@ function loadDataFromYAML(
     if !isnothing(level_shared_models)
         reduceMetaDataSharedModels!(meta_data, level_shared_models)
     end
-    output = preview ? meta_data :
-        loadDataFromMetadata(meta_data, is_model_data, level_shared_models)
+    output = preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
     return output
 end
