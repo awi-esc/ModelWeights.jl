@@ -89,14 +89,21 @@ filter(x -> !(x in members_historical), model_members_lgm)
 # --------------- Load the model data (from yaml config file) --------------- #
 # Load model data for experiment lgm and historical in one run from new config file
 begin
-    path_config = "/albedo/home/brgrus001/ModelWeights/configs/examples/example-lgm-historical.yml";
     # yaml config file already contains basic constraints for subset as defined above.
-    historical_lgm_data_config = mw.loadDataFromYAML(
+    path_config = "/albedo/home/brgrus001/ModelWeights/configs/examples/example-lgm-historical.yml";
+    subset = mw.Constraint(models = models_lgm);
+    hist_lgm_meta =  mw.loadDataFromYAML(
         path_config; 
-        dir_per_var = false, 
         is_model_data,
         level_shared_models = nothing,
-        subset = mw.Constraint(models = models_lgm),
+        subset = subset,
+        preview = true
+    );
+    historical_lgm_data_config = mw.loadDataFromYAML(
+        path_config; 
+        is_model_data,
+        level_shared_models = nothing,
+        subset = subset,
         preview = false
     );
 end

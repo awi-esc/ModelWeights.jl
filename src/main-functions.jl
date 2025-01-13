@@ -196,14 +196,13 @@ it.
 """
 function loadDataFromYAML(
     path_config::String;
-    dir_per_var::Bool=true,
     is_model_data::Bool=true,
     level_shared_models::Union{LEVEL,Nothing}=nothing,
     subset::Union{Constraint, Nothing}=nothing,
     preview::Bool=false
 )
     meta_data = getMetaDataFromYAML(
-        path_config, dir_per_var, is_model_data; constraint=subset
+        path_config, is_model_data; constraint=subset
     )
     if !isnothing(level_shared_models)
         reduceMetaDataSharedModels!(meta_data, level_shared_models)

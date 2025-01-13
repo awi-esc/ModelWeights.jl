@@ -451,11 +451,10 @@ end
 
 """
     getMetaDataFromYAML(
-    path_config::String,
-    dir_per_var::Bool,
-    is_model_data::Bool
-    subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
-)
+        path_config::String,
+        is_model_data::Bool
+        subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
+    )
 
 Load data as specified in config file located at `path_config`. For constraints
 that are specified in the config file as well as in the `subset` argument, 
@@ -465,13 +464,11 @@ file.
 
 # Arguments:
 - `path_config`: path to config yaml file specifying meta attributes and pathes of data
-- `dir_per_var`: true if data for each climate variable is stored in seperate directory 
 - `is_model_data`: true for model data, false for observational data
 - `subset`: TODO
 """
 function getMetaDataFromYAML(
     path_config::String, 
-    dir_per_var::Bool, 
     is_model_data::Bool;
     constraint::Union{Constraint, Nothing} = nothing
 )
@@ -502,6 +499,7 @@ function getMetaDataFromYAML(
     for ds in datasets
         data_dir = get(ds, "base_dir", nothing)
         experiment = get(ds, "exp", nothing)
+        dir_per_var = get(ds, "dir_per_var", true)
         if isnothing(experiment) || isnothing(data_dir)
             msg = "Config yaml file must specify values for keys 'exp' (experiment) and 'base_dir' (path to data directory)!"
             throw(ArgumentError(msg))

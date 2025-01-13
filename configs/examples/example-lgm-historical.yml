@@ -15,15 +15,22 @@ timerange_to_alias:
 # -default value for subdirs is just empty, i.e. all subdirectories would 
 # be loaded 
 datasets: [
-  # {
-  #   base_dir: "LGM", 
-  #   exp: "lgm", 
-  #   variables: ["tas", "tos"], 
-  #   statistics: ["CLIM"], 
-  #   subdirs: ["20241114"]
-  # },
+  {
+    base_dir: "LGM", 
+    exp: "lgm", 
+    variables: ["tas", "tos"], 
+    statistics: ["CLIM"], 
+    subdirs: ["20241114"]
+  },
+   {
+    base_dir: "LGM", 
+    exp: "lgm", 
+    variables: ["thetao"], 
+    statistics: ["CLIM"]
+  },
   {    
-    base_dir: "/albedo/work/projects/p_forclima/preproc_data_cdo/LGM", 
+    base_dir: "/albedo/work/projects/p_forclima/preproc_data_cdo/LGM",
+    dir_per_var: false, # default: true
     exp: "lgm", 
     variables: ["thetao"], 
     statistics: ["CLIM"]
