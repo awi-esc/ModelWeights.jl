@@ -35,10 +35,25 @@ That is, we get a generalized distance value $D_i$ for every model $i$, respecti
 
 ## Computation of overall weight for model $i$
 
-The generalized distances between models and observations, respectively between model pairs are then combined as follows to yield one weight value for each model $i$:
+The generalized distances between models and observations, respectively between model pairs are then combined as follows to yield one weight value for each model $i$ ($w_i$'s are normalized by $\sum_i w_i$):
 
 ```math
 w_i = \frac{e^{-(\frac{D_i}{\sigma_D})^2}}{1 + \sum_{j \ne i} e^{-\left( \frac{S_{ij}}{\sigma_S} \right)^2}}
 ```
 
 The parameters, $\sigma_D$ and $\sigma_S$, are free parameters that Brunner et al. estimated using perfect model tests. For now, we just set them to fix values of 0.5 each.
+
+## Computation of performance/independence weights only
+
+When computing only performance weights, we assume that all models are equally dependent:
+
+```math
+w^{P}_i = \frac{e^{-(\frac{D_i}{\sigma_D})^2}}{N}
+```
+
+When computing only independence weights, we assume that all models perform equally well.
+
+```math
+w^{I}_i = \frac{1}{1 + \sum_{j \ne i} e^{-\left( \frac{S_{ij}}{\sigma_S} \right)^2}}
+```
+
