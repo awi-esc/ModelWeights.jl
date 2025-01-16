@@ -150,14 +150,18 @@ function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
     return fig
 end
 
+"""
+    plotTempGraph
 
+    # TODO: change quantileLabels and uncertaintyRanges, the latter should contain 
+    # the quantile labels
+"""
 function plotTempGraph(
     data::DimArray, 
     averages::NamedTuple, 
     uncertaintyRanges::NamedTuple,
     title::String;
-    ylabel::String="",
-    quantilesLabel::String=""
+    ylabel::String=""
 )
     f = Figure(); 
     years = Dates.year.(Array(dims(data, :time)))

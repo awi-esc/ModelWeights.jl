@@ -146,6 +146,6 @@ end
 
 function kelvinToCelsius(data::DimArray)
     data = data.-273.15
-    data.metadata["units"] = "°C"
+    data.metadata["units"] = "degC"
     return data
 end

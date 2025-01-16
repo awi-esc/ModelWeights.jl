@@ -20,6 +20,8 @@ error between two matrices.
 - single value, area-weighted root mean squared error
 """
 function areaWeightedRMSE(m1::DimArray, m2::DimArray, mask::DimArray)
+    # TODO: update function, just use single input data DimArray and use new function 
+    # to compute the weights
     latitudes = dims(m1, :lat);
     areaWeights = cos.(deg2rad.(latitudes));
     areaWeights = DimArray(areaWeights, Dim{:lat}(Array(latitudes)));
