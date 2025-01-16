@@ -13,7 +13,7 @@ model_data = mw.loadDataFromESMValToolConfigs(
     path_data, path_configs;
     dir_per_var = false,
     is_model_data = true,
-    only_shared_models = false,
+    level_shared_models = nothing,
     subset = mw.Constraint(aliases = ["calculate_weights_climwip"])
 );
 
