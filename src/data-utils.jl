@@ -1041,3 +1041,26 @@ function fixModelNamesMetadata(names::Vector{String})
     end
     return model_names
 end
+
+"""
+    computeAreaWeights(data::DimArray)
+
+# Arguments:
+- `data`: on lon, lat grid, with dimension 'lat' containing latitudes
+- `mask`: optional mask, if given, the area weights are set to 0 where the mask is 1
+"""
+function computeAreaWeights(data::DimArray; mask::Union{DimArray, Nothing}=nothing)
+    latitudes = collect(dims(data, :lat));
+    # cosine of the latitudes as proxy for grid cell area
+    areaWeights = cos.(deg2rad.(latitudes));
+    areaWeights = DimArray(areaWeights, Dim{:lat}(Array(latitudes)));
+
+    areaWeightMatrix = repeat(areaWeights', length(DimensionalData.dims(data, :lon)), 1);  
+    if !isnothing(mask)
+        areaWeightMatrix = ifelse.(mask .== 1, 0, areaWeightMatrix); 
+    end
+    areaWeightMatrix = areaWeightMatrix./sum(areaWeightMatrix)
+    longitudes = collect(dims(data, :lon))
+    result = DimArray(areaWeightMatrix, (Dim{:lon}(longitudes), Dim{:lat}(latitudes)))
+    return result
+end
