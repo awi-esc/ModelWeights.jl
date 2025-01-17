@@ -458,13 +458,6 @@ function getUncertaintyRanges(data::DimArray, w::DimArray; quantiles=[0.167, 0.8
 end
 
 
-function showDataPaths(data::Union{Data, Vector{Data}})
-    data = isa(data, Vector) ? data : [data]
-    map(x->println(x.meta), data);
-    return nothing
-end
-
-
 function reduceMetaDataSharedModels!(
     meta_data::Dict{String, MetaData}, level_shared_models::Union{LEVEL, Nothing}
 )
