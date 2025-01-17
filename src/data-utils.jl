@@ -624,8 +624,6 @@ end
 
 
 function getMetaDataID(attrib::MetaAttrib)
-    # id=join([getfield(attrib, field) for field in fieldnames(MetaAttrib)], "_")
-    # return id
     return join([attrib.variable, attrib.statistic, attrib.alias], "_")
 end
 
