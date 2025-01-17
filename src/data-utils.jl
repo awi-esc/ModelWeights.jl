@@ -96,7 +96,7 @@ end
     )
 
 Concatenate model settings to build ripf-abbreviations for CMIP5 models which 
-do not have it in their metadata.
+do not have it in their metadata. Return a vector of strings.
 
 # Arguments
 - `realizations`:
