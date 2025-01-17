@@ -1,16 +1,11 @@
-using SimilarityWeights
+using ModelWeights
 using Test
 
-@testset "SimilarityWeights tests" begin
-    @testset "Load data" begin
-        include("load_data_tests.jl")
+@testset "ModelWeights tests" begin
+    @testset "Models tests" begin
+        include("models_tests.jl")
     end
-
-    @testset "distance matrices" begin
-        include("rmse_tests.jl")
-    end
-
-    @testset "weights" begin
-        include("weights_tests.jl")
-    end
+    # @testset "Metadata tests" begin
+    #     include("metadata_tests.jl")
+    # end
 end

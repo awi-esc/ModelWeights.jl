@@ -65,7 +65,7 @@ In the paper,
 
 
 ## Tests
-To run the testsets, go to the pkg> mode (by typing ']' in the REPL) and run 'test'. This starts the tests loaded in 'test/runtests.jl'.
+To run the testsets, make sure you activate the Project of your package (e.g. ModelWeights), then go to the pkg> mode (by typing ']' in the REPL) and run 'test'. This starts the tests loaded in 'test/runtests.jl'.
 
 ## References
 - Brunner, Lukas, Angeline G. Pendergrass, Flavio Lehner, Anna L. Merrifield, Ruth Lorenz, and Reto Knutti. “Reduced Global Warming from CMIP6 Projections When Weighting Models by Performance and Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020): 995–1012. https://doi.org/10.5194/esd-11-995-2020.
