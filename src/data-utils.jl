@@ -918,13 +918,16 @@ end
 """
     allcombinations(v...)
 
-Generate all possible combinations of input vectors, where each combination consists of one element from each input vector, concatenated as a string with underscores separating the elements.
+Generate all possible combinations of input vectors, where each combination 
+consists of one element from each input vector, concatenated as a string with 
+underscores separating the elements.
 
 # Arguments
 - `v...`: A variable number of input vectors.
 
 # Returns
-A vector of strings, where each string represents a unique combination of elements from the input vectors, joined by underscores.
+A vector of strings, where each string represents a unique combination of 
+elements from the input vectors, joined by underscores.
 
 # Example
 ```jldoctest
@@ -935,6 +938,9 @@ julia> ModelWeights.allcombinations(["tos", "tas"], ["CLIM"])
 ```
 """
 function allcombinations(v...)
+    if any(isempty.(v))
+        @warn "At least one input vector is empty -> empty vector returned!"
+    end
     combis = Vector{String}()
     for elems in Iterators.product(v...)
         push!(combis, join(elems, "_"))
@@ -1042,6 +1048,10 @@ end
 
 """
     computeAreaWeights(data::DimArray)
+
+Compute the approximated, normalized area weights for each lon,lat-position in 
+`data` as the cosine of their latitudes. Return a DimensionalData.DimArray of
+same size as the (lon x lat)-grid of the input data.
 
 # Arguments:
 - `data`: on lon, lat grid, with dimension 'lat' containing latitudes
