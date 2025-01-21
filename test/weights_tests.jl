@@ -31,7 +31,7 @@ end
 @testset "Test summarizeEnsembleMembersVector" begin
 end
 
-@testset "Test averageEnsembleMatrix" begin
+@testset "Test averageEnsembleMembersMatrix" begin
 end
 
 @testset "Test performanceParts" begin  
