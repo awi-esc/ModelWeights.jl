@@ -543,3 +543,57 @@ function alignPhysics(
     end
     return data
 end
+
+""" 
+    summarizeEnsembleMembersVector(
+        data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean
+)
+
+For each model and variable (if several given), compute a summary statistic 
+(default: mean) across all members of that model. Instead of 'member', the 
+returned DimArray has dimension 'model'.
+
+# Arguments:
+- `data`: a DimArray with at least dimension 'model'
+- `updateMeta`: set true if the vectors in the metadata refer to different models. 
+Set to false if vectors refer to different variables for instance. 
+"""
+function summarizeEnsembleMembersVector(
+    data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean
+)
+    data = setLookupsFromMemberToModel(data, ["member"])
+    grouped = groupby(data, :model=>identity);
+    models = String.(collect(dims(grouped, :model)))
+    averages = map(entry -> mapslices(x -> fn(skipmissing(x)), entry, dims=:model), grouped)
+    combined = cat(averages..., dims=(Dim{:model}(models)));
+    combined = replace(combined, NaN => missing)
+
+    meta = updateMeta ? updateGroupedDataMetadata(data.metadata, grouped) : data.metadata
+    combined = rebuild(combined; metadata = meta);
+    l = Lookups.Categorical(
+        sort(models);
+        order=Lookups.ForwardOrdered()
+    )
+    combined = combined[model=At(sort(models))]
+    combined = DimensionalData.Lookups.set(combined, model=l)
+
+    return combined
+end
+
+
+"""
+    averageEnsembleMembers!(data::Dict{String, Data})
+
+Take average for all members of each model.
+
+# Arguments:
+- `data`: 
+"""
+function averageEnsembleMembers!(data::Dict{String, Data})
+    for k in keys(data)
+        updated_arr = summarizeEnsembleMembersVector(data[k].data, true)
+        current_data = data[k]
+        data[k] = @set current_data.data = updated_arr 
+    end
+    return nothing
+end

@@ -66,3 +66,6 @@ end
 
 @testset "Test loadDataFromYAML" begin
 end
+
+@testset "Test averageEnsembleMembers!" begin
+end
