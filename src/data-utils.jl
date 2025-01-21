@@ -171,6 +171,7 @@ function updateMetadata!(
         
         # if just data from one file is loaded, meta_dict["model_id"] is a string
         # (and we leave it as a string)
+        get!(meta_dict, "model_id", "")
         if isa(meta_dict["model_id"], String)
             meta_dict["model_id"] = fixModelNamesMetadata([meta_dict["model_id"]])[1]
         else
@@ -476,7 +477,6 @@ function getMetaDataFromYAML(
     datasets = config["datasets"]
     base_path = get(config, "path_data", "")
     timerange_to_alias = config["timerange_to_alias"]
-
     """
     If data is constraint by provided argument when loading, the argument takes
     precedence over the given value inside the config yaml file.
@@ -906,7 +906,7 @@ function computeGeneralizedDistances(
     )
     distances = for_performance ? 
         summarizeEnsembleMembersVector(normalized_distances, false) :
-        averageEnsembleMatrix(normalized_distances, false);
+        averageEnsembleMembersMatrix(normalized_distances, false);
 
     distances = mapslices(x -> x .* weights, distances, dims=(:variable, :diagnostic))
     return dropdims(

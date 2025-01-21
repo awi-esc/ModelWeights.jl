@@ -177,16 +177,17 @@ end
 
 
 """
-    averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
+    averageEnsembleMembersMatrix(data::DimArray, updateMeta::Bool)
 
-Compute the average weights across all members of each model for each given variable.
+Compute the average across all members of each model for each given variable 
+for model to model data, e.g. distances between model pairs.
 
 # Arguments:
 - `data`: DimArray with at least dimensions 'member1', 'member2'
 - `updateMeta`: set true if the vectors in the metadata refer to different models. 
 Set to false if vectors refer to different variables for instance. 
 """
-function averageEnsembleMatrix(data::DimArray, updateMeta::Bool)
+function averageEnsembleMembersMatrix(data::DimArray, updateMeta::Bool)
     data = setLookupsFromMemberToModel(data, ["member1", "member2"])
     models = String.(collect(unique(dims(data, :model1))))
 

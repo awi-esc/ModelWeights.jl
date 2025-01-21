@@ -98,8 +98,9 @@ Return a subset of DimArray `data` that contains only data from the models
 specified in `shared_models`. Takes care of metadata.
 
 # Arguments:
-- `data`:
-- `shared_models`: 
+- `data`: must have dimension 'member' or 'model'
+- `shared_models`: vector of models, which can either be on level of models 
+or members of models
 """
 function subsetModelData(data::DimArray, shared_models::Vector{String})
     dim_symbol = hasdim(data, :member) ? :member : :model
@@ -113,7 +114,7 @@ function subsetModelData(data::DimArray, shared_models::Vector{String})
             indices = findall(m -> m in members, dim_names)
         else
             # important not to use dim_names here, since e.g. model=AWI would be found in dim_names where model is actually AWI-X for instance
-            models_data = getModelsFromModelIDs(dim_names) # NOTE: should yield same: models_data = data.metadata["model_names"]
+            models_data = getModelsFromMemberIDs(dim_names) # NOTE: should yield same: models_data = data.metadata["model_names"]
             indices = findall(m -> m in models, models_data)
         end
         data = data[member = indices]
@@ -173,7 +174,7 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
             if !occursin(name, filename) && !(name in keys(MODEL_NAME_FIXES))
                 @warn "model name as read from metadata of stored .nc file ($name) and used as dimension name is not identical to name appearing in its path ($filename)"
             end
-            model_id = getModelIDsFromPaths([file])[1]
+            model_id = getMemberIDsFromPaths([file])[1]
             source_names[i] = split(model_id, MODEL_MEMBER_DELIM)[1]
         else
             source_names[i] = filename
@@ -266,6 +267,7 @@ function loadDataFromMetadata(
     results = Dict{String, Data}()
     for (id, meta) in meta_data
         # loads data at level of model members
+        @info "load $id"
         results[id] = loadPreprocData(meta, is_model_data)
     end
     @debug "loaded data: $(map(x -> x.meta, values(results)))"
@@ -293,7 +295,7 @@ function getSharedModelsFromDimensions(model_data::Dict{String, Data}, dim::Symb
             models = collect(dims(data.data, :model))
         elseif hasdim(data.data, :member) && dim == :model
             members = collect(dims(data.data, :member))
-            models = unique(getModelsFromModelIDs(members))
+            models = unique(getModelsFromMemberIDs(members))
         else
             models = collect(dims(data.data, dim))
         end
@@ -309,7 +311,7 @@ end
 
 
 """
-    getModelIDsFromPaths(all_paths::Vector{String})
+    getMemberIDsFromPaths(all_paths::Vector{String})
 
 For every path in `all_paths` returns a string of the form modelname#memberID[_grid]
 that identifies the corresponding model (on the level of model members!).
@@ -317,7 +319,7 @@ that identifies the corresponding model (on the level of model members!).
 # Arguments:
 - `all_paths`:
 """
-function getModelIDsFromPaths(all_paths::Vector{String})
+function getMemberIDsFromPaths(all_paths::Vector{String})
     all_filenames = map(p -> split(basename(p), "_"), vcat(all_paths...))
     # model names are at predefined position in filenames (ERA_name_mip_exp_id_variable[_grid].nc)
     all_members = Vector{String}()
@@ -388,7 +390,7 @@ end
         meta_data::Dict{String, MetaData}, all_models::Vector{String}
     )
      
-    Return a vector of models from `meta_data` that appear in `all_models`.
+Return a vector of models from `meta_data` that appear in `all_models`.
 
 # Arguments:
 - `meta_data`:
@@ -462,9 +464,9 @@ function reduceMetaDataSharedModels!(
     meta_data::Dict{String, MetaData}, level_shared_models::Union{LEVEL, Nothing}
 )
     all_paths = map(p -> p.paths, values(meta_data))
-    all_models = getModelIDsFromPaths(vcat(all_paths...))
+    all_models = getMemberIDsFromPaths(vcat(all_paths...))
     if level_shared_models == MODEL
-        all_models = unique(getModelsFromModelIDs(all_models))
+        all_models = unique(getModelsFromMemberIDs(all_models))
     end
     shared_models = getSharedModelsFromPaths(meta_data, all_models)
     if isempty(shared_models)
@@ -477,7 +479,7 @@ function reduceMetaDataSharedModels!(
     end
 end
 
-function getModelsFromModelIDs(members::Vector{String})
+function getModelsFromMemberIDs(members::Vector{String})
     return map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members)
 end
 
@@ -487,8 +489,22 @@ function getPhysicsFromMembers(members::Vector{String})
     return String.(map(x -> match(regex, x).captures[1], members))
 end
 
-function alignPhysics(data::Dict{String, Data}, members::Vector{String})
-    models = unique(getModelsFromModelIDs(members))
+
+"""
+    alignPhysics(data::Dict{String, Data}, members::Vector{String})
+
+Return new data dictionary with only the models retained that share the same physics 
+as the respective model's members in `members` have.
+
+# Arguments:
+- `data`: 
+- `members`:
+"""
+function alignPhysics(
+    data::Dict{String, Data}, members::Vector{String};
+    level_shared_models::Union{LEVEL, Nothing} = nothing
+)
+    models = unique(getModelsFromMemberIDs(members))
     for model in models
         # retrieve allowed physics as in members 
         member_ids = filter(m -> startswith(m, model * MODEL_MEMBER_DELIM), members)
@@ -506,6 +522,23 @@ function alignPhysics(data::Dict{String, Data}, members::Vector{String})
             
                 data[id] = Data(meta = meta_updated, data = subsetModelData(ds, members_kept))
             end
+        end
+    end
+    # after having subset the data wrt the physics, make sure that level of 
+    # shared models as it was before if wanted
+    if !isnothing(level_shared_models)
+        meta_data = Dict{String, MetaData}()
+        for k in collect(keys(data))
+            meta_data[k] = data[k].meta 
+        end
+        reduceMetaDataSharedModels!(meta_data, level_shared_models)
+        all_paths = reduce(vcat, map(k -> meta_data[k].paths, collect(keys(data))))
+        all_members = getMemberIDsFromPaths(all_paths)
+        for (id, model_data) in data
+            data[id] = Data(
+                meta = meta_data[id], 
+                data = subsetModelData(model_data.data, all_members)
+            )
         end
     end
     return data
