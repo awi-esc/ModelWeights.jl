@@ -203,7 +203,7 @@ function makeScatterPlot(
     xtick_labels::Union{Vector{String}, Nothing} = nothing,
     xticklabelrotation::Number = pi/2,
     legend::NamedTuple=(label="", position=:rc, color=:red),
-    greyed_area::NamedTuple=(y1=Inf, y2=Inf,label="")
+    greyed_area::NamedTuple=(y1=Inf, y2=Inf,label="", summary_val=Inf, summary_stat="")
 )
     f = Figure(); 
     xticks= isnothing(xtick_labels) ? xs : (xs, xtick_labels) 
@@ -221,6 +221,8 @@ function makeScatterPlot(
     if !isinf(greyed_area.y1) && !isinf(greyed_area.y2)
         band!(xs, greyed_area.y1, greyed_area.y2, color=(:gray, 0.5), 
               label=greyed_area.label)
+        lines!(ax, xs, repeat([greyed_area.summary_val], length(xs)), 
+            color=(:gray, 0.5), label=greyed_area.summary_stat)
     end
 
     axislegend(ax, merge = true, position = legend.position)
