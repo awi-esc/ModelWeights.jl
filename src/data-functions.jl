@@ -597,3 +597,23 @@ function averageEnsembleMembers!(data::Dict{String, Data})
     end
     return nothing
 end
+
+
+"""
+    getGlobalMeans(data::DimArray)
+
+Compute area-weighted globalMeans across longitudes and latitudes for each 
+model. It is assumed that there is no missing data.
+
+# Arguments:
+- `data`: mustn't have missing data.
+"""
+function getGlobalMeans(data::DimArray)
+    @assert !any(ismissing.(data))
+    area_weights= computeAreaWeights(data)
+    global_means = mapslices(x -> Statistics.sum(x), 
+        data .* area_weights, 
+        dims = (:lon,:lat)
+    )[lon=1, lat=1]
+    return global_means
+end

@@ -143,9 +143,45 @@ function getClosestGridPoint(location::Dict, longitudes::Vector, latitudes::Vect
     return Dict([("name", location["name"]), ("lon", lon), ("lat", lat)])
 end
 
+"""
+    kelvinToCelsius(data::DimArray)
 
+Return DimensionalData.DimArray with values that were given in Kelvin converted 
+to Degree Celsius.
+
+# Arguments:
+- `data`:
+"""
 function kelvinToCelsius(data::DimArray)
-    data = data.-273.15
+    units =  data.metadata["units"]
+    if isa(units, String) && units == "K"
+        data = data .- 273.15
+    elseif isa(units, Vector)
+        indices = findall(units .!= "K")
+        if hasdim(data, :member)
+            data[member = indices] =  data[member = indices] .- 273.15
+        else
+            data[model = indices] =  data[model = indices] .- 273.15
+        end
+    end
     data.metadata["units"] = "degC"
+    return data
+end
+
+
+"""
+    kelvinToCelsius!(data::Dict{String, Data})
+
+Modify entries of `data` such that all data is given in Degree Celsius (instead) 
+of Kelvin.
+
+# Arguments:
+- `data`:
+"""
+function kelvinToCelsius(data::Dict{String, Data})
+    for (id, da) in data
+        df = @set da.data = kelvinToCelsius(da.data)
+        data[id] = df;
+    end
     return data
 end

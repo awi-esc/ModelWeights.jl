@@ -197,3 +197,32 @@ function plotTempGraph(
 end
 
 
+function makeScatterPlot(
+    xs::AbstractVector{<:Number}, ys::AbstractVector{<:Number};
+    captions::NamedTuple=(x="",y="",title=""),
+    xtick_labels::Union{Vector{String}, Nothing} = nothing,
+    xticklabelrotation::Number = pi/2,
+    legend::NamedTuple=(label="", position=:rc, color=:red),
+    greyed_area::NamedTuple=(y1=Inf, y2=Inf,label="")
+)
+    f = Figure(); 
+    xticks= isnothing(xtick_labels) ? xs : (xs, xtick_labels) 
+    ax = Axis(
+        f[1,1], 
+        xticks = xticks, 
+        title = captions.title,
+        xlabel = captions.x, 
+        ylabel = captions.y,
+        xticklabelrotation = xticklabelrotation
+    );
+    lines!(ax, xs, ys, color = legend.color, label = legend.label)
+    scatter!(ax, xs, ys, color = legend.color, label = legend.label)
+
+    if !isinf(greyed_area.y1) && !isinf(greyed_area.y2)
+        band!(xs, greyed_area.y1, greyed_area.y2, color=(:gray, 0.5), 
+              label=greyed_area.label)
+    end
+
+    axislegend(ax, merge = true, position = legend.position)
+    return (f,ax)
+end
