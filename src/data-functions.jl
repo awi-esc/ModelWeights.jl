@@ -419,16 +419,24 @@ end
 """
     getCMIPModelsKey(meta::Dict)
 
-Return the respective key to retrieve model names in CMIP6 and CMIP5 data.
+Return the respective key to retrieve model names in CMIP6 ('source_id') and CMIP5 ('model_id') data.
+If both keys are present, 'source_id' used in CMIP6 models is returned, if none is present, throw 
+ArgumentError.
+
+# Arguments:
+- `meta`:
 """
 function getCMIPModelsKey(meta::Dict)
     attributes = keys(meta)
     if "source_id" in attributes
+        if "model_id" in attributes
+            @warn "Dictionary contains  keys 'source_id' (CMIP6) and 'model_id' (CMIP5). 'source_id' is used!"
+        end
         return "source_id"
     elseif "model_id" in attributes
         return "model_id"
     else
-        msg = "Only CMIP6/5 supported (model name keys: source_id/model_id)"
+        msg = "Metadata must contain one of 'source_id' (pointing to names of CMIP6 models or 'model_id' used for CMIP5 models."
         throw(ArgumentError(msg))
     end
 end
