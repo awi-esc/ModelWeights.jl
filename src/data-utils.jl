@@ -616,7 +616,7 @@ function buildPathsToDataFiles(
         if keep
             push!(paths_to_files, file)
         else 
-            @warn "exclude $file because of model subset"
+            @debug "exclude $file because of model subset"
         end
     end
     return paths_to_files
@@ -899,15 +899,20 @@ end
 function computeGeneralizedDistances(
     distances_all::DimArray, weights::DimArray, for_performance::Bool
 )
-    dimensions = for_performance ? (:member,) : (:member1, :member2)
+    dimensions = for_performance ? 
+        (hasdim(distances_all, :member) ? :member : :model) : 
+        (:member1, :member2)
     norm = mapslices(Statistics.median, distances_all, dims=dimensions)
     normalized_distances =  DimArray(
         distances_all ./ norm, dims(distances_all), metadata = distances_all.metadata
     )
-    distances = for_performance ? 
-        summarizeEnsembleMembersVector(normalized_distances, false) :
-        averageEnsembleMembersMatrix(normalized_distances, false);
-
+    if for_performance 
+        distances = hasdim(normalized_distances, :model) ? 
+            normalized_distances :
+            summarizeEnsembleMembersVector(normalized_distances, false)
+    else
+        distances = averageEnsembleMembersMatrix(normalized_distances, false);
+    end
     distances = mapslices(x -> x .* weights, distances, dims=(:variable, :diagnostic))
     return dropdims(
         sum(distances, dims=(:variable, :diagnostic)), dims=(:variable, :diagnostic)
