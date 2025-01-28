@@ -18,29 +18,20 @@ datasets: [
   {
     base_dir: "LGM", 
     exp: "lgm", 
-    variables: ["tas", "tos"], 
+    variables: ["tas"], 
     statistics: ["CLIM"], 
     subdirs: ["20241114"]
   },
-   {
-    base_dir: "LGM", 
-    exp: "lgm", 
-    variables: ["thetao"], 
-    statistics: ["CLIM"]
-  },
-  {    
-    base_dir: "/albedo/work/projects/p_forclima/preproc_data_cdo/LGM",
-    dir_per_var: false, # default: true
-    exp: "lgm", 
-    variables: ["thetao"], 
-    statistics: ["CLIM"]
-  },
   {
-    base_dir: "historical", # required String
-    exp: "historical", # required String
-    variables: ["tas", "tos"], # required Vector
-    statistics: ["CLIM"], # required Vector
-    timeranges: ["full"], # optional Vector
-    subdirs: ["20241121", "20241118"] # optional Vector
+    base_dir: "piControl", 
+    exp: "piControl", 
+    variables: ["tas"], 
+    statistics: ["CLIM"], 
+  },
+    {
+    base_dir: "historical", 
+    exp: "historical", 
+    variables: ["tas"], 
+    statistics: ["CLIM"], 
   }
 ]

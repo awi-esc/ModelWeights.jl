@@ -1,0 +1,253 @@
+documentation:
+  title: Get CMIP6 siconc-data for historical experiment.
+  description: The recipe downloads climate data for historical experiments, regrids
+    the data to a 5x5 grid and provides the climatological average for the entire
+    period and for each month.Further it provides the preprocessed data for four shorter
+    time periods within the historical period.
+  authors:
+  - grusdt_britta
+  maintainer:
+  - grusdt_britta
+preprocessors:
+  general:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+  climatological_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: mean
+      period: full
+  climatological_monthly_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: mean
+      period: monthly
+  default: {}
+diagnostics:
+  historical:
+    variables:
+      siconc_CLIM:
+        short_name: siconc
+        preprocessor: climatological_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+      siconc_CLIM-mon:
+        short_name: siconc
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+    scripts: null
+  historical0:
+    variables:
+      siconc_CLIM:
+        short_name: siconc
+        preprocessor: climatological_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+        timerange: 1850/1900
+      siconc_CLIM-mon:
+        short_name: siconc
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+        timerange: 1850/1900
+    scripts: null
+  historical1:
+    variables:
+      siconc_CLIM:
+        short_name: siconc
+        preprocessor: climatological_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+        timerange: 1951/1980
+      siconc_CLIM-mon:
+        short_name: siconc
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+        timerange: 1951/1980
+    scripts: null
+  historical2:
+    variables:
+      siconc_CLIM:
+        short_name: siconc
+        preprocessor: climatological_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+        timerange: 1961/1990
+      siconc_CLIM-mon:
+        short_name: siconc
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+        timerange: 1961/1990
+    scripts: null
+  historical3:
+    variables:
+      siconc_CLIM:
+        short_name: siconc
+        preprocessor: climatological_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+        timerange: 1991/2014
+      siconc_CLIM-mon:
+        short_name: siconc
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+        timerange: 1991/2014
+    scripts: null
+  historical4:
+    variables:
+      siconc_CLIM:
+        short_name: siconc
+        preprocessor: climatological_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+        timerange: 1980/2014
+      siconc_CLIM-mon:
+        short_name: siconc
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Ice Area Fraction (Ocean Grid)
+        mip: SImon
+        mip_era: CMIP6
+        exp: historical
+        activity: CMIP
+        project: CMIP6
+        timerange: 1980/2014
+    scripts: null
+datasets:
+- dataset: CESM2-FV2
+  ensemble: r1i1p1f1
+  institute: NCAR
+  grid: gn
+  version: v20191120
+- dataset: CESM2-FV2
+  ensemble: r(2:3)i1p1f1
+  institute: NCAR
+  grid: gn
+  version: v20200226
+- dataset: CESM2-FV2
+  ensemble: r1i2p2f1
+  institute: NCAR
+  grid: gn
+  version: v20220915
+- dataset: CESM2-WACCM-FV2
+  ensemble: r1i1p1f1
+  institute: NCAR
+  grid: gn
+  version: v20191120
+- dataset: CESM2-WACCM-FV2
+  ensemble: r(2:3)i1p1f1
+  institute: NCAR
+  grid: gn
+  version: v20200226
+- dataset: INM-CM4-8
+  ensemble: r1i1p1f1
+  institute: INM
+  grid: gr1
+  version: v20190530
+- dataset: MIROC-ES2L
+  ensemble: r(1:3)i1p1f2
+  institute: MIROC
+  grid: gn
+  version: v20190823
+- dataset: MIROC-ES2L
+  ensemble: r(4:10)i1p1f2
+  institute: MIROC
+  grid: gn
+  version: v20200318
+- dataset: MIROC-ES2L
+  ensemble: r1i1000p1f2
+  institute: MIROC
+  grid: gn
+  version: v20210107
+- dataset: MIROC-ES2L
+  ensemble: r(11:30)i1p1f2
+  institute: MIROC
+  grid: gn
+  version: v20210317
+- dataset: MIROC-ES2L
+  ensemble: r(1:10)i1p1f2
+  institute: MIROC
+  grid: gr1
+  version: v20200731
+- dataset: MIROC-ES2L
+  ensemble: r1i1000p1f2
+  institute: MIROC
+  grid: gr1
+  version: v20210107
+- dataset: MIROC-ES2L
+  ensemble: r(11:30)i1p1f2
+  institute: MIROC
+  grid: gr1
+  version: v20210317
+- dataset: MPI-ESM1-2-LR
+  ensemble: r(1:10)i1p1f1
+  institute: MPI-M
+  grid: gn
+  version: v20190710
+- dataset: MPI-ESM1-2-LR
+  ensemble: r(31:50)i1p1f1
+  institute: MPI-M
+  grid: gn
+  version: v20190815
+- dataset: MPI-ESM1-2-LR
+  ensemble: r(11:30)i1p1f1
+  institute: MPI-M
+  grid: gn
+  version: v20210901
+- dataset: MPI-ESM1-2-LR
+  ensemble: r1i2000p1f1
+  institute: MPI-M
+  grid: gn
+  version: v20211412

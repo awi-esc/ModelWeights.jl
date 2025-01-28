@@ -12,10 +12,24 @@ preprocessors:
     regrid:
       target_grid: 5x5
       scheme: linear
+    extract_levels:
+      levels:
+      - 0
+      - 50
+      - 200
+      - 300
+      scheme: linear_extrapolate
   climatological_mean:
     regrid:
       target_grid: 5x5
       scheme: linear
+    extract_levels:
+      levels:
+      - 0
+      - 50
+      - 200
+      - 300
+      scheme: linear_extrapolate
     climate_statistics:
       operator: mean
       period: full
@@ -23,6 +37,13 @@ preprocessors:
     regrid:
       target_grid: 5x5
       scheme: linear
+    extract_levels:
+      levels:
+      - 0
+      - 50
+      - 200
+      - 300
+      scheme: linear_extrapolate
     climate_statistics:
       operator: mean
       period: monthly
@@ -30,6 +51,13 @@ preprocessors:
     regrid:
       target_grid: 5x5
       scheme: linear
+    extract_levels:
+      levels:
+      - 0
+      - 50
+      - 200
+      - 300
+      scheme: linear_extrapolate
     climate_statistics:
       operator: std_dev
       period: full
@@ -37,6 +65,13 @@ preprocessors:
     regrid:
       target_grid: 5x5
       scheme: linear
+    extract_levels:
+      levels:
+      - 0
+      - 50
+      - 200
+      - 300
+      scheme: linear_extrapolate
     climate_statistics:
       operator: std_dev
       period: monthly
@@ -94,10 +129,6 @@ datasets:
   ensemble: r1i1p1
   institute: IPSL
   version: v20120114
-- dataset: MIROC-ESM
-  ensemble: r1i1p1
-  institute: MIROC
-  version: v20130712
 - dataset: MPI-ESM-P
   ensemble: r1i1p1
   institute: MPI-M

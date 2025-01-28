@@ -1,0 +1,193 @@
+documentation:
+  title: Get CMIP5 thetao-data for historical experiment.
+  description: The recipe downloads climate data for historical experiments, regrids
+    the data to a 5x5 grid and provides the climatological average for the entire
+    period as well as for four shorter time periods within the historical period.
+  authors:
+  - grusdt_britta
+  maintainer:
+  - grusdt_britta
+preprocessors:
+  general:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    extract_levels:
+      levels:
+      - 0
+      - 50
+      - 200
+      - 300
+      scheme: linear_extrapolate
+  climatological_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    extract_levels:
+      levels:
+      - 0
+      - 50
+      - 200
+      - 300
+      scheme: linear_extrapolate
+    climate_statistics:
+      operator: mean
+      period: full
+  climatological_monthly_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    extract_levels:
+      levels:
+      - 0
+      - 50
+      - 200
+      - 300
+      scheme: linear_extrapolate
+    climate_statistics:
+      operator: mean
+      period: monthly
+  default: {}
+diagnostics:
+  historical:
+    variables:
+      thetao_CLIM:
+        short_name: thetao
+        preprocessor: climatological_mean
+        variable_long_name: Sea Water Potential Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: historical
+        project: CMIP5
+      thetao_CLIM-mon:
+        short_name: thetao
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Water Potential Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: historical
+        project: CMIP5
+    scripts: null
+    additional_datasets:
+    - dataset: GISS-E2-R
+      ensemble: r1i1p121
+      institute: NASA-GISS
+      version: v20160502
+    - dataset: GISS-E2-R
+      ensemble: r1i1p(123:124)
+      institute: NASA-GISS
+      version: v20160502
+    - dataset: GISS-E2-R
+      ensemble: r1i1p128
+      institute: NASA-GISS
+      version: v20160502
+  historical0:
+    variables:
+      thetao_CLIM:
+        short_name: thetao
+        preprocessor: climatological_mean
+        variable_long_name: Sea Water Potential Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: historical
+        project: CMIP5
+        timerange: 1850/1900
+      thetao_CLIM-mon:
+        short_name: thetao
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Water Potential Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: historical
+        project: CMIP5
+        timerange: 1850/1900
+    scripts: null
+  historical1:
+    variables:
+      thetao_CLIM:
+        short_name: thetao
+        preprocessor: climatological_mean
+        variable_long_name: Sea Water Potential Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: historical
+        project: CMIP5
+        timerange: 1951/1980
+      thetao_CLIM-mon:
+        short_name: thetao
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Water Potential Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: historical
+        project: CMIP5
+        timerange: 1951/1980
+    scripts: null
+    additional_datasets:
+    - dataset: GISS-E2-R
+      ensemble: r1i1p121
+      institute: NASA-GISS
+      version: v20160502
+    - dataset: GISS-E2-R
+      ensemble: r1i1p(123:124)
+      institute: NASA-GISS
+      version: v20160502
+    - dataset: GISS-E2-R
+      ensemble: r1i1p128
+      institute: NASA-GISS
+      version: v20160502
+  historical2:
+    variables:
+      thetao_CLIM:
+        short_name: thetao
+        preprocessor: climatological_mean
+        variable_long_name: Sea Water Potential Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: historical
+        project: CMIP5
+        timerange: 1961/1990
+      thetao_CLIM-mon:
+        short_name: thetao
+        preprocessor: climatological_monthly_mean
+        variable_long_name: Sea Water Potential Temperature
+        mip: Omon
+        mip_era: CMIP5
+        exp: historical
+        project: CMIP5
+        timerange: 1961/1990
+    scripts: null
+    additional_datasets:
+    - dataset: GISS-E2-R
+      ensemble: r1i1p121
+      institute: NASA-GISS
+      version: v20160502
+    - dataset: GISS-E2-R
+      ensemble: r1i1p(123:124)
+      institute: NASA-GISS
+      version: v20160502
+    - dataset: GISS-E2-R
+      ensemble: r1i1p128
+      institute: NASA-GISS
+      version: v20160502
+datasets:
+- dataset: GISS-E2-R
+  ensemble: r1i1p2
+  institute: NASA-GISS
+  version: v20160502
+- dataset: GISS-E2-R
+  ensemble: r4i1p1
+  institute: NASA-GISS
+  version: v20160503
+- dataset: GISS-E2-R
+  ensemble: r6i1p1
+  institute: NASA-GISS
+  version: v20160503
+- dataset: IPSL-CM5A-LR
+  ensemble: r(1:5)i1p1
+  institute: IPSL
+  version: v20111119
+- dataset: IPSL-CM5A-LR
+  ensemble: r6i1p1
+  institute: IPSL
+  version: v20120526
