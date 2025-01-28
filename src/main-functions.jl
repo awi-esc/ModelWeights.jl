@@ -4,7 +4,7 @@ using Setfield
 
 """
     computeWeights(
-        model_data::Vector{Data}, obs_data::Vector{Data}, config::ConfigWeights
+        model_data::Vector{Data}, dists_perform_all::DimArray, config::ConfigWeights
     )
 
 Compute weight for each model in multi-model ensemble according to approach
@@ -16,19 +16,18 @@ Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
 
 # Arguments:
 - `model_data`: Models for data for computing independence and performance weights.
-- `obs_data`: Observational data for computing performance weights.
+- `dists_perform_all`: distances for all variables and diagnostics, has dimensions, 
+'member', 'variable', 'diagnostic'.
 - `config`: parameters specifiying the relative contributions of each 
 combination of variable and diagnostic.
 """
 function computeWeights(
-    model_data::Vector{Data}, obs_data::Vector{Data}, config::ConfigWeights
+    model_data::Vector{Data}, dists_perform_all::DimArray, config::ConfigWeights
 )
     weights_perform = normalizeWeightsVariables(config.performance)  
     weights_indep = normalizeWeightsVariables(config.independence)
-    
-    keys_weights_perform = allcombinations(dims(weights_perform, :variable), dims(weights_perform, :diagnostic))
+    #keys_weights_perform = allcombinations(dims(weights_perform, :variable), dims(weights_perform, :diagnostic))
     keys_weights_indep = allcombinations(dims(weights_indep, :variable), dims(weights_indep, :diagnostic))
-    
     ref_period_alias, ref_period_timerange = getRefPeriodAsTimerangeAndAlias(
         map(x -> x.meta.attrib, model_data), config.ref_perform_weights
     )
@@ -36,19 +35,16 @@ function computeWeights(
     msg(x) =  "For computation of $x weights: Make sure that data is provided 
     for the given reference period ($(config.ref_perform_weights)) and combination of 
         variables and diagnostic for which (balance) weights were specified!"
-    if !isValidDataAndWeightInput(model_data, keys_weights_perform, ref_period_alias)
-        throw(ArgumentError(msg("performance")))
-    end
-    if !isValidDataAndWeightInput(obs_data, keys_weights_perform, ref_period_alias)
-        throw(ArgumentError(msg("performance")))
-    end
+    # if !isValidDataAndWeightInput(model_data, keys_weights_perform, ref_period_alias)
+    #     throw(ArgumentError(msg("performance")))
+    # end
+    # if !isValidDataAndWeightInput(obs_data, keys_weights_perform, ref_period_alias)
+    #     throw(ArgumentError(msg("performance")))
+    # end
     if !isValidDataAndWeightInput(model_data, keys_weights_indep, ref_period_alias)
         throw(ArgumentError(msg("independence")))
     end
 
-    dists_perform_all = computeDistancesAllDiagnostics(
-        model_data, obs_data, config.performance, ref_period_alias, true
-    )
     dists_indep_all = computeDistancesAllDiagnostics(
         model_data, nothing, config.independence, config.ref_indep_weights, false
     )
@@ -106,6 +102,28 @@ function computeWeights(
     end
     return model_weights
 end
+
+
+""" computeModelDataRMSE
+
+# Arguments:
+- `model_data`:
+- `obs_data`: Observational data for computing performance weights.
+- `config`:
+- `ref_period_alias`:
+"""
+function computeModelDataRMSE(
+    model_data::Vector{Data},
+    obs_data::Vector{Data}, 
+    config::ConfigWeights,
+    ref_period_alias::String
+)
+    return computeDistancesAllDiagnostics(
+        model_data, obs_data, config.performance, ref_period_alias, true
+    )
+end
+
+
 
 
 """

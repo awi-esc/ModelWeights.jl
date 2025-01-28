@@ -4,6 +4,8 @@ using Statistics
 using LinearAlgebra
 using JLD2
 using Setfield
+using Distributions
+
 
 """
     areaWeightedRMSE(m1::DimArray, m2::DimArray, mask::DimArray)
@@ -79,6 +81,9 @@ end
 
 Compute the distance (area-weighted RMSE) between model predictions and observations. 
 
+# Arguments:
+- `models`:
+- `observations`:
 """
 function getModelDataDist(models::DimArray, observations::DimArray)      
     # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
@@ -548,3 +553,31 @@ function applyWeights(model_data::DimArray, weights::DimArray)
 end
 
 
+"""
+    getModelLikelihoods(modelData::DimArray, distr::Distribution)
+
+
+# Arguments:
+- `modelData`:
+- `distr`:
+"""
+function getModelLikelihoods(modelData::DimArray, distr::Distribution, diagnostic::String)
+    if hasdim(modelData, :model)
+        dim_symbol = :model
+        names_models = dims(modelData, :model);
+        likelihoods = map(m -> Distributions.pdf(distr, modelData[model = At(m)]), names_models)
+    else
+        dim_symbol = :member
+        names_models = dims(modelData, :member)
+        likelihoods = map(m -> Distributions.pdf(distr, modelData[member = At(m)]), names_models)
+    end
+    meta = modelData.metadata
+    variables = unique(filter(x->!ismissing(x), meta["variable_id"]))
+    if length(variables) > 1
+        throw(ArgumentError("Variable should be unique when computing likelihoods, but is: $var"))
+    end
+    return DimArray(
+        reshape(likelihoods, length(likelihoods), 1, 1), 
+        (Dim{dim_symbol}(Array(names_models)), Dim{:variable}([variables[1]]), Dim{:diagnostic}([diagnostic])), 
+        metadata=meta)
+end
