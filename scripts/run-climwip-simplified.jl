@@ -65,8 +65,8 @@ di_var = dropdims(
     reduce(+, weights.performance_distances, dims=:diagnostic), 
     dims=:diagnostic
 );
-figs_performance = mw.plotDistancesPerformance(di_var; is_bar_plot = true);
-figs_Di = mw.plotDistancesPerformance(weights.Di; is_bar_plot = false);
+figs_performance = mw.plotDistances(di_var, "Performance distances"; is_bar_plot = true);
+figs_Di = mw.plotDistances(weights.Di, "Performance Di"; is_bar_plot = false);
 
 figs_Sij = mw.plotDistancesIndependence(weights.Sij, dimname="model1");
 sij_var = dropdims(reduce(+, weights.independence_distances, dims=:diagnostic), dims=:diagnostic)
@@ -143,7 +143,6 @@ data_temp_graph = mw.loadDataFromESMValToolConfigs(
     subset = mw.Constraint(aliases = ["weighted_temperature_graph"])
 );
 data_graph = data_temp_graph["tas_ANOM_weighted_temperature_graph"].data;
-# TODO: check applyWeights fn and difference!
 # this will compute the weighted avg based on the average across the respective members of each model
 #weighted_avg = mw.applyWeights(data_graph, weights_all_members);
 

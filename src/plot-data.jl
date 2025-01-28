@@ -29,7 +29,7 @@ function plotMeansOnMap(means::DimArray, title::String; colors=nothing)
 
     fig = Figure();
     ax = Axis(fig[1,1], 
-        title = TextWrap.wrap(title, width=40),
+        title = title,
         xlabel = "Longitude",
         ylabel = "Latitude",
         xticklabelrotation = pi/4,
