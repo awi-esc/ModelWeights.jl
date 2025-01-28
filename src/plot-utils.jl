@@ -24,7 +24,7 @@ function savePlot(fig, target_dir::String, target_fn::String)
     @info "saved plot to " path_to_target
 end
 
-function plotDistMatrices(distMat, climateVar, models, modelRefs)
+function plotDistMatrices(distMat, diagnostic, models, modelRefs)
     fig = Figure();
     xs = 1:length(models)
     ax = Axis(
@@ -34,7 +34,7 @@ function plotDistMatrices(distMat, climateVar, models, modelRefs)
         xticks = (xs, models), 
         yticks = (xs, modelRefs),
         xticklabelrotation = pi/4,
-        title = "Distance matrix " * climateVar,
+        title = "Distance matrix " * diagnostic,
         yreversed = true
     )
     hm = heatmap!(ax, distMat', colormap = ColorSchemes.YlGn_4.colors)
