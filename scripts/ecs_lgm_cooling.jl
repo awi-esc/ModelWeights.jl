@@ -5,6 +5,7 @@ using Setfield
 using CairoMakie
 using ColorSchemes
 using NCDatasets
+using Distributions
 
 
 # Get data from piControl + historical + lgm experiments
@@ -20,46 +21,102 @@ df = mw.alignPhysics(
     level_shared_models = mw.MODEL
 );
 mw.averageEnsembleMembers!(df)
-
 # lgm-cooling: here models need to be in same unit for both experiments
 df_celsius = mw.kelvinToCelsius(df)
-
 lgm_cooling = df_celsius["tas_CLIM_lgm"].data .- df_celsius["tas_CLIM_piControl"].data;
-
 # global lgm-cooling values for each model
 # as we look at differences here, the unit (kelvin or celsius) doesnt matter
 global_means = mw.getGlobalMeans(lgm_cooling)
+predictions_gm_tas = Array(global_means);
+ys = repeat([0], length(global_means));
 
-f1 = Figure()
-ax = Axis(f1[1,1])
-density!(global_means, direction=:x)
-scatter!(ax, Array(global_means), repeat([0],length(global_means)), color = :red)
-f1
+# plot model data
+begin
+    f1 = Figure(size=(1000,400))
+    t="GMST (LGM-piControl) with fitted normal distribution"
+    ax = Axis(f1[1,1], title = L"$\Delta$ %$(t)")
+    scatter!(ax, predictions_gm_tas, ys, color = :red)
+    mu = Statistics.mean(global_means)
+    sigma = Statistics.std(global_means; corrected=false, mean=mu)
+    Distributions.fit_mle(Normal, global_means)
 
-f, ax = mw.makeScatterPlot(collect(1:length(global_means)), Array(global_means);
-    captions=(x="Models",y="Global Mean Difference",title="LGM-cooling (lgm-piControl)"),
-    xtick_labels = Array(dims(global_means, :model)),
-    xticklabelrotation = pi/4,
-    legend = (label="tas", position=:ct, color=:red),
-    greyed_area = (
-        y1=-6.8, y2=-4.4, 
-        summary_val=-5.6, summary_stat="median", 
-        label="95% confidence Proxy-only from Tierney et al. (2020)"
-    )
+    dist = Distributions.Normal(mu, sigma)
+    samples = rand(dist, 1000);
+    hist!(samples)
+    labels = Array(dims(global_means,:model))
+    text!(ax, predictions_gm_tas, ys.+5, text=labels, rotation=pi/2)
+    f1
+end
+
+
+# Assimilated data from Tierney et al. (2020)
+tierney_data = NCDataset("/albedo/home/brgrus001/ModelWeightsPaper/work/data/Tierney-2020/Tierney2020_DA_atm.nc")
+deltaSAT = DimArray(
+    Array(tierney_data["deltaSAT"]), 
+    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"])))
 )
-f
+errdeltaSAT = DimArray(
+    Array(tierney_data["errdeltaSAT"]), 
+    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"])))
+)
+gm_deltaSAT = mw.getGlobalMeans(deltaSAT)
+area_weights= mw.computeAreaWeights(deltaSAT)
+std_gm_deltaSAT = sum(area_weights .* errdeltaSAT)
 
-# assimilated data from Tierney et al. (2020)
-tierney_data = NCDataset("/albedo/home/brgrus001/ModelWeightsPaper/work/data/Tierney2020_DA_atm.nc")
-deltaSAT = tierney_data["deltaSAT"]
+CI_lower(n) = gm_deltaSAT - n * std_gm_deltaSAT;
+CI_upper(n) = gm_deltaSAT + n * std_gm_deltaSAT; 
+
+# 68% CI
+l1 = CI_lower(1)
+u1 = CI_upper(1)
+# 95% CI
+l2 = CI_lower(2)
+u2 = CI_upper(2)
+
+begin
+    f3 = Figure(size = (1000, 400))
+    t="Data assimilated reconstruction (Tierney et al., 2020)"
+    ax = Axis(f3[1,1], title = L"%$(t) $\Delta$ GMST")
+    xs = Array(global_means)
+    ys = repeat([0],length(global_means))
+    scatter!(ax, xs, ys)
+    labels = Array(dims(global_means,:model))
+    text!(ax, xs, ys.+5, text=labels, rotation=pi/2)
+    dist = Distributions.Normal(gm_deltaSAT, std_gm_deltaSAT)
+    samples = rand(dist, 1000);
+    hist!(samples)
+    vlines!(gm_deltaSAT; color=:grey, linewidth=5, label="Mean")
+    lines!([l1, u1], [0, 0]; linewidth=5, color=:red, label="68% CI")
+    lines!([l2, u2], [0, 0]; linewidth=5, color=:green, alpha=0.5, label="95% CI")
+    axislegend(ax, merge = true, position = :rt)
+    f3
+end
+save("plots/ecs-lgm-cooling/DA_GMST-lgm-cooling.png", f3)
 
 
+# values from Tierney paper, DA-reproduced (CI-interval mismatch..!)
+reconstruction = (type="proxy-only", lower=-6.8, upper=-4.4, summary_stat="median(?)", 
+    summary_val=-5.6, ci="95%", target="plots/ecs-lgm-cooling/lgm_cooling_global_mean_DA.png");
+reconstruction = (type="Data assimilated", lower=-6.5, upper=-5.7, summary_stat="mean", 
+    summary_val=-6.1, ci="95%(68%??)", target="plots/ecs-lgm-cooling/lgm_cooling_global_mean_proxy_only.png");
 
+begin
+    f, ax = mw.makeScatterPlot(collect(1:length(global_means)), predictions_gm_tas;
+        captions=(x="Models",y="Anomaly area-weighted global mean",title="LGM-cooling (lgm-piControl)"),
+        xtick_labels = Array(dims(global_means, :model)),
+        xticklabelrotation = pi/4,
+        legend = (label="tas", position=:ct, color=:red),
+        greyed_area = (
+            y1=reconstruction.lower, y2=reconstruction.upper, 
+            summary_val=reconstruction.summary_val, summary_stat=reconstruction.summary_stat, 
+            label="$(reconstruction.ci) CI $(reconstruction.type) from Tierney et al. (2020)"
+        )
+    )
+    save(reconstruction.target, f)
+    f
+end
 
-
-
-
-
+###############################################################################
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
 lgm_data = mw.loadDataFromESMValToolConfigs(
@@ -72,9 +129,11 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
         subdirs = ["20241114"]
     )
 )
+lgm_data = mw.kelvinToCelsius(lgm_data);
 lgm_tas = lgm_data["tas_CLIM_lgm"];
 lgm_tos = lgm_data["tos_CLIM_lgm"];
 
+# just use tas data:
 lgm_data = lgm_tas;
 # compute area weights for each model (depends on missing values)
 masksMissing = mapslices(x -> ismissing.(x), lgm_data.data, dims=:member);
@@ -85,11 +144,6 @@ area_weights = DimArray(zeros(length(longitudes), length(latitudes), length(memb
 units = lgm_data.data.metadata["units"];
 for (idx, member) in enumerate(dims(lgm_data.data, :member))
     data = lgm_data.data[member = At(member)]
-    if (isa(units, Vector) && units[idx] == "K") || units == "K"
-        df = lgm_data.data
-        df[member = At(member)] = mw.kelvinToCelsius(df[member = At(member)])
-        lgm_data = @set lgm_data.data = df
-    end
     mask = masksMissing[member = At(member)]
     area_weights[member = At(member)] = mw.computeAreaWeights(data; mask)
 end
@@ -108,7 +162,6 @@ global_means_non_weighted = mapslices(x -> Statistics.mean(x),
     lgm_data.data, dims=(:lon,:lat)
 )[lon=1, lat=1]
 
-
 global_means = mapslices(x -> Statistics.sum(x), 
     lgm_data.data .* area_weights, 
     dims=(:lon,:lat)
@@ -116,7 +169,7 @@ global_means = mapslices(x -> Statistics.sum(x),
 
 
 obs_data = mw.loadDataFromESMValToolConfigs(
-    "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_20241119_124434", 
+    "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_tas_tos", 
     "/albedo/home/brgrus001/ModelWeights/configs/historical_obs",
     dir_per_var = false,
     is_model_data = false,
@@ -125,7 +178,8 @@ obs_data = mw.loadDataFromESMValToolConfigs(
         variables = ["tas"],
         aliases = ["historical"],
         projects = ["ERA5"] # for observational data default value is ["ERA5"]
-    )
+    ),
+    preview=false
 )["tas_CLIM_historical"];
 
 
@@ -137,10 +191,8 @@ mw.plotMeansOnMap(
     "Historical tas for $(dims(obs_data.data, :source)[1])",
     colors = ColorSchemes.twelvebitrainbow.colors
 )
-
-
 mask_obs = ismissing.(obs_data.data[:,:,1])
-area_weights_obs = mw.computeAreaWeights(obs_data.data[:,:,1]; mask)
+area_weights_obs = mw.computeAreaWeights(obs_data.data[:,:,1]; mask=mask_obs)
 mw.plotMeansOnMap(area_weights_obs, "area weights for observations")
 global_means_obs = mapslices(
     x -> Statistics.sum(skipmissing(x)), 
@@ -149,10 +201,8 @@ global_means_obs = mapslices(
 )[lon=1, lat=1]
 
 
-
-
 begin 
-    f = Figure(); 
+    f = Figure(size=(800,600)); 
     models = Array(dims(lgm_data.data, :member))
     ax = Axis(f[1,1], 
         xticks = (1:length(models), models), 
@@ -168,8 +218,8 @@ begin
     lines!(ax, 1:length(models), vec(global_means_non_weighted), color = :blue, label = "Non-weighted")
     scatter!(ax, 1:length(models), vec(global_means_non_weighted), color = :blue, label = "Non-weighted")
 
-    scatter!(ax, 1, global_means_obs, color = :green, label = "Weighted Global Mean Observations")
-    axislegend(ax, merge = true, position = :rc)
+    lines!(ax, 1:length(models), repeat([global_means_obs], length(models)), color = :green, label = "Area-weighted Global Mean Historical observations")
+    axislegend(ax, merge = true, position = :cc)
     f
 end
 
