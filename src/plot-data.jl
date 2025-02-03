@@ -206,15 +206,11 @@ function makeScatterPlot(
     greyed_area::NamedTuple=(y1=Inf, y2=Inf,label="", summary_val=Inf, summary_stat="")
 )
     f = Figure(); 
-    xticks= isnothing(xtick_labels) ? xs : (xs, xtick_labels) 
-    ax = Axis(
-        f[1,1], 
-        xticks = xticks, 
-        title = captions.title,
-        xlabel = captions.x, 
-        ylabel = captions.y,
-        xticklabelrotation = xticklabelrotation
-    );
+    ax = isnothing(xtick_labels) ? 
+        Axis(f[1,1], title=captions.title, xlabel=captions.x, ylabel=captions.y) :
+        Axis(f[1,1], xticks = (xs, xtick_labels), title = captions.title,
+            xlabel = captions.x, ylabel = captions.y, xticklabelrotation = xticklabelrotation
+        );
     lines!(ax, xs, ys, color = legend.color, label = legend.label)
     scatter!(ax, xs, ys, color = legend.color, label = legend.label)
 
@@ -224,7 +220,8 @@ function makeScatterPlot(
         lines!(ax, xs, repeat([greyed_area.summary_val], length(xs)), 
             color=(:gray, 0.5), label=greyed_area.summary_stat)
     end
-
-    axislegend(ax, merge = true, position = legend.position)
-    return (f,ax)
+    if !isempty(legend.label)
+        axislegend(ax, merge = true, position = legend.position)
+    end
+    return (f, ax)
 end
