@@ -558,7 +558,9 @@ function getMetaDataFromYAML(
                             attribs[1], path_data, dir_per_var, is_model_data; 
                             constraint=cs
                         )
-                        addMetaData!(meta_data, meta)
+                        if !isempty(meta.paths)
+                            addMetaData!(meta_data, meta)
+                        end
                     end
                 end
             end
