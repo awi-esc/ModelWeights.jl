@@ -611,17 +611,41 @@ end
     getGlobalMeans(data::DimArray)
 
 Compute area-weighted globalMeans across longitudes and latitudes for each 
-model. It is assumed that there is no missing data.
+model. Missing data is accounted for in the area-weights. 
 
 # Arguments:
-- `data`: mustn't have missing data.
+- `data`: DimArray with at least dimensions lon, lat and possibly member or model.
+
+# Return: a DimArray of size 'number models in data' x 1 containing area-weighted
+global means for each model. 
 """
 function getGlobalMeans(data::DimArray)
-    @assert !any(ismissing.(data))
-    area_weights= computeAreaWeights(data)
-    global_means = mapslices(x -> Statistics.sum(x), 
-        data .* area_weights, 
-        dims = (:lon,:lat)
-    )[lon=1, lat=1]
+    longitudes = Array(dims(data, :lon))
+    latitudes = Array(dims(data, :lat))
+    masks = ismissing.(data)
+
+    dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
+    if !isnothing(dimension)
+        models = Array(dims(data, dimension))
+        global_means = DimArray(zeros(length(models)), (Dim{dimension}(models)))
+        for model in models
+            if dimension == :model
+                mask = masks[model = At(model)]
+                area_weights = computeAreaWeights(longitudes, latitudes; mask)
+                global_means[model = At(model)] = Statistics.sum(data[model = At(model)] .* area_weights)
+            else
+                mask = masks[member = At(model)]
+                area_weights = computeAreaWeights(longitudes, latitudes; mask)
+                global_means[member = At(model)] = Statistics.sum(skipmissing(data[member = At(model)] .* area_weights))
+            end
+        end
+    else 
+        area_weights = computeAreaWeights(longitudes, latitudes; mask=masks)
+        global_means = Statistics.sum(skipmissing(data .* area_weights))
+    end
     return global_means
 end
+
+
+
+

@@ -1054,7 +1054,7 @@ function fixModelNamesMetadata(names::Vector{String})
 end
 
 """
-    computeAreaWeights(data::DimArray)
+    computeAreaWeights(longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; mask::Union{DimArray, Nothing}=nothing)
 
 Compute the approximated, normalized area weights for each lon,lat-position in 
 `data` as the cosine of their latitudes. Return a DimensionalData.DimArray of
@@ -1062,20 +1062,17 @@ same size as the (lon x lat)-grid of the input data.
 
 # Arguments:
 - `data`: on lon, lat grid, with dimension 'lat' containing latitudes
-- `mask`: optional mask, if given, the area weights are set to 0 where the mask is 1
+- `mask`: optional 2D-mask (lonxlat), if given, the area weights are set to 0 where the mask is 1
 """
-function computeAreaWeights(data::DimArray; mask::Union{DimArray, Nothing}=nothing)
-    latitudes = collect(dims(data, :lat));
+function computeAreaWeights(longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; mask::Union{DimArray, Nothing}=nothing)
     # cosine of the latitudes as proxy for grid cell area
     areaWeights = cos.(deg2rad.(latitudes));
-    areaWeights = DimArray(areaWeights, Dim{:lat}(Array(latitudes)));
+    areaWeights = DimArray(areaWeights, Dim{:lat}(latitudes));
 
-    areaWeightMatrix = repeat(areaWeights', length(DimensionalData.dims(data, :lon)), 1);  
+    areaWeightMatrix = repeat(areaWeights', length(longitudes), 1);  
     if !isnothing(mask)
         areaWeightMatrix = ifelse.(mask .== 1, 0, areaWeightMatrix); 
     end
     areaWeightMatrix = areaWeightMatrix./sum(areaWeightMatrix)
-    longitudes = collect(dims(data, :lon))
-    result = DimArray(areaWeightMatrix, (Dim{:lon}(longitudes), Dim{:lat}(latitudes)))
-    return result
+    return DimArray(areaWeightMatrix, (Dim{:lon}(longitudes), Dim{:lat}(latitudes)))
 end
