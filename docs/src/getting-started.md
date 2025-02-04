@@ -24,28 +24,31 @@ path_recipes = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/configs
 
 lgm_data = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes;
+    dir_per_var = true, # default: true
+    is_model_data = true, # default: true
+    level_shared_models = nothing, # default: nothing
+    subset = nothing, # default: nothing
     preview = false # default: false; if true meta data for data to be loaded is returned
 );
 ````
-The loaded data is a Vector containing instances of type `Data`. We provide a function to 
-see the paths from where the data was loaded: 
+The loaded data is a Dictionary mapping from an identifier of the form 'variable_diagnostic_alias' (e.g., tas_CLIM_lgm) to an instance of type `ModelWeights.Data`. This object has two fields, 'meta::MetaData' and 'data::DimArry'. When you print a MetaData object, it will show the paths of the data:
 
 ```julia
-julia> mw.showDataPaths(lgm_data)
-tas_CLIM_historical (timerange: full, experiment: historical)
-        /albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_cmip5_historical_tas_20241121_115637/preproc/historical/tas_CLIM/CMIP5_CNRM-CM5_Amon_historical_r1i1p1_tas.nc
-        /albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_cmip5_historical_tas_20241121_115637/preproc/historical/tas_CLIM/CMIP5_IPSL-CM5A-LR_Amon_historical_r1i1p1_tas.nc
+julia> lgm_data["tas_CLIM_lgm"].meta
+::ModelWeights.MetaData
+tas_CLIM_lgm (timerange: full, experiment: lgm)
+        /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_CNRM-CM5_Amon_lgm_r1i1p1_tas.nc
+        /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_FGOALS-g2_Amon_lgm_r1i1p1_tas.nc
         ...
 ```
 
-
-
-We preprocessed the data with ESMValTool using several recipes so that we get separate directories for (the preprocessed data) for every experiment. Thus, to load data for, say lgm and historical experiments, we would call loadDataFromESMValToolConfigs twice with the respective data- and config paths as arguments.
+Since we preprocessed the data with ESMValTool using several recipes, we got separate directories for the preprocessed data for every experiment. Thus, to load data for, say lgm and historical experiments, we would call loadDataFromESMValToolConfigs twice with the respective data- and config paths as arguments.
 
 Not all information in the ESMValTool recipes is required to specify the data to be loaded here. For a minimal example of the required structure, see [this example](https://github.com/awi-esc/SimilarityWeights/blob/main/configs/examples/esmvaltool-recipes/mwe_esmvaltool_config.yml).
 
-###  Configuration with seperate yaml file
+The optional parameters of the function `loadDataFromESMValToolConfigs` are described [further below](). 
 
+###  Configuration with seperate yaml file
 For an example of a single yaml configuration file [see this example](https://github.com/awi-esc/SimilarityWeights/blob/main/configs/examples/example-lgm-historical.yml).
 
 The config file requires the following entries: 
@@ -87,64 +90,41 @@ datasets: [
 ````
 
 For each given dataset the respective data is loaded from the `base_dir` at
-`path_data`. The keys `exp`, `variables` and `statistics` are required to 
+`path_data`. The keys `base_dir`, `exp`, `variables` and `statistics` are required to 
 specify the data to be loaded. 
+`timeranges` and `subdirs` are optional and work in the same way as when given as field of the optional argument `subset` described below.
 
-`timeranges` is used to filter the data if not 
-all available data shall be loaded, but only the data for specific time periods.
-`subdirs` is optional, too. If given, data will be loaded only from directories
-with names that contain any of the provided values. 
+As we'll explain next, you can also provide further constraints when loading the data using the function `loadDataFromYAML`. Note that in this case, the values from the provided function argument (subset::Constraint) to filter the data take precedence over what had been specified in the yaml file. 
 
 
+### Optional parameters for filtering data
+For both functions, `loadDataFromESMValToolConfigs` and `loadDataFromYAML`, there is a set of optional parameters in order to constrain the loaded data:
 
-### Subset loaded data
+- `preview`: If set to false (default), the data will not be loaded and only the MetaData object is returned.
 
-Independently of the way how the data is specified, with a seperate yaml config 
-file or using ESMValTool recipes, there's the option to filter the data when 
-loading it. Otherwise all  data with the provided properties that is found will
-be loaded.
+- `dir_per_var`: If set to true (default), only subdirectories of the base_path that contain `_VARIABLE` in their name (e.g. `recipe_cmip5_lgm_tas`) will be searched. 
 
-Note that if you specified the data in a new yaml file and further provide 
-constraints when loading the data, using the
-function `loadDataFromYAML`, the values from the provided function argument 
-to filter the data take precedence with respect to what had been specified in 
-the yaml file. 
+- `is_model_data`: is set to true (default) when loading CMIP data, to false when loading observational data (e.g. ERA5).
 
+- `level_shared_models`: Can be either `nothing` (default), `ModelWeights.MODEL` or `ModelWeights.MEMBER`. If set to `MODEL`, only data from the same models will be loaded. If, for instance, data from lgm and historical experiments shall be loaded, this configuration will ensure that for both, only the same models are loaded, i.e. those for which both experiments were done. While this considers models, not specific simulations, setting level_shared_models to `MEMBER` would only load models that share the exact same simulations (i.e. the same member_id abbreviation, e.g. `r1i1p1f1`).
 
-````julia
-lgm_data = mw.loadDataFromESMValToolConfigs(
-    path_data, path_recipes;
-    subset = mw.Constraint(
-        variables = ["tas", "tos"],
-        statistics = ["CLIM"],
-        aliases = ["lgm"],
-        # timeranges = #  default: ["full"],
-        models = Vector{String}(),
-        projects = ["CMIP5", "CMIP6"],
-        subdirs = ["20241114"]
-    )
-);
-````
+- `subset` is an optional parameter of type `Constraint` or `Nothing`. A Constraint further constrains the data to be loaded and has the following fields:
+   
+    - `variables`: The short name of the climate variable, e.g. ["tas", "tos"].
+    
+    - `statistics`: The statistic/diagnostic that was used when preprocessing the data. The names are generally arbitrary, but need to be identical to those you used in the preprocessing; for instance, we refer to the climatological average as "CLIM", s.t. an example value for this argument is ["CLIM"].
+    
+    - `aliases`: Like for `statistics`, the names are arbitrary but must be identical to what you used when preprocessing the data; e.g. ["historical", "historical1"].
+    An alias should refer to a certain `timerange` of a certain experiment, e.g. we call the time period from 1951-1980 'historical1'. To load only this data, it thus does not matter whether you set `timerange=["1951-1980"]` or `alias=["historical1"]`.
+    
+    - `timeranges`: Timeranges to be loaded; especially for historical data, you may preprocess data for different timeranges,  e.g. ["full", "1980-2014"]. 
 
-The functions `loadDataFromYAML` and `loadDataFromESMValToolConfigs` both 
-provide the optional argument `subset` which expects an instance of Type 
-`Constraint` which defines the following fields:
+    - `projects`:  e.g. ["CMIP5", "CMIP6"]. All filenames of the data to be loaded must contain at least one of the given strings. If not specified and `is_model_data=true`, it is set to ["CMIP"]. If not specified and `is_model_data=false`, it is set to ["ERA5"], the default observational dataset used.
 
-- `variables`: the short name of the climate variable, e.g. ["tas", "tos"].
+    - `models`: List of models or individual model members, e.g. ["AWI-CM-1-1-MR"]. All filenames must contain at least one of the given strings + "_". The underscore is important since some models have names that are substrings of other models, e.g. "CNRM-CM5" and "CNRM-CM5-C2". 
+   
+    - `subdirs`: If given, data will be loaded only from subdirectories of the given base_dir that contain any of the provided values in their name. This is recommended when there are many subdirectories for a specific variable  within base_dir and you only want data from a specific one (e.g. of a certain date, given that the date is included in the name of the directory).
 
-- `statistics`: the statistic/diagnostic that was used when preprocessing the data. The names are generally arbitrary, but need to be identical to those you used in the preprocessing; for instance, we refer to the climatological average as "CLIM", s.t. an example value for this argument is ["CLIM"].
-
-- `aliases`: like for `statistics`, the names are arbitrary but must be identical to what you used when preprocessing the data; e.g. ["historical", "historical1"].
-
-    An alias should refer to a certain `timerange` of a certain experiment, e.g. we call the time period from 1951-1980 'historical1'. To load only this data, it thus does not matter whether you set `timerange=["1951-1980"]` or `alias=["historical1"]` within the `Constraint`-object.
-
-- `timeranges`: timerange; especially for historical data, you may preprocess data for different timeranges,  e.g. ["full", "1980-2014"]. 
-
-- `projects`:  e.g. ["CMIP5", "CMIP6"]. All filenames of the data to be loaded must contain at least one of the given strings. If not specified and `is_model_data=true`, it is set to ["CMIP"]. If not specified and `is_model_data=false`, it is set to ["ERA5"], which is thus the default observational dataset used.
-
-- `models`: can refer to models or individual model members, e.g. ["AWI-CM-1-1-MR"]. All filenames must contain at least one of the given strings + "_". The underscore is important since some models have names that are substrings of other models, e.g. "CNRM-CM5" and "CNRM-CM5-C2". 
-
-- `subdirs`: used to constrain subdirectories to be considered when the data is stored in different subdirectories for each variable (i.e. when `dir_per_var=true`), e.g. ["20241121"] for the case that you only want data from that date and the names of the subdirectories that contain the data include the date.
 
 
 ## How to compute weights
