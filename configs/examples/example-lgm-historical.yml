@@ -1,6 +1,7 @@
 # can be omitted if inside datasets, base_dir refers to the entire path
 path_data: "/albedo/work/projects/p_forclima/preproc_data_esmvaltool"
 
+# optional
 timerange_to_alias:
   "1850-1900": "historical0"
   "1951-1980": "historical1"
@@ -40,7 +41,8 @@ datasets: [
     exp: "historical", # required String
     variables: ["tas", "tos"], # required Vector
     statistics: ["CLIM"], # required Vector
-    timeranges: ["full"], # optional Vector
-    subdirs: ["20241121", "20241118"] # optional Vector
+    dir_per_var: true, # optional (default: true)
+    timeranges: ["full"], # optional Vector (default: empty)
+    subdirs: ["20241121", "20241118"] # optional Vector (default: empty)
   }
 ]
