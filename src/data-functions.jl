@@ -240,6 +240,7 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
             members = dims(dimData, :member)
             if length(members) != length(unique(members))
                 duplicates = [m for m in members if sum(members .== m) > 1]
+                #paths = [filter(x -> occursin(split(dup, MODEL_MEMBER_DELIM)[1], x), meta.paths) for dup in duplicates]
                 @warn "Some datasets appear more than once" duplicates
             end
         end
@@ -430,7 +431,7 @@ function getCMIPModelsKey(meta::Dict)
     attributes = keys(meta)
     if "source_id" in attributes
         if "model_id" in attributes
-            @warn "Dictionary contains  keys 'source_id' (CMIP6) and 'model_id' (CMIP5). 'source_id' is used!"
+            @warn "Dictionary contains keys 'source_id' used in CMIP6 ($(meta["source_id"])) and 'model_id' used in CMIP5 ($(meta["model_id"])). 'source_id' is used!"
         end
         return "source_id"
     elseif "model_id" in attributes
@@ -649,3 +650,5 @@ end
 
 
 
+function compute_anomalies(data::Data, ref::Data)
+end
