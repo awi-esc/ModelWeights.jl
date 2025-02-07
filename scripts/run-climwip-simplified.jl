@@ -14,14 +14,14 @@ model_data = mw.loadDataFromESMValToolConfigs(
     dir_per_var = false,
     is_model_data = true,
     level_shared_models = nothing,
-    subset = mw.Constraint(aliases = ["calculate_weights_climwip"])
+    subset = Dict("aliases" => ["calculate_weights_climwip"])
 );
 
 obs_data = mw.loadDataFromESMValToolConfigs(
     path_data, path_configs;
     dir_per_var = false,
     is_model_data = false,
-    subset = mw.Constraint(aliases = ["calculate_weights_climwip"])
+    subset = Dict("aliases" => ["calculate_weights_climwip"])
 );
 
 # TODO: or load from seperate yaml file:
@@ -83,13 +83,13 @@ figs_sij = mw.plotDistancesIndependence(sij_var, dimname="member1");
 data_temp_map_future = mw.loadDataFromESMValToolConfigs(
     path_data, path_configs;
     dir_per_var=false,
-    subset = mw.Constraint(aliases = ["weighted_temperature_map_future"])
+    subset = Dict("aliases" => ["weighted_temperature_map_future"])
 );
 data_temp_map_reference = mw.loadDataFromESMValToolConfigs(
     path_data, path_configs;
     dir_per_var = false,
     only_shared_models = true,
-    subset = mw.Constraint(aliases = ["weighted_temperature_map_reference"])
+    subset = Dict("aliases" => ["weighted_temperature_map_reference"])
 );
                 
 # compute weighted averages and plot results
@@ -140,7 +140,7 @@ end
 data_temp_graph = mw.loadDataFromESMValToolConfigs(
     path_data, path_configs;
     dir_per_var = false,
-    subset = mw.Constraint(aliases = ["weighted_temperature_graph"])
+    subset = Dict("aliases" => ["weighted_temperature_graph"])
 );
 data_graph = data_temp_graph["tas_ANOM_weighted_temperature_graph"].data;
 # this will compute the weighted avg based on the average across the respective members of each model

@@ -23,17 +23,6 @@ function Base.show(io::IO, x::MetaAttrib)
 end
 
 
-@kwdef struct Constraint
-    variables::Vector{String} = Vector{String}()
-    statistics::Vector{String} = Vector{String}()
-    aliases::Vector{String} = Vector{String}()
-    timeranges::Vector{String} = Vector{String}()
-    models::Vector{String} = Vector{String}()
-    projects::Vector{String} = Vector{String}()
-    subdirs::Vector{String} = Vector{String}()
-end
-
-
 @kwdef struct MetaData
     id::String
     attrib::MetaAttrib
@@ -89,6 +78,8 @@ function Base.show(io::IO, x::Weights)
         println(io, "$m: $(round(x.w[model = At(m)], digits=3))")
     end
 end
+
+
 
 """
     buildCMIP5EnsembleMember(
@@ -376,7 +367,7 @@ end
 """
     getMetaAttributesFromESMValToolConfigs(
         base_path_configs::String;
-        subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
+        constraint::Union{Dict, Nothing} = nothing
 )
 
 Read config files (ESMValTool recipes) to determine which data shall be loaded
@@ -386,13 +377,13 @@ experiment and timerange/alias.
 # Arguments:
 - `base_path_configs`: paths to directory that contain one or more yaml configs,
 which may be ESMValTool recipes.
-- `subset`:
+- `constraint`:
 
 # Returns: A Vector of `MetaAttrib`-Objects.
 """
 function getMetaAttributesFromESMValToolConfigs(
     base_path_configs::String;
-    constraint::Union{Constraint, Nothing} = nothing
+    constraint::Union{Dict, Nothing} = nothing
 )
     paths_configs = filter(
         x -> isfile(x) && endswith(x, ".yml"),
@@ -450,6 +441,56 @@ function addMetaData!(meta_dict::Dict{String, MetaData}, meta::MetaData)
     return nothing
 end
 
+
+# for configuration with yaml file
+function get_required_fields_config(ds::Dict)
+    data = Dict(
+        "base_dir" => get(ds, "base_dir", nothing),
+        "exp" => get(ds, "exp", nothing),
+        "variables" => get(ds, "variables", nothing),
+        "statistics" => get(ds, "statistics", nothing)
+    )
+    if any(isnothing.(values(data)))
+        msg = "Config yaml file must specify values for the following required keys: 'exp' (experiment), 'base_dir' (path to data directory), 'variables' and 'statistics'."
+        throw(ArgumentError(msg))
+    end
+    return data
+end
+
+function get_optional_fields_config(ds::Dict)
+    return Dict(
+        "timeranges" => get(ds, "timeranges", ["full"]),
+        "aliases" => get(ds, "aliases", Vector{String}()),
+        "models" => get(ds, "models", Vector{String}()),
+        "projects" => get(ds, "projects", Vector{String}()),
+        "subdirs" => get(ds, "subdirs", Vector{String}()),
+        "dir_per_var" => get(ds, "dir_per_var", true)
+    )
+end
+
+"""
+If data is constraint by provided argument when loading, the argument takes
+precedence over the given value inside the config yaml file.
+"""
+function setConstraintVal!(ds_config::Dict, cs_arg::Dict)
+    for (field, val) in cs_arg
+        ds_config[field] = val
+    end
+    return nothing
+end
+
+# function matchAliasTimerange!(constraint::Dict, timerange_to_alias::Dict)
+#     if !isempty(aliases)
+#         # use subset of aliases as given by input argument constraint
+#         filter!(x -> get(timerange_to_alias, x, nothing) in constraint["aliases"], constraint["timeranges"])
+#         if isempty(constraint["timeranges"])
+#             msg = "Given aliases do not match with considered timeranges for dataset: $ds !"
+#             throw(ArgumentError(msg))
+#         end
+#     end
+# end
+
+
 """
     getMetaDataFromYAML(
         path_config::String,
@@ -471,96 +512,47 @@ file.
 function getMetaDataFromYAML(
     path_config::String, 
     is_model_data::Bool;
-    constraint::Union{Constraint, Nothing} = nothing
+    arg_constraint::Union{Dict, Nothing} = nothing
 )
     config = YAML.load_file(path_config)
     datasets = config["datasets"]
     base_path = get(config, "path_data", "")
-    timerange_to_alias = config["timerange_to_alias"]
-    """
-    If data is constraint by provided argument when loading, the argument takes
-    precedence over the given value inside the config yaml file.
-    """
-    function getConstraintVal(
-        cs_arg::Union{Constraint, Nothing}, 
-        cs_config::Dict, 
-        field::String;
-        default_val::Vector{String} = Vector{String}()
-    )
-        result = get(cs_config, field, default_val)
-        if !isnothing(cs_arg)
-            value = getfield(cs_arg, Symbol(field))
-            result = isempty(value) ? result : value
-        end
-        return result
-    end
+    timerange_to_alias = get(config, "timerange_to_alias", Dict{String, String}())
 
     meta_data = Dict{String, MetaData}()
     for ds in datasets
-        data_dir = get(ds, "base_dir", nothing)
-        experiment = get(ds, "exp", nothing)
-        dir_per_var = get(ds, "dir_per_var", true)
-        if isnothing(experiment) || isnothing(data_dir)
-            msg = "Config yaml file must specify values for keys 'exp' (experiment) and 'base_dir' (path to data directory)!"
-            throw(ArgumentError(msg))
+        # get data from config file
+        req_fields = get_required_fields_config(ds)
+        optional_fields = get_optional_fields_config(ds)
+        ds_constraint = merge(req_fields, optional_fields)
+        # potentially update with constraint from argument
+        if !isnothing(arg_constraint)
+            setConstraintVal!(ds_constraint, arg_constraint)
         end
-        variables = getConstraintVal(constraint, ds, "variables")
-        statistics = getConstraintVal(constraint, ds, "statistics")
-        if isnothing(variables) || isnothing(statistics)
-            throw(ArgumentError("Config yaml file must specify values for keys 'variables', 'statistics'!"))
-        end
-        # NOTE: if data_dir is an absolute path, joinpath will ignore base_path
-        # and just use data_dir
-        path_data = joinpath(base_path, data_dir)
-        # timeranges is optional in config file; they can be subset by aliases provided in constraint argument
-        # in config file only timeranges are provided/considered, not aliases
-        timeranges = getConstraintVal(constraint, ds, "timeranges"; default_val = ["full"])
-        aliases = isnothing(constraint) ? Vector{String}() : constraint.aliases
-        if !isempty(aliases)
-            # use subset of aliases as given by input argument constraint
-            filter!(x -> get(timerange_to_alias, x, nothing) in constraint.aliases, timeranges)
-            if isempty(timeranges)
-                msg = "Given aliases in constraint do not match with considered timeranges for dataset: $ds !"
-                throw(ArgumentError(msg))
-            end
-        end
-        projects = getConstraintVal(constraint, ds, "projects")
-        models = getConstraintVal(constraint, ds, "models")
-        subdirs = getConstraintVal(constraint, ds, "subdirs")
-        cs = Constraint(
-            statistics=statistics, 
-            aliases=aliases, 
-            timeranges=timeranges,
-            models=models, 
-            projects=projects, 
-            subdirs=subdirs
-        )
-
-        for clim_var in variables
-            for stats in statistics
-                for timerange in timeranges
-                    alias = timerange == "full" ? experiment : 
-                        get(timerange_to_alias, timerange, "unknown")
+        # NOTE: if the second arg is an absolute path, joinpath will ignore the 
+        # first arg and just use the second
+        path_data = joinpath(base_path, req_fields["base_dir"])
+        for clim_var in ds_constraint["variables"]
+            for stats in ds_constraint["statistics"]
+                for timerange in ds_constraint["timeranges"]
+                    alias = timerange == "full" ? ds_constraint["exp"] : 
+                        get(timerange_to_alias, timerange, nothing)
+                    if isnothing(alias)
+                        throw(ArgumentError("Unknown alias for timerange $timerange"))
+                    end
                     attribs = [MetaAttrib(
                         variable = clim_var, 
                         statistic = stats, 
                         alias = alias, 
-                        exp = experiment,
+                        exp = ds_constraint["exp"],
                         timerange = timerange
                     )]
-                    # apply constraints if given
-                    constraint_vals = map(x->getfield(cs, x), fieldnames(Constraint))
-                    if any(!isempty, constraint_vals)
-                        applyDataConstraints!(attribs, cs)
-                    end
-                    if !isempty(attribs)
-                        meta = buildMetaData(
-                            attribs[1], path_data, dir_per_var, is_model_data; 
-                            constraint=cs
-                        )
-                        if !isempty(meta.paths)
-                            addMetaData!(meta_data, meta)
-                        end
+                    meta = buildMetaData(
+                        attribs[1], path_data, ds_constraint["dir_per_var"], is_model_data; 
+                        constraint = ds_constraint
+                    )
+                    if !isempty(meta.paths)
+                        addMetaData!(meta_data, meta)
                     end
                 end
             end
@@ -636,7 +628,7 @@ end
         base_path_data::String,
         dir_per_var::Bool,
         is_model_data::Bool;
-        subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
+        constraint::Dict = Dict()
     )
 
 Create data paths from assumed underlying data structure and `base_path_data` 
@@ -648,7 +640,7 @@ objects.
 - `base_path_data`:
 - `dir_per_var`:
 - `is_model_data`:
-- `subset`:
+- `constraint`:
 
 # Return: Vector of `MetaData`-objects.
 """
@@ -657,9 +649,9 @@ function buildMetaData(
     base_path_data::String,
     dir_per_var::Bool,
     is_model_data::Bool;
-    constraint::Union{Constraint, Nothing} = nothing
+    constraint::Dict = Dict()
 )
-    subdir_constraints = isnothing(constraint) ? nothing : constraint.subdirs
+    subdir_constraints = isempty(constraint) ? nothing : get(constraint, "subdirs", Vector{String}())
     paths_data = buildPathsForMetaAttrib(
         base_path_data, attrib, dir_per_var; subdir_constraints
     )
@@ -667,8 +659,8 @@ function buildMetaData(
     for path_data in paths_data
         paths = buildPathsToDataFiles(
             path_data, is_model_data; 
-            model_constraints=constraint.models,
-            project_constraints = constraint.projects
+            model_constraints = get(constraint, "models", Vector{String}()),
+            project_constraints = get(constraint, "projects", Vector{String}())
         )
         append!(paths_to_files, paths)
     end
@@ -737,27 +729,26 @@ end
 
 
 """
-    applyDataConstraints!(
-    meta_attributes::Vector{MetaAttrib}, subset::Dict{String, Vector{String}}
-)
+    applyDataConstraints!(meta_attributes::Vector{MetaAttrib}, constraint::Dict)
 
-Subset model ids so that only those with properties specified in 'subset' remain.
+Subset model ids so that only those with properties specified in 'constraint' remain.
 
 # Arguments
 - `meta_attributes`: Vector of `MetaAttrib` instances.
-- `subset`: Mapping from fieldnames of 'MetaAttrib' struct to Vector 
+- `constraint`: Mapping from fieldnames of 'MetaAttrib' struct to Vector 
 specifiying the properties of which at least one must be present for an id to 
 be retained.
 """
 function applyDataConstraints!(
-    meta_attributes::Vector{MetaAttrib}, constraint::Constraint
+    meta_attributes::Vector{MetaAttrib}, constraint::Dict
 )
-    # check for compatibility of timerange and alias first
-    timerange_constraints = getfield(constraint, :timeranges)
-    alias_constraints = getfield(constraint, :aliases)
+    timerange_constraints = get(constraint, "timeranges", Vector{String}())
+    alias_constraints = get(constraint, "aliases", Vector{String}())
     timerangeOk(attrib::MetaAttrib) = any(x -> attrib.timerange == x, timerange_constraints)
     aliasOk(attrib::MetaAttrib) = any(x -> attrib.alias == x, alias_constraints)
 
+    # timerange and alias don't have to match, it's sufficient if either timerange
+    # or alias match
     if !isempty(timerange_constraints) && !isempty(alias_constraints)
         filter!(x -> timerangeOk(x) || aliasOk(x), meta_attributes)
         if isempty(meta_attributes)
@@ -769,18 +760,13 @@ function applyDataConstraints!(
     elseif !isempty(alias_constraints)
         filter!(aliasOk, meta_attributes)
     end
-
     # constraints wrt variables and statistics
-    stats_constraints = constraint.statistics
-    vars_constraints = constraint.variables
-    stats_ok(attrib::MetaAttrib) = any(x -> attrib.statistic == x, stats_constraints)
-    vars_ok(attrib::MetaAttrib) = any(x -> attrib.variable == x, vars_constraints)
-    if !isempty(stats_constraints)
-        filter!(stats_ok, meta_attributes)
-    end
-    if !isempty(vars_constraints)
-        filter!(vars_ok, meta_attributes)
-    end
+    stats_constraints = get(constraint, "statistics", Vector{String}())
+    vars_constraints = get(constraint, "variables", Vector{String}())
+    stats_ok(attrib::MetaAttrib) = isempty(stats_constraints) || any(x -> attrib.statistic == x, stats_constraints)
+    vars_ok(attrib::MetaAttrib) = isempty(vars_constraints) || any(x -> attrib.variable == x, vars_constraints)
+    filter!(stats_ok, meta_attributes)
+    filter!(vars_ok, meta_attributes)
     return nothing
 end
 

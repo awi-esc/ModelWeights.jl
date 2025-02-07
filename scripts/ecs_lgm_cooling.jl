@@ -60,7 +60,7 @@ errdeltaSAT = DimArray(
     (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"])))
 )
 gm_deltaSAT = mw.getGlobalMeans(deltaSAT)
-area_weights= mw.computeAreaWeights(deltaSAT)
+area_weights= mw.computeAreaWeights(Array(dims(deltaSAT, :lon)), Array(dims(deltaSAT, :lat)))
 std_gm_deltaSAT = sum(area_weights .* errdeltaSAT)
 
 CI_lower(n) = gm_deltaSAT - n * std_gm_deltaSAT;
@@ -121,12 +121,12 @@ path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
 lgm_data = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes; 
-    subset = mw.Constraint(
-        statistics = ["CLIM"], 
-        variables = ["tos", "tas"],
-        projects = ["CMIP5", "CMIP6"],
-        aliases = ["lgm"], 
-        subdirs = ["20241114"]
+    subset = Dict(
+        "statistics" => ["CLIM"], 
+        "variables" => ["tos", "tas"],
+        "projects" => ["CMIP5", "CMIP6"],
+        "aliases" => ["lgm"], 
+        "subdirs" => ["20241114"]
     )
 )
 lgm_data = mw.kelvinToCelsius(lgm_data);
@@ -145,7 +145,7 @@ units = lgm_data.data.metadata["units"];
 for (idx, member) in enumerate(dims(lgm_data.data, :member))
     data = lgm_data.data[member = At(member)]
     mask = masksMissing[member = At(member)]
-    area_weights[member = At(member)] = mw.computeAreaWeights(data; mask)
+    area_weights[member = At(member)] = mw.computeAreaWeights(Array(dims(data, :lon)), Array(dims(data, :lat)); mask)
 end
 all(map(x -> area_weights[:,:, x] == area_weights[:,:,x+1], 1:length(members)-1))
 
@@ -173,11 +173,11 @@ obs_data = mw.loadDataFromESMValToolConfigs(
     "/albedo/home/brgrus001/ModelWeights/configs/historical_obs",
     dir_per_var = false,
     is_model_data = false,
-    subset = mw.Constraint(
-        statistics = ["CLIM"], 
-        variables = ["tas"],
-        aliases = ["historical"],
-        projects = ["ERA5"] # for observational data default value is ["ERA5"]
+    subset = Dict(
+        "statistics" => ["CLIM"], 
+        "variables" => ["tas"],
+        "aliases" => ["historical"],
+        "projects" => ["ERA5"] # for observational data default value is ["ERA5"]
     ),
     preview=false
 )["tas_CLIM_historical"];
@@ -186,17 +186,18 @@ obs_data = mw.loadDataFromESMValToolConfigs(
 if obs_data.data.metadata["units"] == "K"
     obs_data = @set obs_data.data = mw.kelvinToCelsius(obs_data.data);
 end
+dat = obs_data.data[:,:,1]
 mw.plotMeansOnMap(
-    obs_data.data[:,:,1], 
+    dat, 
     "Historical tas for $(dims(obs_data.data, :source)[1])",
     colors = ColorSchemes.twelvebitrainbow.colors
 )
-mask_obs = ismissing.(obs_data.data[:,:,1])
-area_weights_obs = mw.computeAreaWeights(obs_data.data[:,:,1]; mask=mask_obs)
+mask_obs = ismissing.(dat)
+area_weights_obs = mw.computeAreaWeights(Array(dims(dat, :lon)), Array(dims(dat, :lat)); mask=mask_obs)
 mw.plotMeansOnMap(area_weights_obs, "area weights for observations")
 global_means_obs = mapslices(
     x -> Statistics.sum(skipmissing(x)), 
-    obs_data.data[:,:,1] .* area_weights_obs, 
+    dat .* area_weights_obs, 
     dims=(:lon,:lat)
 )[lon=1, lat=1]
 
