@@ -133,7 +133,6 @@ end
         path_recipes::String;
         dir_per_var::Bool=true,
         is_model_data::Bool=true,
-        level_shared_models::Bool=false,
         subset::Union{Dict, Nothing}=nothing
     )
 
@@ -153,14 +152,13 @@ used as config files
 each variable (they must end with _ and the name of the variable), otherwise
 data_path points to the directory that has a subdirectory 'preproc'.
 - `is_model_data`: set true for model data, false for observational data
-- `only_shared_models`: if true only data loaded from model members shared 
-across all experiments and variables.
 - `subset`: specifies the properties of the subset of data to be loaded. 
 The following keys are considered:  `models` (used to load only specific set of models 
 or members of models), `projects` (used to load only data from a given set of
 projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases` 
 (super set is loaded, i.e. data that corresponds to either a given timerange or
-a given alias will be loaded), `variables`, `statistics` and `subdirs`.
+a given alias will be loaded), `variables`, `statistics`, `subdirs` and `level_shared_models` 
+(if set to MEMBER/MODEL only data loaded from model members/models shared across all experiments and variables is loaded).
 - `preview`: used to pre-check which data will be loaded before actually loading
 it. 
 """
@@ -169,7 +167,6 @@ function loadDataFromESMValToolConfigs(
     path_recipes::String;
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
-    level_shared_models::Union{LEVEL, Nothing}=nothing,
     subset::Union{Dict, Nothing}=nothing,
     preview::Bool=false
 )
@@ -181,8 +178,8 @@ function loadDataFromESMValToolConfigs(
         )
         addMetaData!(meta_data, meta)
     end
-    if !isnothing(level_shared_models)
-        reduceMetaDataSharedModels!(meta_data, level_shared_models)
+    if !isnothing(subset) && !isnothing(get(subset, "level_shared_models", nothing))
+        reduceMetaDataSharedModels!(meta_data, subset["level_shared_models"])
     end
     output = preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
     return output
@@ -194,7 +191,6 @@ end
         path_config::String;
         dir_per_var::Bool=true,
         is_model_data::Bool=true,
-        level_shared_models::Bool=false,
         subset::Union{Dict, Nothing}=nothing,
         preview::Bool=false
     )
@@ -206,28 +202,27 @@ has subdirectories, one for each variable (they must end with _ and the name
 of the variable), otherwise `path_data` points to the directory that has a 
 subdirectory 'preproc'.
 - `is_model_data`: set true for model data, false for observational data
-- `only_shared_models`: if true only data loaded from model members shared 
-across all experiments and variables.
 - `subset`: specifies the properties of the subset of data to be loaded. These 
 have to apply to all loaded datasets specified in the config yaml file. 
 The following keys are considered:  `models` (used to load only specific set of models 
 or members of models), `projects` (used to load only data from a given set of
 projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases` 
 (super set is loaded, i.e. data that corresponds to either a given timerange or
-a given alias will be loaded), `variables`, `statistics`, `subdirs` and `dir_per_var`.
+a given alias will be loaded), `variables`, `statistics`, `subdirs`, `level_shared_models` 
+(if set to MEMBER/MODEL only data loaded from model members/models shared across all
+experiments and variables is loaded) and `dir_per_var`.
 - `preview`: used to pre-check which data will be loaded before actually loading
 it. 
 """
 function loadDataFromYAML(
     path_config::String;
     is_model_data::Bool=true,
-    level_shared_models::Union{LEVEL,Nothing}=nothing,
     subset::Union{Dict, Nothing}=nothing,
     preview::Bool=false
 )
     meta_data = getMetaDataFromYAML(path_config, is_model_data; arg_constraint = subset)
-    if !isnothing(level_shared_models)
-        reduceMetaDataSharedModels!(meta_data, level_shared_models)
+    if !isnothing(subset) && !isnothing(get(subset, "level_shared_models", nothing))
+        reduceMetaDataSharedModels!(meta_data, subset["level_shared_models"])
     end
     output = preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
     return output

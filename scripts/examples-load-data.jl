@@ -10,24 +10,27 @@ begin
     statistics = ["CLIM"];
     variables = ["tas", "tos"];
     projects = ["CMIP5", "CMIP6"];
-    subset = mw.Constraint(
-        statistics = statistics, variables = variables, projects = projects,
-        aliases = ["lgm"], 
-        subdirs = ["20241114"]
-    );
 end
 # --------- Load the model data Version 1: from ESMValTool recipes --------- #
 # 1. Model data just for lgm-experiment from ESMValTool recipes
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
 
+subset = Dict{String, Union{Vector{String}, mw.LEVEL}}(
+    "statistics" => statistics, 
+    "variables" => variables, 
+    "projects" => projects,
+    "aliases" => ["lgm"], 
+    "subdirs" => ["20241114"],
+    "level_shared_models" => mw.MEMBER
+);
 lgm_meta = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes; dir_per_var, is_model_data, subset = subset, 
-    preview = true, level_shared_models = mw.MEMBER
+    preview = true
 );
 lgm_data = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes; dir_per_var, is_model_data, subset = subset,
-    level_shared_models = mw.MEMBER, preview = false
+    preview = false
 );
 
 # we set level_shared_models to mw.MEMBER, so model members are identical for 
@@ -46,13 +49,14 @@ path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/historical";
 # same simulations for all variables when computing weights
 historical_data_lgm_models = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes;
-    level_shared_models = mw.MEMBER,
-    subset = mw.Constraint(
-        statistics = statistics, variables = variables, projects = projects,
-        aliases = ["historical"], 
-        timeranges=["full"], 
-        subdirs =  ["20241121", "20241118"],
-        models = models_lgm,
+    subset = Dict(
+        "statistics" => statistics, 
+        "variables" => variables, 
+        "projects" => projects,
+        "aliases" => ["historical"], 
+        "timeranges" => ["full"], 
+        "subdirs" =>  ["20241121", "20241118"],
+        "models" => models_lgm
     ),
     preview = false
 );
@@ -67,13 +71,14 @@ models_historical = unique(historical_data_lgm_models["tos_CLIM_historical"].dat
 begin
     historical_data_lgm_members = mw.loadDataFromESMValToolConfigs(
         path_data, path_recipes;
-        level_shared_models = nothing,
-        subset = mw.Constraint(
-            statistics = statistics, variables = variables, projects = projects,
-            aliases = ["historical"], 
-            timeranges=["full"], 
-            subdirs =  ["20241121", "20241118"],
-            models = model_members_lgm,
+        subset = Dict(
+            "statistics" => statistics, 
+            "variables" => variables, 
+            "projects" => projects,
+            "aliases" => ["historical"], 
+            "timeranges" => ["full"], 
+            "subdirs" =>  ["20241121", "20241118"],
+            "models" => model_members_lgm
         ),
         preview = false
     );
@@ -92,18 +97,22 @@ filter(x -> !(x in members_historical), model_members_lgm)
 begin
     # yaml config file already contains basic constraints for subset as defined above.
     path_config = "/albedo/home/brgrus001/ModelWeights/configs/examples/example-lgm-historical.yml";
-    subset = mw.Constraint(models = models_lgm);
+    subset = Dict{String, Union{Vector{String}, mw.LEVEL}}(
+        "statistics" => statistics, 
+        "variables" => variables, 
+        "projects" => projects,
+        "aliases" => ["historical"],
+        "models" => models_lgm
+    );
     hist_data_lgm_v2_meta =  mw.loadDataFromYAML(
         path_config; 
         is_model_data,
-        level_shared_models = nothing,
         subset = subset,
         preview = true
     );
     hist_data_lgm_v2 = mw.loadDataFromYAML(
         path_config; 
         is_model_data,
-        level_shared_models = nothing,
         subset = subset,
         preview = false
     );
@@ -118,3 +127,25 @@ end
 #         @assert missingOrEqual(data1, data2)
 #     end
 # end
+
+
+
+# -------------------- Load the observational data -------------------------- #
+begin
+    base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_tas_tos";
+    config_path = "/albedo/home/brgrus001/ModelWeights/configs/historical_obs";
+    # aliases and timeranges don't have to match, all data will be loaded that 
+    # corresponds either to aliases or to timeranges!
+    obs_data = mw.loadDataFromESMValToolConfigs(
+        base_path, config_path;
+        dir_per_var = false,
+        is_model_data = false,
+        subset = Dict(
+            "statistics" => statistics, 
+            "variables" => variables,
+            "aliases" => ["historical", "historical2"],
+            "projects" => ["ERA5"], # for observational data default value is ["ERA5"]
+            "timeranges" => ["1980-2014"]
+        )
+    );
+end

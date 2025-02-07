@@ -13,7 +13,6 @@ model_data = mw.loadDataFromESMValToolConfigs(
     path_data, path_configs;
     dir_per_var = false,
     is_model_data = true,
-    level_shared_models = nothing,
     subset = Dict("aliases" => ["calculate_weights_climwip"])
 );
 
@@ -88,7 +87,6 @@ data_temp_map_future = mw.loadDataFromESMValToolConfigs(
 data_temp_map_reference = mw.loadDataFromESMValToolConfigs(
     path_data, path_configs;
     dir_per_var = false,
-    only_shared_models = true,
     subset = Dict("aliases" => ["weighted_temperature_map_reference"])
 );
                 

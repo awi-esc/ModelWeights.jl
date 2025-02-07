@@ -11,7 +11,7 @@ using Distributions
 # Get data from piControl + historical + lgm experiments
 path_config = "/albedo/home/brgrus001/ModelWeights/configs/ecs-lgm-cooling.yml";
 data_meta =  mw.loadDataFromYAML(path_config; preview = true);
-data = mw.loadDataFromYAML(path_config; level_shared_models = mw.MODEL);
+data = mw.loadDataFromYAML(path_config; subset = Dict("level_shared_models" => mw.MODEL));
 
 # for the shared models, make sure that physics of piControl models are the same
 # as physics of lgm models
