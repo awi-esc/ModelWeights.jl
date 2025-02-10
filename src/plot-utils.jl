@@ -185,3 +185,37 @@ function kelvinToCelsius(data::Dict{String, Data})
     end
     return data
 end
+
+
+function makeSubplots(
+    data::DimArray, limits::Tuple, grid::NamedTuple{(:nrows, :ncols), Tuple{Int, Int}}; 
+    fontsize=36, figsize=(800,600)
+)
+    models = hasdim(data, :member) ? Array(dims(data, :member)) : 
+        (hasdim(data, :model) ? Array(dims(data, :model)) : nothing)
+    if isnothing(models)
+        throw(ArgumentError("subplots only possible for data with dimension :model or :member"))
+    end
+    # models = reshape(models, grid...)
+    fig = Figure(size = figsize, fontsize=fontsize)
+    nb_subplots = length(models)
+
+    for idx_plot in 1:nb_subplots
+        row = ceil(Int, idx_plot / grid.ncols)
+        col_temp = idx_plot % grid.ncols
+        col = col_temp==0 ? grid.ncols : col_temp
+        pos = (x=row, y=col)
+        pos_legend = idx_plot == nb_subplots ? (x=1:row, y=grid.ncols+1) : nothing
+        model = models[idx_plot]
+        if hasdim(data, :member)
+            plotMeansOnMap!(
+                fig, data[member = At(model)], "$model"; 
+                color_range = limits, pos=pos, pos_legend=pos_legend)
+        else
+            plotMeansOnMap!(
+                fig, data[model = At(model)], "$model"; 
+                color_range = limits, pos=pos, pos_legend=pos_legend)
+        end
+    end
+    return fig
+end

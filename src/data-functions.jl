@@ -431,7 +431,7 @@ function getCMIPModelsKey(meta::Dict)
     attributes = keys(meta)
     if "source_id" in attributes
         if "model_id" in attributes
-            @warn "Dictionary contains keys 'source_id' used in CMIP6 ($(meta["source_id"])) and 'model_id' used in CMIP5 ($(meta["model_id"])). 'source_id' is used!"
+            @debug "Dictionary contains keys 'source_id' used in CMIP6 ($(meta["source_id"])) and 'model_id' used in CMIP5 ($(meta["model_id"])). 'source_id' is used!"
         end
         return "source_id"
     elseif "model_id" in attributes
@@ -650,5 +650,20 @@ end
 
 
 
-function compute_anomalies(data::Data, ref::Data)
+function compute_anomalies(orig::Data, ref::Data; save::Bool=true)
+    dimension = hasdim(orig.data, :member) ? :member : :model
+    if dims(orig.data, dimension) != dims(ref.data, dimension)
+        throw(ArgumentError("Original and reference data must contain exactly the same models!"))
+    end
+    anomalies = orig.data .- ref.data
+    # getPaths(data::Data) = map(x -> (base=joinpath(splitpath(x)[1:end-3]), 
+    #                                 alias=splitpath(x)[end-2],
+    #                                 diagnostic=splitpath(x)[end-1],
+    #                                 fn = splitpath(x)[end]), 
+    #                             data.meta.paths)
+    # # if save 
+    #     paths_refs = getPaths(ref)
+    #     paths_data = getPaths(orig)
+    # end
+    return anomalies
 end
