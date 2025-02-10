@@ -457,10 +457,66 @@ function get_required_fields_config(ds::Dict)
     return data
 end
 
-function get_optional_fields_config(ds::Dict)
+
+"""
+    get_optional_fields_config(ds::Dict, timerange_aliases_dict::Dict)
+
+Fill optional fields for a dataset in config file with default values. Given 
+Returned timeranges and aliases have the same length and correspond to one another.
+
+# Arguments:
+- `ds`:
+- `timerange_aliases_dict`:
+"""
+function get_optional_fields_config(ds::Dict, timerange_aliases_dict::Dict)
+    aliases_timerange_vec = [(tr=k, alias=v) for (k,v) in timerange_aliases_dict]
+    aliases_timerange_dict = Dict{String, String}()
+    for elem in aliases_timerange_vec
+        aliases_timerange_dict[elem.alias] = elem.tr
+    end
+
+    timeranges = unique(get(ds, "timeranges", Vector{String}()))
+    full_included = "full" in timeranges
+    filter!(x -> x != "full", timeranges)
+    aliases =  unique(get(ds, "aliases", Vector{String}()))
+
+    if !isempty(timeranges) && !isempty(aliases)
+        # make sure that same data is not loaded once for timerange and once 
+        # for corresponding alias
+        tr_as_aliases = [get(timerange_aliases_dict, tr, nothing) for tr in timeranges]
+        if any(isnothing.(tr_as_aliases))
+            unknowns = timeranges[findall(x -> isnothing(x), tr_as_aliases)]
+            throw(ArgumentError("Timeranges $unknowns aren't in timerange to alias dictionary in config file!"))
+        end
+        aliases_temp = filter(x -> !(x in tr_as_aliases), aliases)
+        if !isempty(aliases_temp)
+            aliases_as_tr = map(a -> filter(x -> x.alias==a, aliases_timerange_dict), aliases_temp)
+            if any(x -> length(x) != 1, aliases_as_tr)
+                throw(ArgumentError("Unknown alias according to timerange alias dictionary in config file!"))
+            end
+        else
+            aliases_as_tr = Vector{String}()
+        end
+        aliases = vcat(tr_as_aliases, aliases_temp)
+        timeranges = vcat(timeranges, aliases_as_tr)
+    elseif isempty(timeranges)
+        timeranges = [get(aliases_timerange_dict, a, nothing) for a in aliases]
+        if any(isnothing.(timeranges))
+            throw(ArgumentError("Unknown alias according to timerange alias dictionary in config file!"))
+        end
+    elseif isempty(aliases)
+        aliases = [get(timerange_aliases_dict, tr, nothing) for tr in timeranges]
+        if any(isnothing.(aliases))
+            throw(ArgumentError("Unknown timerange according to timerange alias dictionary in config file!"))
+        end
+    end
+    if  full_included || (isempty(timeranges) && isempty(aliases))
+        push!(timeranges, "full")
+        push!(aliases, ds["exp"])
+    end
     return Dict(
-        "timeranges" => get(ds, "timeranges", ["full"]),
-        "aliases" => get(ds, "aliases", Vector{String}()),
+        "timeranges" => timeranges,
+        "aliases" => aliases,
         "models" => get(ds, "models", Vector{String}()),
         "projects" => get(ds, "projects", Vector{String}()),
         "subdirs" => get(ds, "subdirs", Vector{String}()),
@@ -519,27 +575,28 @@ function getMetaDataFromYAML(
     base_path = get(config, "path_data", "")
     timerange_to_alias = get(config, "timerange_to_alias", Dict{String, String}())
 
+
     meta_data = Dict{String, MetaData}()
     for ds in datasets
         # get data from config file
         req_fields = get_required_fields_config(ds)
-        optional_fields = get_optional_fields_config(ds)
+        optional_fields = get_optional_fields_config(ds, timerange_to_alias)
         ds_constraint = merge(req_fields, optional_fields)
         # potentially update with constraint from argument
         if !isnothing(arg_constraint)
             setConstraintVal!(ds_constraint, arg_constraint)
+        end
+        if length(ds_constraint["timeranges"]) != length(ds_constraint["aliases"]) || isempty(ds_constraint["timeranges"])
+            throw(ArgumentError("Timeranges and aliases must have the same length and match"))
         end
         # NOTE: if the second arg is an absolute path, joinpath will ignore the 
         # first arg and just use the second
         path_data = joinpath(base_path, req_fields["base_dir"])
         for clim_var in ds_constraint["variables"]
             for stats in ds_constraint["statistics"]
-                for timerange in ds_constraint["timeranges"]
-                    alias = timerange == "full" ? ds_constraint["exp"] : 
-                        get(timerange_to_alias, timerange, nothing)
-                    if isnothing(alias)
-                        throw(ArgumentError("Unknown alias for timerange $timerange"))
-                    end
+                for idx in 1:length(ds_constraint["timeranges"])
+                    timerange = ds_constraint["timeranges"][idx]
+                    alias =  ds_constraint["aliases"][idx]
                     attribs = [MetaAttrib(
                         variable = clim_var, 
                         statistic = stats, 
