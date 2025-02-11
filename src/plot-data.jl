@@ -1,12 +1,17 @@
 using ColorSchemes
 using Dates
 
-""" plotMeansOnMap(means::DimArray, title::String, colors=nothing)
+""" plotMeansOnMap!(fig::Figure, means::DimArray, title::String;
+                    colors=nothing, color_range=nothing, high_clip=(1,0,0),
+                    low_clip=(0,0,1), pos=(x=1, y=1), pos_legend=nothing
+                    )
     
-Plot contours of world with an overlayed heatmap that shows the data which 
-correspond to mean value for each position in considered grid. 
+Plot contours of world with an overlayed heatmap of the input data.
 """
-function plotMeansOnMap(means::DimArray, title::String; colors=nothing)
+function plotMeansOnMap!(fig::Figure, means::DimArray, title::String; 
+    colors=nothing, color_range=nothing, high_clip=(1,0,0), low_clip=(0,0,1), 
+    pos=(x=1, y=1), pos_legend=nothing
+)
     means = sortLongitudesWest2East(means);
     dims_lat = Array(dims(means, :lat));
     dims_lon = Array(dims(means, :lon));
@@ -27,8 +32,8 @@ function plotMeansOnMap(means::DimArray, title::String; colors=nothing)
     step_lon = Int(round(length(lonLabels)/10));
     step_lat = Int(round(length(latLabels)/10));
 
-    fig = Figure();
-    ax = Axis(fig[1,1], 
+    #fig = Figure();
+    ax = Axis(fig[pos.x, pos.y], 
         title = title,
         xlabel = "Longitude",
         ylabel = "Latitude",
@@ -40,11 +45,19 @@ function plotMeansOnMap(means::DimArray, title::String; colors=nothing)
     if isnothing(colors)
         colors = reverse(ColorSchemes.redblue.colors)
     end
-    hm = heatmap!(ax, lon, lat, Array(means), colormap=colors, alpha=0.8);
+    if isnothing(color_range)
+        hm = heatmap!(ax, lon, lat, Array(means), colormap=colors, alpha=0.8);
+    else
+        hm = heatmap!(ax, lon, lat, Array(means), colormap=colors, alpha=0.8, 
+                        colorrange = color_range,
+                        highclip = high_clip, 
+                        lowclip = low_clip);
+    end
     lines!(GeoMakie.coastlines(); color=:black);
-    Colorbar(fig[1,2], hm);
-
-    return fig
+    if !isnothing(pos_legend)
+        Colorbar(fig[pos_legend.x, pos_legend.y], hm);
+    end
+    return nothing
 end
 
 

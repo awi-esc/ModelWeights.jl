@@ -11,10 +11,6 @@ reference = data["tas_CLIM_piControl"]
 lgm_data = data["tas_CLIM_lgm"]
 anomalies = mw.compute_anomalies(lgm_data, reference)
 
-figs = []
-for member in Array(dims(anomalies, :member)) 
-    push!(figs, mw.plotMeansOnMap(anomalies[member = At(member)], "Anomalies lgm vs. piControl: $member"))
-end
 f1 = mw.makeSubplots(anomalies, (-20, 0), (nrows=3, ncols=5); figsize= (800,600).*(5,3))
 save("plots/anomalies/lgm_anomalies.png", f1)
 

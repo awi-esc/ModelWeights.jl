@@ -150,12 +150,15 @@ end
 all(map(x -> area_weights[:,:, x] == area_weights[:,:,x+1], 1:length(members)-1))
 
 # plot map of LGM tas data
-mw.plotMeansOnMap(
+fig1 = Figure()
+mw.plotMeansOnMap!(
+    fig1,
     lgm_data.data[:,:,1], 
     "LGM tas for $(dims(lgm_data.data, :member)[1])";
     colors = ColorSchemes.twelvebitrainbow.colors   
 )
-mw.plotMeansOnMap(area_weights[:,:,1], "area weights for lgm models")
+fig2 = Figure();
+mw.plotMeansOnMap!(fig2, area_weights[:,:,1], "area weights for lgm models")
 
 
 global_means_non_weighted = mapslices(x -> Statistics.mean(x), 
@@ -187,14 +190,16 @@ if obs_data.data.metadata["units"] == "K"
     obs_data = @set obs_data.data = mw.kelvinToCelsius(obs_data.data);
 end
 dat = obs_data.data[:,:,1]
-mw.plotMeansOnMap(
-    dat, 
+fig3 = Figure();
+mw.plotMeansOnMap!(
+    fig3, dat, 
     "Historical tas for $(dims(obs_data.data, :source)[1])",
     colors = ColorSchemes.twelvebitrainbow.colors
 )
 mask_obs = ismissing.(dat)
 area_weights_obs = mw.computeAreaWeights(Array(dims(dat, :lon)), Array(dims(dat, :lat)); mask=mask_obs)
-mw.plotMeansOnMap(area_weights_obs, "area weights for observations")
+fig4 = Figure();
+mw.plotMeansOnMap!(fig4, area_weights_obs, "area weights for observations")
 global_means_obs = mapslices(
     x -> Statistics.sum(skipmissing(x)), 
     dat .* area_weights_obs, 
@@ -213,11 +218,11 @@ begin
         ylabel = "Gloabal Mean Temperature in °C",
         xticklabelrotation = pi/2
     );
-    lines!(ax, 1:length(models), vec(global_means), color = :red, label = "Area-weighted")
-    scatter!(ax, 1:length(models), vec(global_means), color = :red, label = "Area-weighted")
+    lines!(ax, 1:length(models), global_means.data, color = :red, label = "Area-weighted")
+    scatter!(ax, 1:length(models), global_means.data, color = :red, label = "Area-weighted")
 
-    lines!(ax, 1:length(models), vec(global_means_non_weighted), color = :blue, label = "Non-weighted")
-    scatter!(ax, 1:length(models), vec(global_means_non_weighted), color = :blue, label = "Non-weighted")
+    lines!(ax, 1:length(models), global_means_non_weighted.data, color = :blue, label = "Non-weighted")
+    scatter!(ax, 1:length(models), global_means_non_weighted.data, color = :blue, label = "Non-weighted")
 
     lines!(ax, 1:length(models), repeat([global_means_obs], length(models)), color = :green, label = "Area-weighted Global Mean Historical observations")
     axislegend(ax, merge = true, position = :cc)

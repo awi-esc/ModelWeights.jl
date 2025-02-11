@@ -296,7 +296,7 @@ function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.Dim
     end
     if !isempty(attribs_diff_across_members)
         # TODO ignore those that are defenitely expected to differ
-        @warn "metadata attributes that differ across model members (ok for some!)" unique(attribs_diff_across_members)
+        @debug "metadata attributes that differ across model members (ok for some!)" unique(attribs_diff_across_members)
     end
     return meta_new
 end
