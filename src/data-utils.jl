@@ -451,8 +451,13 @@ function get_required_fields_config(ds::Dict)
         "statistics" => get(ds, "statistics", nothing)
     )
     if any(isnothing.(values(data)))
-        msg = "Config yaml file must specify values for the following required keys: 'exp' (experiment), 'base_dir' (path to data directory), 'variables' and 'statistics'."
-        throw(ArgumentError(msg))
+        # for surface altitude no statistics are computed, then we assume statistics="none"
+        if isnothing(data["statistics"]) && data["variables"] == ["orog"]
+            data["statistics"] = ["none"]
+        else
+            msg = "Config yaml file must specify values for the following required keys: 'exp' (experiment), 'base_dir' (path to data directory), 'variables' and 'statistics'."
+            throw(ArgumentError(msg))
+        end
     end
     return data
 end
@@ -773,7 +778,8 @@ function buildPathsForMetaAttrib(
     data_paths = Vector{String}()
     for p in base_paths
         # Note: particular data structure assumed here!
-        diagnostic = join([attrib.variable, attrib.statistic], "_")
+        diagnostic = isempty(attrib.statistic) ? attrib.variable : 
+            join([attrib.variable, attrib.statistic], "_")
         path_data = joinpath(p, "preproc", attrib.alias, diagnostic)
         if !isdir(path_data)
             @warn "$path_data is not an existing directory!"
