@@ -187,9 +187,16 @@ function kelvinToCelsius(data::Dict{String, Data})
 end
 
 
+"""
+    makeSubplots
+    
+# Arguments:
+
+"""
 function makeSubplots(
-    data::DimArray, limits::Tuple, grid::NamedTuple{(:nrows, :ncols), Tuple{Int, Int}}; 
-    fontsize=36, figsize=(800,600)
+    data::DimArray, grid::NamedTuple{(:nrows, :ncols), Tuple{Int, Int}}; 
+    fontsize=36, figsize=(800,600), title="",
+    colors=nothing, color_range_limits=nothing, high_clip=(1,0,0), low_clip=(0,0,1)
 )
     models = hasdim(data, :member) ? Array(dims(data, :member)) : 
         (hasdim(data, :model) ? Array(dims(data, :model)) : nothing)
@@ -198,6 +205,8 @@ function makeSubplots(
     end
     # models = reshape(models, grid...)
     fig = Figure(size = figsize, fontsize=fontsize)
+    Label(fig[0, 1:grid.ncols], title, fontsize = 1.5 * fontsize, halign=:center, font=:bold)
+
     nb_subplots = length(models)
 
     for idx_plot in 1:nb_subplots
@@ -209,12 +218,14 @@ function makeSubplots(
         model = models[idx_plot]
         if hasdim(data, :member)
             plotMeansOnMap!(
-                fig, data[member = At(model)], "$model"; 
-                color_range = limits, pos=pos, pos_legend=pos_legend)
+                fig, data[member = At(model)], "$model";
+                colors=colors, high_clip=high_clip, low_clip=low_clip, 
+                color_range=color_range_limits, pos=pos, pos_legend=pos_legend)
         else
             plotMeansOnMap!(
-                fig, data[model = At(model)], "$model"; 
-                color_range = limits, pos=pos, pos_legend=pos_legend)
+                fig, data[model = At(model)], "$model";
+                colors=colors, high_clip=high_clip, low_clip=low_clip,
+                color_range=color_range_limits, pos=pos, pos_legend=pos_legend)
         end
     end
     return fig

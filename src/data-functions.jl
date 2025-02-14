@@ -649,21 +649,34 @@ end
 
 
 
+"""
+    compute_anomalies!(data::Dict{String, Data}, id_data::String, id_ref::String)
 
-function compute_anomalies(orig::Data, ref::Data; save::Bool=true)
-    dimension = hasdim(orig.data, :member) ? :member : :model
-    if dims(orig.data, dimension) != dims(ref.data, dimension)
+# Arguments:
+- `data`:
+- `id_data`:
+- `id_ref`: 
+"""
+function compute_anomalies!(data::Dict{String, Data}, id_data::String, id_ref::String)
+    
+    dimension = hasdim(data[id_data].data, :member) ? :member : :model
+    if dims(data[id_data].data, dimension) != dims(data[id_ref].data, dimension)
         throw(ArgumentError("Original and reference data must contain exactly the same models!"))
     end
-    anomalies = orig.data .- ref.data
-    # getPaths(data::Data) = map(x -> (base=joinpath(splitpath(x)[1:end-3]), 
-    #                                 alias=splitpath(x)[end-2],
-    #                                 diagnostic=splitpath(x)[end-1],
-    #                                 fn = splitpath(x)[end]), 
-    #                             data.meta.paths)
-    # # if save 
-    #     paths_refs = getPaths(ref)
-    #     paths_data = getPaths(orig)
-    # end
-    return anomalies
+    anomalies_mat = Array(data[id_data].data) .- Array(data[id_ref].data)
+    anomalies_metadata = deepcopy(data[id_data].data.metadata)
+    anomalies_metadata["reference_anomalies"] = id_ref
+    anomalies = DimArray(anomalies_mat, dims(data[id_data].data), metadata = anomalies_metadata)
+    clim_var, _, alias = split(id_data, "_")
+    
+    if isa(anomalies.metadata["variable_id"], String)
+        anomalies.metadata["variable_id"] *= "_ANOM"
+    else
+        anomalies.metadata["variable_id"] = map(x -> x *= "_ANOM", anomalies.metadata["variable_id"])
+    end
+
+    anomaly_data = data[id_data]
+    anomaly_data = @set anomaly_data.data = anomalies
+    data[clim_var * "_ANOM_" * alias] = anomaly_data
+    return nothing
 end
