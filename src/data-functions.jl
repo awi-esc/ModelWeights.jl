@@ -628,16 +628,19 @@ function getGlobalMeans(data::DimArray)
     dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
     if !isnothing(dimension)
         models = Array(dims(data, dimension))
-        global_means = DimArray(zeros(length(models)), (Dim{dimension}(models)))
+        global_means = DimArray(Array{Union{Float64, Missing}}(undef, length(models)), (Dim{dimension}(models)))
         for model in models
-            if dimension == :model
-                mask = masks[model = At(model)]
+            mask = dimension == :model ?  masks[model = At(model)] : masks[member = At(model)]
+            global_mean = missing
+            if any(mask .== false)
                 area_weights = computeAreaWeights(longitudes, latitudes; mask)
-                global_means[model = At(model)] = Statistics.sum(data[model = At(model)] .* area_weights)
+                vals = dimension == :model ? data[model = At(model)] : data[member = At(model)]
+                global_mean = Statistics.sum(skipmissing(vals .* area_weights))
+            end
+            if dimension == :model                
+                global_means[model = At(model)] = global_mean
             else
-                mask = masks[member = At(model)]
-                area_weights = computeAreaWeights(longitudes, latitudes; mask)
-                global_means[member = At(model)] = Statistics.sum(skipmissing(data[member = At(model)] .* area_weights))
+                global_means[member = At(model)] = global_mean
             end
         end
     else 
