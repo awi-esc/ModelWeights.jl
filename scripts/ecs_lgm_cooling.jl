@@ -17,13 +17,13 @@ data = mw.loadDataFromYAML(path_config; subset = Dict("level_shared_models" => m
 # as physics of lgm models
 df = mw.alignPhysics(
     data, 
-    data["tas_CLIM_lgm"].data.metadata["member_names"]; 
+    data.map["tas_CLIM_lgm"].data.metadata["member_names"]; 
     level_shared_models = mw.MODEL
 );
 mw.averageEnsembleMembers!(df)
 # lgm-cooling: here models need to be in same unit for both experiments
-df_celsius = mw.kelvinToCelsius(df)
-lgm_cooling = df_celsius["tas_CLIM_lgm"].data .- df_celsius["tas_CLIM_piControl"].data;
+mw.kelvinToCelsius!(df)
+lgm_cooling = df["tas_CLIM_lgm"].data .- df["tas_CLIM_piControl"].data;
 # global lgm-cooling values for each model
 # as we look at differences here, the unit (kelvin or celsius) doesnt matter
 global_means = mw.getGlobalMeans(lgm_cooling)
@@ -129,7 +129,7 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
         "subdirs" => ["20241114"]
     )
 )
-lgm_data = mw.kelvinToCelsius(lgm_data);
+mw.kelvinToCelsius!(lgm_data);
 lgm_tas = lgm_data["tas_CLIM_lgm"];
 lgm_tos = lgm_data["tos_CLIM_lgm"];
 

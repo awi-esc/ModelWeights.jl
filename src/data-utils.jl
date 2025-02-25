@@ -44,6 +44,21 @@ function Base.show(io::IO, x::Data)
 end
 
 
+struct DataMap
+    map::Dict{String, Data}
+end
+# Pretty print DataMap instances
+function Base.show(io::IO, x::DataMap)
+    println(io, "::$(typeof(x)):")
+    println(io, "$(values(x.map))")
+end
+
+function add!(datamap::DataMap, data::Data)
+    id = data.meta.id
+    datamap.map[id] = data
+end
+
+
 @kwdef struct ConfigWeights
     performance::Dict{String, Number}=Dict()
     independence::Dict{String, Number}=Dict()

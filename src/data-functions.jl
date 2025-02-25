@@ -253,20 +253,20 @@ end
 
 
 """
-    loadDataFromMetadata(meta_data::Vector{MetaData}, is_model_data::Bool)
+    loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::Bool)
 
 # Arguments:
 - `meta_data`:
 - `is_model_data`: true for model data, false for observational data.
 """
 function loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::Bool)
-    results = Dict{String, Data}()
+    results = DataMap(Dict{String, Data}())
     for (id, meta) in meta_data
         # loads data at level of model members
         @info "load $id"
-        results[id] = loadPreprocData(meta, is_model_data)
+        add!(results, loadPreprocData(meta, is_model_data))
     end
-    @debug "loaded data: $(map(x -> x.meta, values(results)))"
+    @debug "loaded data: $(map(x -> x.meta, values(results.map)))"
     @debug "filtered for shared models across all loaded data: " level
     return results
 end
@@ -461,25 +461,27 @@ end
 
 
 """
-    alignPhysics(data::Dict{String, Data}, members::Vector{String})
+    alignPhysics(data::DataMap, members::Vector{String}, level_shared_models::Union{LEVEL, Nothing} = nothing)
 
-Return new data dictionary with only the models retained that share the same physics 
+Return new DataMap with only the models retained that share the same physics 
 as the respective model's members in `members` have.
 
 # Arguments:
 - `data`: 
 - `members`:
+- `level_shared_models`:
 """
 function alignPhysics(
-    data::Dict{String, Data}, members::Vector{String};
+    datamap::DataMap, members::Vector{String};
     level_shared_models::Union{LEVEL, Nothing} = nothing
 )
+    data = deepcopy(datamap)
     models = unique(getModelsFromMemberIDs(members))
     for model in models
         # retrieve allowed physics as in members 
         member_ids = filter(m -> startswith(m, model * MODEL_MEMBER_DELIM), members)
         physics = getPhysicsFromMembers(member_ids)
-        for (id, model_data) in data
+        for (id, model_data) in data.map
             ds = model_data.data
             # filter data s.t. of current model only members with retrieved physics are kept
             model_indices = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), Array(dims(ds, :member)))
@@ -490,7 +492,7 @@ function alignPhysics(
                 meta = model_data.meta
                 meta_updated = @set meta.paths = subsetPaths(meta.paths, members_kept)
             
-                data[id] = Data(meta = meta_updated, data = subsetModelData(ds, members_kept))
+                add!(data, Data(meta = meta_updated, data = subsetModelData(ds, members_kept)))
             end
         end
     end
@@ -498,17 +500,17 @@ function alignPhysics(
     # shared models as it was before if wanted
     if !isnothing(level_shared_models)
         meta_data = Dict{String, MetaData}()
-        for k in collect(keys(data))
-            meta_data[k] = data[k].meta 
+        for k in collect(keys(data.map))
+            meta_data[k] = data.map[k].meta 
         end
         reduceMetaDataSharedModels!(meta_data, level_shared_models)
-        all_paths = reduce(vcat, map(k -> meta_data[k].paths, collect(keys(data))))
+        all_paths = reduce(vcat, map(k -> meta_data[k].paths, collect(keys(data.map))))
         all_members = getMemberIDsFromPaths(all_paths)
-        for (id, model_data) in data
-            data[id] = Data(
+        for (id, model_data) in data.map
+            add!(data, Data(
                 meta = meta_data[id], 
                 data = subsetModelData(model_data.data, all_members)
-            )
+            ))
         end
     end
     return data
@@ -552,18 +554,18 @@ end
 
 
 """
-    averageEnsembleMembers!(data::Dict{String, Data})
+    averageEnsembleMembers!(data::DataMap)
 
 Take average for all members of each model.
 
 # Arguments:
 - `data`: 
 """
-function averageEnsembleMembers!(data::Dict{String, Data})
-    for k in keys(data)
-        updated_arr = summarizeEnsembleMembersVector(data[k].data, true)
-        current_data = data[k]
-        data[k] = @set current_data.data = updated_arr 
+function averageEnsembleMembers!(data::DataMap)
+    for k in keys(data.map)
+        updated_arr = summarizeEnsembleMembersVector(data.map[k].data, true)
+        current_data = data.map[k]
+        data.map[k] = @set current_data.data = updated_arr 
     end
     return nothing
 end
@@ -641,15 +643,15 @@ end
 
 
 """
-    computeAnomalies!(data::Dict{String, Data}, id_data::String, id_ref::String)
+    computeAnomalies!(data::DataMap id_data::String, id_ref::String)
 
 # Arguments:
 - `data`:
 - `id_data`:
 - `id_ref`: 
 """
-function computeAnomalies!(data::Dict{String, Data}, id_data::String, id_ref::String)
-    
+function computeAnomalies!(datamap::DataMap, id_data::String, id_ref::String)
+    data = datamap.map
     dimension = hasdim(data[id_data].data, :member) ? :member : :model
     if dims(data[id_data].data, dimension) != dims(data[id_ref].data, dimension)
         throw(ArgumentError("Original and reference data must contain exactly the same models!"))

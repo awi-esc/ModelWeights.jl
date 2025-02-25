@@ -315,7 +315,7 @@ end
 
 
 """
-    makeEqualWeights(metadata::Dict, dimension::Symbol)
+    makeEqualWeights(metadata::Dict, dimension::Symbol; use_members::Bool=true)
 
 Create a weight vector, with equal weight for each model. Distribute weight across
 model members if dimension=:member. Metadata is used to access the individual 

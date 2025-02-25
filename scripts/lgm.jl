@@ -21,7 +21,7 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
     ),
     preview = false
 );
-lgm_data = mw.kelvinToCelsius(lgm_data)
+mw.kelvinToCelsius!(lgm_data)
 members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"].data, :member));
 models_lgm = unique(lgm_data["tas_CLIM_lgm"].data.metadata["model_names"])
 
@@ -44,7 +44,7 @@ historical_data = mw.loadDataFromESMValToolConfigs(
         "level_shared_models" => mw.MEMBER
     )
 );
-historical_data = mw.kelvinToCelsius(historical_data)
+mw.kelvinToCelsius!(historical_data)
 # Load observational data
 base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_tas_tos";
 config_path = "/albedo/home/brgrus001/ModelWeights/configs/historical_obs";
@@ -58,7 +58,7 @@ obs_data = mw.loadDataFromESMValToolConfigs(
         "statistics" => ["CLIM"], "variables" => ["tas"], "timeranges" => ["full"]
     )
 );
-obs_data = mw.kelvinToCelsius(obs_data)
+mw.kelvinToCelsius!(obs_data)
 
 # COMPUTATION WEIGHTS
 weights_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/";
@@ -105,7 +105,7 @@ save("plots/lgm/weighted-avg-historical-tas-based-on-historical.png", f2)
 path_config = "/albedo/home/brgrus001/ModelWeights/configs/ecs-lgm-cooling.yml";
 data = mw.loadDataFromYAML(path_config; subset=Dict("level_shared_models" => mw.MEMBER));
 # lgm-cooling: here models need to be in same unit for both experiments
-data = mw.kelvinToCelsius(data)
+mw.kelvinToCelsius!(data)
 lgm_cooling = data["tas_CLIM_lgm"].data .- data["tas_CLIM_piControl"].data;
 # global lgm-cooling values for each model
 global_means = mw.getGlobalMeans(lgm_cooling)

@@ -170,20 +170,20 @@ end
 
 
 """
-    kelvinToCelsius!(data::Dict{String, Data})
+    kelvinToCelsius!(datamap::DataMap)
 
-Modify entries of `data` such that all data is given in Degree Celsius (instead) 
+Modify entries of `datamap` such that all data is given in Degree Celsius (instead) 
 of Kelvin.
 
 # Arguments:
-- `data`:
+- `datamap`:
 """
-function kelvinToCelsius(data::Dict{String, Data})
-    for (id, da) in data
+function kelvinToCelsius!(datamap::DataMap)
+    for (id, da) in datamap.map
         df = @set da.data = kelvinToCelsius(da.data)
-        data[id] = df;
+        add!(datamap, df)
     end
-    return data
+    return nothing
 end
 
 

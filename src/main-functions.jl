@@ -193,6 +193,8 @@ end
         preview::Bool=false
     )
 
+Load a `DataMap`-instance with data as specified in yaml file at `path_config`.
+
 # Arguments:
 - `path_config`: path to yaml config file
 - `is_model_data`: true for model data (default), false for observational data
