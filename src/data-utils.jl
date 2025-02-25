@@ -30,8 +30,7 @@ end
 end
 # Pretty print MetaData instances
 function Base.show(io::IO, x::MetaData)
-    println(io, "::$(typeof(x))")
-    println(io, "$(x.id) (timerange: $(x.attrib.timerange), experiment: $(x.attrib.exp))")
+    println(io, "::$(typeof(x)): $(x.id) (timerange: $(x.attrib.timerange), experiment: $(x.attrib.exp))")
 end
 
 
@@ -41,8 +40,7 @@ end
 end
 # Pretty print Data instances
 function Base.show(io::IO, x::Data)
-    println(io, "::$(typeof(x)):")
-    print(io, x.meta)
+    println(io, "::$(typeof(x)): size: $(size(x.data)) id: $(x.meta.id)")
 end
 
 @kwdef struct ConfigWeights
