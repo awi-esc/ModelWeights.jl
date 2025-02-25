@@ -20,8 +20,8 @@ export loadDataFromYAML, loadDataFromESMValToolConfigs, computeWeights
 
 
 export getUncertaintyRanges, getGlobalMeans, computeAnomalies!, computeAreaWeights
-export averageEnsembleMembers!, summarizeEnsembleMembersVector,  alignPhysics
-export getLandMask, getOceanMask
+export averageEnsembleMembers!, summarizeEnsembleMembersVector
+export getLandMask, getOceanMask, subsetModelData, alignPhysics
 
 
 export computeWeightedAvg, applyWeights, getModelLikelihoods

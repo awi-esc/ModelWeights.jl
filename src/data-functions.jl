@@ -132,6 +132,24 @@ function subsetModelData(data::DimArray, shared_models::Vector{String})
 end
 
 
+function subsetModelData(datamap::DataMap; level::LEVEL=MEMBER)
+    all_data = collect(values(datamap.map))
+    all_data = level == MEMBER ? filter(x -> hasdim(x.data, :member), all_data) :
+        filter(x -> hasdim(x.data, :model), all_data)
+    dimensions = level == MEMBER ? map(x -> dims(x.data, :member), all_data) :
+        map(x -> dims(x.data, :model), all_data)
+    shared_models = reduce(intersect, dimensions)
+
+    subset = DataMap(Dict{String, Data}())
+    for data in all_data
+        df = deepcopy(data.data)
+        add!(subset, Data(meta=data.meta, data=subsetModelData(df, shared_models)))
+    end
+    return subset
+end
+
+
+
 """
     loadPreprocData(meta_data::MetaData, is_model_data::Bool)
 
@@ -643,10 +661,10 @@ end
 
 
 """
-    computeAnomalies!(data::DataMap id_data::String, id_ref::String)
+    computeAnomalies!(datamap::DataMap id_data::String, id_ref::String)
 
 # Arguments:
-- `data`:
+- `datamap`:
 - `id_data`:
 - `id_ref`: 
 """
@@ -670,7 +688,14 @@ function computeAnomalies!(datamap::DataMap, id_data::String, id_ref::String)
 
     anomaly_data = data[id_data]
     anomaly_data = @set anomaly_data.data = anomalies
-    data[clim_var * "_ANOM_" * alias] = anomaly_data
+    
+    meta = anomaly_data.meta
+    id = clim_var * "_ANOM_" * alias
+    meta = @set meta.id = id
+
+    anomaly_data = @set anomaly_data.meta = meta
+
+    data[id] = anomaly_data
     return nothing
 end
 
