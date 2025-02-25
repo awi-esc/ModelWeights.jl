@@ -43,6 +43,7 @@ function Base.show(io::IO, x::Data)
     println(io, "::$(typeof(x)): size: $(size(x.data)) id: $(x.meta.id)")
 end
 
+
 @kwdef struct ConfigWeights
     performance::Dict{String, Number}=Dict()
     independence::Dict{String, Number}=Dict()
@@ -171,88 +172,6 @@ function updateMetadata!(
         meta_dict["source_names"] = included_data
     end
     return nothing
-end
-
-
-"""
-    joinMetadata(
-    meta1::Dict{String, Any}, meta2::Dict{String, Any}, isModelData::Bool
-)
-
-Join the metadata of data to be joint (e.g. when loading data for tos for
-CMIP5 and CMIP6 from different locations). If keys are present in 'meta1' or 
-'meta2' but not the other, missing values are added.
-
-# Arguments:
-- `meta1`:
-- `meta2`:
-- `is_model_data`: true for model data, false for observational data
-"""
-function joinMetadata(
-    meta1::Dict{String, Any}, meta2::Dict{String, Any}, is_model_data::Bool
-)
-    meta = Dict{String, Any}()
-    n1 = is_model_data ? length(meta1["member_names"]) : length(meta1["source_names"])
-    n2 = is_model_data ? length(meta2["member_names"]) : length(meta2["source_names"])
-    keys_meta1 = keys(meta1)
-    keys_meta2 = keys(meta2)
-    keys_shared = collect(intersect(keys_meta1, keys_meta2))
-    keys_uniq_m1 = filter(x -> !(x in keys_shared), keys_meta1)
-    keys_uniq_m2 = filter(x -> !(x in keys_shared), keys_meta2)
-
-    for k in keys_shared
-        v1 = meta1[k]
-        v2 = meta2[k]
-        if isa(v1, String)
-            if isa(v2, String)
-                if v1 == v2
-                    meta[k] = v1
-                else
-                    meta[k] = vcat(repeat([v1], outer=n1), repeat([v2], outer=n2))
-                end
-            else
-                meta[k] = vcat(repeat([v1], outer=n1), v2)
-            end
-        elseif isa(v1, Vector)
-            if isa(v2, String)
-                meta[k] = vcat(v1, repeat([v2], outer=n2))
-            elseif isa(v2, Vector)
-                meta[k] = vcat(v1, v2)
-            end
-        end
-    end
-
-    for keys_uniq in [keys_uniq_m1, keys_uniq_m2]
-        for k in keys_uniq
-            v = get(meta1, k, nothing)
-            in_meta1 = true
-            if isnothing(v)
-                in_meta1 = false
-                v = meta2[k]
-                n_added = n1
-                n = n2
-            else
-                n_added = n2
-                n = n1
-            end
-            v_added = repeat([missing], outer=n_added)
-            # be sure to add vectors in correct order (because v may refer to value of meta1 or meta2!)
-            if isa(v, String)
-                if in_meta1
-                    meta[k] = vcat(repeat([v], outer=n), v_added)
-                else
-                    meta[k] = vcat(v_added, repeat([v], outer=n))
-                end
-            else
-                if in_meta1
-                    meta[k] = vcat(v, v_added)
-                else
-                    meta[k] = vcat(v_added, v)
-                end
-            end
-        end
-    end
-    return meta
 end
 
 
@@ -535,17 +454,6 @@ function setConstraintVal!(ds_config::Dict, cs_arg::Dict)
     return nothing
 end
 
-# function matchAliasTimerange!(constraint::Dict, timerange_to_alias::Dict)
-#     if !isempty(aliases)
-#         # use subset of aliases as given by input argument constraint
-#         filter!(x -> get(timerange_to_alias, x, nothing) in constraint["aliases"], constraint["timeranges"])
-#         if isempty(constraint["timeranges"])
-#             msg = "Given aliases do not match with considered timeranges for dataset: $ds !"
-#             throw(ArgumentError(msg))
-#         end
-#     end
-# end
-
 
 """
     getMetaDataFromYAML(
@@ -555,15 +463,15 @@ end
     )
 
 Load data as specified in config file located at `path_config`. For constraints
-that are specified in the config file as well as in the `subset` argument, 
+that are specified in the config file as well as in the `arg_constraint` argument, 
 the values of the latter have precedence over the former. The constraints given
 in the argument `subset` are applied to EVERY dataset specified in the config 
 file.
 
 # Arguments:
-- `path_config`: path to config yaml file specifying meta attributes and pathes of data
+- `path_config`: path to config yaml file specifying meta attributes and paths of data
 - `is_model_data`: true for model data, false for observational data
-- `subset`: TODO
+- `arg_constraint`: TODO
 """
 function getMetaDataFromYAML(
     path_config::String, 
@@ -855,7 +763,13 @@ end
 
 
 """
-    indexData(data::Data, clim_var::String, diagnostic::String, alias::String)
+    indexData(data::Vector{Data}, clim_var::String, diagnostic::String, alias::String)
+
+# Arguments:
+- `data`:
+- `clim_var`:
+- `diagnostic`:
+- `alias`:
 """
 function indexData(data::Vector{Data}, clim_var::String, diagnostic::String, alias::String)
     fn(data::Data) = 
@@ -1097,30 +1011,6 @@ function fixModelNamesMetadata(names::Vector{String})
     return model_names
 end
 
-"""
-    computeAreaWeights(longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; mask::Union{DimArray, Nothing}=nothing)
-
-Compute the approximated, normalized area weights for each lon,lat-position in 
-`data` as the cosine of their latitudes. Return a DimensionalData.DimArray of
-same size as the (lon x lat)-grid of the input data.
-
-# Arguments:
-- `data`: on lon, lat grid, with dimension 'lat' containing latitudes
-- `mask`: optional 2D-mask (lonxlat), if given, the area weights are set to 0 where the mask is 1
-"""
-function computeAreaWeights(longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; mask::Union{DimArray, Nothing}=nothing)
-    # cosine of the latitudes as proxy for grid cell area
-    areaWeights = cos.(deg2rad.(latitudes));
-    areaWeights = DimArray(areaWeights, Dim{:lat}(latitudes));
-
-    areaWeightMatrix = repeat(areaWeights', length(longitudes), 1);  
-    if !isnothing(mask)
-        areaWeightMatrix = ifelse.(mask .== 1, 0, areaWeightMatrix); 
-    end
-    areaWeightMatrix = areaWeightMatrix./sum(areaWeightMatrix)
-    return DimArray(areaWeightMatrix, (Dim{:lon}(longitudes), Dim{:lat}(latitudes)))
-end
-
 
 function getMask(orog_data::DimArray, mask_out_land::Bool)
     ocean_mask = orog_data .== 0
@@ -1129,12 +1019,4 @@ function getMask(orog_data::DimArray, mask_out_land::Bool)
     ocean_mask = DimArray(Bool.(ocean_mask.data), dims(ocean_mask))
     mask = mask_out_land ? ocean_mask : ocean_mask .== false
     return mask
-end
-
-function getLandMask(orog_data::DimArray)
-    return getMask(orog_data, false)    
-end
-
-function getOceanMask(orog_data::DimArray)
-    return getMask(orog_data, true)    
 end

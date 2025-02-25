@@ -2,6 +2,27 @@ import YAML
 using DimensionalData
 using Setfield
 
+
+""" computeModelDataRMSE
+
+# Arguments:
+- `model_data`:
+- `obs_data`: Observational data for computing performance weights.
+- `config`:
+- `ref_period_alias`:
+"""
+function computeModelDataRMSE(
+    model_data::Vector{Data},
+    obs_data::Vector{Data}, 
+    config::ConfigWeights,
+    ref_period_alias::String
+)
+    return computeDistancesAllDiagnostics(
+        model_data, obs_data, config.performance, ref_period_alias, true
+    )
+end
+
+
 """
     computeWeights(
         model_data::Vector{Data}, dists_perform_all::DimArray, config::ConfigWeights
@@ -105,28 +126,6 @@ function computeWeights(
 end
 
 
-""" computeModelDataRMSE
-
-# Arguments:
-- `model_data`:
-- `obs_data`: Observational data for computing performance weights.
-- `config`:
-- `ref_period_alias`:
-"""
-function computeModelDataRMSE(
-    model_data::Vector{Data},
-    obs_data::Vector{Data}, 
-    config::ConfigWeights,
-    ref_period_alias::String
-)
-    return computeDistancesAllDiagnostics(
-        model_data, obs_data, config.performance, ref_period_alias, true
-    )
-end
-
-
-
-
 """
     loadDataFromESMValToolConfigs(
         path_data::String,
@@ -189,19 +188,14 @@ end
 """
     loadDataFromYAML(
         path_config::String;
-        dir_per_var::Bool=true,
         is_model_data::Bool=true,
         subset::Union{Dict, Nothing}=nothing,
         preview::Bool=false
     )
 
-    # Arguments:
+# Arguments:
 - `path_config`: path to yaml config file
-- `dir_per_var`: if true, directory at `path_data`, as specified in config file,
-has subdirectories, one for each variable (they must end with _ and the name 
-of the variable), otherwise `path_data` points to the directory that has a 
-subdirectory 'preproc'.
-- `is_model_data`: set true for model data, false for observational data
+- `is_model_data`: true for model data (default), false for observational data
 - `subset`: specifies the properties of the subset of data to be loaded. These 
 have to apply to all loaded datasets specified in the config yaml file. 
 The following keys are considered:  `models` (used to load only specific set of models 
@@ -227,3 +221,5 @@ function loadDataFromYAML(
     output = preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
     return output
 end
+
+

@@ -3,6 +3,7 @@ using NCDatasets
 using YAML
 using Setfield
 
+
 """
     getUniqueMemberIds(meta::Dict, model_names::Vector{String})
 Combine name of the model with the id of the respective model members. The
@@ -252,19 +253,13 @@ end
 
 
 """
-    loadDataFromMetadata(
-        meta_data::Vector{MetaData},
-        is_model_data::Bool
-    )
+    loadDataFromMetadata(meta_data::Vector{MetaData}, is_model_data::Bool)
 
 # Arguments:
 - `meta_data`:
 - `is_model_data`: true for model data, false for observational data.
 """
-function loadDataFromMetadata(
-    meta_data::Dict{String, MetaData},
-    is_model_data::Bool
-)
+function loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::Bool)
     results = Dict{String, Data}()
     for (id, meta) in meta_data
         # loads data at level of model members
@@ -275,40 +270,6 @@ function loadDataFromMetadata(
     @debug "filtered for shared models across all loaded data: " level
     return results
 end
-
-
-"""
-    getSharedModelsFromDimensions(model_data::Vector{Data}, dim::Symbol)
-
-Return only data of models shared across all datasets. Assumes that no id is 
-shared across elements of `model_data`.
-
-# Arguments
-- `model_data`: model predictions for a set of different variable+experiment combinations
-- `dim`: dimension name referring to level of model predictions; e.g., 
-'member' or 'model'
-"""
-function getSharedModelsFromDimensions(model_data::Dict{String, Data}, dim::Symbol)
-    shared_models =  nothing 
-    for (_, data) in model_data
-        if hasdim(data.data, :model) && dim == :member
-            @warn "Model data has dimension :model, but subset of models requested to be taken wrt to level of model members! Level of models is used instead."
-            models = collect(dims(data.data, :model))
-        elseif hasdim(data.data, :member) && dim == :model
-            members = collect(dims(data.data, :member))
-            models = unique(getModelsFromMemberIDs(members))
-        else
-            models = collect(dims(data.data, dim))
-        end
-        if isnothing(shared_models)
-            shared_models = models
-        else
-            shared_models = intersect(shared_models, models)
-        end
-    end
-    return shared_models
-end
-
 
 
 """
@@ -651,16 +612,43 @@ function getGlobalMeans(data::DimArray)
 end
 
 
+"""
+    computeAreaWeights(longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; mask::Union{DimArray, Nothing}=nothing)
+
+Compute the approximated, normalized area weights for each lon,lat-position as 
+the cosine of the latitudes.
+
+# Arguments:
+- `longitudes`:
+- `latitudes`:
+- `mask`: optional 2D-mask (lonxlat), if given, the area weights are set to 0 where the mask is 1
+
+# Return:
+A DimensionalData.DimArray of size length(longitudes) x length(latitudes).
+"""
+function computeAreaWeights(longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; mask::Union{DimArray, Nothing}=nothing)
+    # cosine of the latitudes as proxy for grid cell area
+    areaWeights = cos.(deg2rad.(latitudes));
+    areaWeights = DimArray(areaWeights, Dim{:lat}(latitudes));
+
+    areaWeightMatrix = repeat(areaWeights', length(longitudes), 1);  
+    if !isnothing(mask)
+        areaWeightMatrix = ifelse.(mask .== 1, 0, areaWeightMatrix); 
+    end
+    areaWeightMatrix = areaWeightMatrix./sum(areaWeightMatrix)
+    return DimArray(areaWeightMatrix, (Dim{:lon}(longitudes), Dim{:lat}(latitudes)))
+end
+
 
 """
-    compute_anomalies!(data::Dict{String, Data}, id_data::String, id_ref::String)
+    computeAnomalies!(data::Dict{String, Data}, id_data::String, id_ref::String)
 
 # Arguments:
 - `data`:
 - `id_data`:
 - `id_ref`: 
 """
-function compute_anomalies!(data::Dict{String, Data}, id_data::String, id_ref::String)
+function computeAnomalies!(data::Dict{String, Data}, id_data::String, id_ref::String)
     
     dimension = hasdim(data[id_data].data, :member) ? :member : :model
     if dims(data[id_data].data, dimension) != dims(data[id_ref].data, dimension)
@@ -683,3 +671,14 @@ function compute_anomalies!(data::Dict{String, Data}, id_data::String, id_ref::S
     data[clim_var * "_ANOM_" * alias] = anomaly_data
     return nothing
 end
+
+
+function getLandMask(orog_data::DimArray)
+    return getMask(orog_data, false)    
+end
+
+function getOceanMask(orog_data::DimArray)
+    return getMask(orog_data, true)    
+end
+
+
