@@ -10,7 +10,7 @@ Plot contours of world with an overlayed heatmap of the input data.
 """
 function plotMeansOnMap!(fig::Figure, means::DimArray, title::String; 
     colors=nothing, color_range=nothing, high_clip=(1,0,0), low_clip=(0,0,1), 
-    pos=(x=1, y=1), pos_legend=nothing
+    pos=(x=1, y=1), pos_legend=(x=1, y=2)
 )
     means = sortLongitudesWest2East(means);
     dims_lat = Array(dims(means, :lat));
@@ -211,7 +211,7 @@ end
 
 
 function makeScatterPlot(
-    xs::AbstractVector{<:Number}, ys::AbstractVector{<:Number};
+    xs::AbstractArray{<:Union{Missing, Number}}, ys::AbstractArray{<:Union{Missing, Number}};
     captions::NamedTuple=(x="",y="",title=""),
     xtick_labels::Union{Vector{String}, Nothing} = nothing,
     xticklabelrotation::Number = pi/2,
@@ -226,9 +226,9 @@ function makeScatterPlot(
             xlabel = captions.x, ylabel = captions.y, xticklabelrotation = xticklabelrotation
         );
     if add_lines
-        lines!(ax, xs, ys, color = legend.color, label = legend.label)
+        lines!(ax, Array(xs), Array(ys), color = legend.color, label = legend.label)
     end
-    scatter!(ax, xs, ys, color = legend.color, label = legend.label)
+    scatter!(ax, Array(xs), Array(ys), color = legend.color, label = legend.label)
 
     if !isinf(greyed_area.y1) && !isinf(greyed_area.y2)
         band!(xs, greyed_area.y1, greyed_area.y2, color=(:gray, 0.5), 
