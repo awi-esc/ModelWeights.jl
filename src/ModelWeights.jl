@@ -18,4 +18,15 @@ include("main-functions.jl")
 
 export loadDataFromYAML, loadDataFromESMValToolConfigs, computeWeights
 
+
+export getUncertaintyRanges, getGlobalMeans, computeAnomalies!, computeAreaWeights
+export averageEnsembleMembers!, summarizeEnsembleMembersVector,  alignPhysics
+export getLandMask, getOceanMask
+
+
+export computeWeightedAvg, applyWeights, getModelLikelihoods
+export makeEqualWeights, distributeWeightsAcrossMembers
+export saveWeightsAsJuliaObj, saveWeightsAsNCFile, loadWeightsFromJLD2
+
+
 end # module ModelWeights
