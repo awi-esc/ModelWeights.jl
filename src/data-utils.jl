@@ -32,9 +32,6 @@ end
 function Base.show(io::IO, x::MetaData)
     println(io, "::$(typeof(x))")
     println(io, "$(x.id) (timerange: $(x.attrib.timerange), experiment: $(x.attrib.exp))")
-    for path in x.paths
-        println(io, "\t$path")
-    end
 end
 
 
@@ -1124,4 +1121,22 @@ function computeAreaWeights(longitudes::Vector{<:Number}, latitudes::Vector{<:Nu
     end
     areaWeightMatrix = areaWeightMatrix./sum(areaWeightMatrix)
     return DimArray(areaWeightMatrix, (Dim{:lon}(longitudes), Dim{:lat}(latitudes)))
+end
+
+
+function getMask(orog_data::DimArray, mask_out_land::Bool)
+    ocean_mask = orog_data .== 0
+    indices_missing = findall(x -> ismissing(x), ocean_mask);
+    ocean_mask[indices_missing] .= false;
+    ocean_mask = DimArray(Bool.(ocean_mask.data), dims(ocean_mask))
+    mask = mask_out_land ? ocean_mask : ocean_mask .== false
+    return mask
+end
+
+function getLandMask(orog_data::DimArray)
+    return getMask(orog_data, false)    
+end
+
+function getOceanMask(orog_data::DimArray)
+    return getMask(orog_data, true)    
 end
