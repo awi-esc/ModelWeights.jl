@@ -40,6 +40,9 @@ f2 = mw.makeSubplots(data, (nrows=2, ncols=5); figsize= (800,600).*(5,3),
     )
 save("plots/anomalies/historical_anomalies.png", f2)
 
+# add land/sea masks
+mw.addMasks!(df_historical, "orog_none_historical")
+
 
 # land/sea mask
 ocean_mask = mw.getOceanMask(df_historical.map["orog_none_historical"].data);

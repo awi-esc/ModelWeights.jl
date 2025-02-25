@@ -143,7 +143,7 @@ function subsetModelData(datamap::DataMap; level::LEVEL=MEMBER)
     subset = DataMap(Dict{String, Data}())
     for data in all_data
         df = deepcopy(data.data)
-        add!(subset, Data(meta=data.meta, data=subsetModelData(df, shared_models)))
+        addToMap!(subset, Data(meta=data.meta, data=subsetModelData(df, shared_models)))
     end
     return subset
 end
@@ -282,7 +282,7 @@ function loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::
     for (id, meta) in meta_data
         # loads data at level of model members
         @info "load $id"
-        add!(results, loadPreprocData(meta, is_model_data))
+        addToMap!(results, loadPreprocData(meta, is_model_data))
     end
     @debug "loaded data: $(map(x -> x.meta, values(results.map)))"
     @debug "filtered for shared models across all loaded data: " level
@@ -510,7 +510,7 @@ function alignPhysics(
                 meta = model_data.meta
                 meta_updated = @set meta.paths = subsetPaths(meta.paths, members_kept)
             
-                add!(data, Data(meta = meta_updated, data = subsetModelData(ds, members_kept)))
+                addToMap!(data, Data(meta = meta_updated, data = subsetModelData(ds, members_kept)))
             end
         end
     end
@@ -525,7 +525,7 @@ function alignPhysics(
         all_paths = reduce(vcat, map(k -> meta_data[k].paths, collect(keys(data.map))))
         all_members = getMemberIDsFromPaths(all_paths)
         for (id, model_data) in data.map
-            add!(data, Data(
+            addToMap!(data, Data(
                 meta = meta_data[id], 
                 data = subsetModelData(model_data.data, all_members)
             ))
@@ -708,4 +708,25 @@ function getOceanMask(orog_data::DimArray)
     return getMask(orog_data, true)    
 end
 
+
+function addOceanMask!(datamap::DataMap, orog_data::Data)
+    meta = MetaData(id="mask_ocean", attrib=MetaAttrib(), paths=copy(orog_data.meta.paths))
+    mask = getOceanMask(orog_data.data)
+    addToMap!(datamap, Data(meta=meta, data=mask))
+    return nothing
+end
+
+function addLandMask!(datamap::DataMap, orog_data::Data)
+    meta = MetaData(id="mask_land", attrib=MetaAttrib(), paths=copy(orog_data.meta.paths))
+    mask = getLandMask(orog_data.data)
+    addToMap!(datamap, Data(meta=meta, data=mask))
+    return nothing
+end
+
+function addMasks!(datamap::DataMap, id_orog_data::String)
+    orog_data = getFromMap(datamap, id_orog_data)
+    addOceanMask!(datamap, orog_data)
+    addLandMask!(datamap, orog_data)
+    return nothing
+end
 

@@ -6,11 +6,11 @@ using Interpolations
 @enum LEVEL MODEL=0 MEMBER=1
 
 @kwdef struct MetaAttrib
-    variable::String
-    statistic::String
-    alias::String
-    exp::String
-    timerange::String
+    variable::String=""
+    statistic::String=""
+    alias::String=""
+    exp::String=""
+    timerange::String=""
 end
 # Overload the Base.show method to print key-value pairs of MetaAttrib instances
 function Base.show(io::IO, x::MetaAttrib)
@@ -53,9 +53,13 @@ function Base.show(io::IO, x::DataMap)
     println(io, "$(values(x.map))")
 end
 
-function add!(datamap::DataMap, data::Data)
+function addToMap!(datamap::DataMap, data::Data)
     id = data.meta.id
     datamap.map[id] = data
+end
+
+function getFromMap(datamap::DataMap, id::String)
+    return haskey(datamap.map, id) ? datamap.map[id] : nothing
 end
 
 

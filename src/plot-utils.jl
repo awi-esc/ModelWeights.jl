@@ -181,7 +181,7 @@ of Kelvin.
 function kelvinToCelsius!(datamap::DataMap)
     for (id, da) in datamap.map
         df = @set da.data = kelvinToCelsius(da.data)
-        add!(datamap, df)
+        addToMap!(datamap, df)
     end
     return nothing
 end
