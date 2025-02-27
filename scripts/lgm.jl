@@ -65,7 +65,7 @@ weights_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/";
 
 obs_avg = obs_data["tas_CLIM_historical"].data[source=1]
 f = Figure();
-mw.plotMeansOnMap!(f, obs_data["tas_CLIM_historical"].data[source=1], "Climatology observations")
+mw.plotValsOnMap!(f, obs_data["tas_CLIM_historical"].data[source=1], "Climatology observations")
 save("plots/lgm/climatology-observations.png", f)
 
 # 1. Compute weights based on historical data
@@ -96,7 +96,7 @@ df = deepcopy(historical_data);
 mw.averageEnsembleMembers!(df)
 weighted_avg_hist = mw.applyWeights(df["tas_CLIM_historical"].data, weights.w);
 f2 = Figure;
-mw.plotMeansOnMap!(f2, weighted_avg_hist, "Weighted avg historical tas\n (based on historical data)")
+mw.plotValsOnMap!(f2, weighted_avg_hist, "Weighted avg historical tas\n (based on historical data)")
 save("plots/lgm/weighted-avg-historical-tas-based-on-historical.png", f2)
 
 ###############################################################################
@@ -174,26 +174,26 @@ df = deepcopy(data);
 mw.averageEnsembleMembers!(df)
 weighted_avg_lgm = mw.applyWeights(df["tas_CLIM_historical"].data, weights.w);
 f5 = Figure();
-mw.plotMeansOnMap!(f5, weighted_avg_lgm, "Weighted avg historical tas\n(based on lgm-cooling)")
+mw.plotValsOnMap!(f5, weighted_avg_lgm, "Weighted avg historical tas\n(based on lgm-cooling)")
 save("plots/lgm/weighted-avg-historical-tas-based-on-lgm-cooling.png", f5)
 
 # plot difference
 f6 = Figure();
-mw.plotMeansOnMap!(f6, weighted_avg_hist .- weighted_avg_lgm, "tas historical\n Weighted avg based on hist minus weighted avg based on lgm")
+mw.plotValsOnMap!(f6, weighted_avg_hist .- weighted_avg_lgm, "tas historical\n Weighted avg based on hist minus weighted avg based on lgm")
 save("plots/lgm/weighted-avg-diff.png", f6)
 
 # unweighted average
 unweighted_avg = mw.computeWeightedAvg(df["tas_CLIM_historical"].data; use_members_equal_weights = false);
 f7 = Figure();
-mw.plotMeansOnMap!(f7, unweighted_avg, "tas historical\n Unweighted avg")
+mw.plotValsOnMap!(f7, unweighted_avg, "tas historical\n Unweighted avg")
 save("plots/lgm/unweighted-avg.png", f7)
 
 # diff unweighted and weighted
 f8 = Figure();
-mw.plotMeansOnMap!(f8, unweighted_avg .- weighted_avg_lgm, "tas historical\n Unweighted minus weighted based on lgm")
+mw.plotValsOnMap!(f8, unweighted_avg .- weighted_avg_lgm, "tas historical\n Unweighted minus weighted based on lgm")
 save("plots/lgm/diff_unweighted-minus-weighted-based-on-lgm.png", f8)
 f9 = Figure(); 
-mw.plotMeansOnMap!(f9, unweighted_avg .- weighted_avg_hist, "tas historical\n Unweighted minus weighted based on historical")
+mw.plotValsOnMap!(f9, unweighted_avg .- weighted_avg_hist, "tas historical\n Unweighted minus weighted based on historical")
 save("plots/lgm/diff_unweighted-minus-weighted-based-on-historical.png", f9)
 
 
@@ -225,12 +225,12 @@ unweighted_means_members = mw.computeWeightedAvg(model_historical_lgm.data["tas_
 lgm_tas_data = mw.summarizeEnsembleMembersVector(model_historical_lgm.data["tas_CLIM_lgm"], true)
 unweighted_means = mw.computeWeightedAvg(lgm_tas_data)
 f10 = Figure();
-mw.plotMeansOnMap!(f10, unweighted_means, "unweighted average LGM: tas_CLIM")
+mw.plotValsOnMap!(f10, unweighted_means, "unweighted average LGM: tas_CLIM")
  
 # weighted avg across models
 weighted_means = mw.computeWeightedAvg(lgm_tas_data; weights=weights.w)
 f11 = Figure();
-mw.plotMeansOnMap!(f11, weighted_means, "weighted means LGM: tas_CLIM")
+mw.plotValsOnMap!(f11, weighted_means, "weighted means LGM: tas_CLIM")
 
 # weighted and unweighted means should be different:
 Array(weighted_means) .== Array(unweighted_means)
