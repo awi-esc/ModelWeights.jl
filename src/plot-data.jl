@@ -1,16 +1,20 @@
 using ColorSchemes
 using Dates
 
-""" plotMeansOnMap!(fig::Figure, means::DimArray, title::String;
+""" plotValsOnMap!(fig::Figure, means::DimArray, title::String;
                     colors=nothing, color_range=nothing, high_clip=(1,0,0),
                     low_clip=(0,0,1), pos=(x=1, y=1), pos_legend=nothing
                     )
     
 Plot contours of world with an overlayed heatmap of the input data.
+
+# Arguments:
+- `nb_ticks`: if nothing (default), just min lat/lon, max lat/lon and 0 are labeled.
 """
-function plotMeansOnMap!(fig::Figure, means::DimArray, title::String; 
+function plotValsOnMap!(fig::Figure, means::DimArray, title::String; 
     colors=nothing, color_range=nothing, high_clip=(1,0,0), low_clip=(0,0,1), 
-    pos=(x=1, y=1), pos_legend=(x=1, y=2)
+    pos=(x=1, y=1), pos_legend=(x=1, y=2), xlabel="Longitude", ylabel="Latitude",
+    xlabel_rotate = pi/4, nb_ticks::Union{Int, Nothing}=nothing
 )
     means = sortLongitudesWest2East(means);
     dims_lat = Array(dims(means, :lat));
@@ -25,21 +29,24 @@ function plotMeansOnMap!(fig::Figure, means::DimArray, title::String;
     lon = range(lon_min, stop=lon_max, length=length(dims_lon));
     lat = range(lat_min, stop=lat_max, length=length(dims_lat));
 
-    # axis ticks
-    lonLabels = longitude2EastWest.(dims_lon);
-    latLabels = latitude2NorthSouth.(dims_lat);
-    # just use roughly 10 ticks
-    step_lon = Int(round(length(lonLabels)/10));
-    step_lat = Int(round(length(latLabels)/10));
+    # axis ticks and labels
+    xticks = isnothing(nb_ticks) ?  [ceil(dims_lon[1]), 0, round(dims_lon[end])] : dims_lon
+    yticks = isnothing(nb_ticks) ? [ceil(dims_lat[1]), 0, round(dims_lat[end])] : dims_lat
+    lonLabels = string.(xticks) # longitude2EastWest.(xticks);
+    latLabels = string.(yticks) # latitude2NorthSouth.(yticks);
 
-    #fig = Figure();
+    step_lon = isnothing(nb_ticks) ? 1 : Int(round(length(lonLabels)/nb_ticks));
+    step_lat = isnothing(nb_ticks) ? 1 : Int(round(length(latLabels)/nb_ticks));
+    x_ticks_labels = (xticks[1 : step_lon : end], lonLabels[1 : step_lon : end])
+    y_ticks_labels = (yticks[1 : step_lat : end], latLabels[1 : step_lat : end])
+
     ax = Axis(fig[pos.x, pos.y], 
         title = title,
-        xlabel = "Longitude",
-        ylabel = "Latitude",
-        xticklabelrotation = pi/4,
-        xticks = (dims_lon[1 : step_lon : end], lonLabels[1 : step_lon : end]),
-        yticks = (dims_lat[1 : step_lat : end], latLabels[1 : step_lat : end]),
+        xlabel = xlabel,
+        ylabel = ylabel,
+        xticklabelrotation = xlabel_rotate,
+        xticks = x_ticks_labels,
+        yticks = y_ticks_labels,
         limits = ((lon_min, lon_max), (lat_min, lat_max))
     );
     if isnothing(colors)
@@ -49,13 +56,13 @@ function plotMeansOnMap!(fig::Figure, means::DimArray, title::String;
         hm = heatmap!(ax, lon, lat, Array(means), colormap=colors, alpha=0.8);
     else
         hm = heatmap!(ax, lon, lat, Array(means), colormap=colors, alpha=0.8, 
-                        colorrange = color_range,
-                        highclip = high_clip, 
-                        lowclip = low_clip);
+                      colorrange = color_range, highclip = high_clip, 
+                      lowclip = low_clip);
     end
     lines!(GeoMakie.coastlines(); color=:black);
     if !isnothing(pos_legend)
-        Colorbar(fig[pos_legend.x, pos_legend.y], hm);
+        Colorbar(fig[pos_legend.x, pos_legend.y], hm, height=Relative(2/3))
+        # the width argument is relative to the width of the column#, width=Relative(0.1));
     end
     return nothing
 end

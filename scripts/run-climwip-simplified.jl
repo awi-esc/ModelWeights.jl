@@ -111,14 +111,14 @@ title_f1 = "Weighted mean temp. change 2081-2100 minus 1995-2014";
 weighted_avg = mw.computeWeightedAvg(diff; weights = weights_all_members);
 #weighted_avg = mw.sortLongitudesWest2East(weighted_avg);
 f1 = Figure();
-mw.plotMeansOnMap!(f1, weighted_avg, title_f1; ColorSchemes.Reds.colors)
+mw.plotValsOnMap!(f1, weighted_avg, title_f1; ColorSchemes.Reds.colors)
 
 title_f2 = "Weighted minus unweighted mean temp. change: 2081-2100 minus 1995-2014";
 unweighted_avg = mw.computeWeightedAvg(diff; use_members_equal_weights=false);
 #unweighted_avg = mw.sortLongitudesWest2East(unweighted_avg);
 diff_wu = weighted_avg .- unweighted_avg;
 f2 = Figure();
-mw.plotMeansOnMap!(f2, diff_wu, title_f2; ColorSchemes.Reds.colors)
+mw.plotValsOnMap!(f2, diff_wu, title_f2; ColorSchemes.Reds.colors)
 
 
 begin
@@ -127,7 +127,7 @@ begin
     compareToOrigData(weighted_avg, data_ww_orig)
     # d = DimArray(data_ww_orig, (Dim{:lon}(Array(dims(weighted_avg, :lon))), Dim{:lat}(Array(dims(weighted_avg, :lat)))))
     # f = Figure();
-    # mw.plotMeansOnMap!(f, d, title_f1 * " (original data)"; ColorSchemes.Reds.colors);
+    # mw.plotValsOnMap!(f, d, title_f1 * " (original data)"; ColorSchemes.Reds.colors);
 end
 
 begin

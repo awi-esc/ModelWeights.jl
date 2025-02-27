@@ -195,8 +195,9 @@ end
 """
 function makeSubplots(
     data::DimArray, grid::NamedTuple{(:nrows, :ncols), Tuple{Int, Int}}; 
-    fontsize=36, figsize=(800,600), title="",
-    colors=nothing, color_range_limits=nothing, high_clip=(1,0,0), low_clip=(0,0,1)
+    fontsize=12, figsize=(600,450), title="",
+    colors=nothing, color_range_limits=nothing, high_clip=(1,0,0), low_clip=(0,0,1),
+    xlabel = "Longitude", ylabel = "Latitude", xlabel_rotate = pi/4
 )
     models = hasdim(data, :member) ? Array(dims(data, :member)) : 
         (hasdim(data, :model) ? Array(dims(data, :model)) : nothing)
@@ -217,15 +218,19 @@ function makeSubplots(
         pos_legend = idx_plot == nb_subplots ? (x=1:row, y=grid.ncols+1) : nothing
         model = models[idx_plot]
         if hasdim(data, :member)
-            plotMeansOnMap!(
+            plotValsOnMap!(
                 fig, data[member = At(model)], "$model";
                 colors=colors, high_clip=high_clip, low_clip=low_clip, 
-                color_range=color_range_limits, pos=pos, pos_legend=pos_legend)
+                color_range=color_range_limits, pos=pos, pos_legend=pos_legend,
+                xlabel = xlabel, ylabel = ylabel, xlabel_rotate = xlabel_rotate
+                )
         else
-            plotMeansOnMap!(
+            plotValsOnMap!(
                 fig, data[model = At(model)], "$model";
                 colors=colors, high_clip=high_clip, low_clip=low_clip,
-                color_range=color_range_limits, pos=pos, pos_legend=pos_legend)
+                color_range=color_range_limits, pos=pos, pos_legend=pos_legend,
+                xlabel = xlabel, ylabel = ylabel, xlabel_rotate = xlabel_rotate
+            )
         end
     end
     return fig

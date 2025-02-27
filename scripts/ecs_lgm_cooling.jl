@@ -151,14 +151,14 @@ all(map(x -> area_weights[:,:, x] == area_weights[:,:,x+1], 1:length(members)-1)
 
 # plot map of LGM tas data
 fig1 = Figure()
-mw.plotMeansOnMap!(
+mw.plotValsOnMap!(
     fig1,
     lgm_data.data[:,:,1], 
     "LGM tas for $(dims(lgm_data.data, :member)[1])";
     colors = ColorSchemes.twelvebitrainbow.colors   
 )
 fig2 = Figure();
-mw.plotMeansOnMap!(fig2, area_weights[:,:,1], "area weights for lgm models")
+mw.plotValsOnMap!(fig2, area_weights[:,:,1], "area weights for lgm models")
 
 
 global_means_non_weighted = mapslices(x -> Statistics.mean(x), 
@@ -191,7 +191,7 @@ if obs_data.data.metadata["units"] == "K"
 end
 dat = obs_data.data[:,:,1]
 fig3 = Figure();
-mw.plotMeansOnMap!(
+mw.plotValsOnMap!(
     fig3, dat, 
     "Historical tas for $(dims(obs_data.data, :source)[1])",
     colors = ColorSchemes.twelvebitrainbow.colors
@@ -199,7 +199,7 @@ mw.plotMeansOnMap!(
 mask_obs = ismissing.(dat)
 area_weights_obs = mw.computeAreaWeights(Array(dims(dat, :lon)), Array(dims(dat, :lat)); mask=mask_obs)
 fig4 = Figure();
-mw.plotMeansOnMap!(fig4, area_weights_obs, "area weights for observations")
+mw.plotValsOnMap!(fig4, area_weights_obs, "area weights for observations")
 global_means_obs = mapslices(
     x -> Statistics.sum(skipmissing(x)), 
     dat .* area_weights_obs, 

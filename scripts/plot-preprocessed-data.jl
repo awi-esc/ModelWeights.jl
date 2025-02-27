@@ -15,7 +15,7 @@ function makePlots(data, experiment, clim_var)
     members = dims(data.data, :member)
     for m in members
         f = Figure();
-        mw.plotMeansOnMap!(f, data.data[member=At(m)], "$experiment mean $m")
+        mw.plotValsOnMap!(f, data.data[member=At(m)], "$experiment mean $m")
         save("/albedo/home/brgrus001/ModelWeights/plots/$experiment-$clim_var/$m.png", f)
     end
 end
