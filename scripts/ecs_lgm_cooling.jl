@@ -17,7 +17,7 @@ data = mw.loadDataFromYAML(path_config; subset = Dict("level_shared_models" => m
 # as physics of lgm models
 df = mw.alignPhysics(
     data, 
-    data.map["tas_CLIM_lgm"].data.metadata["member_names"]; 
+    data["tas_CLIM_lgm"].data.metadata["member_names"]; 
     level_shared_models = mw.MODEL
 );
 mw.averageEnsembleMembers!(df)

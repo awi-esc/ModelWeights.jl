@@ -133,38 +133,37 @@ end
 
 
 function subsetModelData(datamap::DataMap; level::LEVEL=MEMBER)
-    all_data = collect(values(datamap.map))
+    all_data = collect(values(datamap))
     all_data = level == MEMBER ? filter(x -> hasdim(x.data, :member), all_data) :
         filter(x -> hasdim(x.data, :model), all_data)
     dimensions = level == MEMBER ? map(x -> dims(x.data, :member), all_data) :
         map(x -> dims(x.data, :model), all_data)
     shared_models = reduce(intersect, dimensions)
 
-    subset = DataMap(Dict{String, Data}())
+    subset = DataMap()
     for data in all_data
         df = deepcopy(data.data)
-        addToMap!(subset, Data(meta=data.meta, data=subsetModelData(df, shared_models)))
+        subset[data.meta.id] = Data(meta=data.meta, data=subsetModelData(df, shared_models))
     end
     return subset
 end
 
-
-
 """
-    loadPreprocData(meta_data::MetaData, is_model_data::Bool)
+    loadPreprocData(meta::MetaData, is_model_data::Bool)
+
+Load the data from disk and fill up meta dictionary.
 
 # Arguments:
-- `path_data`: base path to directory that contains subdirectory with name
-of the respective experiment (see TODO for assumed data structure)
+- `meta`:
 - `is_model_data`: observational and model data loaded seperately,
 if true modelData, else observational data
 
-# Returns: instance of `Data` or nothing
+# Returns:
 """
-function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
-    data = []
-    meta_dict = Dict{String, Any}()
+function loadPreprocData(meta::MetaData, is_model_data::Bool)
+    data = Vector{DimArray}()
     n_files = length(meta.paths)
+    meta_dict = Dict{String, Any}()
     source_names = repeat([""], outer = n_files)
     for (i, file) in enumerate(meta.paths)
         @debug "processing file.." * file
@@ -224,49 +223,73 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool=true)
         end
         push!(data, DimArray(Array(dsVar), Tuple(dimensions)))
     end
-    if length(data) > 0
-        #dimData = cat(data..., dims=3) # way too slow!
-        # all of the preprocessed model data assumed to have the same grid!
-        # Preallocate an n-dimensional array of respective size
-        size_dims = size(data[1])
-        n = length(data)
-        raw_data = Array{eltype(Array(data[1]))}(undef, size_dims..., n)
-        s = repeat([:], length(size_dims))
-        names = collect(source_names)
-        updateMetadata!(meta_dict, names, is_model_data)
-        # sort the data
-        sort_indices = sortperm(names)
-        for idx in sort_indices
+    return (data, meta_dict, source_names)
+end
+
+
+function buildDimArrayFromLoadedData(
+    data::Vector{DimArray}, 
+    meta_dict::Dict{String, Any}, 
+    source_names::Vector{String},
+    is_model_data::Bool
+)
+    if length(data) == 0
+        @warn "No data loaded!"
+        return nothing
+    end
+    #dimData = cat(data..., dims=3) # way too slow!
+    # all of the preprocessed model data assumed to have the same grid!
+    # Preallocate an n-dimensional array of respective size
+    data_sizes = unique(map(size, data))
+    if length(data_sizes) != 1
+        # TODO: if difference only in time, this should be handled here e.g. by 
+        # adding missing values
+        if !all(map(x -> hasdim(x, :time), data))
+            msg = "Data does not have the same size across all models: $(data_sizes)"
+            throw(ArgumentError(msg))
+        else
+            # for now just take the shortest timeseries
+            nb_timesteps = unique(map(x -> length(dims(x, :time)), data))
+            len_shortest_ts = minimum(nb_timesteps)
+            data = map(x -> x[time = 1:len_shortest_ts], data)
+        end
+    end
+    size_dims = size(data[1])
+    n = length(data)
+    raw_data = Array{eltype(Array(data[1]))}(undef, size_dims..., n)
+    s = repeat([:], length(size_dims))
+    names = collect(source_names)
+    updateMetadata!(meta_dict, names, is_model_data)
+    # sort the data
+    sort_indices = sortperm(names)
+    for idx in sort_indices
+        raw_data[s..., idx] = Array(data[idx])
+    end
+    dimData = DimArray(
+        raw_data,
+        (dims(data[1])..., Dim{:source}(names[sort_indices]))
+    )
+    dimData = rebuild(dimData; metadata = meta_dict)
+    if is_model_data
+        indices = sortperm(dimData.metadata["member_names"])
+        for idx in indices
             raw_data[s..., idx] = Array(data[idx])
         end
         dimData = DimArray(
             raw_data,
-            (dims(data[1])..., Dim{:source}(names[sort_indices]))
+            (dims(data[1])..., Dim{:member}(dimData.metadata["member_names"][indices]))
         )
-        dimData = rebuild(dimData; metadata = meta_dict)
-        if is_model_data
-            indices = sortperm(dimData.metadata["member_names"])
-            for idx in indices
-                raw_data[s..., idx] = Array(data[idx])
-            end
-            dimData = DimArray(
-                raw_data,
-                (dims(data[1])..., Dim{:member}(dimData.metadata["member_names"][indices]))
-            )
-            dimData = rebuild(dimData; metadata = meta_dict) 
+        dimData = rebuild(dimData; metadata = meta_dict) 
 
-            # Sanity checks that no dataset exists more than once
-            members = dims(dimData, :member)
-            if length(members) != length(unique(members))
-                duplicates = [m for m in members if sum(members .== m) > 1]
-                #paths = [filter(x -> occursin(split(dup, MODEL_MEMBER_DELIM)[1], x), meta.paths) for dup in duplicates]
-                @warn "Some datasets appear more than once" duplicates
-            end
+        # Sanity checks that no dataset exists more than once
+        members = dims(dimData, :member)
+        if length(members) != length(unique(members))
+            duplicates = [m for m in members if sum(members .== m) > 1]
+            #paths = [filter(x -> occursin(split(dup, MODEL_MEMBER_DELIM)[1], x), meta.paths) for dup in duplicates]
+            @warn "Some datasets appear more than once" duplicates
         end
-        return Data(meta = meta, data = dimData)
-    else
-        return nothing
     end
+    return dimData
 end
 
 
@@ -278,13 +301,15 @@ end
 - `is_model_data`: true for model data, false for observational data.
 """
 function loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::Bool)
-    results = DataMap(Dict{String, Data}())
+    results = DataMap()
     for (id, meta) in meta_data
         # loads data at level of model members
         @info "load $id"
-        addToMap!(results, loadPreprocData(meta, is_model_data))
+        data_vec, meta_dict, source_names = loadPreprocData(meta, is_model_data)
+        data = buildDimArrayFromLoadedData(data_vec, meta_dict, source_names, is_model_data)
+        results[meta.id] = Data(meta, data)
     end
-    @debug "loaded data: $(map(x -> x.meta, values(results.map)))"
+    @debug "loaded data: $(map(x -> x.meta, values(results)))"
     @debug "filtered for shared models across all loaded data: " level
     return results
 end
@@ -499,7 +524,7 @@ function alignPhysics(
         # retrieve allowed physics as in members 
         member_ids = filter(m -> startswith(m, model * MODEL_MEMBER_DELIM), members)
         physics = getPhysicsFromMembers(member_ids)
-        for (id, model_data) in data.map
+        for (id, model_data) in data
             ds = model_data.data
             # filter data s.t. of current model only members with retrieved physics are kept
             model_indices = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), Array(dims(ds, :member)))
@@ -508,9 +533,8 @@ function alignPhysics(
                 indices_keep = filter(x -> !(x in indices_out), 1:length(dims(ds, :member)))
                 members_kept = ds.metadata["member_names"][indices_keep]
                 meta = model_data.meta
-                meta_updated = @set meta.paths = subsetPaths(meta.paths, members_kept)
-            
-                addToMap!(data, Data(meta = meta_updated, data = subsetModelData(ds, members_kept)))
+                meta_updated = @set meta.paths = subsetPaths(meta.paths, members_kept)            
+                data[meta_updated.id] = Data(meta = meta_updated, data = subsetModelData(ds, members_kept))
             end
         end
     end
@@ -518,17 +542,17 @@ function alignPhysics(
     # shared models as it was before if wanted
     if !isnothing(level_shared_models)
         meta_data = Dict{String, MetaData}()
-        for k in collect(keys(data.map))
-            meta_data[k] = data.map[k].meta 
+        for k in collect(keys(data))
+            meta_data[k] = data[k].meta 
         end
         reduceMetaDataSharedModels!(meta_data, level_shared_models)
-        all_paths = reduce(vcat, map(k -> meta_data[k].paths, collect(keys(data.map))))
+        all_paths = reduce(vcat, map(k -> meta_data[k].paths, collect(keys(data))))
         all_members = getMemberIDsFromPaths(all_paths)
-        for (id, model_data) in data.map
-            addToMap!(data, Data(
+        for (id, model_data) in data
+            data[meta_data[id].id] = Data(
                 meta = meta_data[id], 
                 data = subsetModelData(model_data.data, all_members)
-            ))
+            )
         end
     end
     return data
@@ -580,10 +604,10 @@ Take average for all members of each model.
 - `data`: 
 """
 function averageEnsembleMembers!(data::DataMap)
-    for k in keys(data.map)
-        updated_arr = summarizeEnsembleMembersVector(data.map[k].data, true)
-        current_data = data.map[k]
-        data.map[k] = @set current_data.data = updated_arr 
+    for k in keys(data)
+        updated_arr = summarizeEnsembleMembersVector(data[k].data, true)
+        current_data = data[k]
+        data[k] = @set current_data.data = updated_arr 
     end
     return nothing
 end
@@ -668,8 +692,7 @@ end
 - `id_data`:
 - `id_ref`: 
 """
-function computeAnomalies!(datamap::DataMap, id_data::String, id_ref::String)
-    data = datamap.map
+function computeAnomalies!(data::DataMap, id_data::String, id_ref::String)
     dimension = hasdim(data[id_data].data, :member) ? :member : :model
     if dims(data[id_data].data, dimension) != dims(data[id_ref].data, dimension)
         throw(ArgumentError("Original and reference data must contain exactly the same models!"))
@@ -712,19 +735,19 @@ end
 function addOceanMask!(datamap::DataMap, orog_data::Data)
     meta = MetaData(id="mask_ocean", attrib=MetaAttrib(), paths=copy(orog_data.meta.paths))
     mask = getOceanMask(orog_data.data)
-    addToMap!(datamap, Data(meta=meta, data=mask))
+    datamap[meta.id] = Data(meta=meta, data=mask)
     return nothing
 end
 
 function addLandMask!(datamap::DataMap, orog_data::Data)
     meta = MetaData(id="mask_land", attrib=MetaAttrib(), paths=copy(orog_data.meta.paths))
     mask = getLandMask(orog_data.data)
-    addToMap!(datamap, Data(meta=meta, data=mask))
+    datamap[meta.id] =  Data(meta=meta, data=mask)
     return nothing
 end
 
 function addMasks!(datamap::DataMap, id_orog_data::String)
-    orog_data = getFromMap(datamap, id_orog_data)
+    orog_data = datamap[id_orog_data]
     addOceanMask!(datamap, orog_data)
     addLandMask!(datamap, orog_data)
     return nothing
