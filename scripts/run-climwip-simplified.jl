@@ -149,12 +149,14 @@ data_graph = data_temp_graph["tas_ANOM_weighted_temperature_graph"].data;
 
 weighted_avg = mw.computeWeightedAvg(data_graph; weights = weights_all_members);
 unweighted_avg = mw.computeWeightedAvg(data_graph; use_members_equal_weights = false);
-uncertainties = mw.getUncertaintyRanges(data_graph, weights_all_members);
+
+uncertainties_weighted = mw.getUncertaintyRanges(data_graph; weights_all_members);
+uncertainties_unweighted = mw.getUncertaintyRanges(data_graph);
 
 f3 = mw.plotTempGraph(
     data_graph, 
     (weighted=weighted_avg, unweighted=unweighted_avg),
-    uncertainties,
+    (weighted=uncertainties_weighted, unweighted=uncertainties_unweighted),
     "Temperature anomaly relative to 1981-2010";
     ylabel = "Temperature anomaly"
 )
@@ -175,8 +177,6 @@ diff[indices]
 compareToOrigData(uncertainties_weighted_orig, uncertainties_weighted)
 
 # data_graph_models = mw.summarizeEnsembleMembersVector(data_graph, true);
-# uncertainties_models = mw.getUncertaintyRanges(data_graph_models, weights.w);
-
 
 weighted_avg_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/central_estimate_weighted.nc")
 compareToOrigData(weighted_avg_orig["tas"][:], weighted_avg[:])

@@ -448,28 +448,26 @@ end
 
 
 """
-    getUncertaintyRanges(data::DimArray, w::DimArray; quantiles=[0.167, 0.833]})
+    getUncertaintyRanges(
+    data::DimArray; wUnion{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]}
+)
 
 # Arguments:
 - `data`: has dimensions 'time', 'model'
 - `w`: has dimension 'model', sum up to 1
 - `quantiles`: Vector with two entries (btw. 0 and 1) [lower_bound, upper_bound]
 """
-function getUncertaintyRanges(data::DimArray, w::DimArray; quantiles=[0.167, 0.833])
-    unweightedRanges = []
-    weightedRanges = []
+function getUncertaintyRanges(
+    data::DimArray; w::Union{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]
+)
+    uncertainty_ranges = []
     for t in dims(data, :time)
         lower, upper = computeInterpolatedWeightedQuantiles(
             quantiles, Array(data[time = At(t)]); weights=w
         )
-        push!(weightedRanges, [lower, upper])
-        lower, upper = computeInterpolatedWeightedQuantiles(
-            quantiles, Array(data[time = At(t)])
-        )
-        push!(unweightedRanges, [lower, upper])
+        push!(uncertainty_ranges, [lower, upper])
     end
-
-    return (weighted=weightedRanges, unweighted=unweightedRanges)
+    return uncertainty_ranges
 end
 
 
@@ -598,15 +596,14 @@ end
 """
     averageEnsembleMembers!(data::DataMap)
 
-Take average for all members of each model.
+For every dataset in `data`, take average for all members of each model.
 
 # Arguments:
 - `data`: 
 """
 function averageEnsembleMembers!(data::DataMap)
-    for k in keys(data)
-        updated_arr = summarizeEnsembleMembersVector(data[k].data, true)
-        current_data = data[k]
+    for (k, current_data) in data
+        updated_arr = summarizeEnsembleMembersVector(current_data.data, true)
         data[k] = @set current_data.data = updated_arr 
     end
     return nothing
@@ -629,28 +626,49 @@ function getGlobalMeans(data::DimArray)
     longitudes = Array(dims(data, :lon))
     latitudes = Array(dims(data, :lat))
     masks = ismissing.(data)
-
     dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
+    meta = Dict(k => data.metadata[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
     if !isnothing(dimension)
         models = Array(dims(data, dimension))
-        global_means = DimArray(Array{Union{Float64, Missing}}(undef, length(models)), (Dim{dimension}(models)))
+        global_means = DimArray(
+            Array{Union{Float64, Missing}}(undef, length(models)), (Dim{dimension}(models)),
+            metadata=meta
+        )
         for model in models
-            mask = dimension == :model ?  masks[model = At(model)] : masks[member = At(model)]
+            mask = getAtModel(masks, dimension, model)
             global_mean = missing
             if any(mask .== false)
                 area_weights = computeAreaWeights(longitudes, latitudes; mask)
                 vals = dimension == :model ? data[model = At(model)] : data[member = At(model)]
                 global_mean = Statistics.sum(skipmissing(vals .* area_weights))
             end
-            if dimension == :model                
-                global_means[model = At(model)] = global_mean
-            else
-                global_means[member = At(model)] = global_mean
-            end
+                putAtModel!(global_means, dimension, model, global_mean)
         end
     else 
         area_weights = computeAreaWeights(longitudes, latitudes; mask=masks)
+        # here metadata should be retained anyway
         global_means = Statistics.sum(skipmissing(data .* area_weights))
+    end
+    return global_means
+end
+
+
+function getGlobalMeansTS(data::DimArray)
+    dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
+    models = dims(data, dimension)
+    nb_timesteps = length(dims(data, :time))
+    global_means = !isnothing(dimension) ? 
+        DimArray(
+            Array{Union{Float64, Missing}}(undef, (length(models), nb_timesteps)), 
+            (dims(data, dimension), dims(data, :time)),
+            metadata = Dict(k => data.metadata[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
+        ) :
+        DimArray(
+            Array{Union{Float64, Missing}}(undef, nb_timesteps), 
+            dims(data, :time)
+        )
+    for t in dims(data, :time)
+        global_means[time = At(t)] = getGlobalMeans(data[time = At(t)])
     end
     return global_means
 end

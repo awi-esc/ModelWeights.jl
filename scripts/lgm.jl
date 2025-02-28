@@ -207,12 +207,13 @@ m2 = mw.areaWeightedRMSE(weighted_avg_lgm.data, obs_avg, mask)
 
 ##############################################################################
 
-uncertainties = mw.getUncertaintyRanges(tas_data, weights.w_members);
+uncertainties_weighted = mw.getUncertaintyRanges(lgm_tas_data; weights.w_members);
+uncertainties_unweighted = mw.getUncertaintyRanges(lgm_tas_data);
 
 f3 = mw.plotTempGraph(
     data_graph, 
     (weighted=weighted_avg, unweighted=unweighted_avg),
-    uncertainties,
+    (weighted=uncertainties_weighted, unweighted=uncertainties_unweighted),
     "Temperature anomaly relative to 1981-2010";
     ylabel = "Temperature anomaly"
 )

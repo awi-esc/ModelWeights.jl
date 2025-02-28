@@ -228,8 +228,8 @@ Compute the average values for each (lon,lat) grid point in 'data', weighted
 by weights 'weights'. If no weight vector is provided, unweighted average is computed.
 
 # Arguments:
-- `data`: has dimensions lon, lat, model/member
-- `weights`: weights for models or individual members; has dimension model/member
+- `data`: must have dimension 'model' or 'member'
+- `weights`: weights for models or individual members
 - `use_members_equal_weights`:  if `weights` is nothing, all models receive 
 equal weight. If `use_members_equal_weights` is true, the number of members 
 per model is taken into account, s.t. each model receives equal weight, which
@@ -283,19 +283,11 @@ function computeWeightedAvg(
     not_missing_vals = mapslices(x -> (ismissing.(x).==0), data, dims=(dim_symbol))
     w_temp = mapslices(x -> (x .* weights) ./ sum(x .* weights), not_missing_vals, dims=(dim_symbol))
     w_temp = replace(w_temp, NaN => missing)
-    
-    # TODO: the following if-differentiation should not be necessary, find out how to 
-    # index dimarray with variable instead of direct name
-    if dim_symbol == :member
-        for m in models_weights
-            data[member = At(m)] = data[member = At(m)] .* w_temp[member = At(m)]
-        end
-    else
-        for m in models_weights
-            data[model = At(m)] = data[model = At(m)] .* w_temp[model = At(m)]
-        end
-    end
-    
+
+    for m in models_weights
+        val = getAtModel(data, dim_symbol, m) .* getAtModel(w_temp, dim_symbol, m)
+        putAtModel!(data, dim_symbol, m, val)
+    end        
     weighted_avg = mapslices(x -> sum(skipmissing(x)), data, dims=(dim_symbol))
     weighted_avg = dropdims(weighted_avg, dims=dim_symbol)
     # set to missing when value was missing for ALL models
@@ -305,7 +297,8 @@ function computeWeightedAvg(
         dims = dim_symbol
     )
     result = Array{Union{Float32,Missing}}(undef, size(weighted_avg))
-    result[:,:] = weighted_avg
+    s = repeat([:], length(size(weighted_avg)))
+    result[s...] = weighted_avg
     result[all_missing] .= missing
     if !any(ismissing, result)
         result = weighted_avg
@@ -320,7 +313,6 @@ end
 Create a weight vector, with equal weight for each model. Distribute weight across
 model members if dimension=:member. Metadata is used to access the individual 
 model members the computed weights were based on.
-  
 
 # Arguments:
 - `metadata`: metadata of the data for which weights were computed.

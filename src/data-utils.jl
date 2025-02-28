@@ -77,6 +77,20 @@ function Base.show(io::IO, x::Weights)
 end
 
 
+function getAtModel(da::DimArray, dimension::Symbol, model::String)
+    return dimension == :model ? da[model = At(model)] : da[member = At(model)]
+end
+
+# data is matrix or value
+function putAtModel!(da::DimArray, dimension::Symbol, model::String, data)
+    if dimension == :model
+        da[model = At(model)] =  data 
+    else 
+        da[member = At(model)] = data
+    end
+    return nothing
+end
+
 
 """
     buildCMIP5EnsembleMember(
@@ -422,7 +436,8 @@ function get_optional_fields_config(ds::Dict, timerange_aliases_dict::Dict)
     elseif isempty(timeranges)
         timeranges = [get(aliases_timerange_dict, a, nothing) for a in aliases]
         if any(isnothing.(timeranges))
-            throw(ArgumentError("Unknown alias according to timerange alias dictionary in config file!"))
+            unknowns = aliases[findall(x -> isnothing(x), timeranges)]
+            throw(ArgumentError("Unknown alias according to timerange alias dictionary in config file: $unknowns"))
         end
     elseif isempty(aliases)
         aliases = [get(timerange_aliases_dict, tr, nothing) for tr in timeranges]
