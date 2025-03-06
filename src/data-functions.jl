@@ -8,15 +8,17 @@ using Dates
 """
     getUniqueMemberIds(meta::Dict, model_names::Vector{String})
 
-Combine name of the model with the id of the respective model members. The
-returned vector has length of the total number of model members. It contains 
-for every model the unique ids of its members.
+Create a vector that contains for every model in `model_names` the unique ids
+of its members, each with the model name followed by '#' as prefix .
+
+The unique member ids correspond to the variant labels of CMIP6 models, e.g. r1i1p1f1.
 
 # Arguments:
-- `meta::Dict`: for CMIP5 data, must have keys: 'mip_era', 'realization', 'initialization_method',
-'physics_version'. For CMIP6 data must have keys: 'variant_label', 'grid_label'
+- `meta::Dict`: For CMIP5 data, must have keys: 'mip_era', 'realization',
+'initialization_method', 'physics_version'. For CMIP6 data must have keys: 
+'variant_label', 'grid_label'.
 - `model_names::Vector{String}`: Vector of strings containing model names for 
-every model member, i.e. length is sum of the number of members over all models
+every model member, i.e. length is sum of the number of members over all models.
 """
 function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
     meta_subdict = Dict{String, Vector}()
@@ -76,13 +78,10 @@ end
 Return subset of paths in `paths` that point to models in `shared_models`.
 
 # Arguments:
-- `paths`: paths to model data
-- `shared_models`: have form 'modelname#memberID[_grid]
+- `shared_models`: have form 'modelname#memberID[_grid]' on level of model
+members or just 'modelname' on level of models.
 """
 function subsetPaths(paths::Vector{String}, shared_models::Vector{String})
-    # update metadata paths too, keep only those that contain a model 
-    # in shared_models (NOTE: this doesnt work if the filename does 
-    # not contain the model name, which it should though)
     subset_paths = Vector{String}()
     for path in paths
         keep = applyModelConstraints(path, shared_models)
@@ -98,12 +97,14 @@ end
     subsetModelData(data::AbstractArray, shared_models::Vector{String})
 
 Return a subset of `data` that contains only data from the models 
-specified in `shared_models`. Takes care of metadata.
+specified in `shared_models`. 
+
+Takes care of metadata.
 
 # Arguments:
 - `data`: must have dimension 'member' or 'model'
 - `shared_models`: vector of models, which can either be on level of models 
-or members of models
+or members of models ('modelname#memberID[_grid]').
 """
 function subsetModelData(data::AbstractArray, shared_models::Vector{String})
     dim_symbol = hasdim(data, :member) ? :member : :model
@@ -133,7 +134,9 @@ function subsetModelData(data::AbstractArray, shared_models::Vector{String})
     return data
 end
 
-
+"""
+    subsetModelData(datamap::DataMap; level::LEVEL=MEMBER)
+"""
 function subsetModelData(datamap::DataMap; level::LEVEL=MEMBER)
     all_data = collect(values(datamap))
     all_data = level == MEMBER ? filter(x -> hasdim(x.data, :member), all_data) :
@@ -154,18 +157,13 @@ end
 """
     loadPreprocData(meta::MetaData, is_model_data::Bool)
 
-Create a tuple with a vector of YAXArrays and a Dictionary containing the 
-metadata of all loaded data. 
+Create a tuple with a vector of YAXArrays for data specified in `meta` and a 
+Dictionary containing the metadata of all loaded data. 
 
 Load the data from paths specified in `meta.paths` and create a meta dictionary
 that contains the metadata keys from every loaded dataset. Each key maps to a vector 
 of values, one for each loaded dataset, which is set to missing if that key 
 hadn't been present in this datasets own metadata.
-
-# Arguments:
-- `meta`:
-- `is_model_data`: observational and model data loaded seperately,
-if true modelData, else observational data
 """
 function loadPreprocData(meta::MetaData, is_model_data::Bool)
     n_files = length(meta.paths)
@@ -325,10 +323,6 @@ end
 
 """
     loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::Bool)
-
-# Arguments:
-- `meta_data`:
-- `is_model_data`: true for model data, false for observational data.
 """
 function loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::Bool)
     results = DataMap()
@@ -348,12 +342,10 @@ end
 """
     getMemberIDsFromPaths(all_paths::Vector{String})
 
-For every path in `all_paths` returns a string of the form modelname#memberID[_grid]
-that identifies the corresponding model (on the level of model members!).
-The abbreviation of the grid is added to the model name for CMIP6 models.
+For every path in `all_paths` return a string of the form modelname#memberID[_grid]
+that identifies the corresponding model member.
 
-# Arguments:
-- `all_paths`:
+The abbreviation of the grid is added to the model name for CMIP6 models.
 """
 function getMemberIDsFromPaths(all_paths::Vector{String})
     all_filenames = split.(basename.(all_paths), "_")
@@ -374,9 +366,10 @@ end
 """
     searchModelInPaths(model::String, paths::Vector{String})
 
+
+
 # Arguments:
-- `model_id`: string with form: modelname#memberID[_grid]
-- `paths`:
+- `model_id::String`: has form modelname#memberID[_grid]
 """
 function searchModelInPaths(model_id::String, paths::Vector{String})
     model_parts = String.(split(model_id, MODEL_MEMBER_DELIM))
@@ -427,10 +420,6 @@ end
     )
      
 Return a vector of models from `meta_data` that appear in `all_models`.
-
-# Arguments:
-- `meta_data`:
-- `all_models`:
 """
 function getSharedModelsFromPaths(
     meta_data::Dict{String, MetaData}, all_models::Vector{String}
@@ -455,12 +444,11 @@ end
 """
     getCMIPModelsKey(meta::Dict)
 
-Return the respective key to retrieve model names in CMIP6 ('source_id') and CMIP5 ('model_id') data.
-If both keys are present, 'source_id' used in CMIP6 models is returned, if none is present, throw 
-ArgumentError.
+Return the respective key to retrieve model names in CMIP6 ('source_id') and 
+CMIP5 ('model_id') data.
 
-# Arguments:
-- `meta`:
+If both keys are present, 'source_id' used in CMIP6 models is returned, if none 
+is present, throw ArgumentError.
 """
 function getCMIPModelsKey(meta::Dict)
     attributes = keys(meta)
