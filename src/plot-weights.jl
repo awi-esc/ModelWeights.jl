@@ -35,33 +35,50 @@ function plotWeights(weights::Weights; title::String="")
 end
 
 
-function plotDistances(dists::DimArray, title::String; is_bar_plot::Bool=true)
-    models = dims(dists, :member)
-    if isnothing(models)
-        models = Array(dims(dists, :model))
-    end
+
+function plotDistancesByVar(dists::AbstractArray, title::String; is_bar_plot::Bool=true)
+    dists_var = reduce(+, dists, dims=:diagnostic)
+    dists_var = DimensionalData.set(dists_var,
+         :diagnostic => ["sum of diagnostics: $(Array(dims(dists, :diagnostic))...)"])
+    plotDistances(dists_var, title; is_bar_plot=is_bar_plot)
+end
+
+
+"""
+    plotDistances(dists::AbstractArray, title::String; is_bar_plot::Bool=true)
+
+Plot figure of distances for every combination of variable and diagnostic in 
+`dists`.
+
+# Arguments:
+- `dists`: must have dimensions `:variable`, `:diagnostic`
+- `title`:
+- `is_bar_plot`:
+"""
+function plotDistances(dists::AbstractArray, title::String; is_bar_plot::Bool=true)
+    models = hasdim(dists, :member) ? dims(dists, :member) : dims(dists, :model)
     variables = dims(dists, :variable)
-    if isnothing(variables)
-        variables = ["variables combined"]
-        dists_reshaped = reshape(dists, (size(dists)..., 1))
-        dists = DimArray(dists_reshaped, (dims(dists)..., Dim{:variable}(variables)))
-    end
+    # if isnothing(variables)
+    #     variables = ["variables combined"]
+    #     dists_reshaped = reshape(dists, (size(dists)..., 1))
+    #     dists = DimArray(dists_reshaped, (dims(dists)..., Dim{:variable}(variables)))
+    # end
     diagnostics = dims(dists, :diagnostic)
-    if isnothing(diagnostics)
-        diagnostics = ["Generalized distance"]
-        dists_reshaped = reshape(dists, (size(dists)..., 1))
-        dists = DimArray(dists_reshaped, (dims(dists)..., Dim{:diagnostic}(Array(diagnostics))))
-    end
+    # if isnothing(diagnostics)
+    #     diagnostics = ["Generalized distance"]
+    #     dists_reshaped = reshape(dists, (size(dists)..., 1))
+    #     dists = DimArray(dists_reshaped, (dims(dists)..., Dim{:diagnostic}(Array(diagnostics))))
+    # end
 
     figures = []
     xs = 1 : length(models)
     for diag in Array(diagnostics)
-        fig=Figure()
-        ax = Axis(
-            fig[1,1], xticks = (xs, Array(models)), xticklabelrotation = pi/4,
-            xlabel = "Model member", title = title * " -- Diagnostic: $diag"
-        );
         for var in variables
+            fig=Figure()
+            ax = Axis(
+                fig[1,1], xticks = (xs, Array(models)), xticklabelrotation = pi/4,
+                xlabel = "Model member", title = title * "Variable: $var, Diagnostic: $diag"
+            );
             ys = vec(dists[variable = At(var), diagnostic = At(diag)])
             if is_bar_plot
                 barplot!(ax, xs, ys, label = "$var")
@@ -69,22 +86,22 @@ function plotDistances(dists::DimArray, title::String; is_bar_plot::Bool=true)
                 scatter!(ax, xs, ys)
                 lines!(ax, xs, ys, label = "$var")
             end
+            axislegend(ax, merge=true, position=:lt)
+            push!(figures, fig)
         end
-        axislegend(ax, merge=true, position=:ct)
-        push!(figures, fig)
     end
     return figures
 end
 
 
 """
-    plotDistancesIndependence(distances::DimArray, dimname::String)
+    plotDistancesIndependence(distances::AbstractArray, dimname::String)
 
 # Arguments:
 - `distances`:
 - `dimname`:
 """
-function plotDistancesIndependence(distances::DimArray, dimname::String)
+function plotDistancesIndependence(distances::AbstractArray, dimname::String)
     figures = []
     ensembles = collect(dims(distances, Symbol(dimname)))
     if hasdim(distances, :variable)

@@ -85,11 +85,11 @@ end
 
 
 """
-    sortLongitudesWest2East(data::DimArray)
+    sortLongitudesWest2East(data::AbstractArray)
 
 Arrange 'data' such that western latitudes come first, then eastern latitudes.
 """
-function sortLongitudesWest2East(data::DimArray)
+function sortLongitudesWest2East(data::AbstractArray)
     lon = dims(data, :lon)
     east = lon[lon .< 180]
     west = lon[lon .>= 180]
@@ -109,17 +109,17 @@ function sortLongitudesWest2East(data::DimArray)
 end
 
 """
-    convertKgsToSv!(vec:DimArray)
+    convertKgsToSv!(vec:AbstractArray)
 
 Convert data given in unit 'kg s-1' into Sverdrups (Sv).
 """
-function convertKgsToSv!(data::DimArray)
-    if data.metadata["units"] != "kg s-1"
-        msg = "The unit of the data should be 'kg s-1', but it is " * data.metadata["units"];
+function convertKgsToSv!(data::AbstractArray)
+    if data.properties["units"] != "kg s-1"
+        msg = "The unit of the data should be 'kg s-1', but it is " * data.properties["units"];
         throw(ArgumentError(msg))
     end
     data[1:end] = data .* (10^-9);
-    data.metadata["units"] = "Sv";
+    data.properties["units"] = "Sv";
     return nothing
 end
 
@@ -144,28 +144,28 @@ function getClosestGridPoint(location::Dict, longitudes::Vector, latitudes::Vect
 end
 
 """
-    kelvinToCelsius(data::DimArray)
+    kelvinToCelsius(data::AbstractArray)
 
-Return DimensionalData.DimArray with values that were given in Kelvin converted 
-to Degree Celsius.
+Return a copy of `data` with values given in Kelvin covnerted into Degree Celsius.
 
 # Arguments:
 - `data`:
 """
-function kelvinToCelsius(data::DimArray)
-    units =  data.metadata["units"]
+function kelvinToCelsius(data::AbstractArray)
+    units =  data.properties["units"]
+    df = deepcopy(data)
     if isa(units, String) && units == "K"
-        data = data .- 273.15
+        df = df .- 273.15
     elseif isa(units, Vector)
         indices = findall(units .!= "K")
-        if hasdim(data, :member)
-            data[member = indices] =  data[member = indices] .- 273.15
+        if hasdim(df, :member)
+            df[member = indices] =  df[member = indices] .- 273.15
         else
-            data[model = indices] =  data[model = indices] .- 273.15
+            df[model = indices] =  df[model = indices] .- 273.15
         end
     end
-    data.metadata["units"] = "degC"
-    return data
+    df.properties["units"] = "degC"
+    return df
 end
 
 
@@ -181,7 +181,7 @@ of Kelvin.
 function kelvinToCelsius!(datamap::DataMap)
     for (id, da) in datamap
         df = @set da.data = kelvinToCelsius(da.data)
-        datamap[df.meta.id] = df
+        datamap[id] = df
     end
     return nothing
 end
@@ -194,7 +194,7 @@ end
 
 """
 function makeSubplots(
-    data::DimArray, grid::NamedTuple{(:nrows, :ncols), Tuple{Int, Int}}; 
+    data::AbstractArray, grid::NamedTuple{(:nrows, :ncols), Tuple{Int, Int}}; 
     fontsize=12, figsize=(600,450), title="",
     colors=nothing, color_range_limits=nothing, high_clip=(1,0,0), low_clip=(0,0,1),
     xlabel = "Longitude", ylabel = "Latitude", xlabel_rotate = pi/4

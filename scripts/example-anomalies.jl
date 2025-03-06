@@ -9,9 +9,10 @@ using Colors
 
 # LGM simulations
 path_config = "./configs/examples/example-anomalies-lgm-piControl.yml";
-lgm_data =  mw.loadDataFromYAML(
-    path_config, subset=Dict("level_shared_models" => mw.MEMBER)
-);
+lgm_meta =  mw.loadDataFromYAML(path_config; subset=Dict("level_shared_models" => mw.MEMBER), preview=true);
+# lgm_data =  mw.loadDataFromYAML(path_config; subset=Dict("level_shared_models" => mw.MODEL))
+# lgm_data =  mw.loadDataFromYAML(path_config)
+lgm_data =  mw.loadDataFromYAML(path_config; subset=Dict("level_shared_models" => mw.MEMBER))
 mw.computeAnomalies!(lgm_data, "tas_CLIM_lgm", "tas_CLIM_piControl")
 
 colorrange = reverse(Colors.colormap("RdBu", logscale=false, mid=0.25));
@@ -43,7 +44,7 @@ data = df_historical["tas_ANOM_historical3"].data[member = Where(x -> x in membe
 colorrange = reverse(colormap("RdBu", logscale=false));
 f2 = mw.makeSubplots(
     data, (nrows=2, ncols=5); 
-    figsize= (800,350) .* 2, 
+    figsize= (800, 300) .* 2, 
     color_range_limits = (-2.5, 2.5), 
     title="Mean Near-Surface Air Temperature Anomalies 1991-2014 wrt 1850-1900",
     colors = colorrange[2:end-1], low_clip = colorrange[1], high_clip = colorrange[end],
@@ -64,7 +65,8 @@ f_ocean = Figure();
 mw.plotValsOnMap!(f_ocean, ocean_mask[:,:,1], "ocean mask")
 f_land = Figure();
 mw.plotValsOnMap!(f_land, land_mask[:,:,1], "land mask")
-
+f_ocean
+f_land
 
 # compute global mean temperature anomaly for every member for land/sea
 tas_anom_data = df_historical["tas_ANOM_historical3"].data

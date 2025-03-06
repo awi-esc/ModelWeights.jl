@@ -25,7 +25,7 @@ end
 
 """
     computeWeights(
-        model_data::Vector{Data}, dists_perform_all::DimArray, config::ConfigWeights
+        model_data::Vector{Data}, dists_perform_all::AbstractArray, config::ConfigWeights
     )
 
 Compute weight for each model in multi-model ensemble according to approach
@@ -43,7 +43,7 @@ Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
 combination of variable and diagnostic.
 """
 function computeWeights(
-    model_data::Vector{Data}, dists_perform_all::DimArray, config::ConfigWeights
+    model_data::Vector{Data}, dists_perform_all::AbstractArray, config::ConfigWeights
 )
     weights_perform = normalizeWeightsVariables(config.performance)  
     weights_indep = normalizeWeightsVariables(config.independence)
@@ -76,7 +76,7 @@ function computeWeights(
     independences = independenceParts(Sij, config.sigma_independence)
     weights = performances ./ independences
     weights = weights ./ sum(weights)
-    setRefPeriodInWeightsMetadata!(weights.metadata, ref_period_alias, ref_period_timerange)
+    setRefPeriodInWeightsMetadata!(weights.properties, ref_period_alias, ref_period_timerange)
     
     # consider performance and independence weights independently
     # for performance weights, we assume that all models have the same degree of dependence
@@ -90,7 +90,7 @@ function computeWeights(
     # we just set Di=0 for all models, i.e. the numerator is 1 for all models
     norm_i = sum(1 ./ independences)
     wI = (1 ./ independences) ./ norm_i
-    setRefPeriodInWeightsMetadata!(wP.metadata, ref_period_alias, ref_period_timerange)
+    setRefPeriodInWeightsMetadata!(wP.properties, ref_period_alias, ref_period_timerange)
     
     if !isempty(config.target_path)
         target_path = validateConfigTargetPath(config.target_path)
@@ -136,8 +136,8 @@ end
     )
 
 Loads the data from the config files (ESMValTool recipes) located at 'path_recipes'.
-For each variable, experiment, statistic and timerange (alias) a different
-DimArray is loaded.
+For each variable, experiment, statistic and timerange (alias), an instance of `Data`
+is created.
 
 # Arguments:
 - `path_data`:  path to location where preprocessed data is stored; if 

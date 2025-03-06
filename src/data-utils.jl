@@ -1,7 +1,8 @@
 import YAML
 using DimensionalData
 using Interpolations
-
+using YAXArrays
+using Setfield
 
 @enum LEVEL MODEL=0 MEMBER=1
 
@@ -30,13 +31,13 @@ end
 end
 # Pretty print MetaData instances
 function Base.show(io::IO, x::MetaData)
-    println(io, "::$(typeof(x)): $(x.id) (timerange: $(x.attrib.timerange), experiment: $(x.attrib.exp))")
+    println(io, "::$(typeof(x)): $(x.id) (nb files: $(length(x.paths)), timerange: $(x.attrib.timerange), experiment: $(x.attrib.exp))")
 end
 
 
 @kwdef struct Data
     meta::MetaData
-    data::DimArray
+    data::YAXArray
 end
 # Pretty print Data instances
 function Base.show(io::IO, x::Data)
@@ -77,12 +78,17 @@ function Base.show(io::IO, x::Weights)
 end
 
 
-function getAtModel(da::DimArray, dimension::Symbol, model::String)
+function getDimsModel(da::DimArray)
+    dim_symbol = hasdim(da, :model) ? :model : :member
+    return (dim_symbol, dims(da, dim_symbol))
+end
+
+function getAtModel(da::YAXArray, dimension::Symbol, model::String)
     return dimension == :model ? da[model = At(model)] : da[member = At(model)]
 end
 
 # data is matrix or value
-function putAtModel!(da::DimArray, dimension::Symbol, model::String, data)
+function putAtModel!(da::YAXArray, dimension::Symbol, model::String, data)
     if dimension == :model
         da[model = At(model)] =  data 
     else 
@@ -146,7 +152,7 @@ For observational data:
     - 'source_names': vector of data sources
 
 Arguments:
-- `meta`: is the metadata dictionary of a DimArray
+- `meta`: metadata dictionary
 - `source_names`:
 - `isModelData`:
 """
@@ -239,11 +245,6 @@ end
     )
 
 This implementation follows the one used by Brunner et al.
-
-# Arguments:
-- `quantiles`: 
-- `vals`:
-- `weights`:
 """
 function computeInterpolatedWeightedQuantiles(
     quantiles::Vector{<:Number},
@@ -251,13 +252,16 @@ function computeInterpolatedWeightedQuantiles(
     weights=nothing
 )
     if isnothing(weights)
-        weights = ones(length(vals));
+        weights = Array{eltype(vals)}(undef, length(vals))
+        weights[ismissing.(vals) .== false] .= 1
     end
     indicesSorted = Array(sortperm(vals)); # gives indices of smallest to largest data point
     weightsSorted = weights[indicesSorted];
     weightedQuantiles = cumsum(weightsSorted) - 0.5 * weightsSorted;
     weightedQuantiles = reshape(weightedQuantiles, length(weightedQuantiles), 1);
-    weightedQuantiles = (weightedQuantiles .- minimum(weightedQuantiles)) ./ maximum(weightedQuantiles);
+    # TODO: recheck missing values!
+    weightedQuantiles = (weightedQuantiles .- minimum(skipmissing(weightedQuantiles))) ./ 
+        maximum(skipmissing(weightedQuantiles));
 
     interp_linear = Interpolations.linear_interpolation(
         vec(weightedQuantiles),
@@ -269,7 +273,7 @@ end
 
 
 """
-    setLookupsFromMemberToModel(data::DimArray, dim_names::Vector{String})
+    setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
 
 Change the lookup values for the dimension 'member' to refer to the models, i.e.
 they are not unique anymore. This is done in preparation to group the data by
@@ -279,7 +283,7 @@ the different models.
 - `data`: has at least dimensions in 'dim_names'
 - `dim_names`: names of dimensions to be changed, e.g. 'member', 'member1'
 """
-function setLookupsFromMemberToModel(data::DimArray, dim_names::Vector{String})
+function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
     n_dims = length(dim_names)
     for (i, dim) in enumerate(dim_names)
         unique_members = dims(data, Symbol(dim))
@@ -299,16 +303,14 @@ end
         constraint::Union{Dict, Nothing} = nothing
 )
 
-Read config files (ESMValTool recipes) to determine which data shall be loaded
-in general (datapaths are not handled here), as defined by variable, statistic, 
-experiment and timerange/alias.
+Read variable, statistic, experiment and timerange/alias from ESMValTool recipes 
+stored at `base_path_configs` into a vector of `MetaAttrib`-Objects.
 
 # Arguments:
-- `base_path_configs`: paths to directory that contain one or more yaml configs,
-which may be ESMValTool recipes.
-- `constraint`:
-
-# Returns: A Vector of `MetaAttrib`-Objects.
+- `base_path_configs`: path to directory that contain one or more yaml files.
+- `constraint::Union{Dict, Nothing}`: Mapping from fieldnames of 'MetaAttrib'
+struct to vector specifiying the properties of which at least one must be 
+present for an id to be retained.
 """
 function getMetaAttributesFromESMValToolConfigs(
     base_path_configs::String;
@@ -551,14 +553,12 @@ end
         project_constraints::Vector{String} = Vector{String}()
     )
 
-# Arguments:
-- `path_data`:
-- `is_model_data`: true for model data false for observational data
-- `model_constraints`:
-- `project_constraints`:
+Build vector of strings containing paths to data files in `path_data` 
+that were not filtered out by `model_constraints`.
 
-# Returns: Vector of Strings containing paths to data files in `path_data` 
-that were not filtered out by `subset`.
+# Arguments:
+- `model_constraints::Vector{String}`:
+- `project_constraints::Vector{String}`:
 """
 function buildPathsToDataFiles(
     path_data::String,
@@ -612,27 +612,25 @@ end
         constraint::Dict = Dict()
     )
 
-Create data paths from assumed underlying data structure and `base_path_data` 
-for every `MetaAttrib`-object in `attrib` and return a Vector of `MetaData`-
-objects.
+Create vector of `MetaData`-objects with the data paths from assumed underlying 
+data structure and `base_path_data` for every `MetaAttrib`-object in `attrib`.
 
 # Arguments:
-- `attrib`:
-- `base_path_data`:
-- `dir_per_var`:
-- `is_model_data`:
-- `constraint`:
-
-# Return: Vector of `MetaData`-objects.
+- `attrib::MetaAttrib`:
+- `base_path_data::String`:
+- `dir_per_var::Bool`:
+- `is_model_data::Bool`:
+- `constraint::Union{Dict, Nothing}=nothing`:
 """
 function buildMetaData(
     attrib::MetaAttrib,
     base_path_data::String,
     dir_per_var::Bool,
     is_model_data::Bool;
-    constraint::Dict = Dict()
+    constraint::Union{Dict, Nothing}=nothing
 )
-    subdir_constraints = isempty(constraint) ? nothing : get(constraint, "subdirs", Vector{String}())
+    subdir_constraints = isnothing(constraint) || isempty(constraint) ? 
+        nothing : get(constraint, "subdirs", Vector{String}())
     paths_data = buildPathsForMetaAttrib(
         base_path_data, attrib, dir_per_var; subdir_constraints
     )
@@ -716,8 +714,8 @@ end
 Subset model ids so that only those with properties specified in 'constraint' remain.
 
 # Arguments
-- `meta_attributes`: Vector of `MetaAttrib` instances.
-- `constraint`: Mapping from fieldnames of 'MetaAttrib' struct to Vector 
+- `meta_attributes::Vector{MetaAttrib}`
+- `constraint::Dict`: Mapping from fieldnames of 'MetaAttrib' struct to vector 
 specifiying the properties of which at least one must be present for an id to 
 be retained.
 """
@@ -864,7 +862,7 @@ end
 
 """
     computeGeneralizedDistances(
-        distances_all::DimArray, weights::DimArray, for_performance::Bool
+        distances_all::AbstractArray, weights::AbstractArray, for_performance::Bool
 )
 
 # Arguments:
@@ -873,14 +871,15 @@ end
 - `for_performance`: 
 """
 function computeGeneralizedDistances(
-    distances_all::DimArray, weights::DimArray, for_performance::Bool
+    distances_all::AbstractArray, weights::AbstractArray, for_performance::Bool
 )
     dimensions = for_performance ? 
-        (hasdim(distances_all, :member) ? :member : :model) : 
+        (hasdim(distances_all, :member) ? (:member,) : (:model,)) : 
         (:member1, :member2)
-    norm = mapslices(Statistics.median, distances_all, dims=dimensions)
-    normalized_distances =  DimArray(
-        distances_all ./ norm, dims(distances_all), metadata = distances_all.metadata
+    norm = mapslices(Statistics.median, DimArray(distances_all), dims=dimensions)
+    normalized_distances =  YAXArray(dims(distances_all),
+        distances_all ./ norm, 
+        distances_all.properties
     )
     if for_performance 
         distances = hasdim(normalized_distances, :model) ? 
@@ -889,26 +888,22 @@ function computeGeneralizedDistances(
     else
         distances = averageEnsembleMembersMatrix(normalized_distances, false);
     end
-    distances = mapslices(x -> x .* weights, distances, dims=(:variable, :diagnostic))
-    return dropdims(
-        sum(distances, dims=(:variable, :diagnostic)), dims=(:variable, :diagnostic)
-    )
+    meta = distances.properties
+    distances = mapslices(x -> x .* weights, DimArray(distances), dims=(:variable, :diagnostic))
+    distances = dropdims(sum(distances, dims=(:variable, :diagnostic)), dims=(:variable, :diagnostic))
+    return YAXArray(dims(distances), distances.data, meta)
 end
 
 
 """
     allcombinations(v...)
 
-Generate all possible combinations of input vectors, where each combination 
-consists of one element from each input vector, concatenated as a string with 
-underscores separating the elements.
+Generate vector of strings with all possible combinations of input vectors,
+where each combination consists of one element from each input vector, 
+concatenated as a string with underscores separating the elements.
 
 # Arguments
 - `v...`: A variable number of input vectors.
-
-# Returns
-A vector of strings, where each string represents a unique combination of 
-elements from the input vectors, joined by underscores.
 
 # Example
 ```jldoctest
@@ -1028,11 +1023,69 @@ function fixModelNamesMetadata(names::Vector{String})
 end
 
 
-function getMask(orog_data::DimArray, mask_out_land::Bool)
+function getMask(orog_data::AbstractArray, mask_out_land::Bool)
     ocean_mask = orog_data .== 0
     indices_missing = findall(x -> ismissing(x), ocean_mask);
-    ocean_mask[indices_missing] .= false;
-    ocean_mask = DimArray(Bool.(ocean_mask.data), dims(ocean_mask))
+    # load data into memory with Array() for modification
+    ocean_mask_mat = Array(ocean_mask)
+    ocean_mask_mat[indices_missing] .= false;
+    ocean_mask = YAXArray(dims(ocean_mask), Bool.(ocean_mask_mat), orog_data.properties)
     mask = mask_out_land ? ocean_mask : ocean_mask .== false
     return mask
+end
+
+
+function filterTimeseries(
+    data_all::DataMap, start_year::Number, end_year::Number; 
+    only_models_non_missing_vals::Bool = true
+)
+    ids_ts = filter(id -> hasdim(data_all[id].data, :time), collect(keys(data_all)))
+    data_subset = DataMap()
+    for id in ids_ts
+        dat = data_all[id]
+        df = dat.data[time = Where(x -> Dates.year(x) >= start_year && Dates.year(x) <= end_year)]
+
+        if only_models_non_missing_vals
+            dim_symbol = hasdim(df, :model) ? :model : :member
+            models_missing_vals = dropdims(
+                mapslices(x -> any(ismissing.(x)),  DimArray(df), dims=otherdims(df, dim_symbol)), 
+                dims=otherdims(df, dim_symbol)
+            )
+            indices_missing = findall(x -> x==true, models_missing_vals)
+            if !isempty(indices_missing)
+                models_missing = dims(models_missing_vals[model=indices_missing], dim_symbol)
+                
+                df = dim_symbol == :model ? 
+                    df[model = Where(x -> !(x in models_missing))] :
+                    df[member = Where(x -> !(x in models_missing))]
+                # update metadata too
+                k = dim_symbol == :model ? "model_names" : "member_names"
+                indices_keep = findall(x -> !(x in models_missing), df.properties[k])
+                for (k, v) in df.properties
+                    if isa(v, Vector)
+                        df.properties[k] = df.properties[k][indices_keep]
+                    end
+                end
+            end 
+        end
+
+        timesteps = dims(df, :time)
+        # new Data object with filtered timeseries
+        dat = @set dat.data = df
+        data_subset[id] = dat
+ 
+        # sanity checks for missing values and time range
+        if any(ismissing.(df))
+            @warn "missing values in timeseries for $id"
+        end
+        data_start = Dates.year(timesteps[1])
+        if data_start != start_year
+            @warn "start_year for $id is : $(data_start)"
+        end
+        data_end = Dates.year(timesteps[end])
+        if data_end != end_year
+            @warn "end_year for $id is : $(data_end)"
+        end
+    end
+    return data_subset 
 end

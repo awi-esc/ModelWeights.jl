@@ -14,18 +14,14 @@ model_data = mw.loadDataFromESMValToolConfigs(
     dir_per_var = false,
     is_model_data = true,
     subset = Dict("aliases" => ["calculate_weights_climwip"])
-);
+)
 
 obs_data = mw.loadDataFromESMValToolConfigs(
     path_data, path_configs;
     dir_per_var = false,
     is_model_data = false,
     subset = Dict("aliases" => ["calculate_weights_climwip"])
-);
-
-# TODO: or load from seperate yaml file:
-# data = mw.loadDataFromYAML(
-# )
+)
 
 # Compute Weights
 # configure parameters for computing weights
@@ -42,8 +38,13 @@ config_weights = mw.ConfigWeights(
     target_path = joinpath(target_dir, fn_jld2)
     # target_path = joinpath(target_dir, fn_nc)
 );
+
+ref_period_alias = "calculate_weights_climwip";
+dists_perform = mw.computeModelDataRMSE(
+    collect(values(model_data)), collect(values(obs_data)), config_weights, ref_period_alias
+);
 weights = mw.computeWeights(
-    collect(values(model_data)), collect(values(obs_data)), config_weights
+    collect(values(model_data)), dists_perform, config_weights
 );
 
 # save weights as Julia object
@@ -51,21 +52,16 @@ mw.saveWeightsAsJuliaObj(weights, joinpath(target_dir, fn_jld2))
 mw.saveWeightsAsNCFile(weights, joinpath(target_dir, fn_nc))
 
 weights = mw.loadWeightsFromJLD2(joinpath(target_dir, fn_jld2));
-weights_all_members = mw.distributeWeightsAcrossMembers(weights.w);
 
 # make some Plots
-figs_w = mw.plotWeights(weights.w; ylabel="overall weight")
-figs_wP = mw.plotWeights(weights.wP; ylabel="Performance weight")
-figs_wI = mw.plotWeights(weights.wI; ylabel="Independence weight")
-
+fig_weights = mw.plotWeights(weights; title="Climwip test basic; weights")
 mw.plotWeightContributions(weights.wI, weights.wP)
 
-di_var = dropdims(
-    reduce(+, weights.performance_distances, dims=:diagnostic), 
-    dims=:diagnostic
-);
-figs_performance = mw.plotDistances(di_var, "Performance distances"; is_bar_plot = true);
-figs_Di = mw.plotDistances(weights.Di, "Performance Di"; is_bar_plot = false);
+# di_var = dropdims(
+#     reduce(+, weights.performance_distances, dims=:diagnostic), 
+#     dims=:diagnostic
+# );
+figs_performance = mw.plotDistancesByVar(weights.performance_distances, "Performance distances "; is_bar_plot = true);
 
 figs_Sij = mw.plotDistancesIndependence(weights.Sij, dimname="model1");
 sij_var = dropdims(reduce(+, weights.independence_distances, dims=:diagnostic), dims=:diagnostic)

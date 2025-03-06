@@ -2,19 +2,21 @@ using DimensionalData
 using NCDatasets
 using YAML
 using Setfield
-
+using YAXArrays
+using Dates
 
 """
     getUniqueMemberIds(meta::Dict, model_names::Vector{String})
+
 Combine name of the model with the id of the respective model members. The
 returned vector has length of the total number of model members. It contains 
 for every model the unique ids of its members.
 
 # Arguments:
-- `meta`: for CMIP5 data, must have keys: 'mip_era', 'realization', 'initialization_method',
+- `meta::Dict`: for CMIP5 data, must have keys: 'mip_era', 'realization', 'initialization_method',
 'physics_version'. For CMIP6 data must have keys: 'variant_label', 'grid_label'
-- `model_names`: Vector of strings containing model names for every model member, i.e.
-length is sum of the number of members over all models
+- `model_names::Vector{String}`: Vector of strings containing model names for 
+every model member, i.e. length is sum of the number of members over all models
 """
 function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
     meta_subdict = Dict{String, Vector}()
@@ -93,9 +95,9 @@ end
 
 
 """
-    subsetModelData(data::DimArray, shared_models::Vector{String})
+    subsetModelData(data::AbstractArray, shared_models::Vector{String})
 
-Return a subset of DimArray `data` that contains only data from the models 
+Return a subset of `data` that contains only data from the models 
 specified in `shared_models`. Takes care of metadata.
 
 # Arguments:
@@ -103,7 +105,7 @@ specified in `shared_models`. Takes care of metadata.
 - `shared_models`: vector of models, which can either be on level of models 
 or members of models
 """
-function subsetModelData(data::DimArray, shared_models::Vector{String})
+function subsetModelData(data::AbstractArray, shared_models::Vector{String})
     dim_symbol = hasdim(data, :member) ? :member : :model
     dim_names = collect(dims(data, dim_symbol))
     if dim_symbol == :member
@@ -124,9 +126,9 @@ function subsetModelData(data::DimArray, shared_models::Vector{String})
         data = data[model = indices]
     end
     # also adjust the metadata
-    attributes = filter(k -> data.metadata[k] isa Vector, keys(data.metadata))
+    attributes = filter(k -> data.properties[k] isa Vector, keys(data.properties))
     for key in attributes
-        data.metadata[key] = data.metadata[key][indices]
+        data.properties[key] = data.properties[key][indices]
     end
     return data
 end
@@ -148,39 +150,46 @@ function subsetModelData(datamap::DataMap; level::LEVEL=MEMBER)
     return subset
 end
 
+
 """
     loadPreprocData(meta::MetaData, is_model_data::Bool)
 
-Load the data from disk and fill up meta dictionary.
+Create a tuple with a vector of YAXArrays and a Dictionary containing the 
+metadata of all loaded data. 
+
+Load the data from paths specified in `meta.paths` and create a meta dictionary
+that contains the metadata keys from every loaded dataset. Each key maps to a vector 
+of values, one for each loaded dataset, which is set to missing if that key 
+hadn't been present in this datasets own metadata.
 
 # Arguments:
 - `meta`:
 - `is_model_data`: observational and model data loaded seperately,
 if true modelData, else observational data
-
-# Returns:
 """
 function loadPreprocData(meta::MetaData, is_model_data::Bool)
-    data = Vector{DimArray}()
     n_files = length(meta.paths)
+    data = Vector{YAXArray}(undef, n_files)
     meta_dict = Dict{String, Any}()
     source_names = repeat([""], outer = n_files)
+
+    filenames = first.(splitext.(basename.(meta.paths)))
+    climVars = first.(split.(basename.(dirname.(meta.paths)), "_"))
     for (i, file) in enumerate(meta.paths)
         @debug "processing file.." * file
-        parts = splitpath(file)
-        filename = split(parts[end], ".nc")[end-1]
-        climVar = split(parts[end-1], "_")[1]
+        filename = filenames[i]
+        climVar = climVars[i]
 
         ds = NCDataset(file)
         dsVar = ds[climVar]
         # if climVar == "amoc"
         #     dsVar = ds["msftmz"]
         # end
-        attributes = merge(Dict(deepcopy(dsVar.attrib)), Dict(deepcopy(ds.attrib)))
+        attributes = merge(dsVar.attrib, ds.attrib)
         if climVar == "msftmz"
             sector = get(ds, "sector", nothing)
             if !isnothing(sector)
-                attributes = merge(attributes, Dict(deepcopy(sector.attrib)))
+                merge!(attributes, sector.attrib)
             end
         end
         if is_model_data
@@ -205,83 +214,104 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool)
         end
 
         dimension_names = dimnames(dsVar)
-        dimensions = []
-        for d in dimension_names
+        dimensions = Vector(undef, length(dimension_names))
+        for (idx_dim, d) in enumerate(dimension_names)
             if d in ["bnds", "string21"]
                 continue
             end
             if d == "time"
-                times = map(x -> NCDatasets.DateTimeStandard(
+                times = map(x -> DateTime(
                     Dates.year(x), Dates.month(x), Dates.day(x)
-                    ),
-                    dsVar[d][:]
+                    ), dsVar[d][:]
                 )
-                push!(dimensions, Dim{Symbol(d)}(collect(times)))
+                dimensions[idx_dim] = Dim{Symbol(d)}(collect(times))
             else
-                push!(dimensions, Dim{Symbol(d)}(collect(dsVar[d][:])))
+                dimensions[idx_dim] = Dim{Symbol(d)}(collect(dsVar[d][:]))
             end
         end
-        push!(data, DimArray(Array(dsVar), Tuple(dimensions)))
+        data[i] = YAXArray(Tuple(dimensions), Array(dsVar))
+        #data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(dsVar), NaN))
+        close(ds)
     end
-    return (data, meta_dict, source_names)
+    updateMetadata!(meta_dict, collect(source_names), is_model_data)
+    return (data, meta_dict)
 end
 
 
-function buildDimArrayFromLoadedData(
-    data::Vector{DimArray}, 
+"""
+    mergeLoadedData(
+        data_vec::Vector{YAXArray}, 
+        meta_dict::Dict{String, Any}, 
+        is_model_data::Bool
+    )
+"""
+function mergeLoadedData(
+    data_vec::Vector{YAXArray}, 
     meta_dict::Dict{String, Any}, 
-    source_names::Vector{String},
     is_model_data::Bool
 )
-    if length(data) == 0
+    if length(data_vec) == 0
         @warn "No data loaded!"
         return nothing
     end
-    #dimData = cat(data..., dims=3) # way too slow!
+    #dimData = cat(data_vec..., dims=3) # way too slow!
     # all of the preprocessed model data assumed to have the same grid!
-    # Preallocate an n-dimensional array of respective size
-    data_sizes = unique(map(size, data))
+    data_sizes = unique(map(size, data_vec))
     if length(data_sizes) != 1
-        # TODO: if difference only in time, this should be handled here e.g. by 
-        # adding missing values
-        if !all(map(x -> hasdim(x, :time), data))
+        if !all(map(x -> hasdim(x, :time), data_vec))
             msg = "Data does not have the same size across all models: $(data_sizes)"
             throw(ArgumentError(msg))
         else
-            # for now just take the shortest timeseries
-            nb_timesteps = unique(map(x -> length(dims(x, :time)), data))
-            len_shortest_ts = minimum(nb_timesteps)
-            data = map(x -> x[time = 1:len_shortest_ts], data)
+            # if difference only in time, use maximal possible timeseries and add NaNs
+            year_min = minimum(map(x -> minimum(map(Dates.year, dims(x, :time))), data_vec))
+            year_max = maximum(map(x -> maximum(map(Dates.year, dims(x, :time))), data_vec))
+            nb_years = year_max - year_min + 1 
+     
+            timerange = DateTime(year_min):Year(1) : DateTime(year_max)
+            for (i, ds) in enumerate(data_vec)
+                s = map(length, otherdims(ds, :time))
+                #dat = fill(NaN, s..., nb_years)
+                dat = Array{eltype(ds)}(undef, s..., nb_years) # if ds allows missing values, undef is initialized with missing
+                ds_extended = YAXArray((otherdims(ds, :time)..., Dim{:time}(timerange)), dat)
+                ds_extended[time = Where(x -> Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds # ds[time=:]
+                data_vec[i] = ds_extended
+            end
         end
     end
-    size_dims = size(data[1])
-    n = length(data)
-    raw_data = Array{eltype(Array(data[1]))}(undef, size_dims..., n)
-    s = repeat([:], length(size_dims))
-    names = collect(source_names)
-    updateMetadata!(meta_dict, names, is_model_data)
-    # sort the data
-    sort_indices = sortperm(names)
-    for idx in sort_indices
-        raw_data[s..., idx] = Array(data[idx])
-    end
-    dimData = DimArray(
-        raw_data,
-        (dims(data[1])..., Dim{:source}(names[sort_indices]))
-    )
-    dimData = rebuild(dimData; metadata = meta_dict)
-    if is_model_data
-        indices = sortperm(dimData.metadata["member_names"])
-        for idx in indices
-            raw_data[s..., idx] = Array(data[idx])
-        end
-        dimData = DimArray(
-            raw_data,
-            (dims(data[1])..., Dim{:member}(dimData.metadata["member_names"][indices]))
-        )
-        dimData = rebuild(dimData; metadata = meta_dict) 
+    var_axis = is_model_data ? Dim{:member}(meta_dict["member_names"]) : Dim{:source}(meta_dict["source_names"]) 
+    dimData = concatenatecubes(data_vec, var_axis)
+    dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
+    # size_dims = size(data_vec[1])
+    # n = length(data_vec)
+    # raw_data = Array{eltype(Array(data_vec[1]))}(undef, size_dims..., n)
+    # s = repeat([:], length(size_dims))
+    # names = is_model_data ? meta_dict["member_names"] : meta_dict["source_names"]
+    
+    # # sort the data
+    # sort_indices = sortperm(names)
+    # for idx in sort_indices
+    #     raw_data[s..., idx] = Array(data_vec[idx])
+    # end
+    # dimData = DimArray(
+    #     raw_data,
+    #     (dims(data_vec[1])..., Dim{:source}(names[sort_indices])),
+    #     metadata = meta_dict
+    # )
+    # if is_model_data
+    #     indices = sortperm(dimData.metadata["member_names"])
+    #     for idx in indices
+    #         raw_data[s..., idx] = Array(data_vec[idx])
+    #     end
+    #     dimData = DimArray(
+    #         raw_data,
+    #         (dims(data_vec[1])..., Dim{:member}(dimData.metadata["member_names"][indices])),
+    #         metadata = meta_dict
+    #     )
+    #     # dimData = rebuild(dimData; metadata = meta_dict) 
+    # end
 
-        # Sanity checks that no dataset exists more than once
+    #     # Sanity checks that no dataset exists more than once
+    if is_model_data
         members = dims(dimData, :member)
         if length(members) != length(unique(members))
             duplicates = [m for m in members if sum(members .== m) > 1]
@@ -305,8 +335,8 @@ function loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::
     for (id, meta) in meta_data
         # loads data at level of model members
         @info "load $id"
-        data_vec, meta_dict, source_names = loadPreprocData(meta, is_model_data)
-        data = buildDimArrayFromLoadedData(data_vec, meta_dict, source_names, is_model_data)
+        data_vec, meta_dict = loadPreprocData(meta, is_model_data)
+        data = mergeLoadedData(data_vec, meta_dict, is_model_data)
         results[meta.id] = Data(meta, data)
     end
     @debug "loaded data: $(map(x -> x.meta, values(results)))"
@@ -320,21 +350,22 @@ end
 
 For every path in `all_paths` returns a string of the form modelname#memberID[_grid]
 that identifies the corresponding model (on the level of model members!).
+The abbreviation of the grid is added to the model name for CMIP6 models.
 
 # Arguments:
 - `all_paths`:
 """
 function getMemberIDsFromPaths(all_paths::Vector{String})
-    all_filenames = map(p -> split(basename(p), "_"), vcat(all_paths...))
+    all_filenames = split.(basename.(all_paths), "_")
     # model names are at predefined position in filenames (ERA_name_mip_exp_id_variable[_grid].nc)
-    all_members = Vector{String}()
-    for fn_parts in all_filenames
+    all_members = Vector{String}(undef, length(all_filenames))
+    for (i, fn_parts) in enumerate(all_filenames)
         model = join(fn_parts[[2, 5]], MODEL_MEMBER_DELIM)
+        # add grid to model name for CMIP6 models:
         if fn_parts[1] != "CMIP5"
-            model = join([model, fn_parts[7]], "_")
-            model = split(model, ".nc")[1]
+            model = splitext(model * "_" * fn_parts[7])[1] 
         end
-        push!(all_members, model)
+        all_members[i] = model
     end
     return unique(all_members)
 end
@@ -449,8 +480,8 @@ end
 
 """
     getUncertaintyRanges(
-    data::DimArray; wUnion{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]}
-)
+        data::AbstractArray; w::Union{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]}
+    )
 
 # Arguments:
 - `data`: has dimensions 'time', 'model'
@@ -458,14 +489,25 @@ end
 - `quantiles`: Vector with two entries (btw. 0 and 1) [lower_bound, upper_bound]
 """
 function getUncertaintyRanges(
-    data::DimArray; w::Union{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]
+    data::AbstractArray; w::Union{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]
 )
-    uncertainty_ranges = []
-    for t in dims(data, :time)
-        lower, upper = computeInterpolatedWeightedQuantiles(
-            quantiles, Array(data[time = At(t)]); weights=w
-        )
-        push!(uncertainty_ranges, [lower, upper])
+    timesteps = dims(data, :time)
+    uncertainty_ranges = YAXArray(
+        (dims(data, :time), Dim{:confidence}(["lower", "upper"])),
+        Array{Union{Missing, Float64}}(undef, length(timesteps), 2),
+        Dict{String, Any}("quantiles" => string.(quantiles))
+    )
+    for t in timesteps
+        arr = Array(data[time = At(t)])
+        if sum(ismissing.(arr)) >= length(arr) - 1 # at least two values must be given
+            lower, upper = missing, missing
+        else
+            lower, upper = computeInterpolatedWeightedQuantiles(
+                quantiles, collect(skipmissing(arr)); weights=w
+            )
+        end
+        uncertainty_ranges[time=At(t), confidence=At("lower")] = lower
+        uncertainty_ranges[time=At(t), confidence=At("upper")] = upper
     end
     return uncertainty_ranges
 end
@@ -526,10 +568,10 @@ function alignPhysics(
             ds = model_data.data
             # filter data s.t. of current model only members with retrieved physics are kept
             model_indices = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), Array(dims(ds, :member)))
-            indices_out = filter(x -> !(ds.metadata["physics"][x] in physics), model_indices)
+            indices_out = filter(x -> !(ds.properties["physics"][x] in physics), model_indices)
             if !isempty(indices_out)
                 indices_keep = filter(x -> !(x in indices_out), 1:length(dims(ds, :member)))
-                members_kept = ds.metadata["member_names"][indices_keep]
+                members_kept = ds.properties["member_names"][indices_keep]
                 meta = model_data.meta
                 meta_updated = @set meta.paths = subsetPaths(meta.paths, members_kept)            
                 data[meta_updated.id] = Data(meta = meta_updated, data = subsetModelData(ds, members_kept))
@@ -558,37 +600,42 @@ end
 
 """ 
     summarizeEnsembleMembersVector(
-        data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean
+        data::YAXArray, updateMeta::Bool; fn::Function=Statistics.mean
 )
 
 For each model and variable (if several given), compute a summary statistic 
 (default: mean) across all members of that model. Instead of 'member', the 
-returned DimArray has dimension 'model'.
+returned YAXArray has dimension 'model'.
 
 # Arguments:
-- `data`: a DimArray with at least dimension 'model'
+- `data`: a YAXArray with at least dimension 'model'
 - `updateMeta`: set true if the vectors in the metadata refer to different models. 
 Set to false if vectors refer to different variables for instance. 
 """
 function summarizeEnsembleMembersVector(
-    data::DimArray, updateMeta::Bool; fn::Function=Statistics.mean
+    data::YAXArray, updateMeta::Bool; fn::Function=Statistics.mean
 )
     data = setLookupsFromMemberToModel(data, ["member"])
     grouped = groupby(data, :model=>identity);
     models = String.(collect(dims(grouped, :model)))
-    averages = map(entry -> mapslices(x -> fn(skipmissing(x)), entry, dims=:model), grouped)
-    combined = cat(averages..., dims=(Dim{:model}(models)));
-    combined = replace(combined, NaN => missing)
+    # TODO: check if skipmissing necessary!!
+    #averages = map(entry -> mapslices(x -> fn(skipmissing(x)), entry, dims=:model), grouped)
+    #combined = cat(averages..., dims=(Dim{:model}(models)));
+    averages = map(entry -> fn(entry, dims=:model)[model = At("combined")], grouped)
+    combined = concatenatecubes(averages.data,  Dim{:model}(models))
+    combined = replace(combined, NaN => missing) # Why necessary?
 
-    meta = updateMeta ? updateGroupedDataMetadata(data.metadata, grouped) : data.metadata
-    combined = rebuild(combined; metadata = meta);
-    l = Lookups.Categorical(
-        sort(models);
-        order=Lookups.ForwardOrdered()
-    )
-    combined = combined[model=At(sort(models))]
-    combined = DimensionalData.Lookups.set(combined, model=l)
+    meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
+    #combined = rebuild(combined; metadata = meta);
+    combined = YAXArray(dims(combined), combined.data, meta)
 
+    # I think not necessary, since in combined model dimension is now already ForwareOrdered
+    # l = Lookups.Categorical(
+    #     sort(models);
+    #     order=Lookups.ForwardOrdered()
+    # )
+    # combined = combined[model=At(sort(models))]
+    # combined = DimensionalData.Lookups.set(combined, model=l)
     return combined
 end
 
@@ -611,28 +658,28 @@ end
 
 
 """
-    getGlobalMeans(data::DimArray)
+    getGlobalMeans(data::AbtractArray)
 
-Compute area-weighted globalMeans across longitudes and latitudes for each 
-model. Missing data is accounted for in the area-weights. 
+Return a YAXArray with area-weighted global means for each model in `data`. 
+
+Missing data is accounted for in the area-weights. 
 
 # Arguments:
-- `data`: DimArray with at least dimensions lon, lat and possibly member or model.
-
-# Return: a DimArray of size 'number models in data' x 1 containing area-weighted
-global means for each model. 
+- `data::AbstractArray`: has at least dimensions 'lon', 'lat' and possibly 
+'member' or 'model'.
 """
-function getGlobalMeans(data::DimArray)
+function getGlobalMeans(data::AbstractArray)
     longitudes = Array(dims(data, :lon))
     latitudes = Array(dims(data, :lat))
     masks = ismissing.(data)
     dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
-    meta = Dict(k => data.metadata[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
+    meta = Dict(k => data.properties[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
     if !isnothing(dimension)
         models = Array(dims(data, dimension))
-        global_means = DimArray(
-            Array{Union{Float64, Missing}}(undef, length(models)), (Dim{dimension}(models)),
-            metadata=meta
+        global_means = YAXArray(
+            (Dim{dimension}(models),),
+            Array{Union{Float64, Missing}}(undef, length(models)), 
+            meta
         )
         for model in models
             mask = getAtModel(masks, dimension, model)
@@ -653,19 +700,19 @@ function getGlobalMeans(data::DimArray)
 end
 
 
-function getGlobalMeansTS(data::DimArray)
+function getGlobalMeansTS(data::YAXArray)
     dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
     models = dims(data, dimension)
     nb_timesteps = length(dims(data, :time))
     global_means = !isnothing(dimension) ? 
-        DimArray(
-            Array{Union{Float64, Missing}}(undef, (length(models), nb_timesteps)), 
+        YAXArray(
             (dims(data, dimension), dims(data, :time)),
-            metadata = Dict(k => data.metadata[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
+            Array{Union{Float64, Missing}}(undef, (length(models), nb_timesteps)),
+            Dict{String, Any}(k => data.properties[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
         ) :
-        DimArray(
-            Array{Union{Float64, Missing}}(undef, nb_timesteps), 
-            dims(data, :time)
+        YAXArray(
+            dims(data, :time),
+            Array{Union{Float64, Missing}}(undef, nb_timesteps)
         )
     for t in dims(data, :time)
         global_means[time = At(t)] = getGlobalMeans(data[time = At(t)])
@@ -675,30 +722,37 @@ end
 
 
 """
-    computeAreaWeights(longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; mask::Union{DimArray, Nothing}=nothing)
+    computeAreaWeights(
+        longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; 
+        mask::Union{AbstractArray, Nothing}=nothing
+    )
 
-Compute the approximated, normalized area weights for each lon,lat-position as 
-the cosine of the latitudes.
+Create a YAXArray of size length(longitudes) x length(latitudes) with 
+normalized area weights for each lon,lat-position. 
+
+The area weight are approximated as the cosine of the latitudes.
 
 # Arguments:
-- `longitudes`:
-- `latitudes`:
-- `mask`: optional 2D-mask (lonxlat), if given, the area weights are set to 0 where the mask is 1
-
-# Return:
-A DimensionalData.DimArray of size length(longitudes) x length(latitudes).
+- `mask::Union{AbstractArray, Nothing}=nothing`: 2D-mask (lonxlat), if given, 
+the area weights are set to 0 where the mask is 1.
 """
-function computeAreaWeights(longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; mask::Union{DimArray, Nothing}=nothing)
+function computeAreaWeights(
+    longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; 
+    mask::Union{AbstractArray, Nothing}=nothing
+)
     # cosine of the latitudes as proxy for grid cell area
     areaWeights = cos.(deg2rad.(latitudes));
-    areaWeights = DimArray(areaWeights, Dim{:lat}(latitudes));
+    areaWeights = YAXArray((Dim{:lat}(latitudes),), areaWeights)
 
     areaWeightMatrix = repeat(areaWeights', length(longitudes), 1);  
     if !isnothing(mask)
         areaWeightMatrix = ifelse.(mask .== 1, 0, areaWeightMatrix); 
     end
     areaWeightMatrix = areaWeightMatrix./sum(areaWeightMatrix)
-    return DimArray(areaWeightMatrix, (Dim{:lon}(longitudes), Dim{:lat}(latitudes)))
+    return YAXArray(
+        (Dim{:lon}(longitudes), Dim{:lat}(latitudes)),
+        areaWeightMatrix
+    )
 end
 
 
@@ -716,15 +770,16 @@ function computeAnomalies!(data::DataMap, id_data::String, id_ref::String)
         throw(ArgumentError("Original and reference data must contain exactly the same models!"))
     end
     anomalies_mat = Array(data[id_data].data) .- Array(data[id_ref].data)
-    anomalies_metadata = deepcopy(data[id_data].data.metadata)
+    anomalies_metadata = deepcopy(data[id_data].data.properties)
     anomalies_metadata["reference_anomalies"] = id_ref
-    anomalies = DimArray(anomalies_mat, dims(data[id_data].data), metadata = anomalies_metadata)
+
+    anomalies = YAXArray(dims(data[id_data].data), anomalies_mat, anomalies_metadata)
     clim_var, _, alias = split(id_data, "_")
     
-    if isa(anomalies.metadata["variable_id"], String)
-        anomalies.metadata["variable_id"] *= "_ANOM"
+    if isa(anomalies.properties["variable_id"], String)
+        anomalies.properties["variable_id"] *= "_ANOM"
     else
-        anomalies.metadata["variable_id"] = map(x -> x *= "_ANOM", anomalies.metadata["variable_id"])
+        anomalies.properties["variable_id"] = map(x -> x *= "_ANOM", anomalies.properties["variable_id"])
     end
 
     anomaly_data = data[id_data]
@@ -735,17 +790,16 @@ function computeAnomalies!(data::DataMap, id_data::String, id_ref::String)
     meta = @set meta.id = id
 
     anomaly_data = @set anomaly_data.meta = meta
-
     data[id] = anomaly_data
     return nothing
 end
 
 
-function getLandMask(orog_data::DimArray)
+function getLandMask(orog_data::AbstractArray)
     return getMask(orog_data, false)    
 end
 
-function getOceanMask(orog_data::DimArray)
+function getOceanMask(orog_data::AbstractArray)
     return getMask(orog_data, true)    
 end
 

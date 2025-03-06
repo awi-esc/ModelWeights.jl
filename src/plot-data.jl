@@ -1,7 +1,7 @@
 using ColorSchemes
 using Dates
 
-""" plotValsOnMap!(fig::Figure, means::DimArray, title::String;
+""" plotValsOnMap!(fig::Figure, means::AbstractArray, title::String;
                     colors=nothing, color_range=nothing, high_clip=(1,0,0),
                     low_clip=(0,0,1), pos=(x=1, y=1), pos_legend=nothing
                     )
@@ -11,7 +11,7 @@ Plot contours of world with an overlayed heatmap of the input data.
 # Arguments:
 - `nb_ticks`: if nothing (default), just min lat/lon, max lat/lon and 0 are labeled.
 """
-function plotValsOnMap!(fig::Figure, means::DimArray, title::String; 
+function plotValsOnMap!(fig::Figure, means::AbstractArray, title::String; 
     colors=nothing, color_range=nothing, high_clip=(1,0,0), low_clip=(0,0,1), 
     pos=(x=1, y=1), pos_legend=(x=1, y=2), xlabel="Longitude", ylabel="Latitude",
     xlabel_rotate = pi/4, nb_ticks::Union{Int, Nothing}=nothing
@@ -68,15 +68,15 @@ function plotValsOnMap!(fig::Figure, means::DimArray, title::String;
 end
 
 
-""" plotHistAtPos(data::DimArray, location::Dict)
+""" plotHistAtPos(data::AbstractArray, location::Dict)
 
 Plot histogram of all data for a specific `location`.
 
 # Arguments:
-- `data::DimArray`: dimensions 'lon' (from -180° to 180°), 'lat' (-90° to 90°)
-- `location::Dict`: keys 'name', 'lon', 'lat'
+- `data`: dimensions 'lon' (from -180° to 180°), 'lat' (-90° to 90°)
+- `location`: must have keys 'name', 'lon', 'lat'
 """
-function plotHistAtPos(data::DimArray, location::Dict)
+function plotHistAtPos(data::AbstractArray, location::Dict)
     longitudes = Array(dims(data, :lon));
     longitudes = ifelse(any(longitudes .> 180), lon360to180.(longitudes), longitudes);
     if location["lon"] > 180
@@ -92,25 +92,25 @@ function plotHistAtPos(data::DimArray, location::Dict)
 
     grid_lat = latitude2NorthSouth(coords["lat"])
     grid_lon = longitude2EastWest(coords["lon"])
-    t1 = "Variable: " * data.metadata["variable_id"] * " Experiment: " * data.metadata["experiment_id"];
+    t1 = "Variable: " * data.properties["variable_id"] * " Experiment: " * data.properties["experiment_id"];
     t2 = "near " * location["name"] * "(" * grid_lat * "," * grid_lon * ")";
     
     fig = getFigure((14,10), 16);
-    ax = Axis(fig[1,1], title = join([t1, t2], "\n"), xlabel = data.metadata["units"])
+    ax = Axis(fig[1,1], title = join([t1, t2], "\n"), xlabel = data.properties["units"])
     hist!(ax, vec(data_loc))
     return fig
 end
 
 
-""" plotAMOC(data::DimArray)
+""" plotAMOC(data::AbstractArray)
 
 Plot AMOC strength for variable "amoc".
 """
-function plotAMOC(data::DimArray)
+function plotAMOC(data::AbstractArray)
     fig = getFigure((8, 5), 12);
     t = "variable: amoc, experiment: " * data.metadata["experiment_id"];
 
-    unit = data.metadata["units"];
+    unit = data.properties["units"];
     ax = Axis(fig[1, 1], title=join(["AMOC strength (at 26.5°N)", t], "\n"),  xlabel = "Transport in " * unit)
     if length(dims(data)) == 1
         # data for full period
@@ -127,11 +127,11 @@ end
 
 
 """
-    plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
+    plotEnsembleSpread(data::AbstractArray, lon::Number, lat::Number)
 
 Create figure with boxplots for each model in `data` that have several ensemble members.
 """
-function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
+function plotEnsembleSpread(data::AbstractArray, lon::Number, lat::Number)
     # models = unique(dims(data, :model));
     # models_ensembles = filter(x -> length(dims(data[model = Where(m -> m == x)], :model)) > 1, models);
     # data_ensembles = data[model = Where(x -> x in models_ensembles)];
@@ -145,13 +145,13 @@ function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
     end
     
     fig =  getFigure((16,8), 18);
-    t1 = data.metadata["long_name"] * " (" * data.metadata["variable_id"] * ")";    
+    t1 = data.properties["long_name"] * " (" * data.properties["variable_id"] * ")";    
     t = join(["at ", longitude2EastWest(lon), latitude2NorthSouth(lat)], " ");
     t2 = "Spread of models with several ensemble members " * t; 
 
     ax = Axis(fig[1,1], 
               xlabel = "Models", 
-              ylabel = data.metadata["units"], 
+              ylabel = data.properties["units"], 
               title = join([t1, t2], "\n"), 
               xticks = (collect(1:length(models_ensembles)), models_ensembles), 
               xticklabelrotation = pi/2);
@@ -170,6 +170,26 @@ function plotEnsembleSpread(data::DimArray, lon::Number, lat::Number)
     return fig
 end
 
+
+function plotTimeseries!(f::Figure, ax::Axis, vals; 
+    uncertainties::Union{AbstractArray, Nothing}=nothing,
+    color = :red, 
+)
+    timesteps = Array(Dates.year.(dims(vals, :time)))
+    if !isnothing(uncertainties)
+        band!(ax, timesteps,
+            vec(uncertainties[confidence=At("lower")]), 
+            vec(uncertainties[confidence=At("upper")]), 
+            color = (color, 0.2), 
+            label = uncertainties.properties["label"]
+        );
+    end
+    lines!(ax, timesteps, Array(vals), color = color, label = vals.properties["label"])
+    axislegend(ax, merge = true, position = :lt)
+    return nothing
+end
+
+
 """
     plotTempGraph
 
@@ -177,7 +197,7 @@ end
     # the quantile labels
 """
 function plotTempGraph(
-    data::DimArray, 
+    data::AbstractArray, 
     averages::NamedTuple, 
     uncertaintyRanges::NamedTuple,
     title::String;
@@ -191,7 +211,7 @@ function plotTempGraph(
         limits = ((years[1]-10, years[end]+10), (-1, 5)),
         title = title,#"Temperature anomaly relative to " * name_ref_period,
         xlabel = "Year", 
-        ylabel = isempty(ylabel) ? "Temperature in " * data.metadata["units"] : ylabel
+        ylabel = isempty(ylabel) ? "Temperature in " * data.properties["units"] : ylabel
     );
     # add ranges TODO: make label with fn argument
     lowerUnw = getindex.(uncertaintyRanges.unweighted, 1);
