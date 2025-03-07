@@ -14,7 +14,8 @@ Plot contours of world with an overlayed heatmap of the input data.
 function plotValsOnMap!(fig::Figure, means::AbstractArray, title::String; 
     colors=nothing, color_range=nothing, high_clip=(1,0,0), low_clip=(0,0,1), 
     pos=(x=1, y=1), pos_legend=(x=1, y=2), xlabel="Longitude", ylabel="Latitude",
-    xlabel_rotate = pi/4, nb_ticks::Union{Int, Nothing}=nothing
+    xlabel_rotate = pi/4, nb_ticks::Union{Int, Nothing}=nothing, 
+    east_west_labels = false
 )
     means = sortLongitudesWest2East(means);
     dims_lat = Array(dims(means, :lat));
@@ -32,8 +33,8 @@ function plotValsOnMap!(fig::Figure, means::AbstractArray, title::String;
     # axis ticks and labels
     xticks = isnothing(nb_ticks) ?  [ceil(dims_lon[1]), 0, round(dims_lon[end])] : dims_lon
     yticks = isnothing(nb_ticks) ? [ceil(dims_lat[1]), 0, round(dims_lat[end])] : dims_lat
-    lonLabels = string.(xticks) # longitude2EastWest.(xticks);
-    latLabels = string.(yticks) # latitude2NorthSouth.(yticks);
+    lonLabels = east_west_labels ? longitude2EastWest.(xticks) : string.(xticks)
+    latLabels = east_west_labels ? latitude2NorthSouth.(yticks) : string.(yticks)
 
     step_lon = isnothing(nb_ticks) ? 1 : Int(round(length(lonLabels)/nb_ticks));
     step_lat = isnothing(nb_ticks) ? 1 : Int(round(length(latLabels)/nb_ticks));
@@ -52,13 +53,10 @@ function plotValsOnMap!(fig::Figure, means::AbstractArray, title::String;
     if isnothing(colors)
         colors = reverse(ColorSchemes.redblue.colors)
     end
-    if isnothing(color_range)
-        hm = heatmap!(ax, lon, lat, Array(means), colormap=colors, alpha=0.8);
-    else
-        hm = heatmap!(ax, lon, lat, Array(means), colormap=colors, alpha=0.8, 
-                      colorrange = color_range, highclip = high_clip, 
-                      lowclip = low_clip);
-    end
+    hm = isnothing(color_range) ? 
+        heatmap!(ax, lon, lat, Array(means), colormap=colors, alpha=0.8) :
+        heatmap!(ax, lon, lat, Array(means), colormap=colors, alpha=0.8, 
+                colorrange=color_range, highclip=high_clip, lowclip=low_clip)
     lines!(GeoMakie.coastlines(); color=:black);
     if !isnothing(pos_legend)
         Colorbar(fig[pos_legend.x, pos_legend.y], hm, height=Relative(2/3))
@@ -214,13 +212,13 @@ function plotTempGraph(
         ylabel = isempty(ylabel) ? "Temperature in " * data.properties["units"] : ylabel
     );
     # add ranges TODO: make label with fn argument
-    lowerUnw = getindex.(uncertaintyRanges.unweighted, 1);
-    upperUnw = getindex.(uncertaintyRanges.unweighted, 2);
+    lowerUnw = uncertaintyRanges.unweighted[confidence = At("lower")]
+    upperUnw = uncertaintyRanges.unweighted[confidence = At("upper")]
     band!(ax, years, vec(lowerUnw), vec(upperUnw), color = (:red, 0.2), 
           label = "Non-weighted 16.7-83.3 perc range");
     
-    lowerWeighted = getindex.(uncertaintyRanges.weighted, 1);
-    upperWeighted = getindex.(uncertaintyRanges.weighted, 2);
+    lowerWeighted = uncertaintyRanges.weighted[confidence = At("lower")]
+    upperWeighted = uncertaintyRanges.weighted[confidence = At("upper")]
     band!(ax, years, vec(lowerWeighted), vec(upperWeighted), 
           color = (:green, 0.2), label = "Weighted 16.7-83.3perc range");
         

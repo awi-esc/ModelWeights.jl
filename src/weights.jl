@@ -241,7 +241,8 @@ function computeWeightedAvg(
     weights::Union{DimArray, Nothing}=nothing, 
     use_members_equal_weights::Bool=true
 )
-    data = deepcopy(data)
+    da = DimArray(Array{Union{Missing, Float64}}(undef, size(data)), dims(data))
+    da .= Array(data)
     dim_symbol = hasdim(data, :member) ? :member : :model
     models_data = collect(dims(data, dim_symbol))
     
@@ -270,9 +271,9 @@ function computeWeightedAvg(
         end
         # subset data s.t only data that will be weighted is considered
         if dim_symbol == :member
-            data = data[member = Where(m -> m in models_weights)]
+            da = da[member = Where(m -> m in models_weights)]
         else
-            data = data[model = Where(m -> m in models_weights)]
+            da = da[model = Where(m -> m in models_weights)]
         end
     end
     @assert isapprox(sum(weights), 1; atol=10^-4)
@@ -281,30 +282,31 @@ function computeWeightedAvg(
         
     # readjust weights for missing values, if one model has a missing value, 
     # it is ignored in the weighted average for that particular lon,lat-position.
-    not_missing_vals = mapslices(x -> (ismissing.(x).==0), data; dims=(dim_symbol,))
+    not_missing_vals = mapslices(x -> (ismissing.(x).==0), da; dims=(dim_symbol,))
     w_temp = mapslices(x -> (x .* weights) ./ sum(x .* weights), not_missing_vals, dims=(dim_symbol,))
     w_temp = replace(w_temp, NaN => missing)
 
     for m in models_weights
-        val = getAtModel(data, dim_symbol, m) .* getAtModel(w_temp, dim_symbol, m)
-        putAtModel!(data, dim_symbol, m, val)
+        value = getAtModel(da, dim_symbol, m) .* getAtModel(w_temp, dim_symbol, m)
+        putAtModel!(da, dim_symbol, m, value)
     end        
-    weighted_avg = mapslices(x -> sum(skipmissing(x)), data, dims=(dim_symbol,))
-    #weighted_avg = dropdims(weighted_avg, dims=dim_symbol)
+    weighted_avg = mapslices(x -> sum(skipmissing(x)), da, dims=(dim_symbol,))
+    weighted_avg = dropdims(weighted_avg, dims=dim_symbol)
     
     # set to missing when value was missing for ALL models
-    n_models = length(dims(data, dim_symbol))
+    n_models = length(dims(da, dim_symbol))
     all_missing = dropdims(
-        mapslices(x -> sum(ismissing.(x)) == n_models, DimArray(data), dims=(dim_symbol,)),
+        mapslices(x -> sum(ismissing.(x)) == n_models, da, dims=(dim_symbol,)),
         dims = dim_symbol
     )
-    result = Array{eltype(weighted_avg)}(undef, size(weighted_avg))
-    s = repeat([:], length(size(weighted_avg)))
-    result[s...] = Array(weighted_avg)
-    result[all_missing] .= missing
-    # if !any(ismissing, result)
-    #     result = weighted_avg
-    # end
+    if !any(all_missing)
+        result = weighted_avg
+    else
+        result = Array{Union{Missing, Float64}}(undef, size(weighted_avg))
+        s = repeat([:], length(size(weighted_avg)))
+        result[s...] = Array(weighted_avg)
+        result[all_missing] .= missing
+    end
     return YAXArray(dims(weighted_avg), result, deepcopy(data.properties))
 end
 

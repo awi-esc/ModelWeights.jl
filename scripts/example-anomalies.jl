@@ -71,7 +71,7 @@ f_land
 # compute global mean temperature anomaly for every member for land/sea
 tas_anom_data = df_historical["tas_ANOM_historical3"].data
 # sea
-ocean_tas = similar(tas_anom_data, Union{Missing, Float32});
+ocean_tas = similar(tas_anom_data, Union{Missing, Float64});
 ocean_tas .= tas_anom_data;
 ocean_tas[land_mask] .= missing;
 
@@ -89,7 +89,7 @@ mw.plotValsOnMap!(
 f1
 
 # land
-land_tas = similar(tas_anom_data, Union{Missing, Float32});
+land_tas = similar(tas_anom_data, Union{Missing, Float64});
 land_tas .= tas_anom_data;
 land_tas[ocean_mask] .= missing;
 # plot land data for a single model
