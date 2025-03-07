@@ -46,6 +46,17 @@ end
 
 const DataMap = Dict{String, Data}
 
+"""
+    joinDataMaps(v::DataMap...)
+"""
+function joinDataMaps(v::DataMap...)
+    result = DataMap()
+    for dm in v
+        result = merge(result, dm)
+    end
+    return result
+end
+
 @kwdef struct ConfigWeights
     performance::Dict{String, Number}=Dict()
     independence::Dict{String, Number}=Dict()

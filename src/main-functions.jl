@@ -163,7 +163,7 @@ more subdirectories that each contains a directory 'preproc' with the
 preprocessed data. If dir_per_var is false, path_data is path to directory that
  directly contains the 'preproc' subdirectory.
 - `path_recipes`: path to directory that contains one or ESMValTool recipes 
-used as config files
+used as config files.
 - `dir_per_var`: if true, directory at path_data has subdirectories, one for
 each variable (they must end with _ and the name of the variable), otherwise
 data_path points to the directory that has a subdirectory 'preproc'.
@@ -171,9 +171,9 @@ data_path points to the directory that has a subdirectory 'preproc'.
 - `subset`: specifies the properties of the subset of data to be loaded. 
 The following keys are considered:  `models` (used to load only specific set of models 
 or members of models), `projects` (used to load only data from a given set of
-projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases` 
+projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases`.
 (super set is loaded, i.e. data that corresponds to either a given timerange or
-a given alias will be loaded), `variables`, `statistics`, `subdirs` and `level_shared_models` 
+a given alias will be loaded), `variables`, `statistics`, `subdirs` and `level_shared_models` .
 (if set to MEMBER/MODEL only data loaded from model members/models shared across all experiments and variables is loaded).
 - `preview`: used to pre-check which data will be loaded before actually loading
 it. 
