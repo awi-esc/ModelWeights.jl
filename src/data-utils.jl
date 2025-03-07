@@ -51,8 +51,8 @@ const DataMap = Dict{String, Data}
     independence::Dict{String, Number}=Dict()
     sigma_performance::Number=0.5
     sigma_independence::Number=0.5
-    ref_perform_weights::String=""
-    ref_indep_weights::String=""
+    alias_ref_perform_weights::String=""
+    alias_ref_indep_weights::String=""
     target_path::String=""
 end
 
@@ -83,14 +83,16 @@ function getDimsModel(da::DimArray)
     return (dim_symbol, dims(da, dim_symbol))
 end
 
-function getAtModel(da::YAXArray, dimension::Symbol, model::String)
+function getAtModel(da::AbstractArray, dimension::Symbol, model::String)
     return dimension == :model ? da[model = At(model)] : da[member = At(model)]
 end
 
-# data is matrix or value
-function putAtModel!(da::YAXArray, dimension::Symbol, model::String, data)
+""" 
+    putAtModel!(da::AbstractArray, dimension::Symbol, model::String, data)
+"""
+function putAtModel!(da::AbstractArray, dimension::Symbol, model::String, data)
     if dimension == :model
-        da[model = At(model)] =  data 
+        da[model = At(model)] =  data
     else 
         da[member = At(model)] = data
     end
@@ -777,34 +779,9 @@ end
 
 
 """
-    indexData(data::Vector{Data}, clim_var::String, diagnostic::String, alias::String)
-
-# Arguments:
-- `data`:
-- `clim_var`:
-- `diagnostic`:
-- `alias`:
-"""
-function indexData(data::Vector{Data}, clim_var::String, diagnostic::String, alias::String)
-    fn(data::Data) = 
-        data.meta.attrib.variable == clim_var && 
-        data.meta.attrib.statistic == diagnostic &&
-        data.meta.attrib.alias == alias
-    
-    df = filter(fn, data)
-    if length(df) == 0
-        throw(ArgumentError("No data contained for $clim_var, $diagnostic, $alias !"))
-    elseif length(df) > 1
-        @warn "more than one dataset given for $clima_var, $diagnostic, $alias."
-    end
-    return df[1].data
-end
-
-
-"""
     computeDistancesAllDiagnostics(
-        model_data::Vector{Data}, 
-        obs_data::Union{Nothing, Data}, 
+        model_data::DataMap, 
+        obs_data::Union{Nothing, DataMap}, 
         config::Dict{String, Number},
         ref_period_alias::String,
         forPerformance::Bool    
@@ -814,16 +791,15 @@ Compute RMSEs between models and observations or between predictions of models
 for all variables and diagnostics for which weights are specified in `config`.
 
 # Arguments:
-- `model_data`:
-- `obs_data`:
-- `config`: dictionary mapping from string of form VARIABLE_DIAGNOSTIC to respective weight.
+- `config::Dict{String, Number}`: mapping from 'VARIABLE_DIAGNOSTIC' to 
+respective weight.
 - `ref_period_alias`:
 - `for_performance`: true for distances between models and observations, 
-false for distances between model predictions
+false for distances between model predictions.
 """
 function computeDistancesAllDiagnostics(
-    model_data::Vector{Data}, 
-    obs_data::Union{Nothing, Vector{Data}}, 
+    model_data::DataMap, 
+    obs_data::Union{Nothing, DataMap}, 
     config::Dict{String, Number},
     ref_period_alias::String,
     for_performance::Bool
@@ -837,12 +813,13 @@ function computeDistancesAllDiagnostics(
         diagnostic_keys = filter(x -> endswith(x, "_" * diagnostic), var_diagnostic_keys)
         variables = String.(map(x -> split(x, "_")[1], diagnostic_keys))
         for clim_var in variables
-            models = indexData(model_data, clim_var, diagnostic, ref_period_alias)
+            id = join([clim_var, diagnostic, ref_period_alias], "_")
+            models = model_data[id].data
 
             if for_performance
-                observations = indexData(obs_data, clim_var, diagnostic, ref_period_alias)
+                observations = obs_data[id].data
                 if length(dims(observations, :source)) != 1
-                    @warn "several observational datasets available for computing distances"
+                    @warn "several observational datasets available for computing distances. Only first is used."
                 end
                 observations = observations[source=1]
                 dists = getModelDataDist(models, observations)
@@ -871,8 +848,9 @@ end
 - `for_performance`: 
 """
 function computeGeneralizedDistances(
-    distances_all::AbstractArray, weights::AbstractArray, for_performance::Bool
+    distances_all::AbstractArray, weights::DimArray, for_performance::Bool
 )
+    distances_all = distances_all[variable = Where(x -> x in dims(weights, :variable))]
     dimensions = for_performance ? 
         (hasdim(distances_all, :member) ? (:member,) : (:model,)) : 
         (:member1, :member2)
@@ -888,10 +866,9 @@ function computeGeneralizedDistances(
     else
         distances = averageEnsembleMembersMatrix(normalized_distances, false);
     end
-    meta = distances.properties
     distances = mapslices(x -> x .* weights, DimArray(distances), dims=(:variable, :diagnostic))
     distances = dropdims(sum(distances, dims=(:variable, :diagnostic)), dims=(:variable, :diagnostic))
-    return YAXArray(dims(distances), distances.data, meta)
+    return YAXArray(dims(distances), distances.data, distances.metadata)
 end
 
 
@@ -938,9 +915,9 @@ Check that there is data for all keys of the provided (balance) weights and the 
 - `ref_period_alias`:
 """
 function isValidDataAndWeightInput(
-    data::Vector{Data}, keys_weights::Vector{String}, ref_period_alias::String
+    data::DataMap, keys_weights::Vector{String}, ref_period_alias::String
 )
-    actual_ids_data = map(x -> x.meta.id, data)
+    actual_ids_data = map(x -> x.meta.id, values(data))
     required_keys_data = map(x -> x * "_" * ref_period_alias, keys_weights)
     return all([k in actual_ids_data for k in required_keys_data])
 end
