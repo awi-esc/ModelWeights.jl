@@ -268,7 +268,6 @@ function mergeLoadedData(
             timerange = DateTime(year_min):Year(1) : DateTime(year_max)
             for (i, ds) in enumerate(data_vec)
                 s = map(length, otherdims(ds, :time))
-                #dat = fill(NaN, s..., nb_years)
                 dat = Array{eltype(ds)}(undef, s..., nb_years) # if ds allows missing values, undef is initialized with missing
                 ds_extended = YAXArray((otherdims(ds, :time)..., Dim{:time}(timerange)), dat)
                 ds_extended[time = Where(x -> Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds # ds[time=:]
@@ -276,39 +275,12 @@ function mergeLoadedData(
             end
         end
     end
-    var_axis = is_model_data ? Dim{:member}(meta_dict["member_names"]) : Dim{:source}(meta_dict["source_names"]) 
+    var_axis = is_model_data ? Dim{:member}(meta_dict["member_names"]) : 
+        Dim{:source}(meta_dict["source_names"]) 
     dimData = concatenatecubes(data_vec, var_axis)
     dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
-    # size_dims = size(data_vec[1])
-    # n = length(data_vec)
-    # raw_data = Array{eltype(Array(data_vec[1]))}(undef, size_dims..., n)
-    # s = repeat([:], length(size_dims))
-    # names = is_model_data ? meta_dict["member_names"] : meta_dict["source_names"]
     
-    # # sort the data
-    # sort_indices = sortperm(names)
-    # for idx in sort_indices
-    #     raw_data[s..., idx] = Array(data_vec[idx])
-    # end
-    # dimData = DimArray(
-    #     raw_data,
-    #     (dims(data_vec[1])..., Dim{:source}(names[sort_indices])),
-    #     metadata = meta_dict
-    # )
-    # if is_model_data
-    #     indices = sortperm(dimData.metadata["member_names"])
-    #     for idx in indices
-    #         raw_data[s..., idx] = Array(data_vec[idx])
-    #     end
-    #     dimData = DimArray(
-    #         raw_data,
-    #         (dims(data_vec[1])..., Dim{:member}(dimData.metadata["member_names"][indices])),
-    #         metadata = meta_dict
-    #     )
-    #     # dimData = rebuild(dimData; metadata = meta_dict) 
-    # end
-
-    #     # Sanity checks that no dataset exists more than once
+    # Sanity checks that no dataset exists more than once
     if is_model_data
         members = dims(dimData, :member)
         if length(members) != length(unique(members))
