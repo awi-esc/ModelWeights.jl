@@ -156,15 +156,18 @@ function kelvinToCelsius(data::AbstractArray)
     df = deepcopy(data)
     if isa(units, String) && units == "K"
         df = df .- 273.15
+        df.properties["units"] = "degC"
     elseif isa(units, Vector)
-        indices = findall(units .!= "K")
-        if hasdim(df, :member)
-            df[member = indices] =  df[member = indices] .- 273.15
-        else
-            df[model = indices] =  df[model = indices] .- 273.15
+        indices = findall(units .== "K")
+        if !isempty(indices)
+            if hasdim(df, :member)
+                df[member = indices] =  df[member = indices] .- 273.15
+            else
+                df[model = indices] =  df[model = indices] .- 273.15
+            end
+            df.properties["units"] = "degC"
         end
     end
-    df.properties["units"] = "degC"
     return df
 end
 
@@ -180,8 +183,7 @@ of Kelvin.
 """
 function kelvinToCelsius!(datamap::DataMap)
     for (id, da) in datamap
-        df = @set da.data = kelvinToCelsius(da.data)
-        datamap[id] = df
+        datamap[id] = kelvinToCelsius(da)
     end
     return nothing
 end
