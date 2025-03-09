@@ -169,9 +169,9 @@ function plotEnsembleSpread(data::AbstractArray, lon::Number, lat::Number)
 end
 
 
-function plotTimeseries!(f::Figure, ax::Axis, vals; 
+function plotTimeseries!(ax::Axis, vals::AbstractArray; 
     uncertainties::Union{AbstractArray, Nothing}=nothing,
-    color = :red, 
+    color = :red, label::String=""
 )
     timesteps = Array(Dates.year.(dims(vals, :time)))
     if !isnothing(uncertainties)
@@ -182,8 +182,11 @@ function plotTimeseries!(f::Figure, ax::Axis, vals;
             label = uncertainties.properties["label"]
         );
     end
-    lines!(ax, timesteps, Array(vals), color = color, label = vals.properties["label"])
-    axislegend(ax, merge = true, position = :lt)
+    lines!(ax, timesteps, vec(coalesce.(vals, missing => NaN)), 
+        color=color, label=label)
+    if label != ""
+        axislegend(ax, merge = true, position = :lt)
+    end
     return nothing
 end
 

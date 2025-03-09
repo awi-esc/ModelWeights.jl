@@ -3,6 +3,8 @@ using DimensionalData
 using Interpolations
 using YAXArrays
 using Setfield
+using GLM
+using DataFrames
 
 @enum LEVEL MODEL=0 MEMBER=1
 
@@ -1076,4 +1078,17 @@ function filterTimeseries(
         end
     end
     return data_subset 
+end
+
+
+function getLinearTrend(data::YAXArray)
+    x = Dates.year.(Array(data.time))
+    trends = YAXArray(dims(data), Array{eltype(data)}(undef, size(data)))
+    for m in dims(data, :model)
+        y = Array(data[model = At(m)])
+        ols = lm(@formula(Y~X), DataFrame(X=x, Y=y))
+        Yp = predict(ols)
+        trends[model = At(m)] .= Yp
+    end
+    return trends
 end
