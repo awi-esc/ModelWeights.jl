@@ -1092,3 +1092,12 @@ function getLinearTrend(data::YAXArray)
     end
     return trends
 end
+
+
+function addLinearTrend!(data::DataMap; stats::String="CLIM-ann")
+    for (id, dat) in data
+        id_new = replace(id, stats => "TREND")
+        data[id_new] = getLinearTrend(dat.data)
+    end
+    return nothing
+end
