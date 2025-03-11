@@ -151,7 +151,7 @@ Return a copy of `data` with values given in Kelvin covnerted into Degree Celsiu
 # Arguments:
 - `data`:
 """
-function kelvinToCelsius(data::AbstractArray)
+function kelvinToCelsius(data::YAXArray)
     units =  data.properties["units"]
     df = deepcopy(data)
     if isa(units, String) && units == "K"
@@ -161,9 +161,9 @@ function kelvinToCelsius(data::AbstractArray)
         indices = findall(units .== "K")
         if !isempty(indices)
             if hasdim(df, :member)
-                df[member = indices] =  df[member = indices] .- 273.15
+                df[member = indices] .=  df[member = indices] .- 273.15
             else
-                df[model = indices] =  df[model = indices] .- 273.15
+                df[model = indices] .=  df[model = indices] .- 273.15
             end
             df.properties["units"] = "degC"
         end
