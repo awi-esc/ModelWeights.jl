@@ -100,11 +100,11 @@ function plotHistAtPos(data::AbstractArray, location::Dict)
 end
 
 
-""" plotAMOC(data::AbstractArray)
+""" plotAMOC(data::DimArray)
 
 Plot AMOC strength for variable "amoc".
 """
-function plotAMOC(data::AbstractArray)
+function plotAMOC(data::DimArray)
     fig = getFigure((8, 5), 12);
     t = "variable: amoc, experiment: " * data.metadata["experiment_id"];
 
@@ -171,7 +171,7 @@ end
 
 function plotTimeseries!(ax::Axis, vals::AbstractArray; 
     uncertainties::Union{AbstractArray, Nothing}=nothing,
-    color = :red, label::String=""
+    color = :red, label::String="", label_unc::String=""
 )
     timesteps = Array(Dates.year.(dims(vals, :time)))
     if !isnothing(uncertainties)
@@ -179,13 +179,13 @@ function plotTimeseries!(ax::Axis, vals::AbstractArray;
             vec(uncertainties[confidence=At("lower")]), 
             vec(uncertainties[confidence=At("upper")]), 
             color = (color, 0.2), 
-            label = uncertainties.properties["label"]
+            label = label_unc
         );
     end
     lines!(ax, timesteps, vec(coalesce.(vals, missing => NaN)), 
         color=color, label=label)
-    if label != ""
-        axislegend(ax, merge = true, position = :lt)
+    if label != "" || label_unc != ""
+        axislegend(ax, merge = false, position = :lt)
     end
     return nothing
 end
