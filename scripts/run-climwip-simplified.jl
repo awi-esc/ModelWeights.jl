@@ -52,6 +52,7 @@ figs_performance = mw.plotDistancesByVar(
 )
 
 figs_Sij = mw.plotDistancesIndependence(weights.Sij, "model1")
+figs_Sij[1]
 sij_var = dropdims(
     reduce(+, weights.independence_distances, dims=:diagnostic), 
     dims=:diagnostic
@@ -72,8 +73,8 @@ data_temp_map_reference = mw.loadDataFromESMValToolConfigs(
 )
                 
 # compute weighted averages and plot results
-data_ref = data_temp_map_reference["tas_CLIM_weighted_temperature_map_reference"].data;
-data_future = data_temp_map_future["tas_CLIM_weighted_temperature_map_future"].data;
+data_ref = data_temp_map_reference["tas_CLIM_weighted_temperature_map_reference"];
+data_future = data_temp_map_future["tas_CLIM_weighted_temperature_map_future"];
 # just to align with original data
 data_ref = data_ref[lat = Where(x -> x <= 68.75)];
 data_future = data_future[lat = Where(x -> x <= 68.75)];
@@ -123,7 +124,7 @@ f2
 begin
     data_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_map/weighted_temperature_map/temperature_change_weighted_map.nc");
     data_ww_orig = data_orig["__xarray_dataarray_variable__"][:,:];
-    compareToOrigData(weighted_avg.data, data_ww_orig)
+    compareToOrigData(weighted_avg, data_ww_orig)
     # d = DimArray(data_ww_orig, (Dim{:lon}(Array(dims(weighted_avg, :lon))), Dim{:lat}(Array(dims(weighted_avg, :lat)))))
     # f = Figure();
     # mw.plotValsOnMap!(f, d, title_f1 * " (original data)"; ColorSchemes.Reds.colors);
@@ -142,7 +143,7 @@ data_temp_graph = mw.loadDataFromESMValToolConfigs(
     dir_per_var = false,
     subset = Dict("aliases" => ["weighted_temperature_graph"])
 );
-data_graph = data_temp_graph["tas_ANOM_weighted_temperature_graph"].data;
+data_graph = data_temp_graph["tas_ANOM_weighted_temperature_graph"];
 # this will compute the weighted avg based on the average across the respective members of each model
 #weighted_avg = mw.applyWeights(data_graph, weights.w_members);
 

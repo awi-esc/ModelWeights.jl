@@ -35,8 +35,8 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
 
 # we set level_shared_models to mw.MEMBER, so model members are identical for 
 # every loaded data set (variable)
-model_members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"].data, :member));
-models_lgm = unique(lgm_data["tos_CLIM_lgm"].data.properties["model_names"]);
+model_members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"], :member));
+models_lgm = unique(lgm_data["tos_CLIM_lgm"].properties["model_names"]);
 
 # --------------------------------------------------------------------------- #
 # 2. Model data just for historical experiment of models with lgm-experiment
@@ -61,7 +61,7 @@ historical_data_lgm_models = mw.loadDataFromESMValToolConfigs(
     preview = false
 )
 # sanity check: for all lgm models, historical experiment is loaded
-models_historical = unique(historical_data_lgm_models["tos_CLIM_historical"].data.properties["model_names"]);
+models_historical = unique(historical_data_lgm_models["tos_CLIM_historical"].properties["model_names"]);
 @assert models_historical == models_lgm
 
 # function to join two Datamaps into one
@@ -88,10 +88,10 @@ begin
 end
 
 # sanity check: all historical model members must be in lgm model members
-all(map(x -> x in model_members_lgm, dims(historical_data_lgm_members["tos_CLIM_historical"].data, :member)))
+all(map(x -> x in model_members_lgm, dims(historical_data_lgm_members["tos_CLIM_historical"], :member)))
 
 # sanity check: are there lgm model members that dont appear in historical models?
-members_historical = Array(dims(historical_data_lgm_members["tas_CLIM_historical"].data, :member));
+members_historical = Array(dims(historical_data_lgm_members["tas_CLIM_historical"], :member));
 filter(x -> !(x in members_historical), model_members_lgm)
 
 

@@ -6,28 +6,42 @@ using CairoMakie
 using ColorSchemes
 using NCDatasets
 using Distributions
-
+using YAXArrays
 
 # Get data from piControl + historical + lgm experiments
-path_config = "/albedo/home/brgrus001/ModelWeights/configs/ecs-lgm-cooling.yml";
-data_meta =  mw.loadDataFromYAML(path_config; preview = true);
-data = mw.loadDataFromYAML(path_config; subset = Dict("level_shared_models" => mw.MODEL));
+path_config = "./configs/ecs-lgm-cooling.yml";
+data_meta =  mw.loadDataFromYAML(path_config; preview = true)
+data = mw.loadDataFromYAML(path_config; subset = Dict("level_shared_models" => mw.MODEL))
 
 # for the shared models, make sure that physics of piControl models are the same
 # as physics of lgm models
+
 df = mw.alignPhysics(
     data, 
-    data["tas_CLIM_lgm"].data.metadata["member_names"]; 
+    data["tas_CLIM_lgm"].properties["member_names"]; 
     level_shared_models = mw.MODEL
-);
+)
+df2 = mw.alignPhysics(
+    data, 
+    data["tas_CLIM_lgm"].properties["member_names"]; 
+    level_shared_models = mw.MEMBER
+)
+df3 = mw.alignPhysics(
+    data, 
+    data["tas_CLIM_lgm"].properties["member_names"]
+)
+
+
+
+
 mw.averageEnsembleMembers!(df)
 # lgm-cooling: here models need to be in same unit for both experiments
 mw.kelvinToCelsius!(df)
-lgm_cooling = df["tas_CLIM_lgm"].data .- df["tas_CLIM_piControl"].data;
+lgm_cooling = df["tas_CLIM_lgm"] .- df["tas_CLIM_piControl"];
 # global lgm-cooling values for each model
 # as we look at differences here, the unit (kelvin or celsius) doesnt matter
-global_means = mw.getGlobalMeans(lgm_cooling)
-predictions_gm_tas = Array(global_means);
+global_means = coalesce.(mw.getGlobalMeans(lgm_cooling), missing => NaN)
+predictions_gm_tas = coalesce.(Array(global_means), missing => NaN);
 ys = repeat([0], length(global_means));
 
 # plot model data
@@ -38,7 +52,7 @@ begin
     scatter!(ax, predictions_gm_tas, ys, color = :red)
     mu = Statistics.mean(global_means)
     sigma = Statistics.std(global_means; corrected=false, mean=mu)
-    Distributions.fit_mle(Normal, global_means)
+    Distributions.fit_mle(Normal, global_means.data)
 
     dist = Distributions.Normal(mu, sigma)
     samples = rand(dist, 1000);
@@ -51,13 +65,13 @@ end
 
 # Assimilated data from Tierney et al. (2020)
 tierney_data = NCDataset("/albedo/home/brgrus001/ModelWeightsPaper/work/data/Tierney-2020/Tierney2020_DA_atm.nc")
-deltaSAT = DimArray(
-    Array(tierney_data["deltaSAT"]), 
-    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"])))
+deltaSAT = YAXArray(
+    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
+    Array(tierney_data["deltaSAT"])
 )
-errdeltaSAT = DimArray(
-    Array(tierney_data["errdeltaSAT"]), 
-    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"])))
+errdeltaSAT = YAXArray(
+    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
+    Array(tierney_data["errdeltaSAT"])
 )
 gm_deltaSAT = mw.getGlobalMeans(deltaSAT)
 area_weights= mw.computeAreaWeights(Array(dims(deltaSAT, :lon)), Array(dims(deltaSAT, :lat)))
@@ -118,7 +132,7 @@ end
 
 ###############################################################################
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
-path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
+path_recipes = "./configs/lgm-cmip5-cmip6";
 lgm_data = mw.loadDataFromESMValToolConfigs(
     path_data, path_recipes; 
     subset = Dict(
@@ -136,44 +150,46 @@ lgm_tos = lgm_data["tos_CLIM_lgm"];
 # just use tas data:
 lgm_data = lgm_tas;
 # compute area weights for each model (depends on missing values)
-masksMissing = mapslices(x -> ismissing.(x), lgm_data.data, dims=:member);
-longitudes = collect(dims(lgm_data.data, :lon));
-latitudes = collect(dims(lgm_data.data, :lat));
-members = collect(dims(lgm_data.data, :member));
+masksMissing = mapslices(x -> ismissing.(x), DimArray(lgm_data), dims=:member);
+longitudes = collect(dims(lgm_data, :lon));
+latitudes = collect(dims(lgm_data, :lat));
+members = collect(dims(lgm_data, :member));
 area_weights = DimArray(zeros(length(longitudes), length(latitudes), length(members)), (Dim{:lon}(longitudes), Dim{:lat}(latitudes), Dim{:member}(members)));
-units = lgm_data.data.metadata["units"];
-for (idx, member) in enumerate(dims(lgm_data.data, :member))
-    data = lgm_data.data[member = At(member)]
+units = lgm_data.properties["units"];
+for (idx, member) in enumerate(dims(lgm_data, :member))
+    data = lgm_data[member = At(member)]
     mask = masksMissing[member = At(member)]
     area_weights[member = At(member)] = mw.computeAreaWeights(Array(dims(data, :lon)), Array(dims(data, :lat)); mask)
 end
 all(map(x -> area_weights[:,:, x] == area_weights[:,:,x+1], 1:length(members)-1))
 
 # plot map of LGM tas data
-fig1 = Figure()
+fig1 = Figure();
 mw.plotValsOnMap!(
     fig1,
-    lgm_data.data[:,:,1], 
-    "LGM tas for $(dims(lgm_data.data, :member)[1])";
+    lgm_data[:,:,1], 
+    "LGM tas for $(dims(lgm_data, :member)[1])";
     colors = ColorSchemes.twelvebitrainbow.colors   
 )
+fig1
 fig2 = Figure();
 mw.plotValsOnMap!(fig2, area_weights[:,:,1], "area weights for lgm models")
-
+fig2
 
 global_means_non_weighted = mapslices(x -> Statistics.mean(x), 
-    lgm_data.data, dims=(:lon,:lat)
+    DimArray(lgm_data), dims=(:lon,:lat)
 )[lon=1, lat=1]
 
 global_means = mapslices(x -> Statistics.sum(x), 
-    lgm_data.data .* area_weights, 
+    DimArray(lgm_data) .* area_weights, 
     dims=(:lon,:lat)
 )[lon=1, lat=1]
 
 
+# TODO: config file non existent!
 obs_data = mw.loadDataFromESMValToolConfigs(
     "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_tas_tos", 
-    "/albedo/home/brgrus001/ModelWeights/configs/historical_obs",
+    "./configs/historical_obs",
     dir_per_var = false,
     is_model_data = false,
     subset = Dict(
@@ -186,14 +202,14 @@ obs_data = mw.loadDataFromESMValToolConfigs(
 )["tas_CLIM_historical"];
 
 
-if obs_data.data.metadata["units"] == "K"
-    obs_data = @set obs_data.data = mw.kelvinToCelsius(obs_data.data);
+if obs_data.properties["units"] == "K"
+    obs_data = mw.kelvinToCelsius(obs_data)
 end
-dat = obs_data.data[:,:,1]
+dat = obs_data[:,:,1]
 fig3 = Figure();
 mw.plotValsOnMap!(
     fig3, dat, 
-    "Historical tas for $(dims(obs_data.data, :source)[1])",
+    "Historical tas for $(dims(obs_data, :source)[1])",
     colors = ColorSchemes.twelvebitrainbow.colors
 )
 mask_obs = ismissing.(dat)
@@ -209,7 +225,7 @@ global_means_obs = mapslices(
 
 begin 
     f = Figure(size=(800,600)); 
-    models = Array(dims(lgm_data.data, :member))
+    models = Array(dims(lgm_data, :member))
     ax = Axis(f[1,1], 
         xticks = (1:length(models), models), 
         #limits = ((years[1]-10, years[end]+10), (-1, 5)),
@@ -218,11 +234,11 @@ begin
         ylabel = "Gloabal Mean Temperature in °C",
         xticklabelrotation = pi/2
     );
-    lines!(ax, 1:length(models), global_means.data, color = :red, label = "Area-weighted")
-    scatter!(ax, 1:length(models), global_means.data, color = :red, label = "Area-weighted")
+    lines!(ax, 1:length(models), global_means, color = :red, label = "Area-weighted")
+    scatter!(ax, 1:length(models), global_means, color = :red, label = "Area-weighted")
 
-    lines!(ax, 1:length(models), global_means_non_weighted.data, color = :blue, label = "Non-weighted")
-    scatter!(ax, 1:length(models), global_means_non_weighted.data, color = :blue, label = "Non-weighted")
+    lines!(ax, 1:length(models), global_means_non_weighted, color = :blue, label = "Non-weighted")
+    scatter!(ax, 1:length(models), global_means_non_weighted, color = :blue, label = "Non-weighted")
 
     lines!(ax, 1:length(models), repeat([global_means_obs], length(models)), color = :green, label = "Area-weighted Global Mean Historical observations")
     axislegend(ax, merge = true, position = :cc)

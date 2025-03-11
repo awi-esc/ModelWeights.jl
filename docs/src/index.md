@@ -6,30 +6,30 @@
 The purpose of this package is twofold: on the one hand, we built it to handle preprocessed Earth System data easily
 within Julia and, on the other hand, to compute weights for different sets of Earth System Models following the approach from Brunner et al (2020).
 
-The main objects that the package provides are: `Data`, `MetaData` and `ModelWeights`. 
+The main objects that the package provides are: `DataMap` and two weight 
+objects, `ConfigWeights` and `Weights`.
 
-## MetaData Object
-
-The `MetaData` struct defines three fields:
-1. `id::String`: identifier of the type of data; it summarizes the attributes 
-in `attrib` that define the data by joining `variable`, `statistic` and `alias` into 
-a single String using underscores.
-2. `attrib::MetaAttrib`: explicitly specifies the type of data (e.g., experiment, timerange, etc.). 
-3. `paths::Vector{String}`: Paths from where the data was loaded.
-
-
-## Data Object
+## DataMap Object
 
 Each Data object refers to some summary data (e.g. climatological average) 
 of a particular experiment for the full time period or part of it.
 
-The `Data` struct defines two fields:
-1. `meta::MetaData`: stores meta information about data, e.g. paths from where 
-data was loaded.
-2. `data::DimensionalData.DimArray` stores the actual data.
+`DataMap` is a type alias for a dictionary mapping from Strings to YAXArrays.
+The metadata of each dataset (``datamap[id].properties``) contains the 
+metadata loaded from the original files as well as some additional information 
+that we add: 
+- `_variable`
+- `_statistic`
+- `_alias`
+- `_timerange`
+- `_paths`
+- `_id`: concatenates `variable`, `statistic` and `alias` into a single String 
+separated by underscores
 
 
-## Weight Object
+## Weight Objects
+
+### ConfigWeights
 
 ````julia
 import ModelWeights as mw
@@ -44,7 +44,11 @@ config_weights = mw.ConfigWeights(
     ref_period = "historical", # can be alias or timerange
     target_dir = "/weights/"
 );
+````
 
+### Weights
+
+````julia
 weights = mw.computeWeights(model_data_historical, obs_data, config_weights);
 ````
 

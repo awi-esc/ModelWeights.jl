@@ -31,16 +31,7 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
     preview = false # default: false; if true meta data for data to be loaded is returned
 );
 ````
-The loaded data is a Dictionary mapping from an identifier of the form 'variable_diagnostic_alias' (e.g., tas_CLIM_lgm) to an instance of type `ModelWeights.Data`. This object has two fields, 'meta::MetaData' and 'data::DimArry'. When you print a MetaData object, it will show the paths of the data:
-
-```julia
-julia> lgm_data["tas_CLIM_lgm"].meta
-::ModelWeights.MetaData
-tas_CLIM_lgm (timerange: full, experiment: lgm)
-        /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_CNRM-CM5_Amon_lgm_r1i1p1_tas.nc
-        /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_FGOALS-g2_Amon_lgm_r1i1p1_tas.nc
-        ...
-```
+The loaded data is a Dictionary mapping from an identifier of the form 'variable_diagnostic_alias' (e.g., tas_CLIM_lgm) to a `YAXArray`. Additional metadata that was added by us is part of the YAXArrays .properties dictionary. All such fields start with '_', e.g. '_id', '_paths', '_statistic'.
 
 Since we preprocessed the data with ESMValTool using several recipes, we got separate directories for the preprocessed data for every experiment. Thus, to load data for, say lgm and historical experiments, we would call loadDataFromESMValToolConfigs twice with the respective data- and config paths as arguments.
 
@@ -100,7 +91,7 @@ As we'll explain next, you can also provide further constraints when loading the
 ### Optional parameters for filtering data
 For both functions, `loadDataFromESMValToolConfigs` and `loadDataFromYAML`, there is a set of optional parameters in order to constrain the loaded data:
 
-- `preview`: If set to false (default), the data will not be loaded and only the MetaData object is returned.
+- `preview`: If set to false (default), the data will not be loaded and only the metadata with the information that we added that specifies which data will be loaded is returned.
 
 - `dir_per_var`: If set to true (default), only subdirectories of the base_path that contain `_VARIABLE` in their name (e.g. `recipe_cmip5_lgm_tas`) will be searched. 
 

@@ -73,15 +73,15 @@ function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
 end
 
 """
-    subsetPaths(paths::Vector{String}, shared_models::Vector{String})
+    filterPaths(paths::Vector{String}, shared_models::Vector{String})
 
-Return subset of paths in `paths` that point to models in `shared_models`.
+Return new vector with paths in `paths` that point to models in `shared_models`.
 
 # Arguments:
 - `shared_models`: have form 'modelname#memberID[_grid]' on level of model
 members or just 'modelname' on level of models.
 """
-function subsetPaths(paths::Vector{String}, shared_models::Vector{String})
+function filterPaths(paths::Vector{String}, shared_models::Vector{String})
     subset_paths = Vector{String}()
     for path in paths
         keep = applyModelConstraints(path, shared_models)
@@ -96,8 +96,8 @@ end
 """
     subsetModelData(data::AbstractArray, shared_models::Vector{String})
 
-Return a subset of `data` that contains only data from the models 
-specified in `shared_models`. 
+Return an AbstractArray that is the subset of `data` containing only data from 
+the models specified in `shared_models`. 
 
 Takes care of metadata.
 
@@ -107,8 +107,9 @@ Takes care of metadata.
 or members of models ('modelname#memberID[_grid]').
 """
 function subsetModelData(data::AbstractArray, shared_models::Vector{String})
+    data = deepcopy(data)
     dim_symbol = hasdim(data, :member) ? :member : :model
-    dim_names = collect(dims(data, dim_symbol))
+    dim_names = Array(dims(data, dim_symbol))
     if dim_symbol == :member
         models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
         # if shared_models is on the level of models, the following should be empty
@@ -118,7 +119,7 @@ function subsetModelData(data::AbstractArray, shared_models::Vector{String})
             indices = findall(m -> m in members, dim_names)
         else
             # important not to use dim_names here, since e.g. model=AWI would be found in dim_names where model is actually AWI-X for instance
-            models_data = getModelsFromMemberIDs(dim_names) # NOTE: should yield same: models_data = data.metadata["model_names"]
+            models_data = getModelsFromMemberIDs(dim_names) # NOTE: should yield same: models_data = data.properties["model_names"]
             indices = findall(m -> m in models, models_data)
         end
         data = data[member = indices]
@@ -126,36 +127,38 @@ function subsetModelData(data::AbstractArray, shared_models::Vector{String})
         indices = findall(m -> m in shared_models, dim_names)
         data = data[model = indices]
     end
-    # also adjust the metadata
+    # also subset Metadata vectors!
     attributes = filter(k -> data.properties[k] isa Vector, keys(data.properties))
     for key in attributes
+        #println("$(key): $(length(data.properties[key]))")
         data.properties[key] = data.properties[key][indices]
     end
     return data
 end
 
+
 """
     subsetModelData(datamap::DataMap; level::LEVEL=MEMBER)
+
+For those datasets in `datamap` that specify data on the level `level` 
+(i.e. have dimension :member or :model), return a new DataMap with subset of 
+data s.t. the new datasets all have the same models (level=MODEL) or members 
+(level=MEMBER).
 """
 function subsetModelData(datamap::DataMap; level::LEVEL=MEMBER)
     all_data = collect(values(datamap))
-    all_data = level == MEMBER ? filter(x -> hasdim(x.data, :member), all_data) :
-        filter(x -> hasdim(x.data, :model), all_data)
-    dimensions = level == MEMBER ? map(x -> dims(x.data, :member), all_data) :
-        map(x -> dims(x.data, :model), all_data)
-    shared_models = reduce(intersect, dimensions)
-
+    shared_models = level == MEMBER ? getSharedMembers(datamap) : getSharedModels(datamap)
     subset = DataMap()
     for data in all_data
-        df = deepcopy(data.data)
-        subset[data.meta.id] = Data(meta=data.meta, data=subsetModelData(df, shared_models))
+        df = deepcopy(data)
+        subset[df.properties["_id"]] = subsetModelData(df, shared_models)
     end
     return subset
 end
 
 
 """
-    loadPreprocData(meta::MetaData, is_model_data::Bool)
+    loadPreprocData(meta::Dict{String, Any}, is_model_data::Bool)
 
 Create a tuple with a vector of YAXArrays for data specified in `meta` and a 
 Dictionary containing the metadata of all loaded data. 
@@ -165,15 +168,15 @@ that contains the metadata keys from every loaded dataset. Each key maps to a ve
 of values, one for each loaded dataset, which is set to missing if that key 
 hadn't been present in this datasets own metadata.
 """
-function loadPreprocData(meta::MetaData, is_model_data::Bool)
-    n_files = length(meta.paths)
+function loadPreprocData(meta::Dict{String, Any}, is_model_data::Bool)
+    n_files = length(meta["_paths"])
     data = Vector{YAXArray}(undef, n_files)
     meta_dict = Dict{String, Any}()
     source_names = repeat([""], outer = n_files)
 
-    filenames = first.(splitext.(basename.(meta.paths)))
-    climVars = first.(split.(basename.(dirname.(meta.paths)), "_"))
-    for (i, file) in enumerate(meta.paths)
+    filenames = first.(splitext.(basename.(meta["_paths"])))
+    climVars = first.(split.(basename.(dirname.(meta["_paths"])), "_"))
+    for (i, file) in enumerate(meta["_paths"])
         @debug "processing file.." * file
         filename = filenames[i]
         climVar = climVars[i]
@@ -293,20 +296,37 @@ function mergeLoadedData(
 end
 
 
+function createGlobalMetaDataDict(attrib::MetaAttrib, paths::Vector{String})
+    metadata = Dict{String, Any}()
+    metadata["_id"] = buildMetaDataID(attrib)
+    metadata["_paths"] = paths 
+    metadata["_variable"] = attrib.variable
+    metadata["_experiment"] = attrib.exp
+    metadata["_statistic"] = attrib.statistic
+    metadata["_alias"] = attrib.alias
+    metadata["_timerange"] = attrib.timerange
+    return metadata
+end
+
+
 """
-    loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::Bool)
+    loadDataFromMetadata(
+        meta_data::Dict{String, Dict{String, Any}}, is_model_data::Bool
+    )
+
 """
-function loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::Bool)
+function loadDataFromMetadata(
+    meta_data::Dict{String, Dict{String, Any}}, is_model_data::Bool
+)
     results = DataMap()
     for (id, meta) in meta_data
         # loads data at level of model members
         @info "load $id"
         data_vec, meta_dict = loadPreprocData(meta, is_model_data)
         data = mergeLoadedData(data_vec, meta_dict, is_model_data)
-        results[meta.id] = Data(meta, data)
+        merge!(data.properties, meta)
+        results[meta["_id"]] = data
     end
-    @debug "loaded data: $(map(x -> x.meta, values(results)))"
-    @debug "filtered for shared models across all loaded data: " level
     return results
 end
 
@@ -388,19 +408,20 @@ end
 
 """
     getSharedModelsFromPaths(
-        meta_data::Dict{String, MetaData}, all_models::Vector{String}
+        all_paths::Vector{Vector{String}}, all_models::Vector{String}
     )
      
-Return a vector of models from `meta_data` that appear in `all_models`.
+Return vector with those models in 'all_models' for which a path is given in 
+every subvector of 'meta_data'.
 """
 function getSharedModelsFromPaths(
-    meta_data::Dict{String, MetaData}, all_models::Vector{String}
+    all_paths::Vector{Vector{String}}, all_models::Vector{String}
 )
     indices_shared = []
     for (idx, model) in enumerate(all_models)
         is_found = false
-        for (_, meta) in meta_data
-            is_found = searchModelInPaths(model, meta.paths)
+        for paths in all_paths
+            is_found = searchModelInPaths(model, paths)
             if !is_found
                 break
             end
@@ -449,7 +470,8 @@ end
 - `quantiles`: Vector with two entries (btw. 0 and 1) [lower_bound, upper_bound]
 """
 function getUncertaintyRanges(
-    data::AbstractArray; w::Union{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]
+    data::AbstractArray;
+    w::Union{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]
 )
     timesteps = dims(data, :time)
     uncertainty_ranges = YAXArray(
@@ -473,23 +495,32 @@ function getUncertaintyRanges(
 end
 
 
-function reduceMetaDataSharedModels!(
-    meta_data::Dict{String, MetaData}, level_shared_models::Union{LEVEL, Nothing}
+
+"""
+    filterPathsSharedModels!(
+        meta_data::Dict{String, Dict{String, Any}},
+        level_shared_models::Union{LEVEL, Nothing}
+    )
+
+    In particular important before loading data if data should be subset
+"""
+function filterPathsSharedModels!(
+    meta_data::Dict{String, Dict{String, Any}},
+    level_shared_models::Union{LEVEL, Nothing}
 )
-    all_paths = map(p -> p.paths, values(meta_data))
+    all_paths = map(x -> x["_paths"], values(meta_data))
     all_models = getMemberIDsFromPaths(vcat(all_paths...))
     if level_shared_models == MODEL
         all_models = unique(getModelsFromMemberIDs(all_models))
     end
-    shared_models = getSharedModelsFromPaths(meta_data, all_models)
+    shared_models = getSharedModelsFromPaths(all_paths, all_models)
     if isempty(shared_models)
         @warn "No models shared across data!"
     end
     for (id, meta) in meta_data
-        shared_paths = subsetPaths(meta.paths, shared_models)
-        meta_new = @set meta.paths = shared_paths
-        meta_data[id] = meta_new
+        meta_data[id]["_paths"] =  filterPaths(meta["_paths"], shared_models)
     end
+    return nothing
 end
 
 function getModelsFromMemberIDs(members::Vector{String})
@@ -504,15 +535,16 @@ end
 
 
 """
-    alignPhysics(data::DataMap, members::Vector{String}, level_shared_models::Union{LEVEL, Nothing} = nothing)
+    alignPhysics(
+        data::DataMap,
+        members::Vector{String}, 
+        level_shared_models::Union{LEVEL, Nothing} = nothing)
+    )
 
-Return new DataMap with only the models retained that share the same physics 
-as the respective model's members in `members` have.
+Return new DataMap with only the models retained that share the same physics as 
+the respective model's members in `members`.
 
-# Arguments:
-- `data`: 
-- `members`:
-- `level_shared_models`:
+If `level_shared_models` is set, resulting DataMap is subset accordingly.
 """
 function alignPhysics(
     datamap::DataMap, members::Vector{String};
@@ -521,38 +553,27 @@ function alignPhysics(
     data = deepcopy(datamap)
     models = unique(getModelsFromMemberIDs(members))
     for model in models
-        # retrieve allowed physics as in members 
+        # retrieve allowed physics as given in members 
         member_ids = filter(m -> startswith(m, model * MODEL_MEMBER_DELIM), members)
         physics = getPhysicsFromMembers(member_ids)
-        for (id, model_data) in data
-            ds = model_data.data
+        for (_, ds) in data
             # filter data s.t. of current model only members with retrieved physics are kept
-            model_indices = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), Array(dims(ds, :member)))
+            model_indices = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), 
+                Array(dims(ds, :member))
+            )
             indices_out = filter(x -> !(ds.properties["physics"][x] in physics), model_indices)
             if !isempty(indices_out)
                 indices_keep = filter(x -> !(x in indices_out), 1:length(dims(ds, :member)))
                 members_kept = ds.properties["member_names"][indices_keep]
-                meta = model_data.meta
-                meta_updated = @set meta.paths = subsetPaths(meta.paths, members_kept)            
-                data[meta_updated.id] = Data(meta = meta_updated, data = subsetModelData(ds, members_kept))
+                data[ds.properties["_id"]] = subsetModelData(ds, members_kept)
             end
         end
     end
-    # after having subset the data wrt the physics, make sure that level of 
-    # shared models as it was before if wanted
     if !isnothing(level_shared_models)
-        meta_data = Dict{String, MetaData}()
-        for k in collect(keys(data))
-            meta_data[k] = data[k].meta 
-        end
-        reduceMetaDataSharedModels!(meta_data, level_shared_models)
-        all_paths = reduce(vcat, map(k -> meta_data[k].paths, collect(keys(data))))
-        all_members = getMemberIDsFromPaths(all_paths)
+        shared_models = level_shared_models == MEMBER ? 
+            getSharedMembers(data) : getSharedModels(data)
         for (id, model_data) in data
-            data[meta_data[id].id] = Data(
-                meta = meta_data[id], 
-                data = subsetModelData(model_data.data, all_members)
-            )
+            data[id] = subsetModelData(model_data, shared_models)
         end
     end
     return data
@@ -610,8 +631,7 @@ For every dataset in `data`, take average for all members of each model.
 """
 function averageEnsembleMembers!(data::DataMap)
     for (k, current_data) in data
-        updated_arr = summarizeEnsembleMembersVector(current_data.data, true)
-        data[k] = @set current_data.data = updated_arr 
+        data[k] = summarizeEnsembleMembersVector(current_data, true)
     end
     return nothing
 end
@@ -633,7 +653,7 @@ function getGlobalMeans(data::AbstractArray)
     latitudes = Array(dims(data, :lat))
     masks = ismissing.(data)
     dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
-    meta = Dict(k => data.properties[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
+    #meta = Dict(k => data.properties[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
     if !isnothing(dimension)
         models = Array(dims(data, dimension))
         global_means = YAXArray(
@@ -719,69 +739,33 @@ end
 """
     computeAnomalies!(datamap::DataMap id_data::String, id_ref::String)
 
-# Arguments:
-- `datamap`:
-- `id_data`:
-- `id_ref`: 
+Add entry to 'datamap' with difference between 'datamap' at id_data and id_ref.
+
+The id of the original data and of the reference data is added to the metadata.
 """
 function computeAnomalies!(data::DataMap, id_data::String, id_ref::String)
-    dimension = hasdim(data[id_data].data, :member) ? :member : :model
-    if dims(data[id_data].data, dimension) != dims(data[id_ref].data, dimension)
+    dimension = hasdim(data[id_data], :member) ? :member : :model
+    if dims(data[id_data], dimension) != dims(data[id_ref], dimension)
         throw(ArgumentError("Original and reference data must contain exactly the same models!"))
     end
-    anomalies_mat = Array(data[id_data].data) .- Array(data[id_ref].data)
-    anomalies_metadata = deepcopy(data[id_data].data.properties)
-    anomalies_metadata["reference_anomalies"] = id_ref
+    anomalies_mat = Array(data[id_data]) .- Array(data[id_ref])
 
-    anomalies = YAXArray(dims(data[id_data].data), anomalies_mat, anomalies_metadata)
-    clim_var, _, alias = split(id_data, "_")
-    
-    if isa(anomalies.properties["variable_id"], String)
-        anomalies.properties["variable_id"] *= "_ANOM"
-    else
-        anomalies.properties["variable_id"] = map(x -> x *= "_ANOM", anomalies.properties["variable_id"])
-    end
+    anomalies_metadata = deepcopy(data[id_data].properties)
+    anomalies_metadata["_statistic"] = "ANOM"
+    anomalies_id = buildMetaDataID(anomalies_metadata)
+    anomalies_metadata["_id"] = anomalies_id
+    anomalies_metadata["_ref_data_id"] = id_ref
+    anomalies_metadata["_orig_data_id"] = id_data
 
-    anomaly_data = data[id_data]
-    anomaly_data = @set anomaly_data.data = anomalies
-    
-    meta = anomaly_data.meta
-    id = clim_var * "_ANOM_" * alias
-    meta = @set meta.id = id
-
-    anomaly_data = @set anomaly_data.meta = meta
-    data[id] = anomaly_data
+    anomalies = YAXArray(dims(data[id_data]), anomalies_mat, anomalies_metadata)
+    data[anomalies_id] = anomalies
     return nothing
 end
 
-
-function getLandMask(orog_data::AbstractArray)
-    return getMask(orog_data, false)    
-end
-
-function getOceanMask(orog_data::AbstractArray)
-    return getMask(orog_data, true)    
-end
-
-
-function addOceanMask!(datamap::DataMap, orog_data::Data)
-    meta = MetaData(id="mask_ocean", attrib=MetaAttrib(), paths=copy(orog_data.meta.paths))
-    mask = getOceanMask(orog_data.data)
-    datamap[meta.id] = Data(meta=meta, data=mask)
-    return nothing
-end
-
-function addLandMask!(datamap::DataMap, orog_data::Data)
-    meta = MetaData(id="mask_land", attrib=MetaAttrib(), paths=copy(orog_data.meta.paths))
-    mask = getLandMask(orog_data.data)
-    datamap[meta.id] =  Data(meta=meta, data=mask)
-    return nothing
-end
 
 function addMasks!(datamap::DataMap, id_orog_data::String)
     orog_data = datamap[id_orog_data]
-    addOceanMask!(datamap, orog_data)
-    addLandMask!(datamap, orog_data)
+    datamap["mask_land"] = getMask(orog_data; mask_out_land=false)
+    datamap["mask_ocean"] = getMask(orog_data; mask_out_land=true)
     return nothing
 end
-

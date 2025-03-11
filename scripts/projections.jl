@@ -1,8 +1,9 @@
 import ModelWeights as mw
 using DimensionalData
 using CairoMakie
+using YAXArrays
 
-path_config = "configs/projection-data.yml";
+path_config = "./configs/projection-plots.yml";
 
 meta_data = mw.loadDataFromYAML(path_config; preview=true)
 data_all = mw.loadDataFromYAML(path_config)
@@ -20,13 +21,10 @@ data_ts = mw.filterTimeseries(data_all, 2015, 2100)
 # compute ensemble means (unweighted and weighted)
 # compute uncertainty ranges (weighted and unweighted)
 # compute mean for historical (also weighted and unweighted)
-function getDataProjectionPlot(dat::mw.Data)
-    gms = mw.getGlobalMeansTS(dat.data)
+function getDataProjectionPlot(dat::YAXArray)
+    gms = mw.getGlobalMeansTS(dat)
     unweighted_avg = mw.computeWeightedAvg(gms)
     uncertainties = mw.getUncertaintyRanges(gms)
-
-    unweighted_avg.properties["label"] = dat.meta.attrib.exp * ": Non-weighted mean"
-    uncertainties.properties["label"] = dat.meta.attrib.exp * ": Non-weighted quantiles: " * join(uncertainties.properties["quantiles"], "-")    
     return (avg=unweighted_avg, uncertainties=uncertainties)
 end
 
@@ -37,12 +35,17 @@ ssp585 = getDataProjectionPlot(data_ts["tas_CLIM-ann_ssp585"]);
 
 f = Figure(); 
 ax = Axis(f[1,1], title = "Near-Surface Air Temperature", xlabel="Year");
-mw.plotTimeseries!(f, ax, historical.avg; uncertainties = historical.uncertainties, color=:grey)
-mw.plotTimeseries!(f, ax, ssp126.avg; color=:blue, uncertainties = ssp126.uncertainties)
-mw.plotTimeseries!(f, ax, ssp585.avg; uncertainties = ssp585.uncertainties)
+
+label_unc_unw(x) = "Non-weighted quantiles: " * join(x.properties["quantiles"], "-")
+label_unc_w(x) = "Weighted quantiles: " * join(x.properties["quantiles"], "-")
+
+mw.plotTimeseries!(f, ax, historical.avg; 
+    uncertainties=coalesce.(historical.uncertainties, missing => NaN), 
+    label="Non-weighted mean", label_unc=label_unc_unw(historical.uncertainties), 
+    color=:grey)
+mw.plotTimeseries!(ax, ssp126.avg; color=:blue, uncertainties=coalesce.(ssp126.uncertainties, missing => NaN),
+    label="Non-weighted mean", label_unc=label_unc_unw(ssp126.uncertainties))
+mw.plotTimeseries!(ax, ssp585.avg; uncertainties=coalesce.(ssp585.uncertainties, missing => NaN), 
+    label="Non-weighted mean", label_unc=label_unc_unw(ssp585.uncertainties))
 f
-
-
-
-# Check pseudo observations in their Fig.2!
 

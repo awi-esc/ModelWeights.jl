@@ -26,27 +26,22 @@ function Base.show(io::IO, x::MetaAttrib)
 end
 
 
-@kwdef struct MetaData
-    id::String
-    attrib::MetaAttrib
-    paths::Vector{String}
-end
-# Pretty print MetaData instances
-function Base.show(io::IO, x::MetaData)
-    println(io, "::$(typeof(x)): $(x.id) (nb files: $(length(x.paths)), timerange: $(x.attrib.timerange), experiment: $(x.attrib.exp))")
+const DataMap = Dict{String, YAXArray}
+
+function Base.show(io::IO, x::Dict{String, YAXArray})
+    println(io, "$(typeof(x))")
+    for (k, v) in x 
+        println(io, "$k: $(size(v))")
+    end
 end
 
-
-@kwdef struct Data
-    meta::MetaData
-    data::YAXArray
-end
-# Pretty print Data instances
-function Base.show(io::IO, x::Data)
-    println(io, "::$(typeof(x)): size: $(size(x.data)) id: $(x.meta.id)")
+function Base.show(io::IO, ::MIME"text/plain", x::Dict{String, YAXArray})
+    println(io, "$(typeof(x))")
+    for (k, v) in x 
+        println(io, "$k: $(size(v))")
+    end
 end
 
-const DataMap = Dict{String, Data}
 
 """
     joinDataMaps(v::DataMap...)
@@ -371,23 +366,6 @@ function getMetaAttributesFromESMValToolConfigs(
 end
 
 
-function addMetaData!(meta_dict::Dict{String, MetaData}, meta::MetaData)
-    id = getMetaDataID(meta.attrib)
-    if haskey(meta_dict, id)
-        paths = meta_dict[id].paths
-        append!(paths, meta.paths)
-        meta_dict[id] = MetaData(
-            id = id,
-            attrib = meta.attrib,
-            paths = unique(paths)
-        )
-    else
-        meta_dict[id] = meta
-    end
-    return nothing
-end
-
-
 # for configuration with yaml file
 function get_required_fields_config(ds::Dict)
     data = Dict(
@@ -487,6 +465,12 @@ function setConstraintVal!(ds_config::Dict, cs_arg::Dict)
     return nothing
 end
 
+function mergeMetaDataPaths(meta1::Dict{String, Any}, meta2::Dict{String, Any})
+    paths = copy(meta1["_paths"])
+    append!(paths, meta2["_paths"])
+    return unique(paths)
+end
+
 
 """
     getMetaDataFromYAML(
@@ -516,8 +500,7 @@ function getMetaDataFromYAML(
     base_path = get(config, "path_data", "")
     timerange_to_alias = get(config, "timerange_to_alias", Dict{String, String}())
 
-
-    meta_data = Dict{String, MetaData}()
+    meta_data = Dict{String, Dict{String, Any}}()
     for ds in datasets
         # get data from config file
         req_fields = get_required_fields_config(ds)
@@ -527,8 +510,10 @@ function getMetaDataFromYAML(
         if !isnothing(arg_constraint)
             setConstraintVal!(ds_constraint, arg_constraint)
         end
-        if length(ds_constraint["timeranges"]) != length(ds_constraint["aliases"]) || isempty(ds_constraint["timeranges"])
-            throw(ArgumentError("Timeranges and aliases must have the same length and match"))
+        if length(ds_constraint["timeranges"]) != length(ds_constraint["aliases"]) || 
+            isempty(ds_constraint["timeranges"])
+                msg = "Timeranges and aliases must have the same length and match"
+                throw(ArgumentError(msg))
         end
         # NOTE: if the second arg is an absolute path, joinpath will ignore the 
         # first arg and just use the second
@@ -546,11 +531,19 @@ function getMetaDataFromYAML(
                         timerange = timerange
                     )]
                     meta = buildMetaData(
-                        attribs[1], path_data, ds_constraint["dir_per_var"], is_model_data; 
-                        constraint = ds_constraint
+                        attribs[1], 
+                        path_data, 
+                        ds_constraint["dir_per_var"],
+                        is_model_data; 
+                        constraint=ds_constraint
                     )
-                    if !isempty(meta.paths)
-                        addMetaData!(meta_data, meta)
+                    if !isempty(meta["_paths"])
+                        id = meta["_id"]
+                        if haskey(meta_data, id)
+                            meta_data[id]["_paths"] = mergeMetaDataPaths(meta_data[id], meta)
+                        else
+                            meta_data[id] = meta
+                        end
                     end
                 end
             end
@@ -613,8 +606,12 @@ function buildPathsToDataFiles(
 end
 
 
-function getMetaDataID(attrib::MetaAttrib)
+function buildMetaDataID(attrib::MetaAttrib)
     return join([attrib.variable, attrib.statistic, attrib.alias], "_")
+end
+
+function buildMetaDataID(meta::Dict{String, Any})
+    return join([meta["_variable"], meta["_statistic"], meta["_alias"]], "_")
 end
 
 
@@ -624,18 +621,11 @@ end
         base_path_data::String,
         dir_per_var::Bool,
         is_model_data::Bool;
-        constraint::Dict = Dict()
+        constraint::Union{Dict, Nothing} = nothing
     )
 
-Create vector of `MetaData`-objects with the data paths from assumed underlying 
-data structure and `base_path_data` for every `MetaAttrib`-object in `attrib`.
-
-# Arguments:
-- `attrib::MetaAttrib`:
-- `base_path_data::String`:
-- `dir_per_var::Bool`:
-- `is_model_data::Bool`:
-- `constraint::Union{Dict, Nothing}=nothing`:
+Create a metadata Dictionary with the information from `attrib` and the file
+paths to the data files in `base_path_data`.
 """
 function buildMetaData(
     attrib::MetaAttrib,
@@ -668,11 +658,7 @@ function buildMetaData(
             timerange = attrib.timerange
         )
     end
-    return MetaData(
-        id = getMetaDataID(attrib),
-        attrib = attrib,
-        paths = paths_to_files
-    )    
+    return createGlobalMetaDataDict(attrib, paths_to_files)   
 end
 
 # if dir_per_var is true, directories at base_paths have subdirectories,
@@ -769,20 +755,19 @@ end
 """
     applyModelConstraints(file::String, model_constraints::Vector{String})
 
-Returns true if constraints in `model_constraints` are fulfilled, i.e. if the 
-given path to a model (`file`) contains any model from `model_constraints`,
-false otherwise.
+Return true if constraints in `model_constraints` are fulfilled, i.e. if the 
+given `path_model_data` contains any model from `model_constraints`, false 
+otherwise.
 
 # Arguments:
-- `file`: path to a file storing model data
 - `model_constraints`: strings that may contain only model name, e.g. 'MPI-ESM-P', 
 or model_name and member id, e.g. 'MPI-ESM-P#r1i1p2' or model name, member id and 
-grid, e.g. 'MPI-ESM-P#r1i1p2_gn'
+grid, e.g. 'MPI-ESM-P#r1i1p2_gn'.
 """
-function applyModelConstraints(file::String, model_constraints::Vector{String})
+function applyModelConstraints(path_model_data::String, model_constraints::Vector{String})
     keep_file = false
     for model in model_constraints
-        keep_file = searchModelInPaths(model, [file])
+        keep_file = searchModelInPaths(model, [path_model_data])
         if keep_file
             break
         end
@@ -827,10 +812,10 @@ function computeDistancesAllDiagnostics(
         variables = String.(map(x -> split(x, "_")[1], diagnostic_keys))
         for clim_var in variables
             id = join([clim_var, diagnostic, ref_period_alias], "_")
-            models = model_data[id].data
+            models = model_data[id]
 
             if for_performance
-                observations = obs_data[id].data
+                observations = obs_data[id]
                 if length(dims(observations, :source)) != 1
                     @warn "several observational datasets available for computing distances. Only first is used."
                 end
@@ -917,20 +902,17 @@ end
 
 """
     isValidDataAndWeightInput(
-        data::Data, keys_weights::Vector{String}, ref_period::String
+        data::DataMap, keys_weights::Vector{String}, ref_period_alias::String
     )
 
-Check that there is data for all keys of the provided (balance) weights and the given reference period 'ref_period'.
-
-# Arguments:
-- `data`:
-- `keys_weights`:
-- `ref_period_alias`:
+Check that there is data in `data` for all `keys_weights` containing weights 
+balancing the different diagnostics for the given reference period 
+`ref_period_alias`.
 """
 function isValidDataAndWeightInput(
     data::DataMap, keys_weights::Vector{String}, ref_period_alias::String
 )
-    actual_ids_data = map(x -> x.meta.id, values(data))
+    actual_ids_data = map(x -> x.properties["_id"], values(data))
     required_keys_data = map(x -> x * "_" * ref_period_alias, keys_weights)
     return all([k in actual_ids_data for k in required_keys_data])
 end
@@ -1013,15 +995,16 @@ function fixModelNamesMetadata(names::Vector{String})
 end
 
 
-function getMask(orog_data::AbstractArray, mask_out_land::Bool)
+function getMask(orog_data::AbstractArray; mask_out_land::Bool=true)
     ocean_mask = orog_data .== 0
     indices_missing = findall(x -> ismissing(x), ocean_mask);
     # load data into memory with Array() for modification
     ocean_mask_mat = Array(ocean_mask)
     ocean_mask_mat[indices_missing] .= false;
-    ocean_mask = YAXArray(dims(ocean_mask), Bool.(ocean_mask_mat), orog_data.properties)
-    mask = mask_out_land ? ocean_mask : ocean_mask .== false
-    return mask
+    meta = deepcopy(orog_data.properties)
+    meta["_ref_id_mask"] = orog_data.properties["_id"]
+    mask_arr = YAXArray(dims(ocean_mask), Bool.(ocean_mask_mat), meta)
+    return mask_out_land ? mask_arr : mask_arr .== false
 end
 
 
@@ -1029,12 +1012,10 @@ function filterTimeseries(
     data_all::DataMap, start_year::Number, end_year::Number; 
     only_models_non_missing_vals::Bool = true
 )
-    ids_ts = filter(id -> hasdim(data_all[id].data, :time), collect(keys(data_all)))
+    ids_ts = filter(id -> hasdim(data_all[id], :time), collect(keys(data_all)))
     data_subset = DataMap()
     for id in ids_ts
-        dat = data_all[id]
-        df = dat.data[time = Where(x -> Dates.year(x) >= start_year && Dates.year(x) <= end_year)]
-
+        df = deepcopy(data_all[id][time = Where(x -> Dates.year(x) >= start_year && Dates.year(x) <= end_year)])
         if only_models_non_missing_vals
             dim_symbol = hasdim(df, :model) ? :model : :member
             models_missing_vals = dropdims(
@@ -1058,12 +1039,9 @@ function filterTimeseries(
                 end
             end 
         end
-
         timesteps = dims(df, :time)
-        # new Data object with filtered timeseries
-        dat = @set dat.data = df
-        data_subset[id] = dat
- 
+        data_subset[id] = df
+
         # sanity checks for missing values and time range
         if any(ismissing.(df))
             @warn "missing values in timeseries for $id"
@@ -1097,7 +1075,32 @@ end
 function addLinearTrend!(data::DataMap; stats::String="CLIM-ann")
     for (id, dat) in data
         id_new = replace(id, stats => "TREND")
-        data[id_new] = getLinearTrend(dat.data)
+        data[id_new] = getLinearTrend(dat)
     end
     return nothing
+end
+
+
+function getSharedMembers(data::DataMap)
+    if !(all(((id, dat),) -> hasdim(dat, :member), data))
+        throw(ArgumentError("All datasets must have dimension :member!"))
+    end
+    members = map(x -> dims(x, :member), collect(values(data)))
+    return reduce(intersect, members)
+end
+
+
+function getSharedModels(data::DataMap)
+    all_models = Vector(undef, length(data))
+    for (i, id) in enumerate(keys(data))
+        ds = data[id]
+        if hasdim(ds, :model)
+            all_models[i] = dims(ds, :model)
+        elseif hasdim(ds, :member)
+            all_models[i] = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), dims(ds, :member))
+        else
+            throw(ArgumentError("Data for $id must have dimension :member or :model!"))
+        end
+    end
+    return reduce(intersect, all_models)
 end

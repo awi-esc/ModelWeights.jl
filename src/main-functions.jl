@@ -187,15 +187,22 @@ function loadDataFromESMValToolConfigs(
     preview::Bool=false
 )
     attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; constraint=subset)
-    meta_data = Dict{String, MetaData}()
+    meta_data = Dict{String, Dict{String, Any}}()
     for attrib in attributes
         meta = buildMetaData(
             attrib, path_data, dir_per_var, is_model_data; constraint=subset
         )
-        addMetaData!(meta_data, meta)
+        if !isempty(meta["_paths"])
+            id = meta["_id"]
+            if haskey(meta_data, id)
+                meta_data[id]["_paths"] = mergeMetaDataPaths(meta_data[id], meta)
+            else
+                meta_data[id] = meta
+            end
+        end
     end
     if !isnothing(subset) && !isnothing(get(subset, "level_shared_models", nothing))
-        reduceMetaDataSharedModels!(meta_data, subset["level_shared_models"])
+        filterPathsSharedModels!(meta_data, subset["level_shared_models"])
     end
     output = preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
     return output
@@ -235,10 +242,9 @@ function loadDataFromYAML(
 )
     meta_data = getMetaDataFromYAML(path_config, is_model_data; arg_constraint = subset)
     if !isnothing(subset) && !isnothing(get(subset, "level_shared_models", nothing))
-        reduceMetaDataSharedModels!(meta_data, subset["level_shared_models"])
+        filterPathsSharedModels!(meta_data, subset["level_shared_models"])
     end
-    output = preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
-    return output
+    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
 end
 
 

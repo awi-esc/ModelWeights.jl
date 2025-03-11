@@ -24,7 +24,7 @@ lgm_data = mw.loadDataFromESMValToolConfigs(
     ),
     preview = false # default value is false
 );
-model_members_lgm = Array(dims(first(values(lgm_data)).data, :member))
+model_members_lgm = Array(dims(first(values(lgm_data)), :member))
 ```
 
 Then, we load data from the same models for the historical experiment:

@@ -17,10 +17,13 @@ mw.computeAnomalies!(lgm_data, "tas_CLIM_lgm", "tas_CLIM_piControl")
 
 colorrange = reverse(Colors.colormap("RdBu", logscale=false, mid=0.25));
 f1 = mw.makeSubplots(
-    lgm_data["tas_ANOM_lgm"].data, (nrows=3, ncols=5);
+    lgm_data["tas_ANOM_lgm"], (nrows=3, ncols=5);
     figsize = (800, 450) .* 2, 
-    color_range_limits = (-30, 10), title="LGM minus piControl",
-    colors = colorrange[2:end-1], low_clip = colorrange[1], high_clip = colorrange[end],
+    color_range_limits = (-30, 10), 
+    title="LGM minus piControl",
+    colors = colorrange[2:end-1], 
+    low_clip = colorrange[1], 
+    high_clip = colorrange[end],
     xlabel = "", ylabel = "", xlabel_rotate = 0
 )
 save("plots/anomalies/lgm_anomalies.png", f1)
@@ -37,17 +40,19 @@ mw.computeAnomalies!(df_historical, "tos_CLIM_historical3", "tos_CLIM_historical
 
 
 # make plots for all members of a single model
-members = Array(dims(df_historical["tas_ANOM_historical3"].data, :member));
+members = Array(dims(df_historical["tas_ANOM_historical3"], :member));
 model = "ACCESS-CM2";
 indices = findall(x -> startswith(x, model * "#"), members);
-data = df_historical["tas_ANOM_historical3"].data[member = Where(x -> x in members[indices])]
+data = df_historical["tas_ANOM_historical3"][member = Where(x -> x in members[indices])]
 colorrange = reverse(colormap("RdBu", logscale=false));
 f2 = mw.makeSubplots(
     data, (nrows=2, ncols=5); 
     figsize= (800, 300) .* 2, 
     color_range_limits = (-2.5, 2.5), 
     title="Mean Near-Surface Air Temperature Anomalies 1991-2014 wrt 1850-1900",
-    colors = colorrange[2:end-1], low_clip = colorrange[1], high_clip = colorrange[end],
+    colors = colorrange[2:end-1], 
+    low_clip = colorrange[1], 
+    high_clip = colorrange[end],
     xlabel = "", ylabel = "", xlabel_rotate = 0
 )
 save("plots/anomalies/historical_anomalies-" * model * ".png", f2)
@@ -57,8 +62,8 @@ mw.addMasks!(df_historical, "orog_none_historical")
 
 
 # land/sea mask
-ocean_mask = mw.getOceanMask(df_historical["orog_none_historical"].data);
-land_mask = ocean_mask .== false;
+ocean_mask = df_historical["mask_ocean"];
+land_mask = ocean_mask .== 0;
 
 # plot masks for single model (not identical for all due to different missing values/possibly different orog values)
 f_ocean = Figure();
@@ -69,7 +74,7 @@ f_ocean
 f_land
 
 # compute global mean temperature anomaly for every member for land/sea
-tas_anom_data = df_historical["tas_ANOM_historical3"].data
+tas_anom_data = df_historical["tas_ANOM_historical3"]
 # sea
 ocean_tas = similar(tas_anom_data, Union{Missing, Float64});
 ocean_tas .= tas_anom_data;
@@ -125,7 +130,7 @@ f3
 save("plots/anomalies/gm_anomalies_land_vs_ocean.png", f3)
 
 # plot tas vs. ratio of tas on land/tos (proxy for ratio)
-tos_anom_data = df_historical["tos_ANOM_historical3"].data;
+tos_anom_data = df_historical["tos_ANOM_historical3"];
 gms_tos = mw.getGlobalMeans(tos_anom_data);
 
 f4, ax = mw.makeScatterPlot(
