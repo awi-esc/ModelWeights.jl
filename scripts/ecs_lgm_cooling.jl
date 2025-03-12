@@ -1,4 +1,5 @@
 import ModelWeights as mw
+
 using DimensionalData
 using Statistics
 using Setfield
@@ -74,18 +75,21 @@ errdeltaSAT = YAXArray(
     Array(tierney_data["errdeltaSAT"])
 )
 gm_deltaSAT = mw.getGlobalMeans(deltaSAT)
-area_weights= mw.computeAreaWeights(Array(dims(deltaSAT, :lon)), Array(dims(deltaSAT, :lat)))
-std_gm_deltaSAT = sum(area_weights .* errdeltaSAT)
 
-CI_lower(n) = gm_deltaSAT - n * std_gm_deltaSAT;
-CI_upper(n) = gm_deltaSAT + n * std_gm_deltaSAT; 
+area_weights_mat = mw.makeAreaWeightMatrix(Array(dims(deltaSAT, :lon)), Array(dims(deltaSAT, :lat)))
+std_gm_deltaSAT = sum(area_weights_mat .* errdeltaSAT)
 
-# 68% CI
-l1 = CI_lower(1)
-u1 = CI_upper(1)
-# 95% CI
-l2 = CI_lower(2)
-u2 = CI_upper(2)
+begin
+    CI_lower(n) = gm_deltaSAT - n * std_gm_deltaSAT;
+    CI_upper(n) = gm_deltaSAT + n * std_gm_deltaSAT; 
+
+    # 68% CI
+    l1 = CI_lower(1)
+    u1 = CI_upper(1)
+    # 95% CI
+    l2 = CI_lower(2)
+    u2 = CI_upper(2)
+end
 
 begin
     f3 = Figure(size = (1000, 400))
@@ -154,12 +158,15 @@ masksMissing = mapslices(x -> ismissing.(x), DimArray(lgm_data), dims=:member);
 longitudes = collect(dims(lgm_data, :lon));
 latitudes = collect(dims(lgm_data, :lat));
 members = collect(dims(lgm_data, :member));
-area_weights = DimArray(zeros(length(longitudes), length(latitudes), length(members)), (Dim{:lon}(longitudes), Dim{:lat}(latitudes), Dim{:member}(members)));
+area_weights = DimArray(
+    zeros(length(longitudes), length(latitudes), length(members)), 
+    (Dim{:lon}(longitudes), Dim{:lat}(latitudes), Dim{:member}(members))
+);
 units = lgm_data.properties["units"];
 for (idx, member) in enumerate(dims(lgm_data, :member))
     data = lgm_data[member = At(member)]
     mask = masksMissing[member = At(member)]
-    area_weights[member = At(member)] = mw.computeAreaWeights(Array(dims(data, :lon)), Array(dims(data, :lat)); mask)
+    area_weights[member = At(member)] = mw.makeAreaWeightMatrix(Array(dims(data, :lon)), Array(dims(data, :lat)); mask)
 end
 all(map(x -> area_weights[:,:, x] == area_weights[:,:,x+1], 1:length(members)-1))
 
@@ -213,7 +220,7 @@ mw.plotValsOnMap!(
     colors = ColorSchemes.twelvebitrainbow.colors
 )
 mask_obs = ismissing.(dat)
-area_weights_obs = mw.computeAreaWeights(Array(dims(dat, :lon)), Array(dims(dat, :lat)); mask=mask_obs)
+area_weights_obs = mw.makeAreaWeightMatrix(Array(dims(dat, :lon)), Array(dims(dat, :lat)); mask=mask_obs)
 fig4 = Figure();
 mw.plotValsOnMap!(fig4, area_weights_obs, "area weights for observations")
 global_means_obs = mapslices(

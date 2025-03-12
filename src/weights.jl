@@ -10,46 +10,34 @@ using Distributions
 """
     areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractArray)
 
-Compute the area weighted (cosine of latitudes in radians) root mean squared 
-error between two matrices. 
+Compute the area weighted (approximated by cosine of latitudes in radians) 
+root mean squared error between `m1` and `m2`. 
 
 # Arguments:
-- `m1`: has dimensions 'lon', 'lat'
-- `m2`: has dimensions 'lon', 'lat'
-- `mask`: has values 0,1. Locations where mask is 1 are ignored, i.e. they get a weight of 0!
-
-# Return:
-- single value, area-weighted root mean squared error
+- `m1`: must have dimensions 'lon', 'lat'.
+- `m2`: must have dimensions 'lon', 'lat'.
+- `mask`: has values 0,1. Locations where mask is 1 get a weight of 0.
 """
 function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractArray)
-    # TODO: update function, just use single input data Array and use new function 
-    # to compute the weights
-    latitudes = dims(m1, :lat);
-    areaWeights = cos.(deg2rad.(latitudes));
-    areaWeights = DimArray(areaWeights, Dim{:lat}(Array(latitudes)));
-
-    sqDiff = (m1 .- m2).^2;
-    areaWeightMatrix = repeat(areaWeights', length(DimensionalData.dims(sqDiff, :lon)), 1);  
-    weightedValues = areaWeightMatrix .* sqDiff;
-
-    #weightMatrix = repeat(areaWeights', length(DimensionalData.dims(m1, :lon)), 1);  
-    areaWeightMatrix = ifelse.(mask .== 1, 0, areaWeightMatrix); 
-    normalization = sum(areaWeightMatrix);
-
-    return sqrt(sum(skipmissing(weightedValues)./normalization));
+    if dims(m1, :lon) != dims(m2, :lon) || dims(m1, :lat) != dims(m2, :lat)
+        throw(ArgumentError("To compute area weigehted RMSE, $m1 and $m2 must be defined on the same lon,lat-grid!"))
+    end
+    squared_diff = (m1 .- m2).^2    
+    areaweights_mat = makeAreaWeightMatrix(Array(dims(m1, :lon)), Array(dims(m1, :lat)); mask)
+    weighted_vals = areaweights_mat .* squared_diff
+    return sqrt(sum(skipmissing(weighted_vals)))
 end
 
 
 """
-    getModelDistances(modelData::AbstractArray)
+    getModelDistances(modelData::YAXArray)
 
-Compute the area weighted root mean squared error between model predictions for each pair of models. 
+Compute the area weighted root mean squared error between model predictions 
+for each pair of models.
 
 # Arguments:
-- `modelData` has dimensions 'lon', 'lat', 'model' and contains the data for a single climate variable.
-
-# Return:
-- Symmetrical matrix (::YAXArray) of size nxn where n is the number of models in 'modelData'. 
+- `modelData::YAXArray`: must have dimensions 'lon', 'lat', 'model' and 
+contains the data for a single climate variable.
 """
 function getModelDistances(modelData::YAXArray)
     # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
@@ -78,29 +66,26 @@ end
 
 
 """
-    getModelDataDist(models::AbstractArray, observations::AbstractArray)
+    getModelDataDist(models::YAXArray, observations::AbstractArray)
 
-Compute the distance (area-weighted RMSE) between model predictions and observations. 
-
-# Arguments:
-- `models`:
-- `observations`:
+Compute the distance as the area-weighted RMSE between model predictions and 
+observations. 
 """
 function getModelDataDist(models::YAXArray, observations::AbstractArray)      
     # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
-    models = deepcopy(models);
-    observations = deepcopy(observations);
-    distances = [];
-    member_names = Vector{String}();
+    models = deepcopy(models)
+    observations = deepcopy(observations)
+    distances = []
+    member_names = Vector{String}()
     for (i, model_i) in enumerate(eachslice(models; dims=:member))
-        name = dims(models, :member)[i]  # Access the name of the current model
+        name = dims(models, :member)[i]
         maskNbMissing = (ismissing.(observations) + ismissing.(model_i)) .> 0; # observations or model is missing (or both)
         maskedObs = deepcopy(observations);
         # maskedObs = dropdims(ifelse.(maskNbMissing .> 0, 0, maskedObs), dims=:source);
         maskedObs = ifelse.(maskNbMissing .> 0, 0, maskedObs)
 
-        maskedModel = ifelse.(maskNbMissing .> 0, 0, model_i);
-        mse = areaWeightedRMSE(maskedModel, maskedObs, maskNbMissing);
+        maskedModel = ifelse.(maskNbMissing .> 0, 0, model_i)
+        mse = areaWeightedRMSE(maskedModel, maskedObs, maskNbMissing)
 
         push!(member_names, name);
         push!(distances, mse);

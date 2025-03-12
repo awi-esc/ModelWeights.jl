@@ -461,17 +461,23 @@ end
 
 """
     getUncertaintyRanges(
-        data::AbstractArray; w::Union{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]}
+        data::AbstractArray; 
+        w::Union{DimArray, Nothing}=nothing, 
+        quantiles=[0.167, 0.833]}
     )
 
+Compute weighted `quantiles` of `data`.
+
 # Arguments:
-- `data`: has dimensions 'time', 'model'
-- `w`: has dimension 'model', sum up to 1
-- `quantiles`: Vector with two entries (btw. 0 and 1) [lower_bound, upper_bound]
+- `data::AbstractArray`: must have dimensions 'time', 'model'.
+- `w::Union{DimArray, Nothing}=nothing`: must have dimension 'model' and sum up to 1.
+- `quantiles=[0.167, 0.833]`: vector with two entries between 0 and 1 
+representing  the lower and upper bound in this order.
 """
 function getUncertaintyRanges(
     data::AbstractArray;
-    w::Union{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]
+    w::Union{DimArray, Nothing}=nothing, 
+    quantiles=[0.167, 0.833]
 )
     timesteps = dims(data, :time)
     uncertainty_ranges = YAXArray(
@@ -652,7 +658,9 @@ function getGlobalMeans(data::YAXArray)
     latitudes = Array(dims(data, :lat))
     masks = ismissing.(data)
     dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
-    meta = Dict(k => data.properties[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
+    meta = Dict(k => get(data.properties, k, []) for k in 
+        ["model_names", "member_names", "experiment", "variable_id"]
+    )
     if !isnothing(dimension)
         models = Array(dims(data, dimension))
         global_means = YAXArray(
@@ -664,15 +672,14 @@ function getGlobalMeans(data::YAXArray)
             mask = getAtModel(masks, dimension, model)
             global_mean = missing
             if any(mask .== false)
-                area_weights = computeAreaWeights(longitudes, latitudes; mask)
+                area_weights = makeAreaWeightMatrix(longitudes, latitudes; mask)
                 vals = dimension == :model ? data[model = At(model)] : data[member = At(model)]
                 global_mean = Statistics.sum(skipmissing(vals .* area_weights))
             end
                 putAtModel!(global_means, dimension, model, global_mean)
         end
     else 
-        area_weights = computeAreaWeights(longitudes, latitudes; mask=masks)
-        # here metadata should be retained anyway
+        area_weights = makeAreaWeightMatrix(longitudes, latitudes; mask=masks)
         global_means = Statistics.sum(skipmissing(data .* area_weights))
     end
     return global_means
@@ -702,37 +709,45 @@ end
 
 """
     computeAreaWeights(
-        longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; 
+        longitudes::Vector{<:Number}, 
+        latitudes::Vector{<:Number}; 
         mask::Union{AbstractArray, Nothing}=nothing
     )
 
-Create a YAXArray of size length(longitudes) x length(latitudes) with 
-normalized area weights for each lon,lat-position. 
+Create a YAXArray with normalized area weights for each lon,lat-position. 
 
-The area weight are approximated as the cosine of the latitudes.
+The area weights are approximated as the cosine of the latitudes.
 
 # Arguments:
 - `mask::Union{AbstractArray, Nothing}=nothing`: 2D-mask (lonxlat), if given, 
 the area weights are set to 0 where the mask is 1.
 """
-function computeAreaWeights(
-    longitudes::Vector{<:Number}, latitudes::Vector{<:Number}; 
+function computeAreaWeights(latitudes::Vector{<:Number})
+    # cosine of the latitudes as proxy for grid cell area
+    area_weights = cos.(deg2rad.(latitudes));
+    area_weights = YAXArray((Dim{:lat}(latitudes),), area_weights)
+    return area_weights
+end
+
+
+function makeAreaWeightMatrix(
+    longitudes::Vector{<:Number},
+    latitudes::Vector{<:Number};
     mask::Union{AbstractArray, Nothing}=nothing
 )
-    # cosine of the latitudes as proxy for grid cell area
-    areaWeights = cos.(deg2rad.(latitudes));
-    areaWeights = YAXArray((Dim{:lat}(latitudes),), areaWeights)
-
-    areaWeightMatrix = repeat(areaWeights', length(longitudes), 1);  
+    area_weights = computeAreaWeights(latitudes)
+    area_weighted_mat = repeat(area_weights', length(longitudes), 1);  
     if !isnothing(mask)
-        areaWeightMatrix = ifelse.(mask .== 1, 0, areaWeightMatrix); 
+        area_weighted_mat = ifelse.(mask .== 1, 0, area_weighted_mat); 
     end
-    areaWeightMatrix = areaWeightMatrix./sum(areaWeightMatrix)
+    area_weighted_mat = area_weighted_mat./sum(area_weighted_mat)
     return YAXArray(
         (Dim{:lon}(longitudes), Dim{:lat}(latitudes)),
-        areaWeightMatrix
+        area_weighted_mat
     )
 end
+
+
 
 
 """

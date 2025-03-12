@@ -163,23 +163,24 @@ f3 = mw.plotTempGraph(
 tas_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_graph/weighted_temperature_graph/temperature_anomalies.nc")["tas"];
 @assert tas_orig == data_graph
 
-# unc_unweighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range.nc");
+# Recheck the following:
+#unc_unweighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range.nc");
 # compareToOrigData(unc_unweighted_orig["tas"][:,:][1,:], map(x -> x[1], uncertainties_unweighted))
 # compareToOrigData(unc_unweighted_orig["tas"][:,:][2,:], map(x -> x[2], uncertainties_unweighted))
 # unc_weighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range_weighted.nc");
-# compareToOrigData(unc_weighted_orig["tas"][:,:][1,:], map(x -> x[1], uncertainties.weighted))
-# # TODO: only this is not equal for a handful of indices!
+# compareToOrigData(unc_weighted_orig["tas"][:,:][1,:], map(x -> x[1], uncertainties_weighted))
+# # # TODO: only this is not equal for a handful of indices!
 # uncertainties_weighted_orig = unc_weighted_orig["tas"][:,:][2,:];
-# uncertainties_weighted = map(x -> x[2], uncertainties.weighted);
+# uncertainties_weighted = map(x -> x[2], uncertainties_weighted);
 # diff = uncertainties_weighted .- uncertainties_weighted_orig;
 # indices = findall(x -> x>0.0001, diff)
 # diff[indices]
 # compareToOrigData(uncertainties_weighted_orig, uncertainties_weighted)
 
-# data_graph_models = mw.summarizeEnsembleMembersVector(data_graph, true);
+data_graph_models = mw.summarizeEnsembleMembersVector(data_graph, true);
 
-# weighted_avg_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/central_estimate_weighted.nc")
-# compareToOrigData(weighted_avg_orig["tas"][:], weighted_avg[:])
+weighted_avg_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/central_estimate_weighted.nc")
+compareToOrigData(weighted_avg_orig["tas"][:], weighted_avg[:])
 unweighted_avg_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/central_estimate.nc")
 compareToOrigData(unweighted_avg_orig["tas"][:], unweighted_avg[:])
 
