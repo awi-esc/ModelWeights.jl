@@ -39,10 +39,11 @@ import ModelWeights as mw
 config_weights = mw.ConfigWeights(
     performance = Dict("tas_CLIM" => 1, "tos_CLIM" => 1),
     independence = Dict("tas_CLIM" => 1, "tos_CLIM" => 1),
-    sigma_independence = 0.5,
     sigma_performance = 0.5,
-    ref_period = "historical", # can be alias or timerange
-    target_dir = "/weights/"
+    sigma_independence = 0.5,
+    alias_ref_perform_weights = "historical",
+    alias_ref_indep_weights = "historical",
+    target_path = ""
 );
 ````
 
