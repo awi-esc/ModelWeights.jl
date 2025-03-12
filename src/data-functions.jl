@@ -96,7 +96,7 @@ end
 """
     subsetModelData(data::AbstractArray, shared_models::Vector{String})
 
-Return an AbstractArray that is the subset of `data` containing only data from 
+Return a YAXArray that is the subset of `data` containing only data from 
 the models specified in `shared_models`. 
 
 Takes care of metadata.
@@ -106,7 +106,7 @@ Takes care of metadata.
 - `shared_models`: vector of models, which can either be on level of models 
 or members of models ('modelname#memberID[_grid]').
 """
-function subsetModelData(data::AbstractArray, shared_models::Vector{String})
+function subsetModelData(data::YAXArray, shared_models::Vector{String})
     data = deepcopy(data)
     dim_symbol = hasdim(data, :member) ? :member : :model
     dim_names = Array(dims(data, dim_symbol))
@@ -609,7 +609,6 @@ function summarizeEnsembleMembersVector(
     meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
     #combined = rebuild(combined; metadata = meta);
     combined = YAXArray(dims(combined), combined.data, meta)
-
     # I think not necessary, since in combined model dimension is now already ForwareOrdered
     # l = Lookups.Categorical(
     #     sort(models);
@@ -645,15 +644,15 @@ Return a YAXArray with area-weighted global means for each model in `data`.
 Missing data is accounted for in the area-weights. 
 
 # Arguments:
-- `data::AbstractArray`: has at least dimensions 'lon', 'lat' and possibly 
+- `data::YAXArray`: has at least dimensions 'lon', 'lat' and possibly 
 'member' or 'model'.
 """
-function getGlobalMeans(data::AbstractArray)
+function getGlobalMeans(data::YAXArray)
     longitudes = Array(dims(data, :lon))
     latitudes = Array(dims(data, :lat))
     masks = ismissing.(data)
     dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
-    #meta = Dict(k => data.properties[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
+    meta = Dict(k => data.properties[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
     if !isnothing(dimension)
         models = Array(dims(data, dimension))
         global_means = YAXArray(

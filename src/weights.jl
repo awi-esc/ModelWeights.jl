@@ -51,7 +51,7 @@ Compute the area weighted root mean squared error between model predictions for 
 # Return:
 - Symmetrical matrix (::YAXArray) of size nxn where n is the number of models in 'modelData'. 
 """
-function getModelDistances(modelData::AbstractArray)
+function getModelDistances(modelData::YAXArray)
     # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
     data = deepcopy(modelData);
     # only take values where none (!) of the models has infinite values!! (Not just the two that are compared to one another)
@@ -86,7 +86,7 @@ Compute the distance (area-weighted RMSE) between model predictions and observat
 - `models`:
 - `observations`:
 """
-function getModelDataDist(models::AbstractArray, observations::AbstractArray)      
+function getModelDataDist(models::YAXArray, observations::AbstractArray)      
     # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
     models = deepcopy(models);
     observations = deepcopy(observations);
@@ -156,7 +156,7 @@ for model to model data, e.g. distances between model pairs.
 - `updateMeta`: set true if the vectors in the metadata refer to different models. 
 Set to false if vectors refer to different variables for instance. 
 """
-function averageEnsembleMembersMatrix(data::AbstractArray, updateMeta::Bool)
+function averageEnsembleMembersMatrix(data::YAXArray, updateMeta::Bool)
     data = setLookupsFromMemberToModel(data, ["member1", "member2"])
     models = String.(collect(unique(dims(data, :model1))))
 
@@ -558,7 +558,7 @@ end
 - `distr`:
 - `diagnostic`:
 """
-function getModelLikelihoods(modelData::AbstractArray, distr::Distribution, diagnostic::String)
+function getModelLikelihoods(modelData::YAXArray, distr::Distribution, diagnostic::String)
     dim_symbol = hasdim(modelData, :model) ? :model : :member
     names_models = dims(modelData, dim_symbol)
     likelihoods = dim_symbol == :model ? 

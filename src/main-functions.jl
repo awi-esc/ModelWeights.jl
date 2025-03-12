@@ -53,8 +53,8 @@ end
 
 """
     computeWeights(
-        dists_indep_all::AbstractArray, 
-        dists_perform_all::AbstractArray,
+        dists_indep_all::YAXArray, 
+        dists_perform_all::YAXArray,
         config::ConfigWeights
     )
 
@@ -66,18 +66,18 @@ Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
 995–1012. https://doi.org/10.5194/esd-11-995-2020. 
 
 # Arguments:
-- `dists_indep_all::AbstractArray`: RMSEs between pairs of models for all 
+- `dists_indep_all::YAXArray`: RMSEs between pairs of models for all 
 combinations of variables and diagnostics; has dimensions 'member1', 'member2', 
 'variable', 'diagnostic'.
-- `dists_perform_all::AbstractArray`: RMSEs between model and observational 
+- `dists_perform_all::YAXArray`: RMSEs between model and observational 
 data for all combinations variables and diagnostics; has dimensions 'member', 
 'variable', 'diagnostic'.
 - `config::ConfigWeights`: Parameters specifiying the relative contributions 
 of each combination of variable and diagnostic.
 """
 function computeWeights(
-    dists_indep_all::AbstractArray,
-    dists_perform_all::AbstractArray, 
+    dists_indep_all::YAXArray,
+    dists_perform_all::YAXArray, 
     config::ConfigWeights
 )
     weights_perform = normalizeWeightsVariables(config.performance)  

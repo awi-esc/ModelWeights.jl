@@ -846,16 +846,15 @@ end
 - `for_performance`: 
 """
 function computeGeneralizedDistances(
-    distances_all::AbstractArray, weights::DimArray, for_performance::Bool
+    distances_all::YAXArray, weights::DimArray, for_performance::Bool
 )
     distances_all = distances_all[variable = Where(x -> x in dims(weights, :variable))]
     dimensions = for_performance ? 
         (hasdim(distances_all, :member) ? (:member,) : (:model,)) : 
         (:member1, :member2)
     norm = mapslices(Statistics.median, DimArray(distances_all), dims=dimensions)
-    normalized_distances =  YAXArray(dims(distances_all),
-        distances_all ./ norm, 
-        distances_all.properties
+    normalized_distances =  YAXArray(
+        dims(distances_all), distances_all ./ norm, distances_all.properties
     )
     if for_performance 
         distances = hasdim(normalized_distances, :model) ? 
@@ -995,7 +994,7 @@ function fixModelNamesMetadata(names::Vector{String})
 end
 
 
-function getMask(orog_data::AbstractArray; mask_out_land::Bool=true)
+function getMask(orog_data::YAXArray; mask_out_land::Bool=true)
     ocean_mask = orog_data .== 0
     indices_missing = findall(x -> ismissing(x), ocean_mask);
     # load data into memory with Array() for modification
@@ -1041,7 +1040,6 @@ function filterTimeseries(
         end
         timesteps = dims(df, :time)
         data_subset[id] = df
-
         # sanity checks for missing values and time range
         if any(ismissing.(df))
             @warn "missing values in timeseries for $id"
