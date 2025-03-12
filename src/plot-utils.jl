@@ -109,11 +109,11 @@ function sortLongitudesWest2East(data::AbstractArray)
 end
 
 """
-    convertKgsToSv!(vec:AbstractArray)
+    convertKgsToSv!(vec:YAXArray)
 
 Convert data given in unit 'kg s-1' into Sverdrups (Sv).
 """
-function convertKgsToSv!(data::AbstractArray)
+function convertKgsToSv!(data::YAXArray)
     if data.properties["units"] != "kg s-1"
         msg = "The unit of the data should be 'kg s-1', but it is " * data.properties["units"];
         throw(ArgumentError(msg))

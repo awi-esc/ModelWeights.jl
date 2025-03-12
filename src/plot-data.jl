@@ -74,7 +74,7 @@ Plot histogram of all data for a specific `location`.
 - `data`: dimensions 'lon' (from -180° to 180°), 'lat' (-90° to 90°)
 - `location`: must have keys 'name', 'lon', 'lat'
 """
-function plotHistAtPos(data::AbstractArray, location::Dict)
+function plotHistAtPos(data::YAXArray, location::Dict)
     longitudes = Array(dims(data, :lon));
     longitudes = ifelse(any(longitudes .> 180), lon360to180.(longitudes), longitudes);
     if location["lon"] > 180
@@ -104,9 +104,9 @@ end
 
 Plot AMOC strength for variable "amoc".
 """
-function plotAMOC(data::DimArray)
+function plotAMOC(data::YAXArray)
     fig = getFigure((8, 5), 12);
-    t = "variable: amoc, experiment: " * data.metadata["experiment_id"];
+    t = "variable: amoc, experiment: " * data.properties["experiment_id"];
 
     unit = data.properties["units"];
     ax = Axis(fig[1, 1], title=join(["AMOC strength (at 26.5°N)", t], "\n"),  xlabel = "Transport in " * unit)
@@ -129,7 +129,7 @@ end
 
 Create figure with boxplots for each model in `data` that have several ensemble members.
 """
-function plotEnsembleSpread(data::AbstractArray, lon::Number, lat::Number)
+function plotEnsembleSpread(data::YAXArray, lon::Number, lat::Number)
     # models = unique(dims(data, :model));
     # models_ensembles = filter(x -> length(dims(data[model = Where(m -> m == x)], :model)) > 1, models);
     # data_ensembles = data[model = Where(x -> x in models_ensembles)];
@@ -198,7 +198,7 @@ end
     # the quantile labels
 """
 function plotTempGraph(
-    data::AbstractArray, 
+    data::YAXArray, 
     averages::NamedTuple, 
     uncertaintyRanges::NamedTuple,
     title::String;
