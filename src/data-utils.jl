@@ -1117,13 +1117,13 @@ end
 
 Add computed linear trend of all annual climatologies (stats=CLIM-ann) in `data` in to `data`.
 """
-function addLinearTrend!(data::DataMap; stats::String="CLIM-ann")
-    ids = filter(id -> data[id].properties["_statistic"] == "CLIM-ann", keys(data))
-    for id in ids 
+function addLinearTrend!(data::DataMap; statistic::String="CLIM-ann")
+    ids = filter(id -> data[id].properties["_statistic"] == statistic, keys(data))
+    for id in ids
+        @debug "add trend for $id"
+        # TODO: there may be problems when data contains missing values!
         trend = getLinearTrend(data[id])
         data[trend.properties["_id"]] = trend
-        #id_new = replace(id, stats => "TREND")
-        #data[id_new] = getLinearTrend(dat)
     end
     return nothing
 end

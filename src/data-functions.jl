@@ -107,6 +107,10 @@ Takes care of metadata.
 or members of models ('modelname#memberID[_grid]').
 """
 function subsetModelData(data::YAXArray, shared_models::Vector{String})
+    if isempty(shared_models)
+        @warn "Vector of models to subset data to is empty!"
+        return nothing
+    end
     data = deepcopy(data)
     dim_symbol = hasdim(data, :member) ? :member : :model
     dim_names = Array(dims(data, dim_symbol))
@@ -144,10 +148,16 @@ For those datasets in `datamap` that specify data on the level `level`
 (i.e. have dimension :member or :model), return a new DataMap with subset of 
 data s.t. the new datasets all have the same models (level=MODEL) or members 
 (level=MEMBER).
+
+If no models are shared across datasets, return the input `datamap`.
 """
 function subsetModelData(datamap::DataMap; level::LEVEL=MEMBER)
     all_data = collect(values(datamap))
     shared_models = level == MEMBER ? getSharedMembers(datamap) : getSharedModels(datamap)
+    if isempty(shared_models)
+        @warn "Vector of models to subset data to is empty!"
+        return datamap
+    end
     subset = DataMap()
     for data in all_data
         df = deepcopy(data)
@@ -826,4 +836,37 @@ function addMasks!(datamap::DataMap, id_orog_data::String)
     datamap["mask_land"] = getMask(orog_data; mask_out_land=false)
     datamap["mask_ocean"] = getMask(orog_data; mask_out_land=true)
     return nothing
+end
+
+
+
+"""
+    computeTempSTD(ts::YAXArray, trend::YAXArray)
+
+Compute the standard deviation of the temporal detrended data `ts`.
+"""
+function computeTempSTD(ts::YAXArray, trend::YAXArray)
+    if dims(ts) != dims(trend)
+        msg = "Temporal Standard deviation can only be computed for timeseries data and trend data with identical dimensions!"
+        throw(ArgumentError(msg))
+    end
+    meta_new = deepcopy(ts.properties)
+    meta_new["_id"] = replace(meta_new["_id"], meta_new["_statistic"] => "STD-temp")
+    meta_new["_statistic"] = "STD-temp"
+    stds = dropdims(std(ts .- trend, dims=:time), dims=:time)
+    return YAXArray(otherdims(ts, :time), stds.data, meta_new)
+end
+
+
+function addTempSTD!(data::DataMap; statistic::String="CLIM-ann")
+    ids = filter(id -> data[id].properties["_statistic"] == statistic, keys(data))
+    for id in ids
+        println("add temp std for $id")
+        trend_id = replace(id, statistic=>"TREND")
+        get!(data, trend_id, getLinearTrend(data[id]))
+        standard_dev = computeTempSTD(data[id], data[trend_id])
+        data[standard_dev.properties["_id"]] = standard_dev
+    end
+    return nothing
+
 end
