@@ -216,7 +216,7 @@ dat = obs_data[:,:,1]
 fig3 = Figure();
 mw.plotValsOnMap!(
     fig3, dat, 
-    "Historical tas for $(dims(obs_data, :source)[1])",
+    "Historical tas for $(dims(obs_data, :model)[1])",
     colors = ColorSchemes.twelvebitrainbow.colors
 )
 mask_obs = ismissing.(dat)

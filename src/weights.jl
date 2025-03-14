@@ -81,7 +81,7 @@ function getModelDataDist(models::YAXArray, observations::AbstractArray)
         name = dims(models, :member)[i]
         maskNbMissing = (ismissing.(observations) + ismissing.(model_i)) .> 0; # observations or model is missing (or both)
         maskedObs = deepcopy(observations);
-        # maskedObs = dropdims(ifelse.(maskNbMissing .> 0, 0, maskedObs), dims=:source);
+        # maskedObs = dropdims(ifelse.(maskNbMissing .> 0, 0, maskedObs), dims=:model);
         maskedObs = ifelse.(maskNbMissing .> 0, 0, maskedObs)
 
         maskedModel = ifelse.(maskNbMissing .> 0, 0, model_i)

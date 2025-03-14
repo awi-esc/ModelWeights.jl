@@ -279,7 +279,7 @@ function mergeLoadedData(
         end
     end
     var_axis = is_model_data ? Dim{:member}(meta_dict["member_names"]) : 
-        Dim{:source}(meta_dict["source_names"])
+        Dim{:model}(meta_dict["model_names"])
     dimData = concatenatecubes(data_vec, var_axis)
     dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
     
@@ -688,13 +688,12 @@ end
 
 function getGlobalMeansTS(data::YAXArray)
     dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
-    models = dims(data, dimension)
     nb_timesteps = length(dims(data, :time))
     global_means = !isnothing(dimension) ? 
         YAXArray(
             (dims(data, dimension), dims(data, :time)),
-            Array{Union{Float64, Missing}}(undef, (length(models), nb_timesteps)),
-            Dict{String, Any}(k => data.properties[k] for k in ["model_names", "member_names", "experiment", "variable_id"])
+            Array{Union{Float64, Missing}}(undef, (length(dims(data, dimension)), nb_timesteps)),
+            Dict{String, Any}(k => get(data.properties, k, [""]) for k in ["model_names", "member_names", "experiment", "variable_id"])
         ) :
         YAXArray(
             dims(data, :time),
@@ -813,9 +812,11 @@ function computeAnomaliesGM(data::YAXArray)
 end
 
 
-function addAnomaliesGM!(data::DataMap, id_orig_data::String)
-   anomalies = computeAnomaliesGM(data[id_orig_data])
-   data[anomalies.properties["_id"]] = anomalies
+function addAnomaliesGM!(data::DataMap, ids_data::Vector{String})
+    for id in ids_data
+        anomalies = computeAnomaliesGM(data[id])
+        data[anomalies.properties["_id"]] = anomalies
+    end
    return nothing
 end
 

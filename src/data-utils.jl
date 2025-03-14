@@ -144,32 +144,29 @@ end
 
 """
     updateMetadata!(
-        meta::Dict{String, Union{Array, String}},
+        meta::Dict{String, Any},
         source_names::Vector{String},
-        isModelData::Bool
+        is_model_data::Bool
     )
 
-Update metadata 'meta' s.t. attributes that were only present in some files/models 
-are set to missing. Further key-value pairs are added concerning the data sources:
-For model data:
-    - 'member_names': vector that contains for every model a vector with the
-    unique names of that model's members
-    identifier consisting of variant_label, model_name and for CMIP6 models also grid_label.
-    - 'model_names': vector whose length is the sum of the number of all models'
-    members; it contains the model names for each unique model member, i.e. this
-    vector will not unique if any model had several members
-For observational data:
-    - 'source_names': vector of data sources
+Update metadata `meta` s.t. attributes that were only present in some 
+files/models are set to missing. 
+
+Further key-value pairs are added concerning the data sources:
+- 'member_names' (for model data only): vector that contains for every model a 
+vector with the unique names of that model's members identifier consisting of 
+variant_label, model_name and for CMIP6 models also grid_label.
+- 'model_names': vector whose length is the sum of the number of all models' 
+members (or vector of filenames of observational data); it contains the model 
+names for each unique model member, i.e. this vector will not be unique if any 
+model had several members.
 
 Arguments:
-- `meta`: metadata dictionary
-- `source_names`:
-- `isModelData`:
+- `source_names::Vector{String}`: model names (or filenames of observational 
+data)as retrieved from the original files the data was loaded from. 
 """
 function updateMetadata!(
-    meta_dict::Dict{String, Any},
-    source_names::Vector{String},
-    is_model_data::Bool
+    meta_dict::Dict{String, Any}, source_names::Vector{String}, is_model_data::Bool
 )
     sort_indices = sortperm(source_names)
     for key in keys(meta_dict)
@@ -182,10 +179,11 @@ function updateMetadata!(
     end
     # in some cases, the metadata model names do not match the model names as retrieved from the filenames 
     included_data = fixModelNamesMetadata(source_names[sort_indices])
+    meta_dict["model_names"] = included_data
+    
     if is_model_data        
         member_ids = getUniqueMemberIds(meta_dict, included_data)
         meta_dict["member_names"] = member_ids
-        meta_dict["model_names"] = included_data
         
         # if just data from one file is loaded, meta_dict["model_id"] is a string
         # (and we leave it as a string)
@@ -199,8 +197,6 @@ function updateMetadata!(
             meta_dict["model_id"][indices_non_missing] = fixed_models
         end
         meta_dict["physics"] = getPhysicsFromMembers(member_ids)
-    else
-        meta_dict["source_names"] = included_data
     end
     return nothing
 end
@@ -642,11 +638,13 @@ function buildMetaData(
     )
     paths_to_files = Vector{String}()
     for path_data in paths_data
-        paths = buildPathsToDataFiles(
-            path_data, is_model_data; 
-            model_constraints = get(constraint, "models", Vector{String}()),
-            project_constraints = get(constraint, "projects", Vector{String}())
-        )
+        paths = has_constraint ?
+            buildPathsToDataFiles(
+                path_data, is_model_data; 
+                model_constraints = get(constraint, "models", Vector{String}()),
+                project_constraints = get(constraint, "projects", Vector{String}())
+            ) :
+            buildPathsToDataFiles(path_data, is_model_data)
         append!(paths_to_files, paths)
     end
     # for observational data, experiment doesn't make sense
@@ -817,7 +815,7 @@ function computeDistancesAllDiagnostics(
 
             if for_performance
                 observations = obs_data[id]
-                if length(dims(observations, :source)) != 1
+                if length(dims(observations, :model)) != 1
                     @warn "several observational datasets available for computing distances. Only first is used."
                 end
                 observations = observations[source=1]
