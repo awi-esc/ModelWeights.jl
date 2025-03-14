@@ -634,7 +634,8 @@ function buildMetaData(
     is_model_data::Bool;
     constraint::Union{Dict, Nothing}=nothing
 )
-    subdir_constraints = isnothing(constraint) || isempty(constraint) ? 
+    has_constraint = !isnothing(constraint) && !isempty(constraint)
+    subdir_constraints = !has_constraint ? 
         nothing : get(constraint, "subdirs", Vector{String}())
     paths_data = buildPathsForMetaAttrib(
         base_path_data, attrib, dir_per_var; subdir_constraints
@@ -1007,8 +1008,18 @@ function getMask(orog_data::YAXArray; mask_out_land::Bool=true)
 end
 
 
+"""
+    filterTimeseries(
+        data_all::DataMap, 
+        start_year::Number, 
+        end_year::Number; 
+        only_models_non_missing_vals::Bool = true
+    )
+"""
 function filterTimeseries(
-    data_all::DataMap, start_year::Number, end_year::Number; 
+    data_all::DataMap, 
+    start_year::Number, 
+    end_year::Number; 
     only_models_non_missing_vals::Bool = true
 )
     ids_ts = filter(id -> hasdim(data_all[id], :time), collect(keys(data_all)))
@@ -1057,23 +1068,64 @@ function filterTimeseries(
 end
 
 
+"""
+    getLinearTrend(data::YAXArray)
+
+Compute linear trend as ordinary least squares for timeseries data.
+
+If `data` has dimensions 'lon' and 'lat', linear trend is computed for each 
+position separately.
+
+# Arguments:
+- `data::YAXArray`: must have dimension :time and :model.
+"""
 function getLinearTrend(data::YAXArray)
+    if !hasdim(data, :time) || !hasdim(data, :model)
+        msg = "Linear trend can only be computed for timeseries data (with dimension :time) and dimension :model (not yet implemented for :member)!"
+        throw(ArgumentError(msg))
+    end
+    has_grid = hasdim(data, :lon) && hasdim(data, :lat)
     x = Dates.year.(Array(data.time))
-    trends = YAXArray(dims(data), Array{eltype(data)}(undef, size(data)))
+    meta_new = deepcopy(data.properties)
+    meta_new["_id"] = replace(meta_new["_id"], meta_new["_statistic"] => "TREND")
+    meta_new["_statistic"] = "TREND"
+
+    trends = YAXArray(
+        dims(data), 
+        Array{eltype(data)}(undef, size(data)), 
+        meta_new
+    )
     for m in dims(data, :model)
-        y = Array(data[model = At(m)])
-        ols = lm(@formula(Y~X), DataFrame(X=x, Y=y))
-        Yp = predict(ols)
-        trends[model = At(m)] .= Yp
+        if has_grid
+            for (idx, y) in pairs(eachslice(data[model = At(m)], dims=(:lon, :lat)))
+                ols = lm(@formula(Y~X), DataFrame(X=x, Y=Float64.(Array(y))))
+                Yp = predict(ols)
+                lon_idx, lat_idx = Tuple(idx)
+                trends[lon=lon_idx, lat=lat_idx, model=At(m), time=:] .= Yp
+            end
+        else
+            y = Array(data[model = At(m)])
+            ols = lm(@formula(Y~X), DataFrame(X=x, Y=y))
+            Yp = predict(ols)
+            trends[model = At(m)] .= Yp
+        end
     end
     return trends
 end
 
 
+"""
+    addLinearTrend!(data::DataMap)
+
+Add computed linear trend of all annual climatologies (stats=CLIM-ann) in `data` in to `data`.
+"""
 function addLinearTrend!(data::DataMap; stats::String="CLIM-ann")
-    for (id, dat) in data
-        id_new = replace(id, stats => "TREND")
-        data[id_new] = getLinearTrend(dat)
+    ids = filter(id -> data[id].properties["_statistic"] == "CLIM-ann", keys(data))
+    for id in ids 
+        trend = getLinearTrend(data[id])
+        data[trend.properties["_id"]] = trend
+        #id_new = replace(id, stats => "TREND")
+        #data[id_new] = getLinearTrend(dat)
     end
     return nothing
 end

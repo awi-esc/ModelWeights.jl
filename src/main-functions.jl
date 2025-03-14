@@ -241,6 +241,10 @@ function loadDataFromYAML(
     preview::Bool=false
 )
     meta_data = getMetaDataFromYAML(path_config, is_model_data; arg_constraint = subset)
+    if isempty(meta_data)
+        @warn "No metadata found for subset: $subset, path_config: $path_config (model data: $is_model_data)"
+        return nothing
+    end
     if !isnothing(subset) && !isnothing(get(subset, "level_shared_models", nothing))
         filterPathsSharedModels!(meta_data, subset["level_shared_models"])
     end

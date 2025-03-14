@@ -221,9 +221,9 @@ function loadPreprocData(meta::Dict{String, Any}, is_model_data::Bool)
                 continue
             end
             if d == "time"
-                times = map(x -> DateTime(
-                    Dates.year(x), Dates.month(x), Dates.day(x)
-                    ), dsVar[d][:]
+                # NOTE: just YEAR and MONTH are saved in the time dimension
+                times = map(
+                    x -> DateTime(Dates.year(x), Dates.month(x)), dsVar[d][:]
                 )
                 dimensions[idx_dim] = Dim{Symbol(d)}(collect(times))
             else
@@ -279,7 +279,7 @@ function mergeLoadedData(
         end
     end
     var_axis = is_model_data ? Dim{:member}(meta_dict["member_names"]) : 
-        Dim{:source}(meta_dict["source_names"]) 
+        Dim{:source}(meta_dict["source_names"])
     dimData = concatenatecubes(data_vec, var_axis)
     dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
     
@@ -774,6 +774,49 @@ function computeAnomalies!(data::DataMap, id_data::String, id_ref::String)
     anomalies = YAXArray(dims(data[id_data]), anomalies_mat, anomalies_metadata)
     data[anomalies_id] = anomalies
     return nothing
+end
+
+"""
+    computeAnomaliesGM(data::YAXArray)
+
+Compute anomaly of `data` with respect its global mean value.
+
+If `data` has dimension :time, anomalies are computed for each timestep.
+"""
+function computeAnomaliesGM(data::YAXArray)
+    anomalies = Array{Float64}(undef, size(dims(data))...)
+    
+    metadata = deepcopy(data.properties)
+    metadata["_orig_data_id"] = metadata["_id"]
+    metadata["_statistic"] = "ANOM-GM" # must be done before building ID!
+    metadata["_id"] = buildMetaDataID(metadata)
+    
+    anomalies = YAXArray(dims(data), anomalies, metadata)
+    is_timeseries = hasdim(data, :time)
+    gms = is_timeseries ? getGlobalMeansTS(data) : getGlobalMeans(data)
+
+    level = hasdim(data,:model) ? :model : :member
+    models = dims(data, level)
+    for m in models
+        if is_timeseries
+            times = dims(data, :time)
+            for t in times
+                if level == :model
+                    anomalies[time=At(t), model=At(m)] .= data[time=At(t), model=At(m)] .- gms[time=At(t), model=At(m)]
+                else
+                    anomalies[time=At(t), member=At(m)] .= data[time=At(t), member=At(m)] .- gms[time=At(t), member=At(m)]
+                end
+            end
+        end
+    end
+    return anomalies
+end
+
+
+function addAnomaliesGM!(data::DataMap, id_orig_data::String)
+   anomalies = computeAnomaliesGM(data[id_orig_data])
+   data[anomalies.properties["_id"]] = anomalies
+   return nothing
 end
 
 

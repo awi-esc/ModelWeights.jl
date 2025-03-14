@@ -19,7 +19,8 @@ include("main-functions.jl")
 export loadDataFromYAML, loadDataFromESMValToolConfigs, computeWeights
 
 
-export getUncertaintyRanges, getGlobalMeans, computeAnomalies!, computeAreaWeights
+export getUncertaintyRanges, getGlobalMeans, computeAnomalies!, computeAreaWeights, computeAnomaliesGM!, addAnomaliesGM!
+export addLinearTrend!, getLinearTrend
 export averageEnsembleMembers!, summarizeEnsembleMembersVector
 export getLandMask, getOceanMask, addMasks!, subsetModelData, alignPhysics
 
