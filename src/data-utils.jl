@@ -1077,35 +1077,40 @@ position separately.
 # Arguments:
 - `data::YAXArray`: must have dimension :time and :model.
 """
-function getLinearTrend(data::YAXArray)
+function getLinearTrend(data::YAXArray; full_predictions::Bool=false)
     if !hasdim(data, :time) || !hasdim(data, :model)
         msg = "Linear trend can only be computed for timeseries data (with dimension :time) and dimension :model (not yet implemented for :member)!"
         throw(ArgumentError(msg))
     end
     has_grid = hasdim(data, :lon) && hasdim(data, :lat)
     x = Dates.year.(Array(data.time))
-    meta_new = deepcopy(data.properties)
-    meta_new["_id"] = replace(meta_new["_id"], meta_new["_statistic"] => "TREND")
-    meta_new["_statistic"] = "TREND"
+    meta = deepcopy(data.properties)
+    stat = full_predictions ? "TREND-pred" : "TREND"
+    meta["_id"] = replace(meta["_id"], meta["_statistic"] => stat)
+    meta["_statistic"] = stat
+    
+    dimensions = full_predictions ? dims(data) : otherdims(data, :time)
+    trends = YAXArray(dimensions, Array{eltype(data)}(undef, size(dimensions)), meta)
 
-    trends = YAXArray(
-        dims(data), 
-        Array{eltype(data)}(undef, size(data)), 
-        meta_new
-    )
     for m in dims(data, :model)
         if has_grid
             for (idx, y) in pairs(eachslice(data[model = At(m)], dims=(:lon, :lat)))
                 ols = lm(@formula(Y~X), DataFrame(X=x, Y=Float64.(Array(y))))
-                Yp = predict(ols)
                 lon_idx, lat_idx = Tuple(idx)
-                trends[lon=lon_idx, lat=lat_idx, model=At(m), time=:] .= Yp
+                if full_predictions
+                    trends[lon=lon_idx, lat=lat_idx, model=At(m), time=:] .= predict(ols)
+                else
+                    trends[lon=lon_idx, lat=lat_idx, model=At(m)] = coef(ols)[2]
+                end
             end
         else
             y = Array(data[model = At(m)])
             ols = lm(@formula(Y~X), DataFrame(X=x, Y=y))
-            Yp = predict(ols)
-            trends[model = At(m)] .= Yp
+            if full_predictions
+                trends[model = At(m)] .= predict(ols)
+            else
+                trends[model = At(m)] = coef(ols)[2]
+            end
         end
     end
     return trends
@@ -1117,12 +1122,14 @@ end
 
 Add computed linear trend of all annual climatologies (stats=CLIM-ann) in `data` in to `data`.
 """
-function addLinearTrend!(data::DataMap; statistic::String="CLIM-ann")
+function addLinearTrend!(
+    data::DataMap; statistic::String="CLIM-ann", full_predictions::Bool=false
+)
     ids = filter(id -> data[id].properties["_statistic"] == statistic, keys(data))
     for id in ids
         @debug "add trend for $id"
         # TODO: there may be problems when data contains missing values!
-        trend = getLinearTrend(data[id])
+        trend = getLinearTrend(data[id]; full_predictions)
         data[trend.properties["_id"]] = trend
     end
     return nothing
