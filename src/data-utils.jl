@@ -1,10 +1,12 @@
 import YAML
-using DimensionalData
-using Interpolations
-using YAXArrays
-using Setfield
-using GLM
+
 using DataFrames
+using DimensionalData
+using GLM
+using Interpolations
+using JLD2
+using Setfield
+using YAXArrays
 
 @enum LEVEL MODEL=0 MEMBER=1
 
@@ -84,6 +86,14 @@ function Base.show(io::IO, x::Weights)
         println(io, "$m: $(round(x.w[model = At(m)], digits=3))")
     end
 end
+
+
+function saveDataMapAsJuliaObj(data::DataMap, target_path::String)
+    jldsave(target_path; data=data)
+    @info "saved data to: $(target_path)"
+    return nothing
+end
+
 
 
 function getDimsModel(da::DimArray)
@@ -790,7 +800,6 @@ for all variables and diagnostics for which weights are specified in `config`.
 # Arguments:
 - `config::Dict{String, Number}`: mapping from 'VARIABLE_DIAGNOSTIC' to 
 respective weight.
-- `ref_period_alias`:
 - `for_performance`: true for distances between models and observations, 
 false for distances between model predictions.
 """
@@ -810,6 +819,7 @@ function computeDistancesAllDiagnostics(
         diagnostic_keys = filter(x -> endswith(x, "_" * diagnostic), var_diagnostic_keys)
         variables = String.(map(x -> split(x, "_")[1], diagnostic_keys))
         for clim_var in variables
+            @debug "compute distances for $diagnostic + $clim_var"
             id = join([clim_var, diagnostic, ref_period_alias], "_")
             models = model_data[id]
 
@@ -818,7 +828,7 @@ function computeDistancesAllDiagnostics(
                 if length(dims(observations, :model)) != 1
                     @warn "several observational datasets available for computing distances. Only first is used."
                 end
-                observations = observations[source=1]
+                observations = observations[model=1]
                 dists = getModelDataDist(models, observations)
             else
                 dists = getModelDistances(models)
@@ -836,13 +846,12 @@ end
 
 """
     computeGeneralizedDistances(
-        distances_all::AbstractArray, weights::AbstractArray, for_performance::Bool
+        distances_all::YAXArray, weights::DimArray, for_performance::Bool
 )
 
-# Arguments:
-- `distances_all`:
-- `weights`:
-- `for_performance`: 
+For every variable in `distances_all`, compute the weighted sum of all 
+diagnostics.
+
 """
 function computeGeneralizedDistances(
     distances_all::YAXArray, weights::DimArray, for_performance::Bool
@@ -912,6 +921,7 @@ function isValidDataAndWeightInput(
 )
     actual_ids_data = map(x -> x.properties["_id"], values(data))
     required_keys_data = map(x -> x * "_" * ref_period_alias, keys_weights)
+    # TODO return what exactly is missing?!
     return all([k in actual_ids_data for k in required_keys_data])
 end
 
@@ -1017,7 +1027,8 @@ end
 function filterTimeseries(
     data_all::DataMap, 
     start_year::Number, 
-    end_year::Number; 
+    end_year::Number;
+    new_alias::String="",
     only_models_non_missing_vals::Bool = true
 )
     ids_ts = filter(id -> hasdim(data_all[id], :time), collect(keys(data_all)))
@@ -1048,7 +1059,15 @@ function filterTimeseries(
             end 
         end
         timesteps = dims(df, :time)
-        data_subset[id] = df
+        if isempty(new_alias)
+            new_alias = join(string.([start_year, end_year]), "-")
+        end
+        parts = split(id, "_")
+        parts[3] = new_alias
+        new_id = join(parts, "_")
+        df.properties["_id"] = new_id
+
+        data_subset[new_id] = df
         # sanity checks for missing values and time range
         if any(ismissing.(df))
             @warn "missing values in timeseries for $id"
@@ -1075,11 +1094,11 @@ If `data` has dimensions 'lon' and 'lat', linear trend is computed for each
 position separately.
 
 # Arguments:
-- `data::YAXArray`: must have dimension :time and :model.
+- `data::YAXArray`: must have dimension :time and one of :model, :member.
 """
-function getLinearTrend(data::YAXArray; full_predictions::Bool=false)
-    if !hasdim(data, :time) || !hasdim(data, :model)
-        msg = "Linear trend can only be computed for timeseries data (with dimension :time) and dimension :model (not yet implemented for :member)!"
+function getLinearTrend(data::YAXArray; full_predictions::Bool=true)
+    if !hasdim(data, :time) || (!hasdim(data, :model) && !hasdim(data, :member))
+        msg = "Linear trend can only be computed for timeseries data (with dimension :time)!"
         throw(ArgumentError(msg))
     end
     has_grid = hasdim(data, :lon) && hasdim(data, :lat)
@@ -1092,24 +1111,43 @@ function getLinearTrend(data::YAXArray; full_predictions::Bool=false)
     dimensions = full_predictions ? dims(data) : otherdims(data, :time)
     trends = YAXArray(dimensions, Array{eltype(data)}(undef, size(dimensions)), meta)
 
-    for m in dims(data, :model)
+    is_level_model = hasdim(data, :model)
+    models = is_level_model ? dims(data, :model) : dims(data, :member)
+    for m in models
         if has_grid
-            for (idx, y) in pairs(eachslice(data[model = At(m)], dims=(:lon, :lat)))
+            data_model = is_level_model ? data[model = At(m)] : data[member = At(m)]
+            for (idx, y) in pairs(eachslice(data_model, dims=(:lon, :lat)))
                 ols = lm(@formula(Y~X), DataFrame(X=x, Y=Float64.(Array(y))))
                 lon_idx, lat_idx = Tuple(idx)
                 if full_predictions
-                    trends[lon=lon_idx, lat=lat_idx, model=At(m), time=:] .= predict(ols)
+                    if is_level_model 
+                        trends[lon=lon_idx, lat=lat_idx, model=At(m), time=:] .= predict(ols)
+                    else 
+                        trends[lon=lon_idx, lat=lat_idx, member=At(m), time=:] .= predict(ols)
+                    end
                 else
-                    trends[lon=lon_idx, lat=lat_idx, model=At(m)] = coef(ols)[2]
+                    if is_level_model
+                        trends[lon=lon_idx, lat=lat_idx, model=At(m)] = coef(ols)[2]
+                    else
+                        trends[lon=lon_idx, lat=lat_idx, member=At(m)] = coef(ols)[2]
+                    end
                 end
             end
         else
-            y = Array(data[model = At(m)])
+            y = is_level_model ? Array(data[model = At(m)]) : Array(data[member = At(m)])
             ols = lm(@formula(Y~X), DataFrame(X=x, Y=y))
             if full_predictions
-                trends[model = At(m)] .= predict(ols)
+                if is_level_model
+                    trends[model = At(m)] .= predict(ols)
+                else
+                    trends[member = At(m)] .= predict(ols)
+                end
             else
-                trends[model = At(m)] = coef(ols)[2]
+                if is_level_model
+                    trends[model = At(m)] = coef(ols)[2]
+                else 
+                    trends[member = At(m)] = coef(ols)[2]
+                end
             end
         end
     end
@@ -1123,11 +1161,11 @@ end
 Add computed linear trend of all annual climatologies (stats=CLIM-ann) in `data` in to `data`.
 """
 function addLinearTrend!(
-    data::DataMap; statistic::String="CLIM-ann", full_predictions::Bool=false
+    data::DataMap; statistic::String="CLIM-ann", full_predictions::Bool=true
 )
     ids = filter(id -> data[id].properties["_statistic"] == statistic, keys(data))
     for id in ids
-        @debug "add trend for $id"
+        @info "add trend for $id"
         # TODO: there may be problems when data contains missing values!
         trend = getLinearTrend(data[id]; full_predictions)
         data[trend.properties["_id"]] = trend
