@@ -486,6 +486,14 @@ function loadWeightsFromJLD2(target_path::String)
     return weights
 end
 
+function loadFromJLD2(target::String, var::String)
+    f = jldopen(target, "r")
+    data = f[var]
+    close(f)
+    return data
+end
+
+
 
 
 """ 

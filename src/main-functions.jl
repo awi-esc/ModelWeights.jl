@@ -38,11 +38,11 @@ function computeModelDataRMSE(
     keys_weights_perform = [k for k in keys(config.performance) if config.performance[k] > 0]
     ref_period_alias = config.alias_ref_perform_weights
     if !isValidDataAndWeightInput(model_data, keys_weights_perform, ref_period_alias)
-        msg = "There is model data missing for the given weights (for the combinations of diagnostics and variables: $keys_weights_perform) and reference period ($(ref_period_alias))!"
+        msg = "There is MODEL data missing for the given weights (for the combinations of diagnostics and variables: $keys_weights_perform) and reference period ($(ref_period_alias))!"
         throw(ArgumentError(msg))
     end
     if !isValidDataAndWeightInput(obs_data, keys_weights_perform, ref_period_alias)
-        msg = "There is observational data missing for the given weights (for the combinations of diagnostics and variables: $keys_weights_perform) and reference period ($(ref_period_alias))!"
+        msg = "There is OBSERVATIONAL data missing for the given weights (for the combinations of diagnostics and variables: $keys_weights_perform) and reference period ($(ref_period_alias))!"
         throw(ArgumentError(msg))
     end
     return computeDistancesAllDiagnostics(
