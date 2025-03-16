@@ -1020,7 +1020,8 @@ end
     filterTimeseries(
         data_all::DataMap, 
         start_year::Number, 
-        end_year::Number; 
+        end_year::Number;
+        new_alias::String="",
         only_models_non_missing_vals::Bool = true
     )
 """
@@ -1031,9 +1032,11 @@ function filterTimeseries(
     new_alias::String="",
     only_models_non_missing_vals::Bool = true
 )
+    new_alias_given = !isempty(new_alias)
     ids_ts = filter(id -> hasdim(data_all[id], :time), collect(keys(data_all)))
     data_subset = DataMap()
     for id in ids_ts
+        @info "filter timeseries data with id: $id"
         df = deepcopy(data_all[id][time = Where(x -> Dates.year(x) >= start_year && Dates.year(x) <= end_year)])
         if only_models_non_missing_vals
             dim_symbol = hasdim(df, :model) ? :model : :member
@@ -1044,7 +1047,6 @@ function filterTimeseries(
             indices_missing = findall(x -> x==true, models_missing_vals)
             if !isempty(indices_missing)
                 models_missing = dims(models_missing_vals[model=indices_missing], dim_symbol)
-                
                 df = dim_symbol == :model ? 
                     df[model = Where(x -> !(x in models_missing))] :
                     df[member = Where(x -> !(x in models_missing))]
@@ -1059,14 +1061,16 @@ function filterTimeseries(
             end 
         end
         timesteps = dims(df, :time)
-        if isempty(new_alias)
-            new_alias = join(string.([start_year, end_year]), "-")
+        if !new_alias_given
+            new_alias = df.properties["_alias"] * "-" * join(string.([start_year, end_year]), "-")
         end
         parts = split(id, "_")
         parts[3] = new_alias
         new_id = join(parts, "_")
         df.properties["_id"] = new_id
-
+        if haskey(data_subset, new_id)
+            @warn "$new_id was already present in DataMap, is overwritten!"
+        end
         data_subset[new_id] = df
         # sanity checks for missing values and time range
         if any(ismissing.(df))

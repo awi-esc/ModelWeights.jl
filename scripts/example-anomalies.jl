@@ -13,7 +13,7 @@ lgm_meta =  mw.loadDataFromYAML(path_config; subset=Dict("level_shared_models" =
 # lgm_data =  mw.loadDataFromYAML(path_config; subset=Dict("level_shared_models" => mw.MODEL))
 # lgm_data =  mw.loadDataFromYAML(path_config)
 lgm_data =  mw.loadDataFromYAML(path_config; subset=Dict("level_shared_models" => mw.MEMBER))
-mw.computeAnomalies!(lgm_data, "tas_CLIM_lgm", "tas_CLIM_piControl")
+mw.addAnomalies!(lgm_data, "tas_CLIM_lgm", "tas_CLIM_piControl")
 
 colorrange = reverse(Colors.colormap("RdBu", logscale=false, mid=0.25));
 f1 = mw.makeSubplots(
@@ -35,8 +35,8 @@ historical_data =  mw.loadDataFromYAML(
 );
 # take only the exact same models for all variables 
 df_historical = mw.subsetModelData(historical_data)
-mw.computeAnomalies!(df_historical, "tas_CLIM_historical3", "tas_CLIM_historical0");
-mw.computeAnomalies!(df_historical, "tos_CLIM_historical3", "tos_CLIM_historical0");
+mw.addAnomalies!(df_historical, "tas_CLIM_historical3", "tas_CLIM_historical0");
+mw.addAnomalies!(df_historical, "tos_CLIM_historical3", "tos_CLIM_historical0");
 
 
 # make plots for all members of a single model
@@ -131,7 +131,7 @@ save("plots/anomalies/gm_anomalies_land_vs_ocean.png", f3)
 
 # plot tas vs. ratio of tas on land/tos (proxy for ratio)
 tos_anom_data = df_historical["tos_ANOM_historical3"];
-gms_tos = mw.getGlobalMeans(tos_anom_data);
+gms_tos = mw.computeGlobalMeans(tos_anom_data);
 
 f4, ax = mw.makeScatterPlot(
     gms_tas_land, gms_tos; 

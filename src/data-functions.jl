@@ -652,8 +652,20 @@ function averageEnsembleMembers!(data::DataMap)
 end
 
 
+function makeMetadataGMS(data_meta::Dict)
+    meta = Dict(k => get(data_meta, k, []) for k in 
+        ["model_names", "member_names", "experiment", "variable_id", 
+        "_variable", "_experiment", "_alias", "_timerange"]
+    )
+    old_id = get(data_meta, "_id", "")
+    old_stats = get(data_meta, "_statistic", "")
+    meta["_id"] = isempty(old_id) ? "GM" : replace(old_id, old_stats=> "GM")
+    meta["_statistic"] = "GM"
+    return meta
+end
+
 """
-    getGlobalMeans(data::AbtractArray)
+    computeGlobalMeans(data::AbtractArray)
 
 Return a YAXArray with area-weighted global means for each model in `data`. 
 
@@ -663,14 +675,12 @@ Missing data is accounted for in the area-weights.
 - `data::YAXArray`: has at least dimensions 'lon', 'lat' and possibly 
 'member' or 'model'.
 """
-function getGlobalMeans(data::YAXArray)
+function computeGlobalMeans(data::YAXArray)
     longitudes = Array(dims(data, :lon))
     latitudes = Array(dims(data, :lat))
     masks = ismissing.(data)
     dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
-    meta = Dict(k => get(data.properties, k, []) for k in 
-        ["model_names", "member_names", "experiment", "variable_id"]
-    )
+    meta = makeMetadataGMS(data.properties)
     if !isnothing(dimension)
         models = Array(dims(data, dimension))
         global_means = YAXArray(
@@ -690,52 +700,65 @@ function getGlobalMeans(data::YAXArray)
         end
     else 
         area_weights = makeAreaWeightMatrix(longitudes, latitudes; mask=masks)
+        # TODO: check that where data is missing area_weights should be 0!
         global_means = Statistics.sum(skipmissing(data .* area_weights))
     end
     return global_means
 end
 
 
+"""
+    addGlobalMeans!(data::DataMap, ids::Vector{String})
+
+# Arguments:
+- `ids::Vector{String}`: ids for which global means are computed.
+"""
+function addGlobalMeans!(data::DataMap, ids::Vector{String})
+    if any(map(x -> !haskey(data, x), ids))
+        throw(ArgumentError("addGlobalMeans!: There is data missing for some $ids !"))
+    end
+    for id in ids
+        @info "add global means for $id"
+        dat = data[id]
+        gms = hasdim(dat, :time) ? getGlobalMeansTS(dat) : computeGlobalMeans(dat)
+        data[gms.properties["_id"]] = gms
+    end
+    return nothing
+end
+
+
 function getGlobalMeansTS(data::YAXArray)
     dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
     nb_timesteps = length(dims(data, :time))
+    meta = makeMetadataGMS(data.properties)
     global_means = !isnothing(dimension) ? 
         YAXArray(
             (dims(data, dimension), dims(data, :time)),
             Array{Union{Float64, Missing}}(undef, (length(dims(data, dimension)), nb_timesteps)),
-            Dict{String, Any}(k => get(data.properties, k, [""]) for k in ["model_names", "member_names", "experiment", "variable_id"])
+            meta
         ) :
         YAXArray(
             dims(data, :time),
-            Array{Union{Float64, Missing}}(undef, nb_timesteps)
+            Array{Union{Float64, Missing}}(undef, nb_timesteps),
+            meta
         )
     for t in dims(data, :time)
-        global_means[time = At(t)] = getGlobalMeans(data[time = At(t)])
+        global_means[time = At(t)] = computeGlobalMeans(data[time = At(t)])
     end
     return global_means
 end
 
 
 """
-    computeAreaWeights(
-        longitudes::Vector{<:Number}, 
-        latitudes::Vector{<:Number}; 
-        mask::Union{AbstractArray, Nothing}=nothing
-    )
+    approxAreaWeights(latitudes::Vector{<:Number})
 
-Create a YAXArray with normalized area weights for each lon,lat-position. 
-
-The area weights are approximated as the cosine of the latitudes.
-
-# Arguments:
-- `mask::Union{AbstractArray, Nothing}=nothing`: 2D-mask (lonxlat), if given, 
-the area weights are set to 0 where the mask is 1.
+Create a YAXArray with the cosine of `latitudes` which approximates the cell 
+area on the respective latitude.
 """
-function computeAreaWeights(latitudes::Vector{<:Number})
+function approxAreaWeights(latitudes::Vector{<:Number})
     # cosine of the latitudes as proxy for grid cell area
     area_weights = cos.(deg2rad.(latitudes));
-    area_weights = YAXArray((Dim{:lat}(latitudes),), area_weights)
-    return area_weights
+    return YAXArray((Dim{:lat}(latitudes),), area_weights)
 end
 
 
@@ -744,7 +767,7 @@ function makeAreaWeightMatrix(
     latitudes::Vector{<:Number};
     mask::Union{AbstractArray, Nothing}=nothing
 )
-    area_weights = computeAreaWeights(latitudes)
+    area_weights = approxAreaWeights(latitudes)
     area_weighted_mat = repeat(area_weights', length(longitudes), 1);  
     if !isnothing(mask)
         area_weighted_mat = ifelse.(mask .== 1, 0, area_weighted_mat); 
@@ -757,75 +780,81 @@ function makeAreaWeightMatrix(
 end
 
 
-
-
-"""
-    computeAnomalies!(datamap::DataMap id_data::String, id_ref::String)
-
-Add entry to 'datamap' with difference between 'datamap' at id_data and id_ref.
-
-The id of the original data and of the reference data is added to the metadata.
-"""
-function computeAnomalies!(data::DataMap, id_data::String, id_ref::String)
-    dimension = hasdim(data[id_data], :member) ? :member : :model
-    if dims(data[id_data], dimension) != dims(data[id_ref], dimension)
+function computeAnomalies(orig_data::YAXArray, ref_data::YAXArray; stats::String="ANOM")
+    dimension = hasdim(orig_data, :member) ? :member : :model
+    models = dims(orig_data, dimension)
+    if !hasdim(ref_data, dimension) || models != dims(ref_data, dimension)
         throw(ArgumentError("Original and reference data must contain exactly the same models!"))
     end
-    anomalies_mat = Array(data[id_data]) .- Array(data[id_ref])
+    is_timeseries = hasdim(orig_data, :time)
 
-    anomalies_metadata = deepcopy(data[id_data].properties)
-    anomalies_metadata["_statistic"] = "ANOM"
+    anomalies_metadata = deepcopy(orig_data.properties)
+    anomalies_metadata["_statistic"] = stats
     anomalies_id = buildMetaDataID(anomalies_metadata)
     anomalies_metadata["_id"] = anomalies_id
-    anomalies_metadata["_ref_data_id"] = id_ref
-    anomalies_metadata["_orig_data_id"] = id_data
+    anomalies_metadata["_ref_data_id"] = ref_data.properties["_id"]
+    anomalies_metadata["_orig_data_id"] = orig_data.properties["_id"]
 
-    anomalies = YAXArray(dims(data[id_data]), anomalies_mat, anomalies_metadata)
-    data[anomalies_id] = anomalies
-    return nothing
-end
-
-"""
-    computeAnomaliesGM(data::YAXArray)
-
-Compute anomaly of `data` with respect its global mean value.
-
-If `data` has dimension :time, anomalies are computed for each timestep.
-"""
-function computeAnomaliesGM(data::YAXArray)
-    anomalies = Array{Float64}(undef, size(dims(data))...)
-    
-    metadata = deepcopy(data.properties)
-    metadata["_orig_data_id"] = metadata["_id"]
-    metadata["_statistic"] = "ANOM-GM" # must be done before building ID!
-    metadata["_id"] = buildMetaDataID(metadata)
-    
-    anomalies = YAXArray(dims(data), anomalies, metadata)
-    is_timeseries = hasdim(data, :time)
-    gms = is_timeseries ? getGlobalMeansTS(data) : getGlobalMeans(data)
-
-    level = hasdim(data,:model) ? :model : :member
-    models = dims(data, level)
+    arr = Array{Union{Missing, Float64}}(undef, size(dims(orig_data))...)
+    anomalies = YAXArray(dims(orig_data), arr, anomalies_metadata)
     for m in models
         if is_timeseries
-            times = dims(data, :time)
+            times = dims(orig_data, :time)
             for t in times
-                if level == :model
-                    anomalies[time=At(t), model=At(m)] .= data[time=At(t), model=At(m)] .- gms[time=At(t), model=At(m)]
+                if dimension == :model
+                    anomalies[time=At(t), model=At(m)] .= orig_data[time=At(t), model=At(m)] .- ref_data[time=At(t), model=At(m)]
                 else
-                    anomalies[time=At(t), member=At(m)] .= data[time=At(t), member=At(m)] .- gms[time=At(t), member=At(m)]
+                    anomalies[time=At(t), member=At(m)] .= orig_data[time=At(t), member=At(m)] .- ref_data[time=At(t), member=At(m)]
                 end
+            end
+        else
+            if dimension == :model
+                anomalies[model=At(m)] .= orig_data[model=At(m)] .- ref_data[model=At(m)]
+            else
+                anomalies[member=At(m)] .= orig_data[member=At(m)] .- ref_data[member=At(m)]
             end
         end
     end
     return anomalies
 end
 
+"""
+    addAnomalies!(datamap::DataMap id_data::String, id_ref::String)
+
+Add entry to 'datamap' with difference between 'datamap' at id_data and id_ref.
+
+The id of the original data and of the reference data is added to the metadata.
+"""
+function addAnomalies!(data::DataMap, id_data::String, id_ref::String; stats::String="ANOM")
+    if !haskey(data, id_data)
+        throw(ArgumentError("The given DataMap does not have key $id_data"))
+    elseif !haskey(data, id_ref)
+        throw(ArgumentError("The given DataMap does not have key $id_ref"))
+    end
+    anomalies = computeAnomalies(data[id_data], data[id_ref]; stats)
+    data[anomalies.properties["_id"]] = anomalies
+    return nothing
+end
+
 
 function addAnomaliesGM!(data::DataMap, ids_data::Vector{String})
+    # only compute global means for data for which it isnt already there
+    gms_ids = map(id -> replace(id, data[id].properties["_statistic"] => "GM"), ids_data)
+    ids = Vector{String}()
+    for idx in range(1, length(gms_ids))
+        if !haskey(data, gms_ids[idx])
+            push!(ids, ids_data[idx])
+        end
+    end
+    if !isempty(ids)
+        addGlobalMeans!(data, ids)
+    end
     for id in ids_data
-        anomalies = computeAnomaliesGM(data[id])
-        data[anomalies.properties["_id"]] = anomalies
+        @info "add anomalies wrt global mean for $id"
+        addAnomalies!(
+            data, id, replace(id, data[id].properties["_statistic"] => "GM"); 
+            stats="ANOM-GM"
+        )
     end
    return nothing
 end

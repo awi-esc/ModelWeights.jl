@@ -128,7 +128,7 @@ mw.kelvinToCelsius!(data)
 # instead better to use computeAnomaly function to ensure metadata is updated too and for checking that units are identical!
 lgm_cooling = data["tas_CLIM_lgm"] .- data["tas_CLIM_piControl"];
 # global lgm-cooling values for each model
-global_means = mw.getGlobalMeans(lgm_cooling)
+global_means = mw.computeGlobalMeans(lgm_cooling)
 
 # values from Tierney et al. (2020)
 mu_tierney = -6.1

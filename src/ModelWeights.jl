@@ -1,5 +1,10 @@
 module ModelWeights
 
+# using Logging
+# DEBUG_LOGGER = ConsoleLogger(stderr, Logging.Debug)
+
+
+
 const MODEL_MEMBER_DELIM = "#"
 const MODEL_NAME_FIXES = Dict(
     "FGOALS_g2" => "FGOALS-g2",
@@ -19,7 +24,7 @@ include("main-functions.jl")
 export loadDataFromYAML, loadDataFromESMValToolConfigs, computeWeights
 
 
-export getUncertaintyRanges, getGlobalMeans, computeAnomalies!, computeAreaWeights, computeAnomaliesGM!, addAnomaliesGM!
+export getUncertaintyRanges, computeGlobalMeans, addAnomalies!, approxAreaWeights, computeAnomaliesGM!, addAnomaliesGM!
 export addLinearTrend!, getLinearTrend
 export averageEnsembleMembers!, summarizeEnsembleMembersVector
 export getLandMask, getOceanMask, addMasks!, subsetModelData, alignPhysics

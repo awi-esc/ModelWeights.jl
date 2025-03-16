@@ -11,11 +11,16 @@ using YAXArrays
 
 # Get data from piControl + historical + lgm experiments
 path_config = "./configs/ecs-lgm-cooling.yml";
-data_meta =  mw.loadDataFromYAML(path_config; preview = true)
+#data_meta =  mw.loadDataFromYAML(path_config; preview = true)
 data = mw.loadDataFromYAML(path_config; subset = Dict("level_shared_models" => mw.MODEL))
 
 # for the shared models, make sure that physics of piControl models are the same
 # as physics of lgm models
+
+# get global means
+gms = mw.computeGlobalMeans(data["tas_CLIM_historical"])
+
+mw.addGlobalMeans!(data, ["tas_CLIM_historical"])
 
 df = mw.alignPhysics(
     data, 
@@ -41,7 +46,7 @@ mw.kelvinToCelsius!(df)
 lgm_cooling = df["tas_CLIM_lgm"] .- df["tas_CLIM_piControl"];
 # global lgm-cooling values for each model
 # as we look at differences here, the unit (kelvin or celsius) doesnt matter
-global_means = coalesce.(mw.getGlobalMeans(lgm_cooling), missing => NaN)
+global_means = coalesce.(mw.computeGlobalMeans(lgm_cooling), missing => NaN)
 predictions_gm_tas = coalesce.(Array(global_means), missing => NaN);
 ys = repeat([0], length(global_means));
 
@@ -74,7 +79,7 @@ errdeltaSAT = YAXArray(
     (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
     Array(tierney_data["errdeltaSAT"])
 )
-gm_deltaSAT = mw.getGlobalMeans(deltaSAT)
+gm_deltaSAT = mw.computeGlobalMeans(deltaSAT)
 
 area_weights_mat = mw.makeAreaWeightMatrix(Array(dims(deltaSAT, :lon)), Array(dims(deltaSAT, :lat)))
 std_gm_deltaSAT = sum(area_weights_mat .* errdeltaSAT)
