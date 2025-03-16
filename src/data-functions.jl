@@ -846,14 +846,21 @@ end
 Compute the standard deviation of the temporal detrended data `ts`.
 """
 function computeTempSTD(ts::YAXArray, trend::YAXArray)
-    if dims(ts) != dims(trend)
+    if otherdims(ts, :time) != otherdims(trend, :time)
         msg = "Temporal Standard deviation can only be computed for timeseries data and trend data with identical dimensions!"
         throw(ArgumentError(msg))
     end
     meta_new = deepcopy(ts.properties)
     meta_new["_id"] = replace(meta_new["_id"], meta_new["_statistic"] => "STD-temp")
     meta_new["_statistic"] = "STD-temp"
-    stds = dropdims(std(ts .- trend, dims=:time), dims=:time)
+
+    if hasdim(trend, :time)
+        stds = dropdims(std(ts .- trend, dims=:time), dims=:time)
+    else
+        # TODO
+        @warn "computation of temporal trend with just slopes not yet implemented"
+        throw(UndefVarError(:stds))
+    end
     return YAXArray(otherdims(ts, :time), stds.data, meta_new)
 end
 
@@ -861,12 +868,11 @@ end
 function addTempSTD!(data::DataMap; statistic::String="CLIM-ann")
     ids = filter(id -> data[id].properties["_statistic"] == statistic, keys(data))
     for id in ids
-        println("add temp std for $id")
-        trend_id = replace(id, statistic=>"TREND")
+        trend_id = replace(id, statistic=>"TREND-pred")
+        @info "add temp std for data: $id and trend $trend_id"
         get!(data, trend_id, getLinearTrend(data[id]))
         standard_dev = computeTempSTD(data[id], data[trend_id])
         data[standard_dev.properties["_id"]] = standard_dev
     end
     return nothing
-
 end
