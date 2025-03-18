@@ -10,24 +10,6 @@ using YAXArrays
 
 @enum LEVEL MODEL=0 MEMBER=1
 
-@kwdef struct MetaAttrib
-    variable::String=""
-    statistic::String=""
-    alias::String=""
-    exp::String=""
-    timerange::String=""
-end
-# Overload the Base.show method to print key-value pairs of MetaAttrib instances
-function Base.show(io::IO, x::MetaAttrib)
-    for field in fieldnames(MetaAttrib)
-        value = getfield(x, field)
-        if !isempty(value)
-            print(io, "$field=$value ")
-        end
-    end
-end
-
-
 const DataMap = Dict{String, YAXArray}
 
 function Base.show(io::IO, x::Dict{String, YAXArray})
@@ -70,12 +52,12 @@ end
 @kwdef struct Weights
     performance_distances::DimArray
     independence_distances::DimArray
-    Di::DimArray # generalized distances each model wrt performance
-    Sij::DimArray # generalized distances between pairs of models
-    wP::DimArray # normalized
-    wI::DimArray # normalized
-    w::DimArray # normalized
-    w_members::DimArray # weights distributed evenly across resp. model members
+    Di::YAXArray # generalized distances each model wrt performance
+    Sij::YAXArray # generalized distances between pairs of models
+    wP::YAXArray # normalized
+    wI::YAXArray # normalized
+    w::YAXArray # normalized
+    w_members::YAXArray # weights distributed evenly across resp. model members
     config::ConfigWeights # metadata
 end
 
@@ -83,23 +65,27 @@ end
 function Base.show(io::IO, x::Weights)
     println(io, "::$(typeof(x)):")
     for m in dims(x.w, :model)
-        println(io, "$m: $(round(x.w[model = At(m)], digits=3))")
+        println(io, "$m: $(round(x.w[model = At(m)].data[1], digits=3))")
     end
 end
 
 
-function saveDataMapAsJuliaObj(data::DataMap, target_path::String)
-    jldsave(target_path; data=data)
+function writeDataToDisk(data, target_path::String)
+    if endswith(target_path, ".jld2")
+        jldsave(target_path; data=data)
+    else
+        serialize(target_path, data)
+    end
     @info "saved data to: $(target_path)"
     return nothing
 end
-
 
 
 function getDimsModel(da::DimArray)
     dim_symbol = hasdim(da, :model) ? :model : :member
     return (dim_symbol, dims(da, dim_symbol))
 end
+
 
 function getAtModel(da::AbstractArray, dimension::Symbol, model::String)
     return dimension == :model ? da[model = At(model)] : da[member = At(model)]
@@ -215,15 +201,12 @@ end
 """
     updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
 
-Vectors in metadata 'meta' refer to different models (members).
-These are now summarized such that each vector only contains N entries where N
-is the number of models (i.e. without the unique members).
+Summarize vectors in `meta`, refering to different models (members), such that 
+each vector only contains N entries (N=number of models (i.e. without unique 
+members)).
+
 If the metadata for members of a model differ across members, the respective
 entry in the vector will be a vector itself.
-
-# Arguments:
-- `meta`:
-- `grouped_data`:
 """
 function updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
     meta_new = filter(((k,v),) -> k=="member_names" || !(v isa Vector), meta)
@@ -336,7 +319,7 @@ function getMetaAttributesFromESMValToolConfigs(
         x -> isfile(x) && endswith(x, ".yml"),
         readdir(base_path_configs, join=true)
     )
-    meta_attribs = Vector{MetaAttrib}()
+    meta_attribs = Vector{Dict{String, Any}}()
     for path_config in paths_configs
         config = YAML.load_file(path_config)
         data_all = config["diagnostics"]
@@ -352,12 +335,8 @@ function getMetaAttributesFromESMValToolConfigs(
                     experiment = join(v["exp"], "-")
                 end
                 timerange = replace(get(v, "timerange", "full"), "/" => "-")
-                meta = MetaAttrib(
-                    variable = variable, 
-                    statistic = statistic, 
-                    alias = alias, 
-                    exp = experiment,
-                    timerange = timerange
+                meta = createGlobalMetaDataDict(
+                    variable, experiment, statistic, alias, timerange
                 )
                 if !(meta in meta_attribs) 
                     push!(meta_attribs, meta)
@@ -529,15 +508,12 @@ function getMetaDataFromYAML(
                 for idx in 1:length(ds_constraint["timeranges"])
                     timerange = ds_constraint["timeranges"][idx]
                     alias =  ds_constraint["aliases"][idx]
-                    attribs = [MetaAttrib(
-                        variable = clim_var, 
-                        statistic = stats, 
-                        alias = alias, 
-                        exp = ds_constraint["exp"],
-                        timerange = timerange
-                    )]
-                    meta = buildMetaData(
-                        attribs[1], 
+
+                    meta = createGlobalMetaDataDict(
+                        clim_var, ds_constraint["exp"], stats, alias, timerange
+                    )
+                    addPathsToMetaAttribs!(
+                        meta, 
                         path_data, 
                         ds_constraint["dir_per_var"],
                         is_model_data; 
@@ -612,9 +588,10 @@ function buildPathsToDataFiles(
 end
 
 
-function buildMetaDataID(attrib::MetaAttrib)
-    return join([attrib.variable, attrib.statistic, attrib.alias], "_")
+function buildMetaDataID(variable::String, statistic::String, alias::String)
+    return join([variable, statistic, alias], "_")
 end
+
 
 function buildMetaDataID(meta::Dict{String, Any})
     return join([meta["_variable"], meta["_statistic"], meta["_alias"]], "_")
@@ -622,7 +599,7 @@ end
 
 
 """
-    buildMetaData(
+    addPathsToMetaAttribs!(
         attrib::Union{MetaAttrib, Vector{MetaAttrib}},
         base_path_data::String,
         dir_per_var::Bool,
@@ -633,8 +610,8 @@ end
 Create a metadata Dictionary with the information from `attrib` and the file
 paths to the data files in `base_path_data`.
 """
-function buildMetaData(
-    attrib::MetaAttrib,
+function addPathsToMetaAttribs!(
+    attrib::Dict{String, Any},
     base_path_data::String,
     dir_per_var::Bool,
     is_model_data::Bool;
@@ -659,15 +636,10 @@ function buildMetaData(
     end
     # for observational data, experiment doesn't make sense
     if !is_model_data
-        attrib = MetaAttrib(
-            variable = attrib.variable, 
-            statistic = attrib.statistic,
-            alias = attrib.alias,
-            exp = "",
-            timerange = attrib.timerange
-        )
+        attrib["_experiment"] = ""
     end
-    return createGlobalMetaDataDict(attrib, paths_to_files)   
+    attrib["_paths"] = paths_to_files
+    return nothing
 end
 
 # if dir_per_var is true, directories at base_paths have subdirectories,
@@ -690,24 +662,24 @@ end
 """
 function buildPathsForMetaAttrib(
     base_path::String, 
-    attrib::MetaAttrib,
+    attrib::Dict{String, Any},
     dir_per_var::Bool;
     subdir_constraints::Union{Vector{String}, Nothing}=nothing
 )
     base_paths = [base_path]
     if dir_per_var
         base_paths = filter(isdir, readdir(base_path, join=true))
-        filter!(x -> occursin("_" * attrib.variable, x), base_paths)
+        filter!(x -> occursin("_" * attrib["_variable"], x), base_paths)
     end
     if !isnothing(subdir_constraints) && !isempty(subdir_constraints)
         filter!(p -> any([occursin(name, p) for name in subdir_constraints]), base_paths)
     end
     data_paths = Vector{String}()
     for p in base_paths
-        # Note: particular data structure assumed here!
-        diagnostic = isempty(attrib.statistic) ? attrib.variable : 
-            join([attrib.variable, attrib.statistic], "_")
-        path_data = joinpath(p, "preproc", attrib.alias, diagnostic)
+        # NOTE: particular data structure assumed here!
+        diagnostic = isempty(attrib["_statistic"]) ? attrib["_variable"] : 
+            join([attrib["_variable"], attrib["_statistic"]], "_")
+        path_data = joinpath(p, "preproc", attrib["_alias"], diagnostic)
         if !isdir(path_data)
             @warn "$path_data is not an existing directory!"
         else
@@ -730,12 +702,13 @@ specifiying the properties of which at least one must be present for an id to
 be retained.
 """
 function applyDataConstraints!(
-    meta_attributes::Vector{MetaAttrib}, constraint::Dict
+    meta_attributes::Vector{Dict{String, Any}},
+    constraint::Dict
 )
     timerange_constraints = get(constraint, "timeranges", Vector{String}())
     alias_constraints = get(constraint, "aliases", Vector{String}())
-    timerangeOk(attrib::MetaAttrib) = any(x -> attrib.timerange == x, timerange_constraints)
-    aliasOk(attrib::MetaAttrib) = any(x -> attrib.alias == x, alias_constraints)
+    timerangeOk(attrib::Dict{String, Any}) = any(x -> attrib["_timerange"] == x, timerange_constraints)
+    aliasOk(attrib::Dict{String, Any}) = any(x -> attrib["_alias"] == x, alias_constraints)
 
     # timerange and alias don't have to match, it's sufficient if either timerange
     # or alias match
@@ -753,8 +726,8 @@ function applyDataConstraints!(
     # constraints wrt variables and statistics
     stats_constraints = get(constraint, "statistics", Vector{String}())
     vars_constraints = get(constraint, "variables", Vector{String}())
-    stats_ok(attrib::MetaAttrib) = isempty(stats_constraints) || any(x -> attrib.statistic == x, stats_constraints)
-    vars_ok(attrib::MetaAttrib) = isempty(vars_constraints) || any(x -> attrib.variable == x, vars_constraints)
+    stats_ok(attrib::Dict{String, Any}) = isempty(stats_constraints) || any(x -> attrib["_statistic"] == x, stats_constraints)
+    vars_ok(attrib::Dict{String, Any}) = isempty(vars_constraints) || any(x -> attrib["_variable"] == x, vars_constraints)
     filter!(stats_ok, meta_attributes)
     filter!(vars_ok, meta_attributes)
     return nothing
@@ -929,30 +902,22 @@ end
 """
     getTimerangeAsAlias(meta_attribs::Vector{MetaAttrib}, timerange::String)
 
-Translate given timerange to corresponding alias in 'data_ids'.
-
-# Arguments:
-- `meta_attribs`:
-- `timerange`:
+Translate given timerange to corresponding alias in `data_ids`.
 """
-function getTimerangeAsAlias(meta_attribs::Vector{MetaAttrib}, timerange::String)
-    attribs = filter(x -> x.timerange == timerange, meta_attribs)
-    return isempty(attribs) ? nothing : attribs[1].alias
+function getTimerangeAsAlias(meta_attribs::Vector{Dict{String, Any}}, timerange::String)
+    attribs = filter(x -> x["_timerange"] == timerange, meta_attribs)
+    return isempty(attribs) ? nothing : attribs[1]["_alias"]
 end
 
 
 """
     getAliasAsTimerange(meta_attribs::Vector{MetaAttrib}, alias::String)
 
-Translate given alias for every `MetaAttrib` in `meta_attribs`to corresponding timerange.
-
-# Arguments:
-- `meta_attribs`:
-- `alias`:
+Translate each alias in `meta_attribs`to corresponding timerange.
 """
-function getAliasAsTimerange(meta_attribs::Vector{MetaAttrib}, alias::String)
-    attribs = filter(x -> x.alias == alias, meta_attribs)
-    return isempty(attribs) ? nothing : attribs[1].timerange
+function getAliasAsTimerange(meta_attribs::Vector{Dict{String, Any}}, alias::String)
+    attribs = filter(x -> x["_alias"] == alias, meta_attribs)
+    return isempty(attribs) ? nothing : attribs[1]["_timerange"]
 end
 
 """
@@ -962,13 +927,9 @@ end
 
 Return timerange and alias corresponding to `ref_period` which can be either be 
 a timerange or an alias.
-
-# Arguments:
-- `meta_attribs`:
-- `ref_period`: either alias or timerange
 """
 function getRefPeriodAsTimerangeAndAlias(
-    meta_attribs::Vector{MetaAttrib}, ref_period::String
+    meta_attribs::Vector{Dict{String, Any}}, ref_period::String
 )
     alias = getTimerangeAsAlias(meta_attribs, ref_period) 
     # true : ref_period given as alias, false: ref_period given as timerange
@@ -1200,4 +1161,26 @@ function getSharedModels(data::DataMap)
         end
     end
     return reduce(intersect, all_models)
+end
+
+
+"""
+    filterModels!(data::YAXArray, remaining_models::Vector{String})
+
+Remove models from `data` that aren't in `remaining_models` and adapt the 
+metadata of `data` accordingly such that 'member_names' and 'model_names' 
+corresponds to the remaining data.
+"""
+function filterModels!(data::YAXArray, remaining_models::Vector{String})
+    data = hasdim(data, :member) ? 
+        data[member = Where(x -> x in remaining_models)] :
+        data[model = Where(x -> x in remaining_models)]
+
+    indices_out = hasdim(data, :member) ? 
+        findall(x -> !(x in data.properties["member_names"]), remaining_models) :
+        findall(x -> !(x in data.properties["model_names"]), remaining_models)
+
+    deleteat!(data.properties["model_names"], indices_out)
+    deleteat!(data.properties["member_names"], indices_out)
+    return nothing
 end

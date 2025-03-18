@@ -110,9 +110,9 @@ f2
 
 
 
-gms_tas_everywhere = mw.getGlobalMeans(tas_anom_data);
-gms_tas_ocean = mw.getGlobalMeans(ocean_tas);
-gms_tas_land = mw.getGlobalMeans(land_tas);
+gms_tas_everywhere = mw.computeGlobalMeans(tas_anom_data);
+gms_tas_ocean = mw.computeGlobalMeans(ocean_tas);
+gms_tas_land = mw.computeGlobalMeans(land_tas);
 gms_ratio = gms_tas_land ./ gms_tas_ocean;
 
 non_missing_indices = findall(x -> !ismissing(x), gms_ratio)

@@ -5,7 +5,7 @@ using LinearAlgebra
 using JLD2
 using Setfield
 using Distributions
-
+using Serialization
 
 """
     areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractArray)
@@ -223,7 +223,7 @@ is distributed among the respective members.
 """
 function computeWeightedAvg(
     data::YAXArray; 
-    weights::Union{DimArray, Nothing}=nothing, 
+    weights::Union{YAXArray, Nothing}=nothing, 
     use_members_equal_weights::Bool=true
 )
     da = DimArray(Array{Union{Missing, Float64}}(undef, size(data)), dims(data))
@@ -395,7 +395,6 @@ end
 - `target_path`: Path to where weights shall be stored.
 """
 function saveWeightsAsNCFile(weights::Weights, target_path::String)
-    target_path = validateConfigTargetPath(target_path)
     ds = NCDataset(target_path, "c")
     models = map(x -> string(x), dims(weights.w, :model))
     defDim(ds, "model", length(models))
@@ -445,17 +444,22 @@ function saveWeightsAsNCFile(weights::Weights, target_path::String)
        end 
     end
     close(ds)
-    @info "saved weights to $(target_path)"
     return target_path
 end
 
 
-function saveWeightsAsJuliaObj(weights::Weights, target_path::String)
+function writeWeightsToDisk(weights::Weights, target_path::String)
     target_path = validateConfigTargetPath(target_path)
     config = weights.config
     config = @set config.target_path = target_path
     weights = @set weights.config = config
-    jldsave(target_path; weights=weights)
+    if endswith(target_path, ".jld2")
+        jldsave(target_path; weights=weights)
+    elseif endswith(target_path, ".nc")
+        saveWeightsAsNCFile(model_weights, target_path)
+    else
+        serialize(target_path, weights)
+    end
     @info "saved weights to: $(target_path)"
     return target_path
 end
@@ -497,20 +501,21 @@ end
 
 
 """ 
-    applyWeights(model_data::AbstractArray, weights::DimArray)
+    applyWeights(model_data::YAXArray, weights::YAXArray)
 
 Compute the weighted average of model data 'data' with given weights 'weights'.
+
 If weights were computed for a superset of the models in 'data', they are normalized
 and applied to the subset. Only weights per model (not members) are considered
 for now, in the future, members should be considered too.
 
 # Arguments:
-- `model_data`: model predictions. If given for model members, the predictions 
+- `model_data::YAXArray`: model predictions. If given for model members, the predictions 
 of each model are considered the average value of all members of the respective model.
-- `weights`: if given for each member of a model, these will be summed up to 
+- `weights::YAXArray`: if given for each member of a model, these will be summed up to 
 yield one value per model.
 """
-function applyWeights(model_data::AbstractArray, weights::DimArray)
+function applyWeights(model_data::YAXArray, weights::YAXArray)
     if hasdim(weights, :member)
         weights = summarizeEnsembleMembersVector(weights, true; fn=sum)
     end

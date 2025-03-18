@@ -306,15 +306,18 @@ function mergeLoadedData(
 end
 
 
-function createGlobalMetaDataDict(attrib::MetaAttrib, paths::Vector{String})
+function createGlobalMetaDataDict(
+    variable, experiment, statistic, alias, timerange; 
+    paths = Vector{String}()
+)
     metadata = Dict{String, Any}()
-    metadata["_id"] = buildMetaDataID(attrib)
     metadata["_paths"] = paths 
-    metadata["_variable"] = attrib.variable
-    metadata["_experiment"] = attrib.exp
-    metadata["_statistic"] = attrib.statistic
-    metadata["_alias"] = attrib.alias
-    metadata["_timerange"] = attrib.timerange
+    metadata["_variable"] = variable
+    metadata["_experiment"] = experiment
+    metadata["_statistic"] = statistic
+    metadata["_alias"] = alias
+    metadata["_timerange"] = timerange
+    metadata["_id"] = buildMetaDataID(variable, statistic, alias)
     return metadata
 end
 
@@ -486,7 +489,7 @@ representing  the lower and upper bound in this order.
 """
 function getUncertaintyRanges(
     data::AbstractArray;
-    w::Union{DimArray, Nothing}=nothing, 
+    w::Union{YAXArray, Nothing}=nothing, 
     quantiles=[0.167, 0.833]
 )
     timesteps = dims(data, :time)
@@ -623,7 +626,6 @@ function summarizeEnsembleMembersVector(
     combined = replace(combined, NaN => missing) # Why necessary?
 
     meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
-    #combined = rebuild(combined; metadata = meta);
     combined = YAXArray(dims(combined), combined.data, meta)
     # I think not necessary, since in combined model dimension is now already ForwareOrdered
     # l = Lookups.Categorical(
@@ -708,26 +710,37 @@ end
 
 
 """
-    addGlobalMeans!(data::DataMap, ids::Vector{String})
+    addGlobalMeans!(data::DataMap; ids::Union{Vector{String},Nothing})
+
+Compute global means for datasets in `data` with `ids`.
+    
+If `ids` is not specified, compute global means for all datasets in `data`.
+
 
 # Arguments:
-- `ids::Vector{String}`: ids for which global means are computed.
+- `ids::Union{Vector{String},Nothing}`: ids for which global means are computed.
 """
-function addGlobalMeans!(data::DataMap, ids::Vector{String})
-    if any(map(x -> !haskey(data, x), ids))
+function addGlobalMeans!(
+    data::DataMap; ids::Union{Vector{String},Nothing}=nothing
+ )
+    if isnothing(ids)
+        # NOTE: collect is important here, otherwise 'ids' changes when new 
+        # keys are added in for-loop below to the data dictionary!!
+        ids = collect(keys(data))
+    elseif any(map(x -> !haskey(data, x), ids))
         throw(ArgumentError("addGlobalMeans!: There is data missing for some $ids !"))
     end
     for id in ids
         @info "add global means for $id"
-        dat = data[id]
-        gms = hasdim(dat, :time) ? getGlobalMeansTS(dat) : computeGlobalMeans(dat)
+        dat = copy(data[id])
+        gms = hasdim(dat, :time) ? computeGlobalMeansTS(dat) : computeGlobalMeans(dat)
         data[gms.properties["_id"]] = gms
     end
     return nothing
 end
 
 
-function getGlobalMeansTS(data::YAXArray)
+function computeGlobalMeansTS(data::YAXArray)
     dimension = hasdim(data, :member) ? :member : hasdim(data, :model) ? :model : nothing
     nb_timesteps = length(dims(data, :time))
     meta = makeMetadataGMS(data.properties)
@@ -739,7 +752,7 @@ function getGlobalMeansTS(data::YAXArray)
         ) :
         YAXArray(
             dims(data, :time),
-            Array{Union{Float64, Missing}}(undef, nb_timesteps),
+            Array{Union{Float64, Missing}}(undef, (nb_timesteps,)),
             meta
         )
     for t in dims(data, :time)
@@ -847,7 +860,7 @@ function addAnomaliesGM!(data::DataMap, ids_data::Vector{String})
         end
     end
     if !isempty(ids)
-        addGlobalMeans!(data, ids)
+        addGlobalMeans!(data; ids)
     end
     for id in ids_data
         @info "add anomalies wrt global mean for $id"

@@ -1,7 +1,8 @@
 import YAML
-using DimensionalData
-using Setfield
 
+using DimensionalData
+using Serialization
+using Setfield
 
 """
      computeModelModelRMSE(model_data::DataMap, config::ConfigWeights)
@@ -128,16 +129,8 @@ function computeWeights(
         config = config
         # overall = (wP .* wI) ./ sum(wP .* wI), # just for sanity check
     )
-    @debug weights
     if !isempty(config.target_path)
-        filename = basename(target_path)
-        if endswith(filename, ".nc")
-            saveWeightsAsNCFile(model_weights, target_path)
-        elseif endswith(filename, ".jld2")
-            saveWeightsAsJuliaObj(model_weights, target_path)
-        else
-            @warn "Weights not saved - they can only be saved as .nc or .jld2 files!"
-        end 
+        writeWeightsToDisk(model_weights, target_path)
     end
     return model_weights
 end
@@ -188,9 +181,9 @@ function loadDataFromESMValToolConfigs(
 )
     attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; constraint=subset)
     meta_data = Dict{String, Dict{String, Any}}()
-    for attrib in attributes
-        meta = buildMetaData(
-            attrib, path_data, dir_per_var, is_model_data; constraint=subset
+    for meta in attributes
+        addPathsToMetaAttribs!(
+            meta, path_data, dir_per_var, is_model_data; constraint=subset
         )
         if !isempty(meta["_paths"])
             id = meta["_id"]
