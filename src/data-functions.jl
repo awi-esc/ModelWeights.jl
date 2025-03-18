@@ -219,7 +219,9 @@ function loadPreprocData(meta::Dict{String, Any}, is_model_data::Bool)
         end
         # update metadata-dictionary for all processed files with the
         # metadata from the current file
-        for key in keys(attributes)
+        
+        keys_remain = filter(x -> x in KEYS_METADATA, keys(attributes))
+        for key in keys_remain #keys(attributes)
             values = get!(meta_dict, key, repeat(Union{Missing, Any}[missing], outer=n_files))
             values[i] = attributes[key]
         end
@@ -255,6 +257,9 @@ end
         meta_dict::Dict{String, Any}, 
         is_model_data::Bool
     )
+
+All data is assumed to be defined on the same grid.
+
 """
 function mergeLoadedData(
     data_vec::Vector{YAXArray}, 
@@ -266,7 +271,6 @@ function mergeLoadedData(
         return nothing
     end
     #dimData = cat(data_vec..., dims=3) # way too slow!
-    # all of the preprocessed model data assumed to have the same grid!
     data_sizes = unique(map(size, data_vec))
     if length(data_sizes) != 1
         if !all(map(x -> hasdim(x, :time), data_vec))
@@ -655,10 +659,7 @@ end
 
 
 function makeMetadataGMS(data_meta::Dict)
-    meta = Dict(k => get(data_meta, k, []) for k in 
-        ["model_names", "member_names", "experiment", "variable_id", 
-        "_variable", "_experiment", "_alias", "_timerange"]
-    )
+    meta = deepcopy(data_meta)
     old_id = get(data_meta, "_id", "")
     old_stats = get(data_meta, "_statistic", "")
     meta["_id"] = isempty(old_id) ? "GM" : replace(old_id, old_stats=> "GM")

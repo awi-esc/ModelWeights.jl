@@ -1,3 +1,6 @@
+longitudes =  [12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5]
+latitudes = [-77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5]
+
 @testset "Test getMetaAttributesFromESMValToolConfigs" begin
 end
 
@@ -78,4 +81,17 @@ end
 
     mw.putAtModel!(da, :model, "m2", [17, 2, 1987])
     @test mw.getAtModel(da, :model, "m2") == [17, 2, 1987]
+end
+
+
+
+@testset "Test getGlobalMeans" begin
+    a = [1.0 2.0 3.0 4.0];
+    b = [4.0 5.0 6 5.0];
+    da = YAXArray((Dim{:lon}(longitudes[1:2]), Dim{:lat}(latitudes[1:4])), vcat(a,b))
+    gms = mw.getGlobalMeans(da)
+
+    area_weights = mw.makeAreaWeightMatrix(Array(da.lon), Array(da.lat))
+    aw_gm = sum(da .* area_weights)
+
 end

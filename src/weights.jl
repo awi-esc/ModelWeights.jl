@@ -1,11 +1,13 @@
+
 using DimensionalData
-using NCDatasets
-using Statistics
-using LinearAlgebra
-using JLD2
-using Setfield
 using Distributions
+using JLD2
+using LinearAlgebra
+using NCDatasets
 using Serialization
+using Setfield
+using Statistics
+import StatsBase:countmap
 
 """
     areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractArray)
@@ -232,9 +234,7 @@ function computeWeightedAvg(
     models_data = collect(dims(data, dim_symbol))
     
     if isnothing(weights)
-        weights = makeEqualWeights(
-            data.properties, dim_symbol, use_members_equal_weights
-        )
+        weights = makeEqualWeights(data, use_members_equal_weights)
         models_weights = collect(dims(weights, dim_symbol))
     else
         if !hasdim(weights, dim_symbol)
@@ -297,76 +297,50 @@ end
 
 
 """
-    makeEqualWeights(metadata::Dict, dimension::Symbol; use_members::Bool=true)
+    makeEqualWeights(data::YAXArray; use_members::Bool=true)
 
-Create a weight vector, with equal weight for each model. Distribute weight across
-model members if dimension=:member. Metadata is used to access the individual 
-model members the computed weights were based on.
-
-# Arguments:
-- `metadata`: metadata of the data for which weights were computed.
-- `dimension`: level of data, e.g. 'member', 'model'
+Create a weight vector, with equal weight for each MODEL. Distribute weight across
+model members if dimension=:member and use_members is true. If use_member is false, 
+each model member is considered as standalone model and all receive the same weight.
 """
-function makeEqualWeights(
-    metadata::Dict, dimension::Symbol, use_members::Bool=true
-)
-    model_members = metadata["member_names"]
-    n_models = length(unique(metadata["model_names"]))
+function makeEqualWeights(data::YAXArray; use_members::Bool=true)
+    dimension = hasdim(data, :member) ? :member : :model
+    dimnames = dims(data, dimension)
+    models = collect(map(x -> split(x, MODEL_MEMBER_DELIM)[1], dimnames))
+    n_models = length(unique(models))
     if dimension == :member
-        dimnames = model_members
-        if use_members
-            # make sure that the number of members per model is considered
-            w = [repeat([1/n_models * (1/length(members))], length(members)) 
-                for members in model_members]
-            w = vcat(w...)
-        else
-            n_members = length(dimnames)
-            w = repeat([1/n_members], n_members)
-        end
+        # make sure that the number of members per model is considered
+        counts = countmap(models)
+        n_members = length(dimnames)
+        w = use_members ?
+            [1/n_models * 1/counts[m] for m in models] :
+            repeat([1/n_members], n_members)
     elseif dimension == :model
         w = [1/n_models for _ in range(1, n_models)]
-        dimnames = unique(metadata["model_names"])
     else
-        throw(ArgumentError("dimension must be one of: :model, :member"))
+        throw(ArgumentError("Weights can only be computed for data with one of dimensions :model, :member."))
     end
-
-    l = Lookups.Categorical(
-        sort(dimnames);
-        order=Lookups.ForwardOrdered()
-    )
-    weights = DimArray(w, Dim{dimension}(dimnames), metadata = deepcopy(metadata))
-    if dimension == :member
-        weights = weights[member = At(sort(dimnames))]
-        weights = DimensionalData.Lookups.set(weights, member=l)
-    else
-        weights = weights[model = At(sort(dimnames))]
-        weights = DimensionalData.Lookups.set(weights, model=l)
-    end
-    return weights
+    return YAXArray((dims(data,dimension),), w)
 end
 
 
 """
-    distributeWeightsAcrossMembers(weights::YAXArray)
+    distributeWeightsAcrossMembers(weights::YAXArray, members::Vector{String})
 
-Equally distribute weight for each model over its members. Metadata is used
-to access the individual model members the computed weights were based on.
-
-# Arguments:
-- `weights`:
+Equally distribute weight for each model over its members.
 """
-function distributeWeightsAcrossMembers(weights::YAXArray)
+function distributeWeightsAcrossMembers(weights::YAXArray, members::Vector{String})
     models = Array(dims(weights, :model))
-    members = weights.properties["member_names"]
+    counts_models = map(m -> length(findall(x -> startswith(x, m * MODEL_MEMBER_DELIM), members)), models)
     w_members = []
     for (i, m) in enumerate(models)
-        n_members = sum(weights.properties["model_names"] .== m)
+        n_members = counts_models[i]
         w = only(weights[model = At(m)])
         for _ in range(1, n_members) 
             push!(w_members, w/n_members)
         end
     end
-    return YAXArray((Dim{:member}(members),), w_members, weights.properties)
+    return YAXArray((Dim{:member}(members),), w_members)
 end
 
 

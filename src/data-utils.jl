@@ -10,6 +10,11 @@ using YAXArrays
 
 @enum LEVEL MODEL=0 MEMBER=1
 
+KEYS_METADATA = [
+    "mip_era", "variant_label", "grid_label",
+    "realization", "physics_version", "initialization_method"
+]
+
 const DataMap = Dict{String, YAXArray}
 
 function Base.show(io::IO, x::Dict{String, YAXArray})

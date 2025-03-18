@@ -116,7 +116,12 @@ function computeWeights(
         config = @set config.target_path = target_path
     end
     
-    w_members = distributeWeightsAcrossMembers(weights);
+    if hasdim(dists_perform_all, :member)
+        members = collect(dims(dists_perform_all, :member))
+        w_members = distributeWeightsAcrossMembers(weights, members)
+    else 
+        w_members = weights
+    end
     model_weights =  Weights(
         performance_distances = dists_perform_all,
         independence_distances = dists_indep_all, 
