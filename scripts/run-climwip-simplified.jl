@@ -42,7 +42,7 @@ weights = mw.computeWeights(dists_indep, dists_perform, config_weights);
 
 
 # Load weights from disk
-weights = mw.loadWeightsFromJLD2(config_weights.target_path);
+weights = mw.readDataFromDisk(config_weights.target_path; variable="weights");
 
 # make some Plots
 fig_weights = mw.plotWeights(weights; title="Climwip test basic; weights")

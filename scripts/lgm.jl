@@ -276,7 +276,7 @@ Array(weighted_means) .== Array(unweighted_means)
 # @assert target_jld2 == weights_from_disk.config.target_path
 
 ########################### 3. PLOTTING ###########################
-weights = mw.loadWeightsFromJLD2(joinpath(weights_dir, "weights-lgm-cooling.jld2"))
+weights = mw.readDataFromDisk(joinpath(weights_dir, "weights-lgm-cooling.jld2"); variable="weights")
 # if weights loaded from .nc file instead, you can use the following function to load
 # respective weights:
 # wP = mw.loadWeightsAsDimArray(ds_weights, "wP");

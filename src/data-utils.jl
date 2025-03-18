@@ -86,6 +86,18 @@ function writeDataToDisk(data, target_path::String)
 end
 
 
+function readDataFromDisk(target_path::String; variable::String="")
+    if endswith(target_path, ".jld2")
+        f = jldopen(target_path, "r")
+        data = f[variable]
+        close(f)
+    else
+        data = deserialize(target_path)
+    end
+    return data
+end
+
+
 function getDimsModel(da::DimArray)
     dim_symbol = hasdim(da, :model) ? :model : :member
     return (dim_symbol, dims(da, dim_symbol))
@@ -686,7 +698,7 @@ function buildPathsForMetaAttrib(
             join([attrib["_variable"], attrib["_statistic"]], "_")
         path_data = joinpath(p, "preproc", attrib["_alias"], diagnostic)
         if !isdir(path_data)
-            @warn "$path_data is not an existing directory!"
+            @debug "$path_data is not an existing directory!"
         else
             push!(data_paths, path_data)
         end
@@ -1176,16 +1188,19 @@ Remove models from `data` that aren't in `remaining_models` and adapt the
 metadata of `data` accordingly such that 'member_names' and 'model_names' 
 corresponds to the remaining data.
 """
-function filterModels!(data::YAXArray, remaining_models::Vector{String})
+function filterModels(data::YAXArray, remaining_models::Vector{String})
+    meta = deepcopy(data.properties)
     data = hasdim(data, :member) ? 
         data[member = Where(x -> x in remaining_models)] :
         data[model = Where(x -> x in remaining_models)]
 
-    indices_out = hasdim(data, :member) ? 
-        findall(x -> !(x in data.properties["member_names"]), remaining_models) :
-        findall(x -> !(x in data.properties["model_names"]), remaining_models)
-
-    deleteat!(data.properties["model_names"], indices_out)
-    deleteat!(data.properties["member_names"], indices_out)
-    return nothing
+    if haskey(meta, "member_names") && haskey(meta, "model_names")
+        indices_out = hasdim(data, :member) ? 
+            findall(x -> !(x in remaining_models), meta["member_names"]) :
+            findall(x -> !(x in remaining_models), meta["model_names"])
+        deleteat!(meta["model_names"], indices_out)
+        deleteat!(meta["member_names"], indices_out)
+        data = YAXArray(dims(data), Array(data), meta)
+    end
+    return data
 end

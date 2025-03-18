@@ -32,7 +32,7 @@ export getLandMask, getOceanMask, addMasks!, subsetModelData, alignPhysics
 
 export computeWeightedAvg, applyWeights, getModelLikelihoods
 export makeEqualWeights, distributeWeightsAcrossMembers
-export writeWeightsToDisk, saveWeightsAsNCFile, loadWeightsFromJLD2
+export writeWeightsToDisk, saveWeightsAsNCFile, readDataFromDisk
 
 
 end # module ModelWeights

@@ -234,7 +234,7 @@ function computeWeightedAvg(
     models_data = collect(dims(data, dim_symbol))
     
     if isnothing(weights)
-        weights = makeEqualWeights(data, use_members_equal_weights)
+        weights = makeEqualWeights(data; use_members=use_members_equal_weights)
         models_weights = collect(dims(weights, dim_symbol))
     else
         if !hasdim(weights, dim_symbol)
@@ -456,22 +456,6 @@ function loadWeightsAsDimArray(data::NCDataset, key_weights::String)
     )
     return arr
 end
-
-function loadWeightsFromJLD2(target_path::String)
-    f = jldopen(target_path, "r")
-    weights = f["weights"]
-    close(f)
-    return weights
-end
-
-function loadFromJLD2(target::String, var::String)
-    f = jldopen(target, "r")
-    data = f[var]
-    close(f)
-    return data
-end
-
-
 
 
 """ 
