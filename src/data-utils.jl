@@ -789,6 +789,10 @@ function computeDistancesAllDiagnostics(
         end
         # TODO: recheck the metadata here! standard_name should be converted 
         # to a vector?!
+        if length(unique(map(x -> size(x), distances))) > 1
+            @warn "Not all models are identical for variables for diagnostic $diagnostic !"
+            return nothing
+        end
         distances = cat(distances..., dims = Dim{:variable}(String.(collect(variables))));
         push!(distances_all, distances)
     end
@@ -940,23 +944,34 @@ function filterTimeseries(
     start_year::Number, 
     end_year::Number;
     new_alias::String="",
+    ids_ts::Vector{String}=Vector{String}(),
     only_models_non_missing_vals::Bool = true
 )
     new_alias_given = !isempty(new_alias)
-    ids_ts = filter(id -> hasdim(data_all[id], :time), collect(keys(data_all)))
+    if isempty(ids_ts)
+        @info "filter all datasets with :time dimension..."
+        ids_ts = filter(id -> hasdim(data_all[id], :time), collect(keys(data_all)))
+    end
     data_subset = DataMap()
     for id in ids_ts
         @info "filter timeseries data with id: $id"
-        df = deepcopy(data_all[id][time = Where(x -> Dates.year(x) >= start_year && Dates.year(x) <= end_year)])
+        try
+            df = data_all[id][time = Where(x -> Dates.year(x) >= start_year && Dates.year(x) <= end_year)]
+            df = YAXArray(dims(df), Array(df), deepcopy(df.properties))
+        catch
+            @warn "No data found in between $start_year and $end_year !"
+            return nothing
+        end
         if only_models_non_missing_vals
-            dim_symbol = hasdim(df, :model) ? :model : :member
+            dim_symbol, _ = getDimsModel(df)
             models_missing_vals = dropdims(
                 mapslices(x -> any(ismissing.(x)),  DimArray(df), dims=otherdims(df, dim_symbol)), 
                 dims=otherdims(df, dim_symbol)
             )
             indices_missing = findall(x -> x==true, models_missing_vals)
             if !isempty(indices_missing)
-                models_missing = dims(models_missing_vals[model=indices_missing], dim_symbol)
+                models_missing = getByIdxModel(models_missing_vals, dim_symbol, indices_missing)
+                models_missing = dims(models_missing, dim_symbol).val
                 df = dim_symbol == :model ? 
                     df[model = Where(x -> !(x in models_missing))] :
                     df[member = Where(x -> !(x in models_missing))]

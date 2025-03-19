@@ -33,7 +33,7 @@ as Symbol at position 1 and the respetive dimension names at position 2.
 function getDimsModel(data::AbstractArray)
     throwErrorIfModelDimMissing(data)
     dim_symbol = hasdim(data, :model) ? :model : :member
-    return (dim_symbol, dims(data, dim_symbol))
+    return (dim_symbol, dims(data, dim_symbol).val)
 end
 
 
@@ -45,6 +45,17 @@ Return `data` where `dimension` (member or model) has value `model`.
 function getAtModel(data::AbstractArray, dimension::Symbol, model::String)
     throwErrorIfModelDimMissing(data)
     return dimension == :model ? data[model = At(model)] : data[member = At(model)]
+end
+
+
+"""
+    getByIdxModel(data::AbstractArray, dimension::Symbol, indices::Vector)
+
+Return `data` where `dimension` (member or model) has value `model`.
+"""
+function getByIdxModel(data::AbstractArray, dimension::Symbol, indices::Vector)
+    throwErrorIfModelDimMissing(data)
+    return dimension == :model ? data[model = indices] : data[member = indices]
 end
 
 

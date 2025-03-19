@@ -79,7 +79,8 @@ of each combination of variable and diagnostic.
 function computeWeights(
     dists_indep_all::YAXArray,
     dists_perform_all::YAXArray, 
-    config::ConfigWeights
+    config::ConfigWeights;
+    target_path::String=""
 )
     weights_perform = normalizeWeightsVariables(config.performance)  
     weights_indep = normalizeWeightsVariables(config.independence)
@@ -110,8 +111,8 @@ function computeWeights(
     wI = (1 ./ independences) ./ norm_i
     #setRefPeriodInWeightsMetadata!(wP.properties, ref_period_alias, ref_period_timerange)
     
-    if !isempty(config.target_path)
-        target_path = validateConfigTargetPath(config.target_path)
+    if !isempty(target_path)
+        target_path = validateConfigTargetPath(target_path)
         # update config accordingly since it is also saved together with the weights
         config = @set config.target_path = target_path
     end
@@ -134,7 +135,7 @@ function computeWeights(
         config = config
         # overall = (wP .* wI) ./ sum(wP .* wI), # just for sanity check
     )
-    if !isempty(config.target_path)
+    if !isempty(target_path)
         writeWeightsToDisk(model_weights, target_path)
     end
     return model_weights

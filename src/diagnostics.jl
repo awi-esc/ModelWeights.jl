@@ -77,15 +77,27 @@ end
 
 
 """
-    addLinearTrend!(data::DataMap)
+    addLinearTrend!(
+        data::DataMap;     
+        statistic::String="CLIM-ann", 
+        ids_ts::Vector{String}=Vector{String}(), 
+        full_predictions::Bool=true
+    )
 
-Add computed linear trend of all annual climatologies (stats=CLIM-ann) in `data` in to `data`.
+Add computed linear trend (getLinearTrend) for all datasets in `data` with an 
+id in `ids_ts`, or if `ids_ts` is not given for all annual climatologies 
+(stats=CLIM-ann) or with given `statistic` in `data`.
 """
 function addLinearTrend!(
-    data::DataMap; statistic::String="CLIM-ann", full_predictions::Bool=true
+    data::DataMap; 
+    statistic::String="CLIM-ann", 
+    ids_ts::Vector{String}=Vector{String}(), 
+    full_predictions::Bool=true
 )
-    ids = filter(id -> data[id].properties["_statistic"] == statistic, keys(data))
-    for id in ids
+    if isempty(ids_ts)
+        ids_ts = filter(id -> data[id].properties["_statistic"] == statistic, keys(data)) 
+    end
+    for id in ids_ts
         @info "add trend for $id"
         # TODO: there may be problems when data contains missing values!
         trend = getLinearTrend(data[id]; full_predictions)
