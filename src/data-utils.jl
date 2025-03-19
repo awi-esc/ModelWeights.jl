@@ -3,7 +3,6 @@ import YAML
 using DataFrames
 using DimensionalData
 using GLM
-using Interpolations
 using JLD2
 using Setfield
 using YAXArrays
@@ -32,17 +31,6 @@ function Base.show(io::IO, ::MIME"text/plain", x::Dict{String, YAXArray})
 end
 
 
-"""
-    joinDataMaps(v::DataMap...)
-"""
-function joinDataMaps(v::DataMap...)
-    result = DataMap()
-    for dm in v
-        result = merge(result, dm)
-    end
-    return result
-end
-
 @kwdef struct ConfigWeights
     performance::Dict{String, Number}=Dict()
     independence::Dict{String, Number}=Dict()
@@ -66,7 +54,6 @@ end
     config::ConfigWeights # metadata
 end
 
-# Pretty print Weights
 function Base.show(io::IO, x::Weights)
     println(io, "::$(typeof(x)):")
     for m in dims(x.w, :model)
@@ -75,6 +62,25 @@ function Base.show(io::IO, x::Weights)
 end
 
 
+"""
+    joinDataMaps(v::DataMap...)
+"""
+function joinDataMaps(v::DataMap...)
+    result = DataMap()
+    for dm in v
+        warn_if_identical_keys(result, dm)
+        result = merge(result, dm)
+    end
+    return result
+end
+
+
+"""
+    writeDataToDisk(data, target_path::String)
+
+Save `data` as Julia obj if `target_path` has ending '.jld2', otherwise save 
+as binary.
+"""
 function writeDataToDisk(data, target_path::String)
     if endswith(target_path, ".jld2")
         jldsave(target_path; data=data)
@@ -86,8 +92,17 @@ function writeDataToDisk(data, target_path::String)
 end
 
 
+"""
+    readDataFromDisk(target_path::String; variable::String="")
+
+Load data from `target_path`. If `target_path` ends with '.jld2', `variable` 
+must be specified, otherwise  data is assumed to be binary.
+"""
 function readDataFromDisk(target_path::String; variable::String="")
     if endswith(target_path, ".jld2")
+        if isempty(variable)
+            throw(ArgumentError("To load .jld2 data, specify argument variable!"))
+        end
         f = jldopen(target_path, "r")
         data = f[variable]
         close(f)
@@ -98,29 +113,6 @@ function readDataFromDisk(target_path::String; variable::String="")
 end
 
 
-function getDimsModel(da::DimArray)
-    dim_symbol = hasdim(da, :model) ? :model : :member
-    return (dim_symbol, dims(da, dim_symbol))
-end
-
-
-function getAtModel(da::AbstractArray, dimension::Symbol, model::String)
-    return dimension == :model ? da[model = At(model)] : da[member = At(model)]
-end
-
-""" 
-    putAtModel!(da::AbstractArray, dimension::Symbol, model::String, data)
-"""
-function putAtModel!(da::AbstractArray, dimension::Symbol, model::String, data)
-    if dimension == :model
-        da[model = At(model)] =  data
-    else 
-        da[member = At(model)] = data
-    end
-    return nothing
-end
-
-
 """
     buildCMIP5EnsembleMember(
         realizations::Vector, initializations::Vector, physics::Vector
@@ -128,11 +120,6 @@ end
 
 Concatenate model settings to build ripf-abbreviations for CMIP5 models which 
 do not have it in their metadata. Return a vector of strings.
-
-# Arguments
-- `realizations`:
-- `initializations`:
-- `physics`:
 """
 function buildCMIP5EnsembleMember(
     realizations::Vector, initializations::Vector, physics::Vector
@@ -152,6 +139,32 @@ function buildCMIP5EnsembleMember(
     rips = [concat(realizations, "r"), concat(initializations, "i"), concat(physics, "p")];
     variants = [join(k, "") for k in zip(rips...)]
     return variants
+end
+
+
+"""
+    setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
+
+Change the lookup values for the dimension 'member' to refer to the models, i.e.
+they are not unique anymore. This is done in preparation to group the data by
+the different models.
+
+# Arguments:
+- `data::YAXArray`: has at least dimensions in `dim_names`.
+- `dim_names::Vector{String}`: names of dimensions to be changed, e.g. 'member', 
+'member1' (would be changed to 'model', 'model1').
+"""
+function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
+    n_dims = length(dim_names)
+    for (i, dim) in enumerate(dim_names)
+        unique_members = dims(data, Symbol(dim))
+        models = map(x -> split(x, MODEL_MEMBER_DELIM)[1], unique_members)
+
+        data = DimensionalData.set(data, Symbol(dim) => models)
+        new_dim_name = n_dims > 1 ? "model" * string(i) : "model"
+        data = DimensionalData.set(data, Symbol(dim) => Symbol(new_dim_name))
+    end
+    return data
 end
 
 
@@ -254,79 +267,18 @@ end
 
 
 """
-    computeInterpolatedWeightedQuantiles(
-        quantiles::Vector{<:Number},
-        vals::Vector;
-        weights=nothing    
-    )
-
-This implementation follows the one used by Brunner et al.
-"""
-function computeInterpolatedWeightedQuantiles(
-    quantiles::Vector{<:Number},
-    vals::Vector;
-    weights=nothing
-)
-    if isnothing(weights)
-        weights = Array{eltype(vals)}(undef, length(vals))
-        weights[ismissing.(vals) .== false] .= 1
-    end
-    indicesSorted = Array(sortperm(vals)); # gives indices of smallest to largest data point
-    weightsSorted = weights[indicesSorted];
-    weightedQuantiles = cumsum(weightsSorted) - 0.5 * weightsSorted;
-    weightedQuantiles = reshape(weightedQuantiles, length(weightedQuantiles), 1);
-    # TODO: recheck missing values!
-    weightedQuantiles = (weightedQuantiles .- minimum(skipmissing(weightedQuantiles))) ./ 
-        maximum(skipmissing(weightedQuantiles));
-
-    interp_linear = Interpolations.linear_interpolation(
-        vec(weightedQuantiles),
-        vals[indicesSorted],
-        extrapolation_bc=Interpolations.Line()
-    );
-    return interp_linear(quantiles)
-end
-
-
-"""
-    setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
-
-Change the lookup values for the dimension 'member' to refer to the models, i.e.
-they are not unique anymore. This is done in preparation to group the data by
-the different models.
-
-# Arguments:
-- `data`: has at least dimensions in 'dim_names'
-- `dim_names`: names of dimensions to be changed, e.g. 'member', 'member1'
-"""
-function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
-    n_dims = length(dim_names)
-    for (i, dim) in enumerate(dim_names)
-        unique_members = dims(data, Symbol(dim))
-        models = map(x -> split(x, MODEL_MEMBER_DELIM)[1], unique_members)
-
-        data = DimensionalData.set(data, Symbol(dim) => models)
-        new_dim_name = n_dims > 1 ? "model" * string(i) : "model"
-        data = DimensionalData.set(data, Symbol(dim) => Symbol(new_dim_name))
-    end
-    return data
-end
-
-
-"""
     getMetaAttributesFromESMValToolConfigs(
         base_path_configs::String;
         constraint::Union{Dict, Nothing} = nothing
 )
 
-Read variable, statistic, experiment and timerange/alias from ESMValTool recipes 
-stored at `base_path_configs` into a vector of `MetaAttrib`-Objects.
+Read variable, statistic, experiment and timerange/alias values from ESMValTool 
+recipes stored at `base_path_configs` into a vector of Dictionaries storing the 
+respective readoff values.
 
-# Arguments:
-- `base_path_configs`: path to directory that contain one or more yaml files.
-- `constraint::Union{Dict, Nothing}`: Mapping from fieldnames of 'MetaAttrib'
-struct to vector specifiying the properties of which at least one must be 
-present for an id to be retained.
+If constraint is given, a combination of 'statistic', 'experiment', etc. is 
+only retained if each of the respective readoff values aligns with the
+the specified constraints if provided.
 """
 function getMetaAttributesFromESMValToolConfigs(
     base_path_configs::String;
@@ -392,7 +344,7 @@ end
 """
     get_optional_fields_config(ds::Dict, timerange_aliases_dict::Dict)
 
-Fill optional fields for a dataset in config file with default values. Given 
+Fill optional fields for a dataset in config file with default values. 
 Returned timeranges and aliases have the same length and correspond to one another.
 
 # Arguments:
@@ -443,42 +395,49 @@ function get_optional_fields_config(ds::Dict, timerange_aliases_dict::Dict)
         end
     end
     if  full_included || (isempty(timeranges) && isempty(aliases))
+        # default is "full"
         push!(timeranges, "full")
         push!(aliases, ds["exp"])
     end
+    # sanity check
+    if (length(timeranges) != length(aliases)) || isempty(timeranges)
+            msg = "Merging timeranges and aliases failed! After merging, they must have the same length and match!"
+            throw(ArgumentError(msg))
+    end
+
+    # subset this dataset only 
+    subset_level = lowercase(get(ds, "level_shared_models", ""))
+    subset_level = subset_level == "model" ? MODEL : (subset_level == "member" ? MEMBER : nothing)
+
     return Dict(
         "timeranges" => timeranges,
         "aliases" => aliases,
         "models" => get(ds, "models", Vector{String}()),
         "projects" => get(ds, "projects", Vector{String}()),
         "subdirs" => get(ds, "subdirs", Vector{String}()),
-        "dir_per_var" => get(ds, "dir_per_var", true)
+        "dir_per_var" => get(ds, "dir_per_var", true),
+        "level_shared_models" => subset_level
     )
 end
 
-"""
-If data is constraint by provided argument when loading, the argument takes
-precedence over the given value inside the config yaml file.
-"""
-function setConstraintVal!(ds_config::Dict, cs_arg::Dict)
-    for (field, val) in cs_arg
-        ds_config[field] = val
-    end
-    return nothing
-end
 
-function mergeMetaDataPaths(meta1::Dict{String, Any}, meta2::Dict{String, Any})
-    paths = copy(meta1["_paths"])
-    append!(paths, meta2["_paths"])
-    return unique(paths)
-end
+# """
+# If data is constraint by provided argument when loading, the argument takes
+# precedence over the given value inside the config yaml file.
+# """
+# function setConstraintVal!(ds_config::Dict, cs_arg::Dict)
+#     for (field, val) in cs_arg
+#         ds_config[field] = val
+#     end
+#     return nothing
+# end
 
 
 """
     getMetaDataFromYAML(
         path_config::String,
         is_model_data::Bool
-        subset::Union{Dict{String, Vector{String}}, Nothing} = nothing
+        subset::Union{Dict, Nothing} = nothing
     )
 
 Load data as specified in config file located at `path_config`. For constraints
@@ -504,18 +463,21 @@ function getMetaDataFromYAML(
 
     meta_data = Dict{String, Dict{String, Any}}()
     for ds in datasets
+        meta_ds = Dict{String, Dict{String, Any}}()
         # get data from config file
         req_fields = get_required_fields_config(ds)
         optional_fields = get_optional_fields_config(ds, timerange_to_alias)
         ds_constraint = merge(req_fields, optional_fields)
-        # potentially update with constraint from argument
+        # potentially update with constraint from argument (has precedence over value in yaml file)
         if !isnothing(arg_constraint)
-            setConstraintVal!(ds_constraint, arg_constraint)
-        end
-        if length(ds_constraint["timeranges"]) != length(ds_constraint["aliases"]) || 
-            isempty(ds_constraint["timeranges"])
-                msg = "Timeranges and aliases must have the same length and match"
-                throw(ArgumentError(msg))
+            #setConstraintVal!(ds_constraint, arg_constraint)
+            for (field, val) in arg_constraint
+                # if level_shared_models is given as argument, it will subset 
+                # considering all loaded datasets, not individual ones!
+                if field != "level_shared_models"
+                    ds_constraint[field] = val
+                end
+            end
         end
         # NOTE: if the second arg is an absolute path, joinpath will ignore the 
         # first arg and just use the second
@@ -537,14 +499,21 @@ function getMetaDataFromYAML(
                         constraint=ds_constraint
                     )
                     if !isempty(meta["_paths"])
-                        id = meta["_id"]
-                        if haskey(meta_data, id)
-                            meta_data[id]["_paths"] = mergeMetaDataPaths(meta_data[id], meta)
-                        else
-                            meta_data[id] = meta
-                        end
+                        meta_ds[meta["_id"]] = meta
                     end
                 end
+            end
+        end
+        # Apply level_shared_models if provided inside yaml file for individual datasets
+        if !isnothing(ds_constraint) && !isnothing(get(ds_constraint, "level_shared_models", nothing))
+            filterPathsSharedModels!(meta_ds, ds_constraint["level_shared_models"])
+        end
+        # merge new dataset with already loaded
+        for (id, meta) in meta_ds
+            if haskey(meta_data, id)
+                meta_data[id]["_paths"] = mergeMetaDataPaths(meta_data[id], meta)
+            else
+                meta_data[id] = meta
             end
         end
     end
@@ -561,7 +530,7 @@ end
     )
 
 Build vector of strings containing paths to data files in `path_data` 
-that were not filtered out by `model_constraints`.
+that were not filtered out by `model_constraints` or `project_constraints`.
 
 # Arguments:
 - `model_constraints::Vector{String}`:
@@ -605,27 +574,17 @@ function buildPathsToDataFiles(
 end
 
 
-function buildMetaDataID(variable::String, statistic::String, alias::String)
-    return join([variable, statistic, alias], "_")
-end
-
-
-function buildMetaDataID(meta::Dict{String, Any})
-    return join([meta["_variable"], meta["_statistic"], meta["_alias"]], "_")
-end
-
-
 """
     addPathsToMetaAttribs!(
-        attrib::Union{MetaAttrib, Vector{MetaAttrib}},
+        attrib::Dict{String, Any},
         base_path_data::String,
         dir_per_var::Bool,
         is_model_data::Bool;
-        constraint::Union{Dict, Nothing} = nothing
+        constraint::Union{Dict, Nothing}=nothing
     )
 
 Create a metadata Dictionary with the information from `attrib` and the file
-paths to the data files in `base_path_data`.
+paths to the data files in `base_path_data` taking into account `constraint`.
 """
 function addPathsToMetaAttribs!(
     attrib::Dict{String, Any},
@@ -708,15 +667,14 @@ end
 
 
 """
-    applyDataConstraints!(meta_attributes::Vector{MetaAttrib}, constraint::Dict)
+    applyDataConstraints!(meta_attributes::Vector{Dict{String, Any}}, constraint::Dict)
 
-Subset model ids so that only those with properties specified in 'constraint' remain.
+Subset entries in `meta_attributes` so that only those with properties specified 
+in `constraint` remain.
 
 # Arguments
-- `meta_attributes::Vector{MetaAttrib}`
-- `constraint::Dict`: Mapping from fieldnames of 'MetaAttrib' struct to vector 
-specifiying the properties of which at least one must be present for an id to 
-be retained.
+- `constraint::Dict`: Mapping to vector specifiying the properties of which at 
+least one must be present for an id to be retained.
 """
 function applyDataConstraints!(
     meta_attributes::Vector{Dict{String, Any}},
@@ -752,7 +710,9 @@ end
 
 
 """
-    applyModelConstraints(file::String, model_constraints::Vector{String})
+    applyModelConstraints(
+        path_model_data::String, model_constraints::Vector{String}
+    )
 
 Return true if constraints in `model_constraints` are fulfilled, i.e. if the 
 given `path_model_data` contains any model from `model_constraints`, false 
@@ -763,7 +723,9 @@ otherwise.
 or model_name and member id, e.g. 'MPI-ESM-P#r1i1p2' or model name, member id and 
 grid, e.g. 'MPI-ESM-P#r1i1p2_gn'.
 """
-function applyModelConstraints(path_model_data::String, model_constraints::Vector{String})
+function applyModelConstraints(
+    path_model_data::String, model_constraints::Vector{String}
+)
     keep_file = false
     for model in model_constraints
         keep_file = searchModelInPaths(model, [path_model_data])
@@ -790,7 +752,7 @@ for all variables and diagnostics for which weights are specified in `config`.
 # Arguments:
 - `config::Dict{String, Number}`: mapping from 'VARIABLE_DIAGNOSTIC' to 
 respective weight.
-- `for_performance`: true for distances between models and observations, 
+- `for_performance::Bool`: true for distances between models and observations, 
 false for distances between model predictions.
 """
 function computeDistancesAllDiagnostics(
@@ -841,7 +803,6 @@ end
 
 For every variable in `distances_all`, compute the weighted sum of all 
 diagnostics.
-
 """
 function computeGeneralizedDistances(
     distances_all::YAXArray, weights::DimArray, for_performance::Bool
@@ -866,35 +827,6 @@ function computeGeneralizedDistances(
     return YAXArray(dims(distances), distances.data, distances.metadata)
 end
 
-
-"""
-    allcombinations(v...)
-
-Generate vector of strings with all possible combinations of input vectors,
-where each combination consists of one element from each input vector, 
-concatenated as a string with underscores separating the elements.
-
-# Arguments
-- `v...`: A variable number of input vectors.
-
-# Example
-```jldoctest
-julia> ModelWeights.allcombinations(["tos", "tas"], ["CLIM"])
-2-element Vector{String}:
- "tos_CLIM"
- "tas_CLIM"
-```
-"""
-function allcombinations(v...)
-    if any(isempty.(v))
-        @warn "At least one input vector is empty -> empty vector returned!"
-    end
-    combis = Vector{String}()
-    for elems in Iterators.product(v...)
-        push!(combis, join(elems, "_"))
-    end
-    return combis
-end
 
 
 """
@@ -1067,95 +999,6 @@ function filterTimeseries(
 end
 
 
-"""
-    getLinearTrend(data::YAXArray)
-
-Compute linear trend as ordinary least squares for timeseries data.
-
-If `data` has dimensions 'lon' and 'lat', linear trend is computed for each 
-position separately.
-
-# Arguments:
-- `data::YAXArray`: must have dimension :time and one of :model, :member.
-"""
-function getLinearTrend(data::YAXArray; full_predictions::Bool=true)
-    if !hasdim(data, :time) || (!hasdim(data, :model) && !hasdim(data, :member))
-        msg = "Linear trend can only be computed for timeseries data (with dimension :time)!"
-        throw(ArgumentError(msg))
-    end
-    has_grid = hasdim(data, :lon) && hasdim(data, :lat)
-    x = Dates.year.(Array(data.time))
-    meta = deepcopy(data.properties)
-    stat = full_predictions ? "TREND-pred" : "TREND"
-    meta["_id"] = replace(meta["_id"], meta["_statistic"] => stat)
-    meta["_statistic"] = stat
-    
-    dimensions = full_predictions ? dims(data) : otherdims(data, :time)
-    trends = YAXArray(dimensions, Array{eltype(data)}(undef, size(dimensions)), meta)
-
-    is_level_model = hasdim(data, :model)
-    models = is_level_model ? dims(data, :model) : dims(data, :member)
-    for m in models
-        if has_grid
-            data_model = is_level_model ? data[model = At(m)] : data[member = At(m)]
-            for (idx, y) in pairs(eachslice(data_model, dims=(:lon, :lat)))
-                ols = lm(@formula(Y~X), DataFrame(X=x, Y=Float64.(Array(y))))
-                lon_idx, lat_idx = Tuple(idx)
-                if full_predictions
-                    if is_level_model 
-                        trends[lon=lon_idx, lat=lat_idx, model=At(m), time=:] .= predict(ols)
-                    else 
-                        trends[lon=lon_idx, lat=lat_idx, member=At(m), time=:] .= predict(ols)
-                    end
-                else
-                    if is_level_model
-                        trends[lon=lon_idx, lat=lat_idx, model=At(m)] = coef(ols)[2]
-                    else
-                        trends[lon=lon_idx, lat=lat_idx, member=At(m)] = coef(ols)[2]
-                    end
-                end
-            end
-        else
-            y = is_level_model ? Array(data[model = At(m)]) : Array(data[member = At(m)])
-            ols = lm(@formula(Y~X), DataFrame(X=x, Y=y))
-            if full_predictions
-                if is_level_model
-                    trends[model = At(m)] .= predict(ols)
-                else
-                    trends[member = At(m)] .= predict(ols)
-                end
-            else
-                if is_level_model
-                    trends[model = At(m)] = coef(ols)[2]
-                else 
-                    trends[member = At(m)] = coef(ols)[2]
-                end
-            end
-        end
-    end
-    return trends
-end
-
-
-"""
-    addLinearTrend!(data::DataMap)
-
-Add computed linear trend of all annual climatologies (stats=CLIM-ann) in `data` in to `data`.
-"""
-function addLinearTrend!(
-    data::DataMap; statistic::String="CLIM-ann", full_predictions::Bool=true
-)
-    ids = filter(id -> data[id].properties["_statistic"] == statistic, keys(data))
-    for id in ids
-        @info "add trend for $id"
-        # TODO: there may be problems when data contains missing values!
-        trend = getLinearTrend(data[id]; full_predictions)
-        data[trend.properties["_id"]] = trend
-    end
-    return nothing
-end
-
-
 function getSharedMembers(data::DataMap)
     if !(all(((id, dat),) -> hasdim(dat, :member), data))
         throw(ArgumentError("All datasets must have dimension :member!"))
@@ -1182,7 +1025,7 @@ end
 
 
 """
-    filterModels!(data::YAXArray, remaining_models::Vector{String})
+    filterModels(data::YAXArray, remaining_models::Vector{String})
 
 Remove models from `data` that aren't in `remaining_models` and adapt the 
 metadata of `data` accordingly such that 'member_names' and 'model_names' 
@@ -1203,4 +1046,20 @@ function filterModels(data::YAXArray, remaining_models::Vector{String})
         data = YAXArray(dims(data), Array(data), meta)
     end
     return data
+end
+
+
+function createGlobalMetaDataDict(
+    variable, experiment, statistic, alias, timerange; 
+    paths = Vector{String}()
+)
+    metadata = Dict{String, Any}()
+    metadata["_paths"] = paths 
+    metadata["_variable"] = variable
+    metadata["_experiment"] = experiment
+    metadata["_statistic"] = statistic
+    metadata["_alias"] = alias
+    metadata["_timerange"] = timerange
+    metadata["_id"] = buildMetaDataID(variable, statistic, alias)
+    return metadata
 end

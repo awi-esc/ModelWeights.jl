@@ -218,10 +218,10 @@ end
 Load a `DataMap`-instance with data as specified in yaml file at `path_config`.
 
 # Arguments:
-- `path_config`: path to yaml config file
-- `is_model_data`: true for model data (default), false for observational data
+- `path_config`: path to yaml config file.
+- `is_model_data`: true for model data (default), false for observational data.
 - `subset`: specifies the properties of the subset of data to be loaded. These 
-have to apply to all loaded datasets specified in the config yaml file. 
+have to apply to each loaded dataset specified in the config yaml file. 
 The following keys are considered:  `models` (used to load only specific set of models 
 or members of models), `projects` (used to load only data from a given set of
 projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases` 

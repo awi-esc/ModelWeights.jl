@@ -11,7 +11,9 @@ const MODEL_NAME_FIXES = Dict(
     "ACCESS1.3" => "ACCESS1-3"
 )
 
+include("helper-functions.jl")
 include("data-utils.jl")
+include("diagnostics.jl")
 include("data-functions.jl")
 include("plot-utils.jl")
 include("weights.jl")
@@ -24,6 +26,9 @@ include("main-functions.jl")
 export loadDataFromYAML, loadDataFromESMValToolConfigs, computeWeights
 
 
+export joinDataMaps
+export writeDataToDisk, readDataFromDisk
+
 export getUncertaintyRanges, computeGlobalMeans, addAnomalies!, approxAreaWeights, computeAnomaliesGM!, addAnomaliesGM!
 export addLinearTrend!, getLinearTrend
 export averageEnsembleMembers!, summarizeEnsembleMembersVector
@@ -32,7 +37,7 @@ export getLandMask, getOceanMask, addMasks!, subsetModelData, alignPhysics
 
 export computeWeightedAvg, applyWeights, getModelLikelihoods
 export makeEqualWeights, distributeWeightsAcrossMembers
-export writeWeightsToDisk, saveWeightsAsNCFile, readDataFromDisk
+export writeWeightsToDisk, saveWeightsAsNCFile
 
 
 end # module ModelWeights

@@ -1,6 +1,7 @@
 
 using DimensionalData
 using Distributions
+using Interpolations
 using JLD2
 using LinearAlgebra
 using NCDatasets
@@ -8,6 +9,38 @@ using Serialization
 using Setfield
 using Statistics
 import StatsBase:countmap
+
+
+"""
+    computeInterpolatedWeightedQuantiles(
+        quantiles::Vector{<:Number}, vals::Vector; weights=nothing    
+    )
+
+This implementation follows the one used by Brunner et al.
+"""
+function computeInterpolatedWeightedQuantiles(
+    quantiles::Vector{<:Number}, vals::Vector; weights=nothing
+)
+    if isnothing(weights)
+        weights = Array{eltype(vals)}(undef, length(vals))
+        weights[ismissing.(vals) .== false] .= 1
+    end
+    indicesSorted = Array(sortperm(vals)); # gives indices of smallest to largest data point
+    weightsSorted = weights[indicesSorted];
+    weightedQuantiles = cumsum(weightsSorted) - 0.5 * weightsSorted;
+    weightedQuantiles = reshape(weightedQuantiles, length(weightedQuantiles), 1);
+    # TODO: recheck missing values!
+    weightedQuantiles = (weightedQuantiles .- minimum(skipmissing(weightedQuantiles))) ./ 
+        maximum(skipmissing(weightedQuantiles));
+
+    interp_linear = Interpolations.linear_interpolation(
+        vec(weightedQuantiles),
+        vals[indicesSorted],
+        extrapolation_bc=Interpolations.Line()
+    );
+    return interp_linear(quantiles)
+end
+
 
 """
     areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractArray)
@@ -530,4 +563,46 @@ function getModelLikelihoods(modelData::YAXArray, distr::Distribution, diagnosti
         reshape(likelihoods, length(likelihoods), 1, 1),
         deepcopy(modelData.properties)
     )
+end
+
+
+"""
+    getUncertaintyRanges(
+        data::AbstractArray; 
+        w::Union{DimArray, Nothing}=nothing, 
+        quantiles=[0.167, 0.833]}
+    )
+
+Compute weighted `quantiles` of `data`.
+
+# Arguments:
+- `data::AbstractArray`: must have dimensions 'time', 'model'.
+- `w::Union{DimArray, Nothing}=nothing`: must have dimension 'model' and sum up to 1.
+- `quantiles=[0.167, 0.833]`: vector with two entries between 0 and 1 
+representing  the lower and upper bound in this order.
+"""
+function getUncertaintyRanges(
+    data::AbstractArray;
+    w::Union{YAXArray, Nothing}=nothing, 
+    quantiles=[0.167, 0.833]
+)
+    timesteps = dims(data, :time)
+    uncertainty_ranges = YAXArray(
+        (dims(data, :time), Dim{:confidence}(["lower", "upper"])),
+        Array{Union{Missing, Float64}}(undef, length(timesteps), 2),
+        Dict{String, Any}("quantiles" => string.(quantiles))
+    )
+    for t in timesteps
+        arr = Array(data[time = At(t)])
+        if sum(ismissing.(arr)) >= length(arr) - 1 # at least two values must be given
+            lower, upper = missing, missing
+        else
+            lower, upper = computeInterpolatedWeightedQuantiles(
+                quantiles, collect(skipmissing(arr)); weights=w
+            )
+        end
+        uncertainty_ranges[time=At(t), confidence=At("lower")] = lower
+        uncertainty_ranges[time=At(t), confidence=At("upper")] = upper
+    end
+    return uncertainty_ranges
 end
