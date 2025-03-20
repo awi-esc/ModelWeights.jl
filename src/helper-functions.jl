@@ -33,7 +33,7 @@ as Symbol at position 1 and the respetive dimension names at position 2.
 function getDimsModel(data::AbstractArray)
     throwErrorIfModelDimMissing(data)
     dim_symbol = hasdim(data, :model) ? :model : :member
-    return (dim_symbol, dims(data, dim_symbol).val)
+    return (dim_symbol, Array(dims(data, dim_symbol)))
 end
 
 

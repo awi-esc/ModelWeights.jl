@@ -559,26 +559,27 @@ Set to false if vectors refer to different variables for instance.
 function summarizeEnsembleMembersVector(
     data::YAXArray, updateMeta::Bool; fn::Function=Statistics.mean
 )
+    throwErrorIfModelDimMissing(data)
     data = setLookupsFromMemberToModel(data, ["member"])
-    grouped = groupby(data, :model=>identity);
-    models = String.(collect(dims(grouped, :model)))
-    # TODO: check if skipmissing necessary!!
-    #averages = map(entry -> mapslices(x -> fn(skipmissing(x)), entry, dims=:model), grouped)
-    #combined = cat(averages..., dims=(Dim{:model}(models)));
-    averages = map(entry -> fn(entry, dims=:model)[model = At("combined")], grouped)
-    combined = concatenatecubes(averages.data,  Dim{:model}(models))
-    combined = replace(combined, NaN => missing) # Why necessary?
+    models = unique(Array(dims(data, :model)))
+    dimensions = otherdims(data, :model)
+    s = isempty(dimensions) ? (length(models),) : (size(dimensions)..., length(models))
+    summarized_data = YAXArray(
+        (otherdims(data, :model)..., Dim{:model}(models)),
+        Array{eltype(data)}(undef, s),
+        deepcopy(data.properties)
+    )
+    for m in models
+        dat = data[model = Where(x -> x== m)]
+        average = isempty(dimensions) ? fn(dat) : mapslices(x -> fn(x), dat; dims=(:model,))
+        summarized_data[model = At(m)] = average
+    end
+    summarized_data = replace(summarized_data, NaN => missing)
 
-    meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
-    combined = YAXArray(dims(combined), combined.data, meta)
-    # I think not necessary, since in combined model dimension is now already ForwareOrdered
-    # l = Lookups.Categorical(
-    #     sort(models);
-    #     order=Lookups.ForwardOrdered()
-    # )
-    # combined = combined[model=At(sort(models))]
-    # combined = DimensionalData.Lookups.set(combined, model=l)
-    return combined
+    meta = deepcopy(data.properties)
+    # TODO: fix updateMetadat
+    #meta = updateMeta ? updateGroupedDataMetadata(meta, grouped) : meta
+    return YAXArray(dims(summarized_data), summarized_data.data, meta)
 end
 
 
@@ -592,7 +593,10 @@ For every dataset in `data`, take average for all members of each model.
 """
 function averageEnsembleMembers!(data::DataMap)
     for (k, current_data) in data
-        data[k] = summarizeEnsembleMembersVector(current_data, true)
+        if hasdim(current_data, :member)
+            @info "average ensemble members for $k"
+            data[k] = summarizeEnsembleMembersVector(current_data, true)
+        end
     end
     return nothing
 end

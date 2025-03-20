@@ -205,40 +205,21 @@ end
 
 
 function computeAnomalies(orig_data::YAXArray, ref_data::YAXArray; stats::String="ANOM")
-    dimension = hasdim(orig_data, :member) ? :member : :model
-    models = dims(orig_data, dimension)
-    if !hasdim(ref_data, dimension) || models != dims(ref_data, dimension)
+    dimension, models = getDimsModel(orig_data)
+    if !hasdim(ref_data, dimension) || models != Array(dims(ref_data, dimension))
         throw(ArgumentError("Original and reference data must contain exactly the same models!"))
     end
-    is_timeseries = hasdim(orig_data, :time)
-
     anomalies_metadata = deepcopy(orig_data.properties)
     anomalies_metadata["_statistic"] = stats
     anomalies_id = buildMetaDataID(anomalies_metadata)
     anomalies_metadata["_id"] = anomalies_id
     anomalies_metadata["_ref_data_id"] = ref_data.properties["_id"]
     anomalies_metadata["_orig_data_id"] = orig_data.properties["_id"]
-
-    arr = Array{Union{Missing, Float64}}(undef, size(dims(orig_data))...)
-    anomalies = YAXArray(dims(orig_data), arr, anomalies_metadata)
-    for m in models
-        if is_timeseries
-            times = dims(orig_data, :time)
-            for t in times
-                if dimension == :model
-                    anomalies[time=At(t), model=At(m)] .= orig_data[time=At(t), model=At(m)] .- ref_data[time=At(t), model=At(m)]
-                else
-                    anomalies[time=At(t), member=At(m)] .= orig_data[time=At(t), member=At(m)] .- ref_data[time=At(t), member=At(m)]
-                end
-            end
-        else
-            if dimension == :model
-                anomalies[model=At(m)] .= orig_data[model=At(m)] .- ref_data[model=At(m)]
-            else
-                anomalies[member=At(m)] .= orig_data[member=At(m)] .- ref_data[member=At(m)]
-            end
-        end
-    end
+    
+    anomalies = @d orig_data .- ref_data
+    anomalies = YAXArray(
+        dims(orig_data), Array(anomalies), anomalies_metadata
+    )
     return anomalies
 end
 
@@ -249,12 +230,15 @@ Add entry to 'datamap' with difference between 'datamap' at id_data and id_ref.
 
 The id of the original data and of the reference data is added to the metadata.
 """
-function addAnomalies!(data::DataMap, id_data::String, id_ref::String; stats::String="ANOM")
+function addAnomalies!(
+    data::DataMap, id_data::String, id_ref::String; stats::String="ANOM"
+)
     if !haskey(data, id_data)
         throw(ArgumentError("The given DataMap does not have key $id_data"))
     elseif !haskey(data, id_ref)
         throw(ArgumentError("The given DataMap does not have key $id_ref"))
     end
+    @info "add anomalies for $id_data"
     anomalies = computeAnomalies(data[id_data], data[id_ref]; stats)
     data[anomalies.properties["_id"]] = anomalies
     return nothing

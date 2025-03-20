@@ -158,7 +158,7 @@ function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
     n_dims = length(dim_names)
     for (i, dim) in enumerate(dim_names)
         unique_members = dims(data, Symbol(dim))
-        models = map(x -> split(x, MODEL_MEMBER_DELIM)[1], unique_members)
+        models = map(x -> String.(split(x, MODEL_MEMBER_DELIM)[1]), unique_members)
 
         data = DimensionalData.set(data, Symbol(dim) => models)
         new_dim_name = n_dims > 1 ? "model" * string(i) : "model"

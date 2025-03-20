@@ -110,15 +110,9 @@ function computeWeights(
     norm_i = sum(1 ./ independences)
     wI = (1 ./ independences) ./ norm_i
     #setRefPeriodInWeightsMetadata!(wP.properties, ref_period_alias, ref_period_timerange)
-    
-    if !isempty(target_path)
-        target_path = validateConfigTargetPath(target_path)
-        # update config accordingly since it is also saved together with the weights
-        config = @set config.target_path = target_path
-    end
-    
+        
     if hasdim(dists_perform_all, :member)
-        members = collect(dims(dists_perform_all, :member))
+        members = Array(dims(dists_perform_all, :member))
         w_members = distributeWeightsAcrossMembers(weights, members)
     else 
         w_members = weights
@@ -136,6 +130,7 @@ function computeWeights(
         # overall = (wP .* wI) ./ sum(wP .* wI), # just for sanity check
     )
     if !isempty(target_path)
+        target_path = validateConfigTargetPath(target_path)
         writeWeightsToDisk(model_weights, target_path)
     end
     return model_weights
