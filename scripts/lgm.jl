@@ -177,7 +177,7 @@ config_weights = mw.ConfigWeights(
     target_path = joinpath(weights_dir, target_fn * ".jld2")
 );
 
-dists_perform = mw.getModelLikelihoods(global_means, distr_tierney, "lgm-cooling");
+dists_perform = mw.getModelLogLikelihoods(global_means, distr_tierney)
 # On which values to base independence weights?
 weights = mw.computeWeights(dists_indep, dists_perform, config_weights)
 title = "Weights based on lgm-cooling data wrt Tierney DA-reconstruction (tas)"

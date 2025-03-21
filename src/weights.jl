@@ -540,28 +540,24 @@ end
 
 
 """
-    getModelLikelihoods(modelData::AbstractArray, distr::Distribution, diagnostic::String)
+    getModelLogLikelihoods(model_data::YAXArray, distr::Distribution)
 
-# Arguments:
-- `modelData`:
-- `distr`:
-- `diagnostic`:
+Compute the log likelihood of `model_data` to originate from `distr`.
 """
-function getModelLikelihoods(modelData::YAXArray, distr::Distribution, diagnostic::String)
-    dim_symbol = hasdim(modelData, :model) ? :model : :member
-    names_models = dims(modelData, dim_symbol)
+function getModelLogLikelihoods(model_data::YAXArray, distr::Distribution)
+    dim_symbol, names_models = getDimsModel(model_data)
+    # TODO: add checks that distribution and data dimensions match
     likelihoods = dim_symbol == :model ? 
-        map(m -> Distributions.pdf(distr, DimArray(modelData)[model = At(m)]), names_models) :
-        map(m -> Distributions.pdf(distr, DimArray(modelData)[member = At(m)]), names_models)
+        map(m -> Distributions.pdf(distr, DimArray(model_data)[model = At(m)]), names_models) :
+        map(m -> Distributions.pdf(distr, DimArray(model_data)[member = At(m)]), names_models)
 
-    variables = unique(filter(x->!ismissing(x), modelData.properties["variable_id"]))
-    if length(variables) > 1
-        throw(ArgumentError("Variable should be unique when computing likelihoods, given variables: $variables"))
-    end
     return YAXArray(
-        (Dim{dim_symbol}(Array(names_models)), Dim{:variable}([variables[1]]), Dim{:diagnostic}([diagnostic])),
-        reshape(likelihoods, length(likelihoods), 1, 1),
-        deepcopy(modelData.properties)
+        (Dim{dim_symbol}(Array(names_models)), 
+         Dim{:variable}([model_data.properties["_variable"]]), 
+         Dim{:diagnostic}([model_data.properties["_statistic"]])
+        ),
+        reshape(log.(likelihoods), length(likelihoods), 1, 1),
+        deepcopy(model_data.properties)
     )
 end
 

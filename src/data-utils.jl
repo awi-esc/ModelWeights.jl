@@ -11,7 +11,8 @@ using YAXArrays
 
 KEYS_METADATA = [
     "mip_era", "variant_label", "grid_label",
-    "realization", "physics_version", "initialization_method"
+    "realization", "physics_version", "initialization_method",
+    "units"
 ]
 
 const DataMap = Dict{String, YAXArray}

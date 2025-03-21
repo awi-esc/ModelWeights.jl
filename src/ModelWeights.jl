@@ -30,12 +30,12 @@ export joinDataMaps
 export writeDataToDisk, readDataFromDisk
 
 export getUncertaintyRanges, computeGlobalMeans, addAnomalies!, approxAreaWeights, computeAnomaliesGM!, addAnomaliesGM!
-export addLinearTrend!, getLinearTrend
+export addLinearTrend!, computeLinearTrend
 export averageEnsembleMembers!, summarizeEnsembleMembersVector
 export getLandMask, getOceanMask, addMasks!, subsetModelData, alignPhysics
 
 
-export computeWeightedAvg, applyWeights, getModelLikelihoods
+export computeWeightedAvg, applyWeights, getModelLogLikelihoods
 export makeEqualWeights, distributeWeightsAcrossMembers
 export writeWeightsToDisk, saveWeightsAsNCFile
 
