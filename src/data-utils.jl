@@ -937,6 +937,7 @@ end
         start_year::Number, 
         end_year::Number;
         new_alias::String="",
+        ids_ts::Vector{String}=Vector{String}(),
         only_models_non_missing_vals::Bool = true
     )
 """

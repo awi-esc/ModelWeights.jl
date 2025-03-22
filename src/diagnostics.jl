@@ -116,7 +116,7 @@ function computeGlobalMeans(data::YAXArray)
     weighted_unnormalized_vals = area_weighted_mat .* data
     normalization = sum(coalesce.(area_weighted_mat, 0), dims=(:lon, :lat)) # takes a bit
     weighted_normalized_vals = weighted_unnormalized_vals ./ normalization
-    gms = sum(coalesce.(weighted_normalized_vals, 0), dims=(:lon, :lat)) # this is slow! (~35 sec. for 72x36x165x156 data)
+    gms = sum(coalesce.(weighted_normalized_vals, 0), dims=(:lon, :lat)) # this is slow!
 
     return YAXArray(otherdims(data, (:lon, :lat)), Array(gms[lon=1, lat=1]), meta)
 end
@@ -153,6 +153,10 @@ function computeAnomalies(
     if !hasdim(ref_data, dimension) || models != Array(dims(ref_data, dimension))
         throw(ArgumentError("Original and reference data must contain exactly the same models!"))
     end
+    if orig_data.properties["_units"] != orig_data.properties["_units"]
+        @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
+        return nothing
+    end
     # TODO: add check that datasets have the same units!
     anomalies_metadata = deepcopy(orig_data.properties)
     anomalies_metadata["_statistic"] = stats
@@ -186,7 +190,7 @@ function addAnomalies!(
     elseif !haskey(data, id_ref)
         throw(ArgumentError("The given DataMap does not have key $id_ref"))
     end
-    addDiagnostic!(data, computeAnomalies, id, data[id_ref]; stats)
+    addDiagnostic!(data, computeAnomalies, id_data, data[id_ref]; stats)
     return nothing
 end
 

@@ -101,7 +101,7 @@ save("plots/lgm/" * target_fn * ".png", f1)
 
 # 2. Apply weights on historical period
 df = deepcopy(historical_data);
-mw.averageEnsembleMembers!(df)
+mw.setToSummarizedMembers!(df)
 weighted_avg_hist = mw.applyWeights(df["tas_CLIM_historical"], weights.w);
 f2 = Figure();
 cmap = reverse(Colors.colormap("RdBu", mid=25/70));
@@ -190,7 +190,7 @@ mw.plotDistances(dists_perform, "Likelihoods";is_bar_plot=false)[1]
 
 # 2. apply weights on estimated climatological average of historical period
 df = deepcopy(data);
-mw.averageEnsembleMembers!(df)
+mw.setToSummarizedMembers!(df)
 weighted_avg_lgm = mw.applyWeights(df["tas_CLIM_historical"], weights.w);
 f5 = Figure();
 title = "Weighted avg historical tas\n(based on lgm-cooling)";

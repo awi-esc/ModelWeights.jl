@@ -10,7 +10,7 @@ data_all = mw.loadDataFromYAML(path_config)
 # data_all =  mw.loadDataFromYAML(
 #     path_config, subset=Dict("level_shared_models" => mw.MODEL)
 # )
-mw.averageEnsembleMembers!(data_all)
+mw.setToSummarizedMembers!(data_all)
 data_ts = mw.filterTimeseries(data_all, 2015, 2100)
 
 # Brunner paper Fig. 2 with unweighted data

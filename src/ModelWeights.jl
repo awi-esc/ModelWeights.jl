@@ -31,7 +31,7 @@ export writeDataToDisk, readDataFromDisk
 
 export getUncertaintyRanges, computeGlobalMeans, addAnomalies!, approxAreaWeights, computeAnomaliesGM!, addAnomaliesGM!
 export addLinearTrend!, computeLinearTrend
-export averageEnsembleMembers!, summarizeEnsembleMembersVector
+export setToSummarizedMembers!, summarizeEnsembleMembersVector
 export getLandMask, getOceanMask, addMasks!, subsetModelData, alignPhysics
 
 

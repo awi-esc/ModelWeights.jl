@@ -40,7 +40,7 @@ df3 = mw.alignPhysics(
 
 
 
-mw.averageEnsembleMembers!(df)
+mw.setToSummarizedMembers!(df)
 # lgm-cooling: here models need to be in same unit for both experiments
 mw.kelvinToCelsius!(df)
 lgm_cooling = df["tas_CLIM_lgm"] .- df["tas_CLIM_piControl"];

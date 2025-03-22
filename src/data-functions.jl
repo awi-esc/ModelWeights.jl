@@ -552,9 +552,9 @@ For each model and variable (if several given), compute a summary statistic
 returned YAXArray has dimension 'model'.
 
 # Arguments:
-- `data`: a YAXArray with at least dimension 'model'
-- `updateMeta`: set true if the vectors in the metadata refer to different models. 
-Set to false if vectors refer to different variables for instance. 
+- `data::YAXArray`: a YAXArray with at least dimension 'member'
+- `updateMeta::Bool`: set true if the vectors in the metadata refer to 
+different models. Set to false if vectors refer to different variables.
 """
 function summarizeEnsembleMembersVector(
     data::YAXArray, updateMeta::Bool; fn::Function=Statistics.mean
@@ -584,14 +584,12 @@ end
 
 
 """
-    averageEnsembleMembers!(data::DataMap)
+    setToSummarizedMembers!(data::DataMap)
 
-For every dataset in `data`, take average for all members of each model.
-
-# Arguments:
-- `data`: 
+Set values for every dataset in `data` to the average across all members of 
+each model.
 """
-function averageEnsembleMembers!(data::DataMap)
+function setToSummarizedMembers!(data::DataMap)
     for (k, current_data) in data
         if hasdim(current_data, :member)
             @info "average ensemble members for $k"
