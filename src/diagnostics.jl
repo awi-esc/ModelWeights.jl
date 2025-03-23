@@ -114,11 +114,14 @@ function computeGlobalMeans(data::YAXArray)
     area_weighted_mat = ifelse.(masks .== 1, missing, area_weighted_mat)
 
     weighted_unnormalized_vals = area_weighted_mat .* data
-    normalization = sum(coalesce.(area_weighted_mat, 0), dims=(:lon, :lat)) # takes a bit
-    weighted_normalized_vals = weighted_unnormalized_vals ./ normalization
-    gms = sum(coalesce.(weighted_normalized_vals, 0), dims=(:lon, :lat)) # this is slow!
-
-    return YAXArray(otherdims(data, (:lon, :lat)), Array(gms[lon=1, lat=1]), meta)
+    normalization = mapslices(area_weighted_mat, dims=("lon", "lat")) do x 
+        sum(skipmissing(x))
+    end
+    weighted_normalized_vals = @d weighted_unnormalized_vals ./ normalization
+    gms = mapslices(weighted_normalized_vals, dims=("lon", "lat")) do x
+        sum(skipmissing(x))
+    end 
+    return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), meta)
 end
 
 
@@ -153,7 +156,7 @@ function computeAnomalies(
     if !hasdim(ref_data, dimension) || models != Array(dims(ref_data, dimension))
         throw(ArgumentError("Original and reference data must contain exactly the same models!"))
     end
-    if orig_data.properties["_units"] != orig_data.properties["_units"]
+    if orig_data.properties["units"] != orig_data.properties["units"]
         @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
         return nothing
     end
