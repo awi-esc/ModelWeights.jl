@@ -205,7 +205,7 @@ end
 
 """
     loadDataFromYAML(
-        path_config::String;
+        content::Dict;
         is_model_data::Bool=true,
         subset::Union{Dict, Nothing}=nothing,
         preview::Bool=false
@@ -229,12 +229,12 @@ experiments and variables is loaded) and `dir_per_var`.
 it. 
 """
 function loadDataFromYAML(
-    path_config::String;
+    content::Dict;
     is_model_data::Bool=true,
     subset::Union{Dict, Nothing}=nothing,
     preview::Bool=false
 )
-    meta_data = getMetaDataFromYAML(path_config, is_model_data; arg_constraint = subset)
+    meta_data = getMetaDataFromYAML(content, is_model_data; arg_constraint = subset)
     if isempty(meta_data)
         @warn "No metadata found for subset: $subset, path_config: $path_config (model data: $is_model_data)"
         return nothing
@@ -246,3 +246,12 @@ function loadDataFromYAML(
 end
 
 
+function loadDataFromYAML(
+    path_config::String;
+    is_model_data::Bool=true,
+    subset::Union{Dict, Nothing}=nothing,
+    preview::Bool=false
+)
+    content = YAML.load_file(path_config)
+    return loadDataFromYAML(content; is_model_data, subset, preview)
+end

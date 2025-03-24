@@ -453,14 +453,13 @@ file.
 - `arg_constraint`: TODO
 """
 function getMetaDataFromYAML(
-    path_config::String, 
+    content::Dict, 
     is_model_data::Bool;
     arg_constraint::Union{Dict, Nothing} = nothing
 )
-    config = YAML.load_file(path_config)
-    datasets = config["datasets"]
-    base_path = get(config, "path_data", "")
-    timerange_to_alias = get(config, "timerange_to_alias", Dict{String, String}())
+    datasets = content["datasets"]
+    base_path = get(content, "path_data", "")
+    timerange_to_alias = get(content, "timerange_to_alias", Dict{String, String}())
 
     meta_data = Dict{String, Dict{String, Any}}()
     for ds in datasets
