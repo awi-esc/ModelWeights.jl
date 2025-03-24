@@ -172,9 +172,9 @@ end
 function plotTimeseries!(ax::Axis, vals::AbstractArray; 
     uncertainties::Union{AbstractArray, Nothing}=nothing,
     color::Symbol = :red, label::String="", label_unc::String="",
-    linestyle::Symbol=:solid, alpha=0.2
+    linestyle::Symbol=:solid, alpha=0.2, legend_pos=:lt
 )
-    timesteps = Array(Dates.year.(dims(vals, :time)))
+    timesteps = Array(dims(vals, :time))
     if !isnothing(uncertainties)
         band!(ax, timesteps,
             vec(uncertainties[confidence=At("lower")]), 
@@ -186,9 +186,6 @@ function plotTimeseries!(ax::Axis, vals::AbstractArray;
     lines!(ax, timesteps, vec(coalesce.(vals, missing => NaN)), 
         color = (color, alpha), label=label, linestyle = linestyle
     )
-    if label != "" || label_unc != ""
-        axislegend(ax, merge = false, position = :lt)
-    end
     return nothing
 end
 
