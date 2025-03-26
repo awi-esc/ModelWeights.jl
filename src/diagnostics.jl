@@ -105,7 +105,7 @@ function computeGlobalMeans(data::YAXArray)
     latitudes = Array(dims(data, :lat))
     meta = makeMetadataGMS(data.properties, hasdim(data, :time))
     
-    area_weights = approxAreaWeights(latitudes)
+    area_weights = approxAreaWeights(coalesce.(latitudes, NaN))
     s = otherdims(data, (:lon, :lat))
     area_weighted_mat = isempty(s) ? 
         repeat(area_weights', length(longitudes), 1) :
