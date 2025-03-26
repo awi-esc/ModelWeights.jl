@@ -211,22 +211,22 @@ end
         preview::Bool=false
     )
 
-Load a `DataMap`-instance with data as specified in yaml file at `path_config`.
+Load a `DataMap`-instance that contains the data specified in `content`.
 
 # Arguments:
-- `path_config`: path to yaml config file.
-- `is_model_data`: true for model data (default), false for observational data.
+- `content::Dict`: see TODO:add link to documentation?! for required keys.
+- `is_model_data::Bool`: true for model data (default), false for observational data.
 - `subset`: specifies the properties of the subset of data to be loaded. These 
 have to apply to each loaded dataset specified in the config yaml file. 
 The following keys are considered:  `models` (used to load only specific set of models 
 or members of models), `projects` (used to load only data from a given set of
 projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases` 
-(super set is loaded, i.e. data that corresponds to either a given timerange or
+(super set is loaded, i.e. all data that corresponds to either a given timerange or
 a given alias will be loaded), `variables`, `statistics`, `subdirs`, `level_shared_models` 
 (if set to MEMBER/MODEL only data loaded from model members/models shared across all
-experiments and variables is loaded) and `dir_per_var`.
-- `preview`: used to pre-check which data will be loaded before actually loading
-it. 
+datasets is loaded) and `dir_per_var`.
+- `preview::Bool`: if true (default: false), return metadata without actually 
+loading any data.
 """
 function loadDataFromYAML(
     content::Dict;
@@ -246,6 +246,17 @@ function loadDataFromYAML(
 end
 
 
+"""
+    loadDataFromYAML(
+        path_config::String;
+        is_model_data::Bool=true,
+        subset::Union{Dict, Nothing}=nothing,
+        preview::Bool=false
+    )
+
+Load a `DataMap`-instance that contains the data specified in yaml file at 
+`path_config`.
+"""
 function loadDataFromYAML(
     path_config::String;
     is_model_data::Bool=true,
