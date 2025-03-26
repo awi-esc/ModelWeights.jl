@@ -42,43 +42,59 @@ The optional parameters of the function `loadDataFromESMValToolConfigs` are desc
 ###  Configuration with seperate yaml file
 For an example of a single yaml configuration file [see this example](https://github.com/awi-esc/SimilarityWeights/blob/main/configs/examples/example-lgm-historical.yml).
 
-The config file requires the following entries: 
+Keys expected in the config-yaml file:
 
-- `path_data`: base path to where the preprocessed data is stored. This path will be concatenated with the directories specified for each dataset. It can be omitted if inside datasets (see below), base_dir refers to the entire path.
+- `path_data`: base path to where the preprocessed data is stored. This path 
+will be concatenated with the directories specified for each dataset. It can 
+be omitted if inside datasets (see below), `base_dir` refers to the entire 
+absolute path.
 
-````yaml
-path_data: "/albedo/work/projects/p_forclima/preproc_data_esmvaltool"
-````
+- ``datasets``: list of each dataset to be loaded. Each dataset is specified 
+by a dictionary with the following keys:
+    - ``base_dir::String``: relative path to the data with respect to the path 
+    given in `path_data`. If `path_data` is not specified in the config file, 
+    `path_data` for this dataset is assumed to refer to an absolute path 
+    instead.
+    - ``exp::String``: e.g., "historical"
+    - ``variables::Vector{String}``: e.g., ["tos", "tas"]
+    - ``statistics::Vector{String}``: may be empty for fixed variables for 
+    which no statistics are computed. In that case, `statistics` is set to 
+    ["none"] and a warning is thrown unless for known fixed variables (now 
+    just [`orog`]).
 
-- `timerange_to_alias`: mapping from timerange to alias:
+   The following keys are optional:
+   - `subdirs`:
+   - `timeranges`:
+   - `aliases`:
 
-````yaml
-timerange_to_alias:
-"1850-1900": "historical0"
-"1951-1980": "historical1"
-````
+    ````yaml
+    datasets: [
+    {
+        base_dir: "LGM", 
+        exp: "lgm", 
+        variables: ["tas", "tos"], 
+        statistics: ["CLIM"], 
+        subdirs: ["20241114"]
+    },
+    {
+        base_dir: "historical", # required String
+        exp: "historical", # required String
+        variables: ["tas", "tos"], # required Vector
+        statistics: ["CLIM"], # required Vector
+        timeranges: ["full"], # optional Vector
+        subdirs: ["20241121", "20241118"] # optional Vector
+    }
+    ]
+    ````
 
-- `datasets`: list of each dataset to be loaded: 
+- `timerange_to_alias`: mapping from timerange to alias.
 
-````yaml
-datasets: [
-{
-    base_dir: "LGM", 
-    exp: "lgm", 
-    variables: ["tas", "tos"], 
-    statistics: ["CLIM"], 
-    subdirs: ["20241114"]
-},
-{
-    base_dir: "historical", # required String
-    exp: "historical", # required String
-    variables: ["tas", "tos"], # required Vector
-    statistics: ["CLIM"], # required Vector
-    timeranges: ["full"], # optional Vector
-    subdirs: ["20241121", "20241118"] # optional Vector
-}
-]
-````
+    ````yaml
+    timerange_to_alias:
+    "1850-1900": "historical0"
+    "1951-1980": "historical1"
+    ````
+
 
 For each given dataset the respective data is loaded from the `base_dir` at
 `path_data`. The keys `base_dir`, `exp`, `variables` and `statistics` are required to 
