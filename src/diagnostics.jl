@@ -247,7 +247,8 @@ function computeTempSTD(data::YAXArray, trend::YAXArray)
     meta_new["_statistic"] = "STD-temp"
 
     if hasdim(trend, :time)
-        stds = dropdims(std(data .- trend, dims=:time), dims=:time)
+        diffs = @d data .- trend
+        stds = dropdims(std(diffs, dims=:time), dims=:time)
     else
         # TODO
         @warn "computation of temporal trend with just slopes not yet implemented"
