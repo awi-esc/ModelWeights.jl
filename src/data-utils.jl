@@ -327,16 +327,21 @@ function get_required_fields_config(ds::Dict)
         "base_dir" => get(ds, "base_dir", nothing),
         "exp" => get(ds, "exp", nothing),
         "variables" => get(ds, "variables", nothing),
-        "statistics" => get(ds, "statistics", nothing)
     )
     if any(isnothing.(values(data)))
-        # for surface altitude no statistics are computed, then we assume statistics="none"
-        if isnothing(data["statistics"]) && data["variables"] == ["orog"]
-            data["statistics"] = ["none"]
-        else
-            msg = "Config yaml file must specify values for the following required keys: 'exp' (experiment), 'base_dir' (path to data directory), 'variables' and 'statistics'."
-            throw(ArgumentError(msg))
+        msg = "Config yaml file must specify values for the following required keys: $(keys(data))."
+        throw(ArgumentError(msg))
+    end
+    # for fixed variables, no statistics are computed!
+    # may add more than 'orog' for which no warning is thrown.
+    stats = get(ds, "statistics", nothing)
+    if isnothing(stats)
+        data["statistics"] = ["none"]
+        if data["variables"] != ["orog"]
+            @warn "No statistics specified for $(data["variables"])."
         end
+    else
+        data["statistics"] = stats
     end
     return data
 end

@@ -238,12 +238,14 @@ function loadPreprocData(meta::Dict{String, Any}, is_model_data::Bool)
                 times = map(
                     x -> DateTime(Dates.year(x), Dates.month(x)), dsVar[d][:]
                 )
+                # times = 1:length(dsVar[d][:])
                 dimensions[idx_dim] = Dim{Symbol(d)}(collect(times))
             else
                 dimensions[idx_dim] = Dim{Symbol(d)}(collect(dsVar[d][:]))
             end
         end
         data[i] = YAXArray(Tuple(dimensions), Array(dsVar))
+        # replace missing values by NaN?
         #data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(dsVar), NaN))
         close(ds)
     end
