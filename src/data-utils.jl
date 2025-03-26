@@ -505,6 +505,8 @@ function getMetaDataFromYAML(
                     )
                     if !isempty(meta["_paths"])
                         meta_ds[meta["_id"]] = meta
+                    else
+                        @warn "No data found for $(meta["_id"])"
                     end
                 end
             end
