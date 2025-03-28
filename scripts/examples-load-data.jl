@@ -24,11 +24,11 @@ subset = Dict{String, Union{Vector{String}, mw.LEVEL}}(
     "aliases" => ["lgm"], 
     "level_shared_models" => mw.MEMBER
 );
-lgm_meta = mw.loadDataFromESMValToolConfigs(
+lgm_meta = mw.loadDataFromESMValToolRecipes(
     path_data, path_recipes; 
     dir_per_var, is_model_data, subset=subset, preview=true
 )
-lgm_data = mw.loadDataFromESMValToolConfigs(
+lgm_data = mw.loadDataFromESMValToolRecipes(
     path_data, path_recipes; 
     dir_per_var, is_model_data, subset=subset, preview = false
 )
@@ -47,7 +47,7 @@ path_recipes = "./configs/historical";
 # experiment and make sure that across variables, only shared model members 
 # are loaded (level_shared_models set to mw.MEMBER) since we want the exact 
 # same simulations for all variables when computing weights
-historical_data_lgm_models = mw.loadDataFromESMValToolConfigs(
+historical_data_lgm_models = mw.loadDataFromESMValToolRecipes(
     path_data, path_recipes;
     subset = Dict(
         "statistics" => statistics, 
@@ -72,7 +72,7 @@ data_members = mw.subsetModelData(data; level = mw.MEMBER)
 # (may be less than in 2.1, since the exact simulations now have to match with
 # the lgm models, not only the models)
 begin
-    historical_data_lgm_members = mw.loadDataFromESMValToolConfigs(
+    historical_data_lgm_members = mw.loadDataFromESMValToolRecipes(
         path_data, path_recipes;
         subset = Dict(
             "statistics" => statistics, 
@@ -104,13 +104,13 @@ begin
         "models" => model_members_lgm,
         "level_shared_models" => mw.MEMBER # applies to every loaded dataset
     );
-    data_lgm_v2_meta =  mw.loadDataFromYAML(
+    data_lgm_v2_meta =  mw.loadData(
         path_config; 
         is_model_data,
         subset = subset,
         preview = true
     )
-    data_lgm_v2 = mw.loadDataFromYAML(
+    data_lgm_v2 = mw.loadData(
         path_config; 
         is_model_data,
         subset = subset,
@@ -127,7 +127,7 @@ begin
 
     # aliases and timeranges don't have to match, all data will be loaded that 
     # corresponds either to aliases or to timeranges!
-    obs_data = mw.loadDataFromESMValToolConfigs(
+    obs_data = mw.loadDataFromESMValToolRecipes(
         base_path, config_path;
         dir_per_var = false,
         is_model_data = false,

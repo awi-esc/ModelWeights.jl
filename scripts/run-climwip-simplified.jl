@@ -9,12 +9,12 @@ using CairoMakie
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358"; 
 path_configs = "./configs/climwip_config";
 
-model_data = mw.loadDataFromESMValToolConfigs(
+model_data = mw.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var = false,
     subset = Dict("aliases" => ["calculate_weights_climwip"])
 )
-obs_data = mw.loadDataFromESMValToolConfigs(
+obs_data = mw.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var = false,
     is_model_data = false,
@@ -61,12 +61,12 @@ sij_var = dropdims(
 
 
 # Climwip Plots - Temperature map plots
-data_temp_map_future = mw.loadDataFromESMValToolConfigs(
+data_temp_map_future = mw.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var=false,
     subset = Dict("aliases" => ["weighted_temperature_map_future"])
 )
-data_temp_map_reference = mw.loadDataFromESMValToolConfigs(
+data_temp_map_reference = mw.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var = false,
     subset = Dict("aliases" => ["weighted_temperature_map_reference"])
@@ -138,7 +138,7 @@ end
 
 
 # Apply computed weights - Temperature graph plots
-data_temp_graph = mw.loadDataFromESMValToolConfigs(
+data_temp_graph = mw.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var = false,
     subset = Dict("aliases" => ["weighted_temperature_graph"])

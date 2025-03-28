@@ -204,7 +204,7 @@ end
 
 
 """
-    loadDataFromYAML(
+    loadData(
         content::Dict;
         is_model_data::Bool=true,
         subset::Union{Dict, Nothing}=nothing,
@@ -228,7 +228,7 @@ datasets is loaded) and `dir_per_var`.
 - `preview::Bool`: if true (default: false), return metadata without actually 
 loading any data.
 """
-function loadDataFromYAML(
+function loadData(
     content::Dict;
     is_model_data::Bool=true,
     subset::Union{Dict, Nothing}=nothing,
@@ -247,7 +247,7 @@ end
 
 
 """
-    loadDataFromYAML(
+    loadData(
         path_config::String;
         is_model_data::Bool=true,
         subset::Union{Dict, Nothing}=nothing,
@@ -257,12 +257,12 @@ end
 Load a `DataMap`-instance that contains the data specified in yaml file at 
 `path_config`.
 """
-function loadDataFromYAML(
+function loadData(
     path_config::String;
     is_model_data::Bool=true,
     subset::Union{Dict, Nothing}=nothing,
     preview::Bool=false
 )
     content = YAML.load_file(path_config)
-    return loadDataFromYAML(content; is_model_data, subset, preview)
+    return loadData(content; is_model_data, subset, preview)
 end

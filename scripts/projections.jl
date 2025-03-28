@@ -5,9 +5,9 @@ using YAXArrays
 
 path_config = "./configs/projection-plots.yml";
 
-meta_data = mw.loadDataFromYAML(path_config; preview=true)
-data_all = mw.loadDataFromYAML(path_config)
-# data_all =  mw.loadDataFromYAML(
+meta_data = mw.loadData(path_config; preview=true)
+data_all = mw.loadData(path_config)
+# data_all =  mw.loadData(
 #     path_config, subset=Dict("level_shared_models" => mw.MODEL)
 # )
 mw.setToSummarizedMembers!(data_all)

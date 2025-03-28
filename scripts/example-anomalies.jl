@@ -9,10 +9,10 @@ using Colors
 
 # LGM simulations
 path_config = "./configs/examples/example-anomalies-lgm-piControl.yml";
-lgm_meta =  mw.loadDataFromYAML(path_config; subset=Dict("level_shared_models" => mw.MEMBER), preview=true);
-# lgm_data =  mw.loadDataFromYAML(path_config; subset=Dict("level_shared_models" => mw.MODEL))
-# lgm_data =  mw.loadDataFromYAML(path_config)
-lgm_data =  mw.loadDataFromYAML(path_config; subset=Dict("level_shared_models" => mw.MEMBER))
+lgm_meta =  mw.loadData(path_config; subset=Dict("level_shared_models" => mw.MEMBER), preview=true);
+# lgm_data =  mw.loadData(path_config; subset=Dict("level_shared_models" => mw.MODEL))
+# lgm_data =  mw.loadData(path_config)
+lgm_data =  mw.loadData(path_config; subset=Dict("level_shared_models" => mw.MEMBER))
 mw.addAnomalies!(lgm_data, "tas_CLIM_lgm", "tas_CLIM_piControl")
 
 colorrange = reverse(Colors.colormap("RdBu", logscale=false, mid=0.25));
@@ -30,7 +30,7 @@ save("plots/anomalies/lgm_anomalies.png", f1)
 
 # Historical simulations
 path_config = "./configs/examples/example-anomalies-historical.yml";
-historical_data =  mw.loadDataFromYAML(
+historical_data =  mw.loadData(
     path_config, subset=Dict("level_shared_models" => mw.MEMBER)
 );
 # take only the exact same models for all variables 

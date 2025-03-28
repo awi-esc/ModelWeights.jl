@@ -12,7 +12,7 @@ using Colors
 # 1. Model data for LGM experiment
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "./configs/lgm-cmip5-cmip6";
-lgm_data = mw.loadDataFromESMValToolConfigs(
+lgm_data = mw.loadDataFromESMValToolRecipes(
     path_data, path_recipes; 
     subset =  Dict(
         "statistics" => ["CLIM"], 
@@ -33,7 +33,7 @@ path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/historical";
 # Across variables, only shared model members should be loaded (level_shared_models set to mw.MEMBER) 
 # since we want the exact same simulations for all variables when computing weights
 # use same model members as for lgm
-historical_data = mw.loadDataFromESMValToolConfigs(
+historical_data = mw.loadDataFromESMValToolRecipes(
     path_data, path_recipes;
     subset = Dict(
         "statistics" =>["CLIM"], 
@@ -52,7 +52,7 @@ base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical
 config_path = "./configs/obs";
 # aliases and timeranges don't have to match, all data will be loaded that 
 # corresponds either to aliases or to timeranges!
-obs_data = mw.loadDataFromESMValToolConfigs(
+obs_data = mw.loadDataFromESMValToolRecipes(
     base_path, config_path;
     dir_per_var = false,
     is_model_data = false,
@@ -122,7 +122,7 @@ save("plots/lgm/weighted-avg-historical-tas-based-on-historical.png", f2)
 # WEIGHTS BASED ON LGM-COOLING WITH RESPECT TO TIERNEY DATA
 # 0. Get data
 path_config = "/albedo/home/brgrus001/ModelWeights/configs/ecs-lgm-cooling.yml";
-data = mw.loadDataFromYAML(path_config; subset=Dict("level_shared_models" => mw.MEMBER))
+data = mw.loadData(path_config; subset=Dict("level_shared_models" => mw.MEMBER))
 # lgm-cooling: here models need to be in same unit for both experiments
 mw.kelvinToCelsius!(data)
 # instead better to use computeAnomaly function to ensure metadata is updated too and for checking that units are identical!
