@@ -64,7 +64,7 @@ end
 @testset "Test loadPreprocData" begin
 end
 
-@testset "Test loadDataFromESMValToolConfigs" begin
+@testset "Test loadDataFromESMValToolRecipes" begin
 end
 
 @testset "Test loadDataFromYAML" begin

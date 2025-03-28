@@ -138,7 +138,7 @@ end
 
 
 """
-    loadDataFromESMValToolConfigs(
+    loadDataFromESMValToolRecipes(
         path_data::String,
         path_recipes::String;
         dir_per_var::Bool=true,
@@ -172,7 +172,7 @@ a given alias will be loaded), `variables`, `statistics`, `subdirs` and `level_s
 - `preview`: used to pre-check which data will be loaded before actually loading
 it. 
 """
-function loadDataFromESMValToolConfigs(
+function loadDataFromESMValToolRecipes(
     path_data::String,
     path_recipes::String;
     dir_per_var::Bool=true,
