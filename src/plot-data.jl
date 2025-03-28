@@ -171,21 +171,29 @@ end
 
 function plotTimeseries!(ax::Axis, vals::AbstractArray; 
     uncertainties::Union{AbstractArray, Nothing}=nothing,
-    color::Symbol = :red, label::String="", label_unc::String="",
-    linestyle::Symbol=:solid, alpha=0.2, legend_pos=:lt
+    color_line::Symbol = :darkred,
+    color_range::Symbol = :red,
+    label::String="", label_unc::String="",
+    linestyle::Symbol=:solid,linewidth=2, alpha=0.2,
 )
     timesteps = Array(dims(vals, :time))
+    if typeof(timesteps[1]) == DateTime
+        timesteps = map(x -> Dates.year(x), timesteps)
+    end
+
+    lines!(ax, timesteps, vec(coalesce.(vals, NaN)),
+        color = color_line, # color = (color_line, alpha), 
+        label=label, 
+        linestyle = linestyle, linewidth = linewidth
+    )
     if !isnothing(uncertainties)
         band!(ax, timesteps,
-            vec(uncertainties[confidence=At("lower")]), 
-            vec(uncertainties[confidence=At("upper")]), 
-            color = (color, alpha), 
+            vec(coalesce.(uncertainties[confidence=At("lower")], NaN)), 
+            vec(coalesce.(uncertainties[confidence=At("upper")], NaN)), 
+            color = (color_range, alpha), 
             label = label_unc
         );
     end
-    lines!(ax, timesteps, vec(coalesce.(vals, missing => NaN)), 
-        color = (color, alpha), label=label, linestyle = linestyle
-    )
     return nothing
 end
 
