@@ -208,7 +208,7 @@ function addAnomaliesGM!(data::DataMap, ids_data::Vector{String})
     # only compute global means for data for which it isnt already there
     gms_ids = similar(ids_data)
     for (i, id) in enumerate(ids_data)
-        new_stats = hasdim(data[id], :time) ? "GM-tas" : "GM"
+        new_stats = hasdim(data[id], :time) ? "GM-ts" : "GM"
         gms_ids[i] = replace(id, data[id].properties["_statistic"] => new_stats)
     end
     ids = Vector{String}()
@@ -223,7 +223,9 @@ function addAnomaliesGM!(data::DataMap, ids_data::Vector{String})
     @info "add anomalies wrt global mean..."
     for (i, id) in enumerate(ids_data)
         id_ref = gms_ids[i]
-        addAnomalies!(data, id, id_ref; stats="ANOM-" * id_ref)
+        addAnomalies!(
+            data, id, id_ref; stats="ANOM-" * string(split(id_ref, "_")[2])
+        )
     end
    return nothing
 end
