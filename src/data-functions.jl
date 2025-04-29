@@ -464,18 +464,18 @@ end
 """
     filterPathsSharedModels!(
         meta_data::Dict{String, Dict{String, Any}},
-        level_shared_models::Union{LEVEL, Nothing}
+        subset_shared::Union{LEVEL, Nothing}
     )
 
     In particular important before loading data if data should be subset
 """
 function filterPathsSharedModels!(
     meta_data::Dict{String, Dict{String, Any}},
-    level_shared_models::Union{LEVEL, Nothing}
+    subset_shared::Union{LEVEL, Nothing}
 )
     all_paths = map(x -> x["_paths"], values(meta_data))
     all_models = getMemberIDsFromPaths(vcat(all_paths...))
-    if level_shared_models == MODEL
+    if subset_shared == MODEL
         all_models = unique(getModelsFromMemberIDs(all_models))
     end
     shared_models = getSharedModelsFromPaths(all_paths, all_models)
@@ -503,17 +503,17 @@ end
     alignPhysics(
         data::DataMap,
         members::Vector{String}, 
-        level_shared_models::Union{LEVEL, Nothing} = nothing)
+        subset_shared::Union{LEVEL, Nothing} = nothing)
     )
 
 Return new DataMap with only the models retained that share the same physics as 
 the respective model's members in `members`.
 
-If `level_shared_models` is set, resulting DataMap is subset accordingly.
+If `subset_shared` is set, resulting DataMap is subset accordingly.
 """
 function alignPhysics(
     datamap::DataMap, members::Vector{String};
-    level_shared_models::Union{LEVEL, Nothing} = nothing
+    subset_shared::Union{LEVEL, Nothing} = nothing
 )
     data = deepcopy(datamap)
     models = unique(getModelsFromMemberIDs(members))
@@ -534,8 +534,8 @@ function alignPhysics(
             end
         end
     end
-    if !isnothing(level_shared_models)
-        shared_models = level_shared_models == MEMBER ? 
+    if !isnothing(subset_shared)
+        shared_models = subset_shared == MEMBER ? 
             getSharedMembers(data) : getSharedModels(data)
         for (id, model_data) in data
             data[id] = subsetModelData(model_data, shared_models)

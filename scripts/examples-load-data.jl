@@ -22,7 +22,7 @@ subset = Dict{String, Union{Vector{String}, mw.LEVEL}}(
     "variables" => variables, 
     "projects" => projects,
     "aliases" => ["lgm"], 
-    "level_shared_models" => mw.MEMBER
+    "subset_shared" => mw.MEMBER
 );
 lgm_meta = mw.loadDataFromESMValToolRecipes(
     path_data, path_recipes; 
@@ -33,7 +33,7 @@ lgm_data = mw.loadDataFromESMValToolRecipes(
     dir_per_var, is_model_data, subset=subset, preview = false
 )
 
-# we set level_shared_models to mw.MEMBER, so model members are identical for 
+# we set subset_shared to mw.MEMBER, so model members are identical for 
 # every loaded data set (variable)
 model_members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"], :member));
 models_lgm = unique(lgm_data["tos_CLIM_lgm"].properties["model_names"]);
@@ -45,7 +45,7 @@ path_recipes = "./configs/historical";
 
 # 2.1 use same models (NOT on level of model members) as for the lgm 
 # experiment and make sure that across variables, only shared model members 
-# are loaded (level_shared_models set to mw.MEMBER) since we want the exact 
+# are loaded (subset_shared set to mw.MEMBER) since we want the exact 
 # same simulations for all variables when computing weights
 historical_data_lgm_models = mw.loadDataFromESMValToolRecipes(
     path_data, path_recipes;
@@ -102,7 +102,7 @@ begin
     path_config = "./configs/examples/example-lgm-historical.yml";
     subset = Dict{String, Union{Vector{String}, mw.LEVEL}}(
         "models" => model_members_lgm,
-        "level_shared_models" => mw.MEMBER # applies to every loaded dataset
+        "subset_shared" => mw.MEMBER # applies to every loaded dataset
     );
     data_lgm_v2_meta =  mw.loadData(
         path_config; 

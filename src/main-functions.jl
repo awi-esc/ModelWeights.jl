@@ -167,7 +167,7 @@ The following keys are considered:  `models` (used to load only specific set of 
 or members of models), `projects` (used to load only data from a given set of
 projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases`.
 (super set is loaded, i.e. data that corresponds to either a given timerange or
-a given alias will be loaded), `variables`, `statistics`, `subdirs` and `level_shared_models` .
+a given alias will be loaded), `variables`, `statistics`, `subdirs` and `subset_shared` .
 (if set to MEMBER/MODEL only data loaded from model members/models shared across all experiments and variables is loaded).
 - `preview`: used to pre-check which data will be loaded before actually loading
 it. 
@@ -195,8 +195,8 @@ function loadDataFromESMValToolRecipes(
             end
         end
     end
-    if !isnothing(subset) && !isnothing(get(subset, "level_shared_models", nothing))
-        filterPathsSharedModels!(meta_data, subset["level_shared_models"])
+    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))
+        filterPathsSharedModels!(meta_data, subset["subset_shared"])
     end
     output = preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
     return output
@@ -222,7 +222,7 @@ The following keys are considered:  `models` (used to load only specific set of 
 or members of models), `projects` (used to load only data from a given set of
 projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases` 
 (super set is loaded, i.e. all data that corresponds to either a given timerange or
-a given alias will be loaded), `variables`, `statistics`, `subdirs`, `level_shared_models` 
+a given alias will be loaded), `variables`, `statistics`, `subdirs`, `subset_shared` 
 (if set to MEMBER/MODEL only data loaded from model members/models shared across all
 datasets is loaded) and `dir_per_var`.
 - `preview::Bool`: if true (default: false), return metadata without actually 
@@ -239,8 +239,8 @@ function loadData(
         @warn "No metadata found for subset: $subset, path_config: $path_config (model data: $is_model_data)"
         return nothing
     end
-    if !isnothing(subset) && !isnothing(get(subset, "level_shared_models", nothing))
-        filterPathsSharedModels!(meta_data, subset["level_shared_models"])
+    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))
+        filterPathsSharedModels!(meta_data, subset["subset_shared"])
     end
     return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
 end

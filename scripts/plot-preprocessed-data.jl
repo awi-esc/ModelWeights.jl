@@ -8,7 +8,7 @@ using CairoMakie
 
 # Get data from piControl + historical + lgm experiments
 path_config = "/albedo/home/brgrus001/ModelWeights/configs/lgm-historical.yml";
-data_meta =  mw.loadData(path_config; preview = true, subset=Dict("level_shared_models" => mw.MODEL));
+data_meta =  mw.loadData(path_config; preview = true, subset=Dict("subset_shared" => mw.MODEL));
 data = mw.loadData(path_config)
 
 function makePlots(data, experiment, clim_var)

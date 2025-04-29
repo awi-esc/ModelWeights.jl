@@ -8,7 +8,7 @@ path_config = "./configs/projection-plots.yml";
 meta_data = mw.loadData(path_config; preview=true)
 data_all = mw.loadData(path_config)
 # data_all =  mw.loadData(
-#     path_config, subset=Dict("level_shared_models" => mw.MODEL)
+#     path_config, subset=Dict("subset_shared" => mw.MODEL)
 # )
 mw.setToSummarizedMembers!(data_all)
 data_ts = mw.filterTimeseries(data_all, 2015, 2100)

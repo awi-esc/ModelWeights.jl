@@ -412,7 +412,7 @@ function get_optional_fields_config(ds::Dict, timerange_aliases_dict::Dict)
     end
 
     # subset this dataset only 
-    subset_level = lowercase(get(ds, "level_shared_models", ""))
+    subset_level = lowercase(get(ds, "subset_shared", ""))
     subset_level = subset_level == "model" ? MODEL : (subset_level == "member" ? MEMBER : nothing)
 
     return Dict(
@@ -422,7 +422,7 @@ function get_optional_fields_config(ds::Dict, timerange_aliases_dict::Dict)
         "projects" => get(ds, "projects", Vector{String}()),
         "subdirs" => get(ds, "subdirs", Vector{String}()),
         "dir_per_var" => get(ds, "dir_per_var", true),
-        "level_shared_models" => subset_level
+        "subset_shared" => subset_level
     )
 end
 
@@ -477,9 +477,9 @@ function getMetaDataFromYAML(
         if !isnothing(arg_constraint)
             #setConstraintVal!(ds_constraint, arg_constraint)
             for (field, val) in arg_constraint
-                # if level_shared_models is given as argument, it will subset 
+                # if subset_shared is given as argument, it will subset 
                 # considering all loaded datasets, not individual ones!
-                if field != "level_shared_models"
+                if field != "subset_shared"
                     ds_constraint[field] = val
                 end
             end
@@ -511,9 +511,9 @@ function getMetaDataFromYAML(
                 end
             end
         end
-        # Apply level_shared_models if provided inside yaml file for individual datasets
-        if !isnothing(ds_constraint) && !isnothing(get(ds_constraint, "level_shared_models", nothing))
-            filterPathsSharedModels!(meta_ds, ds_constraint["level_shared_models"])
+        # Apply subset_shared if provided inside yaml file for individual datasets
+        if !isnothing(ds_constraint) && !isnothing(get(ds_constraint, "subset_shared", nothing))
+            filterPathsSharedModels!(meta_ds, ds_constraint["subset_shared"])
         end
         # merge new dataset with already loaded
         for (id, meta) in meta_ds
