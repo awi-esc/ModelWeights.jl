@@ -7,7 +7,7 @@ DocMeta.setdocmeta!(ModelWeights, :DocTestSetup, :(using ModelWeights); recursiv
 makedocs(
     sitename = "ModelWeights.jl",
     modules = [ModelWeights],
-    #format   = Documenter.HTML(; prettyurls = get(ENV, "CI", nothing) == "true"),
+    format   = Documenter.HTML(; prettyurls = get(ENV, "CI", nothing) == "true"),
     pages = [
         "Home" => "index.md",
         "requirements.md",
@@ -15,9 +15,10 @@ makedocs(
         "weights.md",
         "Examples" => ["examples/climwip.md", "examples/lgm.md"],
         "references.md"
-    ]
+    ],
+    clean = true,
 )
 
 deploydocs(
-    repo = "github.com/awi-esc/ModelWeights.jl.git",
+    repo = "github.com/awi-esc/ModelWeights.git",
 )
