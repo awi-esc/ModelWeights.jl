@@ -12,7 +12,7 @@ each combination of variable and diagnostic for which weights > 0 are specified
 in `config`.
 """
 function computeModelModelRMSE(model_data::DataMap, config::ConfigWeights)
-    keys_weights_indep =  [k for k in keys(config.independence) if config.independence[k] > 0]
+    keys_weights_indep = [k for k in keys(config.independence) if config.independence[k] > 0]
     ref_period_alias = config.alias_ref_indep_weights
     if !isValidDataAndWeightInput(model_data, keys_weights_indep, ref_period_alias)
         msg = "There is model data missing for the given weights (for the combinations of diagnostics and variables: $keys_weights_indep) and reference period ($ref_period_alias)!"
@@ -78,11 +78,11 @@ of each combination of variable and diagnostic.
 """
 function computeWeights(
     dists_indep_all::YAXArray,
-    dists_perform_all::YAXArray, 
+    dists_perform_all::YAXArray,
     config::ConfigWeights;
     target_path::String=""
 )
-    weights_perform = normalizeWeightsVariables(config.performance)  
+    weights_perform = normalizeWeightsVariables(config.performance)
     weights_indep = normalizeWeightsVariables(config.independence)
 
     Di = computeGeneralizedDistances(dists_perform_all, weights_perform, true)
@@ -96,37 +96,37 @@ function computeWeights(
     #     map(x -> x.meta.attrib, values(model_data)), config.ref_perform_weights
     # )
     #setRefPeriodInWeightsMetadata!(weights.properties, ref_period_alias, ref_period_timerange)
-    
+
     # consider performance and independence weights independently
     # for performance weights, we assume that all models have the same degree of dependence
     # among each other (e.g. all are compeletely independent), i.e. we can 
     # just consider the performance Parts (the denominator would be the same for all models)
     norm_p = sum(performances)
     wP = performances ./ norm_p
-    
+
     # for independence weights, we assume that all models perform equally well, i.e. 
     # Di = Dj for all models i, j. Thus, the numerator would be the same for all models, 
     # we just set Di=0 for all models, i.e. the numerator is 1 for all models
     norm_i = sum(1 ./ independences)
     wI = (1 ./ independences) ./ norm_i
     #setRefPeriodInWeightsMetadata!(wP.properties, ref_period_alias, ref_period_timerange)
-        
+
     if hasdim(dists_perform_all, :member)
         members = Array(dims(dists_perform_all, :member))
         w_members = distributeWeightsAcrossMembers(weights, members)
-    else 
+    else
         w_members = weights
     end
-    model_weights =  Weights(
-        performance_distances = dists_perform_all,
-        independence_distances = dists_indep_all, 
-        Di = Di,
-        Sij = Sij,
-        wP = wP,
-        wI = wI,
-        w =  weights,
-        w_members = w_members,
-        config = config
+    model_weights = Weights(
+        performance_distances=dists_perform_all,
+        independence_distances=dists_indep_all,
+        Di=Di,
+        Sij=Sij,
+        wP=wP,
+        wI=wI,
+        w=weights,
+        w_members=w_members,
+        config=config
         # overall = (wP .* wI) ./ sum(wP .* wI), # just for sanity check
     )
     if !isempty(target_path)
@@ -177,11 +177,11 @@ function loadDataFromESMValToolRecipes(
     path_recipes::String;
     dir_per_var::Bool=true,
     is_model_data::Bool=true,
-    subset::Union{Dict, Nothing}=nothing,
+    subset::Union{Dict,Nothing}=nothing,
     preview::Bool=false
 )
     attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; constraint=subset)
-    meta_data = Dict{String, Dict{String, Any}}()
+    meta_data = Dict{String,Dict{String,Any}}()
     for meta in attributes
         addPathsToMetaAttribs!(
             meta, path_data, dir_per_var, is_model_data; constraint=subset
@@ -231,10 +231,10 @@ loading any data.
 function loadData(
     content::Dict;
     is_model_data::Bool=true,
-    subset::Union{Dict, Nothing}=nothing,
+    subset::Union{Dict,Nothing}=nothing,
     preview::Bool=false
 )
-    meta_data = getMetaDataFromYAML(content, is_model_data; arg_constraint = subset)
+    meta_data = getMetaDataFromYAML(content, is_model_data; arg_constraint=subset)
     if isempty(meta_data)
         @warn "No metadata found for subset: $subset, path_config: $path_config (model data: $is_model_data)"
         return nothing
@@ -260,7 +260,7 @@ Load a `DataMap`-instance that contains the data specified in yaml file at
 function loadData(
     path_config::String;
     is_model_data::Bool=true,
-    subset::Union{Dict, Nothing}=nothing,
+    subset::Union{Dict,Nothing}=nothing,
     preview::Bool=false
 )
     content = YAML.load_file(path_config)

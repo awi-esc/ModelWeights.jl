@@ -8,7 +8,7 @@ using NCDatasets
 using Serialization
 using Setfield
 using Statistics
-import StatsBase:countmap
+import StatsBase: countmap
 
 
 """
@@ -23,21 +23,21 @@ function computeInterpolatedWeightedQuantiles(
 )
     if isnothing(weights)
         weights = Array{eltype(vals)}(undef, length(vals))
-        weights[ismissing.(vals) .== false] .= 1
+        weights[ismissing.(vals).==false] .= 1
     end
-    indicesSorted = Array(sortperm(vals)); # gives indices of smallest to largest data point
-    weightsSorted = weights[indicesSorted];
-    weightedQuantiles = cumsum(weightsSorted) - 0.5 * weightsSorted;
-    weightedQuantiles = reshape(weightedQuantiles, length(weightedQuantiles), 1);
+    indicesSorted = Array(sortperm(vals)) # gives indices of smallest to largest data point
+    weightsSorted = weights[indicesSorted]
+    weightedQuantiles = cumsum(weightsSorted) - 0.5 * weightsSorted
+    weightedQuantiles = reshape(weightedQuantiles, length(weightedQuantiles), 1)
     # TODO: recheck missing values!
-    weightedQuantiles = (weightedQuantiles .- minimum(skipmissing(weightedQuantiles))) ./ 
-        maximum(skipmissing(weightedQuantiles));
+    weightedQuantiles = (weightedQuantiles .- minimum(skipmissing(weightedQuantiles))) ./
+                        maximum(skipmissing(weightedQuantiles))
 
     interp_linear = Interpolations.linear_interpolation(
         vec(weightedQuantiles),
         vals[indicesSorted],
         extrapolation_bc=Interpolations.Line()
-    );
+    )
     return interp_linear(quantiles)
 end
 
@@ -57,7 +57,7 @@ function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractAr
     if dims(m1, :lon) != dims(m2, :lon) || dims(m1, :lat) != dims(m2, :lat)
         throw(ArgumentError("To compute area weigehted RMSE, $m1 and $m2 must be defined on the same lon,lat-grid!"))
     end
-    squared_diff = (m1 .- m2).^2    
+    squared_diff = (m1 .- m2) .^ 2
     areaweights_mat = makeAreaWeightMatrix(Array(dims(m1, :lon)), Array(dims(m1, :lat)); mask)
     weighted_vals = areaweights_mat .* squared_diff
     return sqrt(sum(skipmissing(weighted_vals)))
@@ -76,26 +76,26 @@ contains the data for a single climate variable.
 """
 function getModelDistances(modelData::YAXArray)
     # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
-    data = deepcopy(modelData);
+    data = deepcopy(modelData)
     # only take values where none (!) of the models has infinite values!! (Not just the two that are compared to one another)
-    nbModels = length(dims(data, :member));
-    maskMissing = dropdims(any(ismissing, data, dims=:member), dims=:member);
+    nbModels = length(dims(data, :member))
+    maskMissing = dropdims(any(ismissing, data, dims=:member), dims=:member)
 
-    matrixS = zeros(nbModels, nbModels);    
-    for (i, model_i) in enumerate(eachslice(data[:,:,1:end-1]; dims=:member))
+    matrixS = zeros(nbModels, nbModels)
+    for (i, model_i) in enumerate(eachslice(data[:, :, 1:end-1]; dims=:member))
         model_i_mat = Array(model_i)
-        model_i_mat[maskMissing .== 1] .= 0;
+        model_i_mat[maskMissing.==1] .= 0
         for (j, model_j) in enumerate(eachslice(data[:, :, i+1:end]; dims=:member))
             model_j_mat = Array(model_j)
-            idx = j + i;
-            model_j_mat[maskMissing .== 1] .= 0;
-            s_ij = areaWeightedRMSE(model_i, model_j, maskMissing);
+            idx = j + i
+            model_j_mat[maskMissing.==1] .= 0
+            s_ij = areaWeightedRMSE(model_i, model_j, maskMissing)
             matrixS[i, idx] = s_ij
         end
     end
     # make symmetrical matrix
-    symDistMatrix = matrixS .+ matrixS';
-    dim = Array(dims(modelData, :member));
+    symDistMatrix = matrixS .+ matrixS'
+    dim = Array(dims(modelData, :member))
     return YAXArray((Dim{:member1}(dim), Dim{:member2}(dim)), symDistMatrix, deepcopy(modelData.properties))
 end
 
@@ -106,7 +106,7 @@ end
 Compute the distance as the area-weighted RMSE between model predictions and 
 observations. 
 """
-function getModelDataDist(models::YAXArray, observations::AbstractArray)      
+function getModelDataDist(models::YAXArray, observations::AbstractArray)
     # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
     models = deepcopy(models)
     observations = deepcopy(observations)
@@ -114,16 +114,16 @@ function getModelDataDist(models::YAXArray, observations::AbstractArray)
     member_names = Vector{String}()
     for (i, model_i) in enumerate(eachslice(models; dims=:member))
         name = dims(models, :member)[i]
-        maskNbMissing = (ismissing.(observations) + ismissing.(model_i)) .> 0; # observations or model is missing (or both)
-        maskedObs = deepcopy(observations);
+        maskNbMissing = (ismissing.(observations) + ismissing.(model_i)) .> 0 # observations or model is missing (or both)
+        maskedObs = deepcopy(observations)
         # maskedObs = dropdims(ifelse.(maskNbMissing .> 0, 0, maskedObs), dims=:model);
         maskedObs = ifelse.(maskNbMissing .> 0, 0, maskedObs)
 
         maskedModel = ifelse.(maskNbMissing .> 0, 0, model_i)
         mse = areaWeightedRMSE(maskedModel, maskedObs, maskNbMissing)
 
-        push!(member_names, name);
-        push!(distances, mse);
+        push!(member_names, name)
+        push!(distances, mse)
     end
     return YAXArray((Dim{:member}(member_names),), distances, models.properties)
 end
@@ -142,12 +142,12 @@ sum up to 1.
 DimArray with dimensions 'variable' and 'diagnostic' containig the normalized 
 weights.
 """
-function normalizeWeightsVariables(weights_dict::Dict{String, Number})
-    filter!(((k,v),) -> v != 0, weights_dict)
+function normalizeWeightsVariables(weights_dict::Dict{String,Number})
+    filter!(((k, v),) -> v != 0, weights_dict)
     total = sum(values(weights_dict))
-    normalized_weights = Dict{String, Number}()
+    normalized_weights = Dict{String,Number}()
     for key in keys(weights_dict)
-        normalized_weights[key] = weights_dict[key] / total 
+        normalized_weights[key] = weights_dict[key] / total
     end
     weights = map(x -> split(x, "_"), collect(keys(weights_dict)))
     variables = unique(map(first, weights))
@@ -180,20 +180,20 @@ function averageEnsembleMembersMatrix(data::YAXArray, updateMeta::Bool)
     data = setLookupsFromMemberToModel(data, ["member1", "member2"])
     models = String.(collect(unique(dims(data, :model1))))
 
-    grouped = groupby(data, :model2=>identity)
+    grouped = groupby(data, :model2 => identity)
     averages = map(entry -> mapslices(Statistics.mean, entry, dims=(:model2,)), grouped)
     combined = cat(averages..., dims=(Dim{:model2}(models)))
 
-    grouped = groupby(combined, :model1=>identity)
+    grouped = groupby(combined, :model1 => identity)
     averages = map(entry -> mapslices(Statistics.mean, entry, dims=(:model1,)), grouped)
-    combined = cat(averages..., dims=(Dim{:model1}(models)));
-    
+    combined = cat(averages..., dims=(Dim{:model1}(models)))
+
     for m in models
         combined[model1=At(m), model2=At(m)] .= 0
     end
 
     meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
-    combined = rebuild(combined; metadata = meta);
+    combined = rebuild(combined; metadata=meta)
 
     l = Lookups.Categorical(
         sort(models);
@@ -215,7 +215,7 @@ Compute the performance part (numerator) of the overall weight for each model.
 - `sigmaD`: free model parameter for impact of performance weights
 """
 function performanceParts(generalizedDistances::AbstractArray, sigmaD::Number)
-    return exp.(-(generalizedDistances ./ sigmaD).^2);
+    return exp.(-(generalizedDistances ./ sigmaD) .^ 2)
 end
 
 
@@ -231,9 +231,9 @@ Compute the independence part (denominator) of the overall weight for each model
 """
 function independenceParts(generalizedDistances::AbstractArray, sigmaS::Number)
     # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
-    indep_parts = sum(exp.(-(generalizedDistances ./ sigmaS).^2), dims=:model2);
+    indep_parts = sum(exp.(-(generalizedDistances ./ sigmaS) .^ 2), dims=:model2)
     indep_parts = dropdims(indep_parts, dims=:model2)
-    indep_parts = DimensionalData.set(indep_parts, :model1 => :model);
+    indep_parts = DimensionalData.set(indep_parts, :model1 => :model)
     return indep_parts
 end
 
@@ -257,15 +257,15 @@ per model is taken into account, s.t. each model receives equal weight, which
 is distributed among the respective members.
 """
 function computeWeightedAvg(
-    data::YAXArray; 
-    weights::Union{YAXArray, Nothing}=nothing, 
+    data::YAXArray;
+    weights::Union{YAXArray,Nothing}=nothing,
     use_members_equal_weights::Bool=true
 )
-    da = DimArray(Array{Union{Missing, Float64}}(undef, size(data)), dims(data))
+    da = DimArray(Array{Union{Missing,Float64}}(undef, size(data)), dims(data))
     da .= Array(data)
     dim_symbol = hasdim(data, :member) ? :member : :model
     models_data = collect(dims(data, dim_symbol))
-    
+
     if isnothing(weights)
         weights = makeEqualWeights(data; use_members=use_members_equal_weights)
         models_weights = collect(dims(weights, dim_symbol))
@@ -280,7 +280,7 @@ function computeWeightedAvg(
             # so the list of models for which weights have been computed may be shorter 
             # than the models of the given data. But for all given weights there must be data 
             # for now.
-            data_no_weights = [model for model in models_data if !(model in models_weights)]           
+            data_no_weights = [model for model in models_data if !(model in models_weights)]
             @warn "No weights were computed for these models which are therefore not considered in the weighted average:" data_no_weights
             if any(x -> !(x in models_data), models_weights)
                 msg = "Data of models missing for which weights have been computed."
@@ -289,38 +289,38 @@ function computeWeightedAvg(
         end
         # subset data s.t only data that will be weighted is considered
         if dim_symbol == :member
-            da = da[member = Where(m -> m in models_weights)]
+            da = da[member=Where(m -> m in models_weights)]
         else
-            da = da[model = Where(m -> m in models_weights)]
+            da = da[model=Where(m -> m in models_weights)]
         end
     end
     @assert isapprox(sum(weights), 1; atol=10^-4)
     # there shouldnt be data for which there is no weight since it was filtered out above
     @assert sort(Array(models_weights)) == sort(Array(dims(data, dim_symbol)))
-        
+
     # readjust weights for missing values, if one model has a missing value, 
     # it is ignored in the weighted average for that particular lon,lat-position.
-    not_missing_vals = mapslices(x -> (ismissing.(x).==0), da; dims=(dim_symbol,))
+    not_missing_vals = mapslices(x -> (ismissing.(x) .== 0), da; dims=(dim_symbol,))
     w_temp = mapslices(x -> (x .* weights) ./ sum(x .* weights), not_missing_vals, dims=(dim_symbol,))
     w_temp = replace(w_temp, NaN => missing)
 
     for m in models_weights
         value = getAtModel(da, dim_symbol, m) .* getAtModel(w_temp, dim_symbol, m)
         putAtModel!(da, dim_symbol, m, value)
-    end        
+    end
     weighted_avg = mapslices(x -> sum(skipmissing(x)), da, dims=(dim_symbol,))
     weighted_avg = dropdims(weighted_avg, dims=dim_symbol)
-    
+
     # set to missing when value was missing for ALL models
     n_models = length(dims(da, dim_symbol))
     all_missing = dropdims(
         mapslices(x -> sum(ismissing.(x)) == n_models, da, dims=(dim_symbol,)),
-        dims = dim_symbol
+        dims=dim_symbol
     )
     if !any(all_missing)
         result = weighted_avg
     else
-        result = Array{Union{Missing, Float64}}(undef, size(weighted_avg))
+        result = Array{Union{Missing,Float64}}(undef, size(weighted_avg))
         s = repeat([:], length(size(weighted_avg)))
         result[s...] = Array(weighted_avg)
         result[all_missing] .= missing
@@ -346,14 +346,14 @@ function makeEqualWeights(data::YAXArray; use_members::Bool=true)
         counts = countmap(models)
         n_members = length(dimnames)
         w = use_members ?
-            [1/n_models * 1/counts[m] for m in models] :
-            repeat([1/n_members], n_members)
+            [1 / n_models * 1 / counts[m] for m in models] :
+            repeat([1 / n_members], n_members)
     elseif dimension == :model
-        w = [1/n_models for _ in range(1, n_models)]
+        w = [1 / n_models for _ in range(1, n_models)]
     else
         throw(ArgumentError("Weights can only be computed for data with one of dimensions :model, :member."))
     end
-    return YAXArray((dims(data,dimension),), w)
+    return YAXArray((dims(data, dimension),), w)
 end
 
 
@@ -368,9 +368,9 @@ function distributeWeightsAcrossMembers(weights::YAXArray, members::Vector{Strin
     w_members = []
     for (i, m) in enumerate(models)
         n_members = counts_models[i]
-        w = only(weights[model = At(m)])
-        for _ in range(1, n_members) 
-            push!(w_members, w/n_members)
+        w = only(weights[model=At(m)])
+        for _ in range(1, n_members)
+            push!(w_members, w / n_members)
         end
     end
     return YAXArray((Dim{:member}(members),), w_members)
@@ -407,12 +407,12 @@ function saveWeightsAsNCFile(weights::Weights, target_path::String)
     defDim(ds, "model", length(models))
     # Add a new variable to store the model names
     defVar(ds, "model", Array(models), ("model",))
-    
+
     # add dimension variables
     function addNCDatasetVar!(ds, dimensions, name)
         defDim(ds, name, length(dimensions))
         defVar(ds, name, Array(dimensions), (name,))
-        return nothing  
+        return nothing
     end
     addNCDatasetVar!(ds, dims(weights.performance_distances, :member), "member")
     addNCDatasetVar!(ds, dims(weights.performance_distances, :variable), "variable")
@@ -426,21 +426,21 @@ function saveWeightsAsNCFile(weights::Weights, target_path::String)
             v[:] = Array(data)
         elseif String(name) == "independence_distances"
             v = defVar(ds, String(name), Float64, ("member", "member", "variable", "diagnostic"))
-            v[:,:,:,:] =  Array(weights.independence_distances)
+            v[:, :, :, :] = Array(weights.independence_distances)
         elseif String(name) == "Sij"
             v = defVar(ds, String(name), Float64, ("model", "model"))
-            v[:,:] = Array(weights.Sij)
+            v[:, :] = Array(weights.Sij)
         elseif String(name) == "performance_distances"
             v = defVar(ds, String(name), Float64, ("member", "variable", "diagnostic"))
-            v[:,:,:] = Array(weights.performance_distances)
+            v[:, :, :] = Array(weights.performance_distances)
         elseif String(name) == "config"
             # configuration is added as global attributes:
             for config_name in fieldnames(ConfigWeights)
                 config_val = getfield(weights.config, config_name)
                 config_key = String(config_name)
                 if config_key in ["performance", "independence"]
-                    for (k,v) in config_val
-                        ds.attrib["w_" * config_key * "_" * k] = v
+                    for (k, v) in config_val
+                        ds.attrib["w_"*config_key*"_"*k] = v
                     end
                 elseif config_key != "target_path"
                     # if target path was updated, use updated version here, 
@@ -448,7 +448,7 @@ function saveWeightsAsNCFile(weights::Weights, target_path::String)
                     ds.attrib[config_key] = config_val
                 end
             end
-       end 
+        end
     end
     close(ds)
     return target_path
@@ -485,7 +485,7 @@ function loadWeightsAsDimArray(data::NCDataset, key_weights::String)
     sources = Array(data[src_name])
     arr = DimArray(
         Array(data[key_weights]),
-        (Dim{Symbol(src_name)}(sources)), metadata = Dict(data.attrib)
+        (Dim{Symbol(src_name)}(sources)), metadata=Dict(data.attrib)
     )
     return arr
 end
@@ -520,17 +520,17 @@ function applyWeights(model_data::YAXArray, weights::YAXArray)
 
     if length(shared_models) == 0
         throw(ArgumentError("No models given for which weights had been computed!"))
-    else 
-        model_data = model_data[model = Where(x -> x in shared_models)]
-        weights = weights[model = Where(x -> x in shared_models)]
+    else
+        model_data = model_data[model=Where(x -> x in shared_models)]
+        weights = weights[model=Where(x -> x in shared_models)]
         weights = weights ./ sum(weights)
-        
+
         # sanity checks:
         if any(map(x -> !(x in shared_models), model_data.model))
-            data_out = model_data[model = Where(x -> !(x in shared_models))]            
+            data_out = model_data[model=Where(x -> !(x in shared_models))]
             models_out = dims(data_out, :model)
             @warn "No weights had been computed for $models_out"
-        end 
+        end
         if length(shared_models) < length(models_weights)
             @warn "Weights were computed for a subset of the models of the given data. Weights were renormalized."
         end
@@ -547,14 +547,14 @@ Compute the log likelihood of `model_data` to originate from `distr`.
 function getModelLogLikelihoods(model_data::YAXArray, distr::Distribution)
     dim_symbol, names_models = getDimsModel(model_data)
     # TODO: add checks that distribution and data dimensions match
-    likelihoods = dim_symbol == :model ? 
-        map(m -> Distributions.pdf(distr, DimArray(model_data)[model = At(m)]), names_models) :
-        map(m -> Distributions.pdf(distr, DimArray(model_data)[member = At(m)]), names_models)
+    likelihoods = dim_symbol == :model ?
+                  map(m -> Distributions.pdf(distr, DimArray(model_data)[model=At(m)]), names_models) :
+                  map(m -> Distributions.pdf(distr, DimArray(model_data)[member=At(m)]), names_models)
 
     return YAXArray(
-        (Dim{dim_symbol}(Array(names_models)), 
-         Dim{:variable}([model_data.properties["_variable"]]), 
-         Dim{:diagnostic}([model_data.properties["_statistic"]])
+        (Dim{dim_symbol}(Array(names_models)),
+            Dim{:variable}([model_data.properties["_variable"]]),
+            Dim{:diagnostic}([model_data.properties["_statistic"]])
         ),
         reshape(log.(likelihoods), length(likelihoods), 1, 1),
         deepcopy(model_data.properties)
@@ -579,17 +579,17 @@ representing  the lower and upper bound in this order.
 """
 function getUncertaintyRanges(
     data::AbstractArray;
-    w::Union{YAXArray, Nothing}=nothing, 
+    w::Union{YAXArray,Nothing}=nothing,
     quantiles=[0.167, 0.833]
 )
     timesteps = dims(data, :time)
     uncertainty_ranges = YAXArray(
         (dims(data, :time), Dim{:confidence}(["lower", "upper"])),
-        Array{Union{Missing, Float64}}(undef, length(timesteps), 2),
-        Dict{String, Any}("quantiles" => string.(quantiles))
+        Array{Union{Missing,Float64}}(undef, length(timesteps), 2),
+        Dict{String,Any}("quantiles" => string.(quantiles))
     )
     for t in timesteps
-        arr = Array(data[time = At(t)])
+        arr = Array(data[time=At(t)])
         if sum(ismissing.(arr)) >= length(arr) - 1 # at least two values must be given
             lower, upper = missing, missing
         else

@@ -40,22 +40,22 @@ function computeLinearTrend(data::YAXArray; full_predictions::Bool=false)
     stats = full_predictions ? "TREND-pred" : "TREND"
     meta["_id"] = replace(meta["_id"], meta["_statistic"] => stats)
     meta["_statistic"] = stats
- 
+
     function fn(y)
         y = Array(y)
         indices = findall(.!(ismissing.(y)))
         # TODO: this is slow and should be changed!
-        ols = lm(@formula(Y~X), DataFrame(X=x[indices], Y=Float64.(y[indices])))
+        ols = lm(@formula(Y ~ X), DataFrame(X=x[indices], Y=Float64.(y[indices])))
         if full_predictions
-            y_hat = Array{Union{Missing, Float64}}(undef, size(y))
-            y_hat[indices] =  predict(ols)
+            y_hat = Array{Union{Missing,Float64}}(undef, size(y))
+            y_hat[indices] = predict(ols)
         else
             y_hat = coef(ols)[2]
         end
         return y_hat
     end
-    trends = mapslices(fn, data; dims = (:time,))
-    return YAXArray(dims(trends), Array(trends), meta) 
+    trends = mapslices(fn, data; dims=(:time,))
+    return YAXArray(dims(trends), Array(trends), meta)
 end
 
 
@@ -73,15 +73,15 @@ id in `ids_ts`, or if `ids_ts` is not given for all datasets with `statistic`
 climatologies (CLIM-ann).
 """
 function addLinearTrend!(
-    data::DataMap; 
-    statistic::String="CLIM-ann", 
-    ids_ts::Vector{String}=Vector{String}(), 
+    data::DataMap;
+    statistic::String="CLIM-ann",
+    ids_ts::Vector{String}=Vector{String}(),
     full_predictions::Bool=true
 )
     if isempty(ids_ts)
         ids_ts = filter(
             id -> data[id].properties["_statistic"] == statistic, keys(data)
-        ) 
+        )
     end
     for id in ids_ts
         addDiagnostic!(data, computeLinearTrend, id; full_predictions)
@@ -104,23 +104,23 @@ function computeGlobalMeans(data::YAXArray)
     longitudes = Array(dims(data, :lon))
     latitudes = Array(dims(data, :lat))
     meta = makeMetadataGMS(data.properties, hasdim(data, :time))
-    
+
     area_weights = approxAreaWeights(coalesce.(latitudes, NaN))
     s = otherdims(data, (:lon, :lat))
-    area_weighted_mat = isempty(s) ? 
-        repeat(area_weights', length(longitudes), 1) :
-        repeat(area_weights', length(longitudes), 1, size(s)...)
+    area_weighted_mat = isempty(s) ?
+                        repeat(area_weights', length(longitudes), 1) :
+                        repeat(area_weights', length(longitudes), 1, size(s)...)
     masks = ismissing.(data)
     area_weighted_mat = ifelse.(masks .== 1, missing, area_weighted_mat)
 
     weighted_unnormalized_vals = area_weighted_mat .* data
-    normalization = mapslices(area_weighted_mat, dims=("lon", "lat")) do x 
+    normalization = mapslices(area_weighted_mat, dims=("lon", "lat")) do x
         sum(skipmissing(x))
     end
     weighted_normalized_vals = @d weighted_unnormalized_vals ./ normalization
     gms = mapslices(weighted_normalized_vals, dims=("lon", "lat")) do x
         sum(skipmissing(x))
-    end 
+    end
     return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), meta)
 end
 
@@ -133,8 +133,8 @@ Compute global means for datasets in `data` with `ids`.
 If `ids` is not specified, compute global means for all datasets in `data`.
 """
 function addGlobalMeans!(
-    data::DataMap; ids::Union{Vector{String}, Nothing}=nothing
- )
+    data::DataMap; ids::Union{Vector{String},Nothing}=nothing
+)
     if isnothing(ids)
         # NOTE: collect is important here, otherwise 'ids' changes when new 
         # keys are added in for-loop below to the data dictionary!!
@@ -167,7 +167,7 @@ function computeAnomalies(
     anomalies_metadata["_id"] = anomalies_id
     anomalies_metadata["_ref_data_id"] = ref_data.properties["_id"]
     anomalies_metadata["_orig_data_id"] = orig_data.properties["_id"]
-    
+
     anomalies = @d orig_data .- ref_data
     anomalies = YAXArray(
         dims(orig_data), Array(anomalies), anomalies_metadata
@@ -227,7 +227,7 @@ function addAnomaliesGM!(data::DataMap, ids_data::Vector{String})
             data, id, id_ref; stats="ANOM-" * string(split(id_ref, "_")[2])
         )
     end
-   return nothing
+    return nothing
 end
 
 
@@ -276,7 +276,7 @@ function addTempSTD!(data::DataMap; statistic::String="CLIM-ann")
         return nothing
     end
     for id in ids
-        trend_id = replace(id, statistic=>"TREND-pred")
+        trend_id = replace(id, statistic => "TREND-pred")
         get!(data, trend_id, computeLinearTrend(data[id]; full_predictions=true))
         addDiagnostic!(data, computeTempSTD, id, data[trend_id])
     end

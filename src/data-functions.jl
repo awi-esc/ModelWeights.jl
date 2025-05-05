@@ -21,7 +21,7 @@ The unique member ids correspond to the variant labels of CMIP6 models, e.g. r1i
 every model member, i.e. length is sum of the number of members over all models.
 """
 function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
-    meta_subdict = Dict{String, Vector}()
+    meta_subdict = Dict{String,Vector}()
     keys_model_ids = [
         "realization", "physics_version", "initialization_method",
         "mip_era", "grid_label", "variant_label"
@@ -45,7 +45,7 @@ function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
             meta_subdict["initialization_method"][indices_cmip5],
             meta_subdict["physics_version"][indices_cmip5]
         )
-        members[indices_cmip5] =  map(
+        members[indices_cmip5] = map(
             x -> join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM),
             zip(model_names[indices_cmip5], variants)
         )
@@ -55,9 +55,9 @@ function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
         variants = meta_subdict["variant_label"][indices_cmip6]
         grids = meta_subdict["grid_label"][indices_cmip6]
         members[indices_cmip6] = map(
-            x->join(x, MODEL_MEMBER_DELIM, "_"),
+            x -> join(x, MODEL_MEMBER_DELIM, "_"),
             zip(model_names[indices_cmip6], variants, grids)
-        );
+        )
     end
     # from vector of strings of length of sum over members of all models make
     # a vector of vectors where each subvector contains the unique ids of the
@@ -119,7 +119,7 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
         models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
         # if shared_models is on the level of models, the following should be empty
         # otherwise, nothing is filtered out, and members is the same as shared_models 
-        members = filter(x -> !(x in models), shared_models)    
+        members = filter(x -> !(x in models), shared_models)
         if !isempty(members) # shared models on level of members
             indices = findall(m -> m in members, dim_names)
         else
@@ -127,10 +127,10 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
             models_data = getModelsFromMemberIDs(dim_names) # NOTE: should yield same: models_data = data.properties["model_names"]
             indices = findall(m -> m in models, models_data)
         end
-        data = data[member = indices]
-    else 
+        data = data[member=indices]
+    else
         indices = findall(m -> m in shared_models, dim_names)
-        data = data[model = indices]
+        data = data[model=indices]
     end
     # also subset Metadata vectors!
     attributes = filter(k -> data.properties[k] isa Vector, keys(data.properties))
@@ -179,11 +179,11 @@ that contains the metadata keys from every loaded dataset. Each key maps to a ve
 of values, one for each loaded dataset, which is set to missing if that key 
 hadn't been present in this datasets own metadata.
 """
-function loadPreprocData(meta::Dict{String, Any}, is_model_data::Bool)
+function loadPreprocData(meta::Dict{String,Any}, is_model_data::Bool)
     n_files = length(meta["_paths"])
     data = Vector{YAXArray}(undef, n_files)
-    meta_dict = Dict{String, Any}()
-    source_names = repeat([""], outer = n_files)
+    meta_dict = Dict{String,Any}()
+    source_names = repeat([""], outer=n_files)
 
     filenames = first.(splitext.(basename.(meta["_paths"])))
     climVars = first.(split.(basename.(dirname.(meta["_paths"])), "_"))
@@ -220,10 +220,10 @@ function loadPreprocData(meta::Dict{String, Any}, is_model_data::Bool)
         end
         # update metadata-dictionary for all processed files with the
         # metadata from the current file
-        
+
         keys_remain = filter(x -> x in KEYS_METADATA, keys(attributes))
         for key in keys_remain #keys(attributes)
-            values = get!(meta_dict, key, repeat(Union{Missing, Any}[missing], outer=n_files))
+            values = get!(meta_dict, key, repeat(Union{Missing,Any}[missing], outer=n_files))
             values[i] = attributes[key]
         end
 
@@ -264,8 +264,8 @@ end
 All data is assumed to be defined on the same grid.
 """
 function mergeLoadedData(
-    data_vec::Vector{YAXArray}, 
-    meta_dict::Dict{String, Any}, 
+    data_vec::Vector{YAXArray},
+    meta_dict::Dict{String,Any},
     is_model_data::Bool
 )
     if length(data_vec) == 0
@@ -282,23 +282,23 @@ function mergeLoadedData(
             # if difference only in time, use maximal possible timeseries and add NaNs
             year_min = minimum(map(x -> minimum(map(Dates.year, dims(x, :time))), data_vec))
             year_max = maximum(map(x -> maximum(map(Dates.year, dims(x, :time))), data_vec))
-            nb_years = year_max - year_min + 1 
-     
-            timerange = DateTime(year_min):Year(1) : DateTime(year_max)
+            nb_years = year_max - year_min + 1
+
+            timerange = DateTime(year_min):Year(1):DateTime(year_max)
             for (i, ds) in enumerate(data_vec)
                 s = map(length, otherdims(ds, :time))
                 dat = Array{eltype(ds)}(undef, s..., nb_years) # if ds allows missing values, undef is initialized with missing
                 ds_extended = YAXArray((otherdims(ds, :time)..., Dim{:time}(timerange)), dat)
-                ds_extended[time = Where(x -> Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds # ds[time=:]
+                ds_extended[time=Where(x -> Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds # ds[time=:]
                 data_vec[i] = ds_extended
             end
         end
     end
-    var_axis = is_model_data ? Dim{:member}(meta_dict["member_names"]) : 
-        Dim{:model}(meta_dict["model_names"])
+    var_axis = is_model_data ? Dim{:member}(meta_dict["member_names"]) :
+               Dim{:model}(meta_dict["model_names"])
     dimData = concatenatecubes(data_vec, var_axis)
     dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
-    
+
     # Sanity checks that no dataset exists more than once
     if is_model_data
         members = dims(dimData, :member)
@@ -319,7 +319,7 @@ end
 
 """
 function loadDataFromMetadata(
-    meta_data::Dict{String, Dict{String, Any}}, is_model_data::Bool
+    meta_data::Dict{String,Dict{String,Any}}, is_model_data::Bool
 )
     results = DataMap()
     for (id, meta) in meta_data
@@ -350,7 +350,7 @@ function getMemberIDsFromPaths(all_paths::Vector{String})
         model = join(fn_parts[[2, 5]], MODEL_MEMBER_DELIM)
         # add grid to model name for CMIP6 models:
         if fn_parts[1] != "CMIP5"
-            model = splitext(model * "_" * fn_parts[7])[1] 
+            model = splitext(model * "_" * fn_parts[7])[1]
         end
         all_members[i] = model
     end
@@ -387,7 +387,7 @@ function searchModelInPaths(model_id::String, paths::Vector{String})
                         if found_grid
                             is_found = true
                             break
-                        else 
+                        else
                             continue
                         end
                     else
@@ -395,7 +395,7 @@ function searchModelInPaths(model_id::String, paths::Vector{String})
                         break
                     end
                 else # member not found -> continue with next path
-                    continue 
+                    continue
                 end
             else
                 is_found = true
@@ -470,8 +470,8 @@ end
     In particular important before loading data if data should be subset
 """
 function filterPathsSharedModels!(
-    meta_data::Dict{String, Dict{String, Any}},
-    subset_shared::Union{LEVEL, Nothing}
+    meta_data::Dict{String,Dict{String,Any}},
+    subset_shared::Union{LEVEL,Nothing}
 )
     all_paths = map(x -> x["_paths"], values(meta_data))
     all_models = getMemberIDsFromPaths(vcat(all_paths...))
@@ -483,7 +483,7 @@ function filterPathsSharedModels!(
         @warn "No models shared across data!"
     end
     for (id, meta) in meta_data
-        meta_data[id]["_paths"] =  filterPaths(meta["_paths"], shared_models)
+        meta_data[id]["_paths"] = filterPaths(meta["_paths"], shared_models)
     end
     return nothing
 end
@@ -513,7 +513,7 @@ If `subset_shared` is set, resulting DataMap is subset accordingly.
 """
 function alignPhysics(
     datamap::DataMap, members::Vector{String};
-    subset_shared::Union{LEVEL, Nothing} = nothing
+    subset_shared::Union{LEVEL,Nothing}=nothing
 )
     data = deepcopy(datamap)
     models = unique(getModelsFromMemberIDs(members))
@@ -523,7 +523,7 @@ function alignPhysics(
         physics = getPhysicsFromMembers(member_ids)
         for (_, ds) in data
             # filter data s.t. of current model only members with retrieved physics are kept
-            model_indices = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), 
+            model_indices = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM),
                 Array(dims(ds, :member))
             )
             indices_out = filter(x -> !(ds.properties["physics"][x] in physics), model_indices)
@@ -535,8 +535,8 @@ function alignPhysics(
         end
     end
     if !isnothing(subset_shared)
-        shared_models = subset_shared == MEMBER ? 
-            getSharedMembers(data) : getSharedModels(data)
+        shared_models = subset_shared == MEMBER ?
+                        getSharedMembers(data) : getSharedModels(data)
         for (id, model_data) in data
             data[id] = subsetModelData(model_data, shared_models)
         end
@@ -572,9 +572,9 @@ function summarizeEnsembleMembersVector(
         deepcopy(data.properties)
     )
     for m in models
-        dat = data[model = Where(x -> x== m)]
+        dat = data[model=Where(x -> x == m)]
         average = isempty(dimensions) ? fn(dat) : mapslices(x -> fn(x), dat; dims=(:model,))
-        summarized_data[model = At(m)] = average
+        summarized_data[model=At(m)] = average
     end
     summarized_data = replace(summarized_data, NaN => missing)
 
@@ -610,7 +610,7 @@ area on the respective latitude.
 """
 function approxAreaWeights(latitudes::Vector{<:Number})
     # cosine of the latitudes as proxy for grid cell area
-    area_weights = cos.(deg2rad.(latitudes));
+    area_weights = cos.(deg2rad.(latitudes))
     return YAXArray((Dim{:lat}(latitudes),), area_weights)
 end
 
@@ -618,14 +618,14 @@ end
 function makeAreaWeightMatrix(
     longitudes::Vector{<:Number},
     latitudes::Vector{<:Number};
-    mask::Union{AbstractArray, Nothing}=nothing
+    mask::Union{AbstractArray,Nothing}=nothing
 )
     area_weights = approxAreaWeights(latitudes)
-    area_weighted_mat = repeat(area_weights', length(longitudes), 1);  
+    area_weighted_mat = repeat(area_weights', length(longitudes), 1)
     if !isnothing(mask)
-        area_weighted_mat = ifelse.(mask .== 1, 0, area_weighted_mat); 
+        area_weighted_mat = ifelse.(mask .== 1, 0, area_weighted_mat)
     end
-    area_weighted_mat = area_weighted_mat./sum(area_weighted_mat)
+    area_weighted_mat = area_weighted_mat ./ sum(area_weighted_mat)
     return YAXArray(
         (Dim{:lon}(longitudes), Dim{:lat}(latitudes)),
         area_weighted_mat

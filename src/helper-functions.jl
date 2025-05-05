@@ -44,7 +44,7 @@ Return `data` where `dimension` (member or model) has value `model`.
 """
 function getAtModel(data::AbstractArray, dimension::Symbol, model::String)
     throwErrorIfModelDimMissing(data)
-    return dimension == :model ? data[model = At(model)] : data[member = At(model)]
+    return dimension == :model ? data[model=At(model)] : data[member=At(model)]
 end
 
 
@@ -55,7 +55,7 @@ Return `data` where `dimension` (member or model) has value `model`.
 """
 function getByIdxModel(data::AbstractArray, dimension::Symbol, indices::Vector)
     throwErrorIfModelDimMissing(data)
-    return dimension == :model ? data[model = indices] : data[member = indices]
+    return dimension == :model ? data[model=indices] : data[member=indices]
 end
 
 
@@ -65,9 +65,9 @@ end
 function putAtModel!(data::AbstractArray, dimension::Symbol, model::String, input)
     throwErrorIfModelDimMissing(data)
     if dimension == :model
-        data[model = At(model)] =  input
-    else 
-        data[member = At(model)] = input
+        data[model=At(model)] = input
+    else
+        data[member=At(model)] = input
     end
     return nothing
 end
@@ -78,7 +78,7 @@ end
 
 Return vector of unique paths of mergee set of paths from `meta1` and `meta2`.
 """
-function mergeMetaDataPaths(meta1::Dict{String, Any}, meta2::Dict{String, Any})
+function mergeMetaDataPaths(meta1::Dict{String,Any}, meta2::Dict{String,Any})
     paths = copy(meta1["_paths"])
     append!(paths, meta2["_paths"])
     return unique(paths)
@@ -89,7 +89,7 @@ function buildMetaDataID(variable::String, statistic::String, alias::String)
     return join([variable, statistic, alias], "_")
 end
 
-function buildMetaDataID(meta::Dict{String, Any})
+function buildMetaDataID(meta::Dict{String,Any})
     return join([meta["_variable"], meta["_statistic"], meta["_alias"]], "_")
 end
 
@@ -124,12 +124,12 @@ function getAllCombinations(v...)
 end
 
 
-function makeMetadataGMS(data_meta::Dict{String, Any}, is_timeseries::Bool)
+function makeMetadataGMS(data_meta::Dict{String,Any}, is_timeseries::Bool)
     meta = deepcopy(data_meta)
     old_id = get(data_meta, "_id", "")
     old_stats = get(data_meta, "_statistic", "")
     new_stats = is_timeseries ? "GM-ts" : "GM"
-    meta["_id"] = isempty(old_id) ? new_stats : replace(old_id, old_stats=> new_stats)
+    meta["_id"] = isempty(old_id) ? new_stats : replace(old_id, old_stats => new_stats)
     meta["_statistic"] = new_stats
     return meta
 end
