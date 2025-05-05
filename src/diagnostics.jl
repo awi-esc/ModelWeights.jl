@@ -10,9 +10,7 @@ Compute a diagnostic by running `fn` with positional arguments `args` and
 keyword arguments `kwargs` and add result to `datamap` at the id of the 
 computed result.
 """
-function addDiagnostic!(
-    datamap::DataMap, fn::Function, id::String, args...; kwargs...
-)
+function addDiagnostic!(datamap::DataMap, fn::Function, id::String, args...; kwargs...)
     @info "run $(String(Symbol(fn))) for $id..."
     data = fn(datamap[id], args...; kwargs...)
     datamap[data.properties["_id"]] = data
@@ -30,7 +28,7 @@ Compute linear trend as ordinary least squares for timeseries data.
 - `full_predictions::Bool`: if false, return only slope, otherwise return 
 predicted value.
 """
-function computeLinearTrend(data::YAXArray; full_predictions::Bool=false)
+function computeLinearTrend(data::YAXArray; full_predictions::Bool = false)
     if !hasdim(data, :time)
         msg = "Linear trend can only be computed for timeseries data (with dimension :time)!"
         throw(ArgumentError(msg))
@@ -45,7 +43,7 @@ function computeLinearTrend(data::YAXArray; full_predictions::Bool=false)
         y = Array(y)
         indices = findall(.!(ismissing.(y)))
         # TODO: this is slow and should be changed!
-        ols = lm(@formula(Y ~ X), DataFrame(X=x[indices], Y=Float64.(y[indices])))
+        ols = lm(@formula(Y ~ X), DataFrame(X = x[indices], Y = Float64.(y[indices])))
         if full_predictions
             y_hat = Array{Union{Missing,Float64}}(undef, size(y))
             y_hat[indices] = predict(ols)
@@ -54,7 +52,7 @@ function computeLinearTrend(data::YAXArray; full_predictions::Bool=false)
         end
         return y_hat
     end
-    trends = mapslices(fn, data; dims=(:time,))
+    trends = mapslices(fn, data; dims = (:time,))
     return YAXArray(dims(trends), Array(trends), meta)
 end
 
@@ -74,14 +72,12 @@ climatologies (CLIM-ann).
 """
 function addLinearTrend!(
     data::DataMap;
-    statistic::String="CLIM-ann",
-    ids_ts::Vector{String}=Vector{String}(),
-    full_predictions::Bool=true
+    statistic::String = "CLIM-ann",
+    ids_ts::Vector{String} = Vector{String}(),
+    full_predictions::Bool = true,
 )
     if isempty(ids_ts)
-        ids_ts = filter(
-            id -> data[id].properties["_statistic"] == statistic, keys(data)
-        )
+        ids_ts = filter(id -> data[id].properties["_statistic"] == statistic, keys(data))
     end
     for id in ids_ts
         addDiagnostic!(data, computeLinearTrend, id; full_predictions)
@@ -107,18 +103,18 @@ function computeGlobalMeans(data::YAXArray)
 
     area_weights = approxAreaWeights(coalesce.(latitudes, NaN))
     s = otherdims(data, (:lon, :lat))
-    area_weighted_mat = isempty(s) ?
-                        repeat(area_weights', length(longitudes), 1) :
-                        repeat(area_weights', length(longitudes), 1, size(s)...)
+    area_weighted_mat =
+        isempty(s) ? repeat(area_weights', length(longitudes), 1) :
+        repeat(area_weights', length(longitudes), 1, size(s)...)
     masks = ismissing.(data)
     area_weighted_mat = ifelse.(masks .== 1, missing, area_weighted_mat)
 
     weighted_unnormalized_vals = area_weighted_mat .* data
-    normalization = mapslices(area_weighted_mat, dims=("lon", "lat")) do x
+    normalization = mapslices(area_weighted_mat, dims = ("lon", "lat")) do x
         sum(skipmissing(x))
     end
     weighted_normalized_vals = @d weighted_unnormalized_vals ./ normalization
-    gms = mapslices(weighted_normalized_vals, dims=("lon", "lat")) do x
+    gms = mapslices(weighted_normalized_vals, dims = ("lon", "lat")) do x
         sum(skipmissing(x))
     end
     return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), meta)
@@ -132,9 +128,7 @@ Compute global means for datasets in `data` with `ids`.
     
 If `ids` is not specified, compute global means for all datasets in `data`.
 """
-function addGlobalMeans!(
-    data::DataMap; ids::Union{Vector{String},Nothing}=nothing
-)
+function addGlobalMeans!(data::DataMap; ids::Union{Vector{String},Nothing} = nothing)
     if isnothing(ids)
         # NOTE: collect is important here, otherwise 'ids' changes when new 
         # keys are added in for-loop below to the data dictionary!!
@@ -149,12 +143,14 @@ function addGlobalMeans!(
 end
 
 
-function computeAnomalies(
-    orig_data::YAXArray, ref_data::YAXArray; stats::String="ANOM"
-)
+function computeAnomalies(orig_data::YAXArray, ref_data::YAXArray; stats::String = "ANOM")
     dimension, models = getDimsModel(orig_data)
     if !hasdim(ref_data, dimension) || models != Array(dims(ref_data, dimension))
-        throw(ArgumentError("Original and reference data must contain exactly the same models!"))
+        throw(
+            ArgumentError(
+                "Original and reference data must contain exactly the same models!",
+            ),
+        )
     end
     if orig_data.properties["units"] != orig_data.properties["units"]
         @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
@@ -169,9 +165,7 @@ function computeAnomalies(
     anomalies_metadata["_orig_data_id"] = orig_data.properties["_id"]
 
     anomalies = @d orig_data .- ref_data
-    anomalies = YAXArray(
-        dims(orig_data), Array(anomalies), anomalies_metadata
-    )
+    anomalies = YAXArray(dims(orig_data), Array(anomalies), anomalies_metadata)
     return anomalies
 end
 
@@ -186,7 +180,10 @@ Add entry to `datamap` with difference between `datamap` at `id_data` and `id_re
 The id of the original data and of the reference data is added to the metadata.
 """
 function addAnomalies!(
-    data::DataMap, id_data::String, id_ref::String; stats::String="ANOM"
+    data::DataMap,
+    id_data::String,
+    id_ref::String;
+    stats::String = "ANOM",
 )
     if !haskey(data, id_data)
         throw(ArgumentError("The given DataMap does not have key $id_data"))
@@ -223,9 +220,7 @@ function addAnomaliesGM!(data::DataMap, ids_data::Vector{String})
     @info "add anomalies wrt global mean..."
     for (i, id) in enumerate(ids_data)
         id_ref = gms_ids[i]
-        addAnomalies!(
-            data, id, id_ref; stats="ANOM-" * string(split(id_ref, "_")[2])
-        )
+        addAnomalies!(data, id, id_ref; stats = "ANOM-" * string(split(id_ref, "_")[2]))
     end
     return nothing
 end
@@ -250,7 +245,7 @@ function computeTempSTD(data::YAXArray, trend::YAXArray)
 
     if hasdim(trend, :time)
         diffs = @d data .- trend
-        stds = dropdims(std(diffs, dims=:time), dims=:time)
+        stds = dropdims(std(diffs, dims = :time), dims = :time)
     else
         # TODO
         @warn "computation of temporal trend with just slopes not yet implemented"
@@ -269,7 +264,7 @@ Compute temporal standard deviation (computeTempSTD) for every dataset with
 The id of computed temporal standard deviation is the same as before, but with 
 `statistic` replaced by 'TREND'.
 """
-function addTempSTD!(data::DataMap; statistic::String="CLIM-ann")
+function addTempSTD!(data::DataMap; statistic::String = "CLIM-ann")
     ids = filter(id -> data[id].properties["_statistic"] == statistic, keys(data))
     if isempty(ids)
         @warn "No data for statistic $statistic found!"
@@ -277,7 +272,7 @@ function addTempSTD!(data::DataMap; statistic::String="CLIM-ann")
     end
     for id in ids
         trend_id = replace(id, statistic => "TREND-pred")
-        get!(data, trend_id, computeLinearTrend(data[id]; full_predictions=true))
+        get!(data, trend_id, computeLinearTrend(data[id]; full_predictions = true))
         addDiagnostic!(data, computeTempSTD, id, data[trend_id])
     end
     return nothing

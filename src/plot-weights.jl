@@ -8,39 +8,62 @@ independence-only weights.
 - `weights`:
 - `title`: 
 """
-function plotWeights(weights::Weights; title::String="")
+function plotWeights(weights::Weights; title::String = "")
     models = Array(dims(weights.wP, :model))
     n_models = length(models)
     xs = 1:n_models
     fig = Figure()
-    ax = Axis(fig[1, 1],
-        xticks=(xs, models),
-        xticklabelrotation=pi / 4,
-        xlabel="MODEL",
-        ylabel="Weight",
-        title=title
+    ax = Axis(
+        fig[1, 1],
+        xticks = (xs, models),
+        xticklabelrotation = pi / 4,
+        xlabel = "MODEL",
+        ylabel = "Weight",
+        title = title,
     )
     ys = [weights.wP, weights.wI, weights.w]
     colors = [:red, :green, :blue]
     labels = ["performance", "independence", "overall"]
-    for idx in 1:3
-        scatter!(ax, xs, Array(ys[idx]), color=colors[idx], label=labels[idx], alpha=0.5)
-        lines!(ax, xs, Array(ys[idx]), color=colors[idx], label=labels[idx], alpha=0.5)
+    for idx = 1:3
+        scatter!(
+            ax,
+            xs,
+            Array(ys[idx]),
+            color = colors[idx],
+            label = labels[idx],
+            alpha = 0.5,
+        )
+        lines!(
+            ax,
+            xs,
+            Array(ys[idx]),
+            color = colors[idx],
+            label = labels[idx],
+            alpha = 0.5,
+        )
     end
     # add equal weight for reference
-    lines!(ax, xs, [1 / n_models for _ in range(1, n_models)],
-        color=:gray, label="unweighted", linestyle=:dashdot)
-    axislegend(ax, position=:lt, merge=true)
+    lines!(
+        ax,
+        xs,
+        [1 / n_models for _ in range(1, n_models)],
+        color = :gray,
+        label = "unweighted",
+        linestyle = :dashdot,
+    )
+    axislegend(ax, position = :lt, merge = true)
     return fig
 end
 
 
 
-function plotDistancesByVar(dists::AbstractArray, title::String; is_bar_plot::Bool=true)
-    dists_var = reduce(+, dists, dims=:diagnostic)
-    dists_var = DimensionalData.set(dists_var,
-        :diagnostic => ["sum of diagnostics: $(Array(dims(dists, :diagnostic))...)"])
-    plotDistances(dists_var, title; is_bar_plot=is_bar_plot)
+function plotDistancesByVar(dists::AbstractArray, title::String; is_bar_plot::Bool = true)
+    dists_var = reduce(+, dists, dims = :diagnostic)
+    dists_var = DimensionalData.set(
+        dists_var,
+        :diagnostic => ["sum of diagnostics: $(Array(dims(dists, :diagnostic))...)"],
+    )
+    plotDistances(dists_var, title; is_bar_plot = is_bar_plot)
 end
 
 
@@ -55,7 +78,7 @@ Plot figure of distances for every combination of variable and diagnostic in
 - `title`:
 - `is_bar_plot`:
 """
-function plotDistances(dists::AbstractArray, title::String; is_bar_plot::Bool=true)
+function plotDistances(dists::AbstractArray, title::String; is_bar_plot::Bool = true)
     models = hasdim(dists, :member) ? dims(dists, :member) : dims(dists, :model)
     variables = dims(dists, :variable)
     # if isnothing(variables)
@@ -76,17 +99,20 @@ function plotDistances(dists::AbstractArray, title::String; is_bar_plot::Bool=tr
         for var in variables
             fig = Figure()
             ax = Axis(
-                fig[1, 1], xticks=(xs, Array(models)), xticklabelrotation=pi / 4,
-                xlabel="Model member", title=title * "Variable: $var, Diagnostic: $diag"
+                fig[1, 1],
+                xticks = (xs, Array(models)),
+                xticklabelrotation = pi / 4,
+                xlabel = "Model member",
+                title = title * "Variable: $var, Diagnostic: $diag",
             )
             ys = vec(dists[variable=At(var), diagnostic=At(diag)])
             if is_bar_plot
-                barplot!(ax, xs, ys, label="$var")
+                barplot!(ax, xs, ys, label = "$var")
             else
                 scatter!(ax, xs, ys)
-                lines!(ax, xs, ys, label="$var")
+                lines!(ax, xs, ys, label = "$var")
             end
-            axislegend(ax, merge=true, position=:lt)
+            axislegend(ax, merge = true, position = :lt)
             push!(figures, fig)
         end
     end
@@ -109,13 +135,20 @@ function plotDistancesIndependence(distances::AbstractArray, dimname::String)
             for diag in dims(distances, :diagnostic)
                 fig = plotDistMatrices(
                     Array(distances[variable=At(var), diagnostic=At(diag)]),
-                    var * "_" * diag, ensembles, ensembles
+                    var * "_" * diag,
+                    ensembles,
+                    ensembles,
                 )
                 push!(figures, fig)
             end
         end
     else
-        fig = plotDistMatrices(Array(distances), "Generalized distances Sij", ensembles, ensembles)
+        fig = plotDistMatrices(
+            Array(distances),
+            "Generalized distances Sij",
+            ensembles,
+            ensembles,
+        )
         push!(figures, fig)
     end
     return figures
@@ -134,26 +167,30 @@ Plot performance against independence weights.
 function plotWeightContributions(
     independence::DimArray,
     performance::DimArray;
-    xlabel::String="Normalized performance weights",
-    ylabel::String="Normalized independence weights",
-    title::String=""
+    xlabel::String = "Normalized performance weights",
+    ylabel::String = "Normalized independence weights",
+    title::String = "",
 )
     #L"Performance\n $e^{-(D_i/\sigma_D)^2}$",
     #L"Independence\n\n $1 + \sum_{j≠i}^M e^{-(S_{ij}/\sigma_S)^2}$",  
-    fig = Figure(size=(800, 600), fontsize=16)
+    fig = Figure(size = (800, 600), fontsize = 16)
     ax = Axis(
-        fig[1, 1], xlabel=xlabel, ylabel=ylabel, title=title,
-        xlabelsize=24, ylabelsize=24
+        fig[1, 1],
+        xlabel = xlabel,
+        ylabel = ylabel,
+        title = title,
+        xlabelsize = 24,
+        ylabelsize = 24,
     )
     scatter!(ax, Array(performance), Array(independence))
     m = maximum([maximum(independence), maximum(performance)])
     extra = 0.0005
-    lines!(ax, [0, m + extra], [0, m + extra], color=:gray)
+    lines!(ax, [0, m + extra], [0, m + extra], color = :gray)
     text!(
         Array(performance),
         Array(independence),
-        text=Array(dims(performance, :model)),
-        align=(:center, :top)
+        text = Array(dims(performance, :model)),
+        align = (:center, :top),
     )
     return fig
 end

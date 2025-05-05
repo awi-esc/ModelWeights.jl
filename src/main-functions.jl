@@ -12,14 +12,19 @@ each combination of variable and diagnostic for which weights > 0 are specified
 in `config`.
 """
 function computeModelModelRMSE(model_data::DataMap, config::ConfigWeights)
-    keys_weights_indep = [k for k in keys(config.independence) if config.independence[k] > 0]
+    keys_weights_indep =
+        [k for k in keys(config.independence) if config.independence[k] > 0]
     ref_period_alias = config.alias_ref_indep_weights
     if !isValidDataAndWeightInput(model_data, keys_weights_indep, ref_period_alias)
         msg = "There is model data missing for the given weights (for the combinations of diagnostics and variables: $keys_weights_indep) and reference period ($ref_period_alias)!"
         throw(ArgumentError(msg))
     end
     return computeDistancesAllDiagnostics(
-        model_data, nothing, config.independence, ref_period_alias, false
+        model_data,
+        nothing,
+        config.independence,
+        ref_period_alias,
+        false,
     )
 end
 
@@ -33,10 +38,9 @@ Compute the Root-mean-squared-error between `model_data` and `obs_data` for
 each combination of variable and diagnostic for which weights > 0 are specified 
 in `config`.
 """
-function computeModelDataRMSE(
-    model_data::DataMap, obs_data::DataMap, config::ConfigWeights
-)
-    keys_weights_perform = [k for k in keys(config.performance) if config.performance[k] > 0]
+function computeModelDataRMSE(model_data::DataMap, obs_data::DataMap, config::ConfigWeights)
+    keys_weights_perform =
+        [k for k in keys(config.performance) if config.performance[k] > 0]
     ref_period_alias = config.alias_ref_perform_weights
     if !isValidDataAndWeightInput(model_data, keys_weights_perform, ref_period_alias)
         msg = "There is MODEL data missing for the given weights (for the combinations of diagnostics and variables: $keys_weights_perform) and reference period ($(ref_period_alias))!"
@@ -47,7 +51,11 @@ function computeModelDataRMSE(
         throw(ArgumentError(msg))
     end
     return computeDistancesAllDiagnostics(
-        model_data, obs_data, config.performance, ref_period_alias, true
+        model_data,
+        obs_data,
+        config.performance,
+        ref_period_alias,
+        true,
     )
 end
 
@@ -80,7 +88,7 @@ function computeWeights(
     dists_indep_all::YAXArray,
     dists_perform_all::YAXArray,
     config::ConfigWeights;
-    target_path::String=""
+    target_path::String = "",
 )
     weights_perform = normalizeWeightsVariables(config.performance)
     weights_indep = normalizeWeightsVariables(config.independence)
@@ -118,15 +126,15 @@ function computeWeights(
         w_members = weights
     end
     model_weights = Weights(
-        performance_distances=dists_perform_all,
-        independence_distances=dists_indep_all,
-        Di=Di,
-        Sij=Sij,
-        wP=wP,
-        wI=wI,
-        w=weights,
-        w_members=w_members,
-        config=config
+        performance_distances = dists_perform_all,
+        independence_distances = dists_indep_all,
+        Di = Di,
+        Sij = Sij,
+        wP = wP,
+        wI = wI,
+        w = weights,
+        w_members = w_members,
+        config = config,
         # overall = (wP .* wI) ./ sum(wP .* wI), # just for sanity check
     )
     if !isempty(target_path)
@@ -175,16 +183,20 @@ it.
 function loadDataFromESMValToolRecipes(
     path_data::String,
     path_recipes::String;
-    dir_per_var::Bool=true,
-    is_model_data::Bool=true,
-    subset::Union{Dict,Nothing}=nothing,
-    preview::Bool=false
+    dir_per_var::Bool = true,
+    is_model_data::Bool = true,
+    subset::Union{Dict,Nothing} = nothing,
+    preview::Bool = false,
 )
-    attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; constraint=subset)
+    attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; constraint = subset)
     meta_data = Dict{String,Dict{String,Any}}()
     for meta in attributes
         addPathsToMetaAttribs!(
-            meta, path_data, dir_per_var, is_model_data; constraint=subset
+            meta,
+            path_data,
+            dir_per_var,
+            is_model_data;
+            constraint = subset,
         )
         if !isempty(meta["_paths"])
             id = meta["_id"]
@@ -230,11 +242,11 @@ loading any data.
 """
 function loadData(
     content::Dict;
-    is_model_data::Bool=true,
-    subset::Union{Dict,Nothing}=nothing,
-    preview::Bool=false
+    is_model_data::Bool = true,
+    subset::Union{Dict,Nothing} = nothing,
+    preview::Bool = false,
 )
-    meta_data = getMetaDataFromYAML(content, is_model_data; arg_constraint=subset)
+    meta_data = getMetaDataFromYAML(content, is_model_data; arg_constraint = subset)
     if isempty(meta_data)
         @warn "No metadata found for subset: $subset, path_config: $path_config (model data: $is_model_data)"
         return nothing
@@ -259,9 +271,9 @@ Load a `DataMap`-instance that contains the data specified in yaml file at
 """
 function loadData(
     path_config::String;
-    is_model_data::Bool=true,
-    subset::Union{Dict,Nothing}=nothing,
-    preview::Bool=false
+    is_model_data::Bool = true,
+    subset::Union{Dict,Nothing} = nothing,
+    preview::Bool = false,
 )
     content = YAML.load_file(path_config)
     return loadData(content; is_model_data, subset, preview)

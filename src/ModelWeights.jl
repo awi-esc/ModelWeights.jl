@@ -6,10 +6,7 @@ module ModelWeights
 
 
 const MODEL_MEMBER_DELIM = "#"
-const MODEL_NAME_FIXES = Dict(
-    "FGOALS_g2" => "FGOALS-g2",
-    "ACCESS1.3" => "ACCESS1-3"
-)
+const MODEL_NAME_FIXES = Dict("FGOALS_g2" => "FGOALS-g2", "ACCESS1.3" => "ACCESS1-3")
 
 include("helper-functions.jl")
 include("data-utils.jl")
@@ -29,7 +26,12 @@ export loadData, loadDataFromESMValToolRecipes, computeWeights
 export joinDataMaps
 export writeDataToDisk, readDataFromDisk
 
-export getUncertaintyRanges, computeGlobalMeans, addAnomalies!, approxAreaWeights, computeAnomaliesGM!, addAnomaliesGM!
+export getUncertaintyRanges,
+    computeGlobalMeans,
+    addAnomalies!,
+    approxAreaWeights,
+    computeAnomaliesGM!,
+    addAnomaliesGM!
 export addLinearTrend!, computeLinearTrend
 export setToSummarizedMembers!, summarizeEnsembleMembersVector
 export getLandMask, getOceanMask, addMasks!, subsetModelData, alignPhysics

@@ -7,11 +7,11 @@ using DimensionalData
 using CairoMakie
 using GeoMakie
 
-CairoMakie.activate!(type="svg")
+CairoMakie.activate!(type = "svg")
 
 function getFigure(figsize, fontsize)
     size_pt = 72 .* figsize
-    fig = Figure(size=size_pt, fontsize=fontsize)
+    fig = Figure(size = size_pt, fontsize = fontsize)
     return fig
 end
 
@@ -30,15 +30,15 @@ function plotDistMatrices(distMat, diagnostic, models, modelRefs)
     xs = 1:length(models)
     ax = Axis(
         fig[1, 1],
-        xlabel="Model",
-        ylabel="Model",
-        xticks=(xs, models),
-        yticks=(xs, modelRefs),
-        xticklabelrotation=pi / 4,
-        title="Distance matrix " * diagnostic,
-        yreversed=true
+        xlabel = "Model",
+        ylabel = "Model",
+        xticks = (xs, models),
+        yticks = (xs, modelRefs),
+        xticklabelrotation = pi / 4,
+        title = "Distance matrix " * diagnostic,
+        yreversed = true,
     )
-    hm = heatmap!(ax, distMat', colormap=ColorSchemes.YlGn_4.colors)
+    hm = heatmap!(ax, distMat', colormap = ColorSchemes.YlGn_4.colors)
     Colorbar(fig[1, 2], hm)
     return fig
 end
@@ -92,20 +92,20 @@ Arrange 'data' such that western latitudes come first, then eastern latitudes.
 """
 function sortLongitudesWest2East(data::AbstractArray)
     lon = dims(data, :lon)
-    east = lon[lon.<180]
-    west = lon[lon.>=180]
+    east = lon[lon .< 180]
+    west = lon[lon .>= 180]
     sorted_lon = [Array(west); Array(east)]
 
     # necessary to specify that lookup dimension values aren't sorted anymore!
     # otherwise Selector At won't work! does seem to work don't know TODO: CHECK THIS!!
     lookup_lon = Lookups.Sampled(
         sorted_lon;
-        span=Lookups.Irregular(minimum(lon), maximum(lon)),
+        span = Lookups.Irregular(minimum(lon), maximum(lon)),
         # order=Lookups.Unordered()
-        order=Lookups.ForwardOrdered()
+        order = Lookups.ForwardOrdered(),
     )
     data = data[lon=At(sorted_lon)]
-    data = DimensionalData.Lookups.set(data, lon=lookup_lon)
+    data = DimensionalData.Lookups.set(data, lon = lookup_lon)
     return data
 end
 
@@ -116,7 +116,8 @@ Convert data given in unit 'kg s-1' into Sverdrups (Sv).
 """
 function convertKgsToSv!(data::YAXArray)
     if data.properties["units"] != "kg s-1"
-        msg = "The unit of the data should be 'kg s-1', but it is " * data.properties["units"]
+        msg =
+            "The unit of the data should be 'kg s-1', but it is " * data.properties["units"]
         throw(ArgumentError(msg))
     end
     data[1:end] = data .* (10^-9)
@@ -197,42 +198,77 @@ end
 
 """
 function makeSubplots(
-    data::AbstractArray, grid::NamedTuple{(:nrows, :ncols),Tuple{Int,Int}};
-    fontsize=12, figsize=(600, 450), title="",
-    colors=nothing, color_range_limits=nothing, high_clip=(1, 0, 0), low_clip=(0, 0, 1),
-    xlabel="Longitude", ylabel="Latitude", xlabel_rotate=pi / 4
+    data::AbstractArray,
+    grid::NamedTuple{(:nrows, :ncols),Tuple{Int,Int}};
+    fontsize = 12,
+    figsize = (600, 450),
+    title = "",
+    colors = nothing,
+    color_range_limits = nothing,
+    high_clip = (1, 0, 0),
+    low_clip = (0, 0, 1),
+    xlabel = "Longitude",
+    ylabel = "Latitude",
+    xlabel_rotate = pi / 4,
 )
-    models = hasdim(data, :member) ? Array(dims(data, :member)) :
-             (hasdim(data, :model) ? Array(dims(data, :model)) : nothing)
+    models =
+        hasdim(data, :member) ? Array(dims(data, :member)) :
+        (hasdim(data, :model) ? Array(dims(data, :model)) : nothing)
     if isnothing(models)
-        throw(ArgumentError("subplots only possible for data with dimension :model or :member"))
+        throw(
+            ArgumentError(
+                "subplots only possible for data with dimension :model or :member",
+            ),
+        )
     end
     # models = reshape(models, grid...)
-    fig = Figure(size=figsize, fontsize=fontsize)
-    Label(fig[0, 1:grid.ncols], title, fontsize=1.5 * fontsize, halign=:center, font=:bold)
+    fig = Figure(size = figsize, fontsize = fontsize)
+    Label(
+        fig[0, 1:grid.ncols],
+        title,
+        fontsize = 1.5 * fontsize,
+        halign = :center,
+        font = :bold,
+    )
 
     nb_subplots = length(models)
 
-    for idx_plot in 1:nb_subplots
+    for idx_plot = 1:nb_subplots
         row = ceil(Int, idx_plot / grid.ncols)
         col_temp = idx_plot % grid.ncols
         col = col_temp == 0 ? grid.ncols : col_temp
-        pos = (x=row, y=col)
-        pos_legend = idx_plot == nb_subplots ? (x=1:row, y=grid.ncols + 1) : nothing
+        pos = (x = row, y = col)
+        pos_legend = idx_plot == nb_subplots ? (x = 1:row, y = grid.ncols + 1) : nothing
         model = models[idx_plot]
         if hasdim(data, :member)
             plotValsOnMap!(
-                fig, data[member=At(model)], "$model";
-                colors=colors, high_clip=high_clip, low_clip=low_clip,
-                color_range=color_range_limits, pos=pos, pos_legend=pos_legend,
-                xlabel=xlabel, ylabel=ylabel, xlabel_rotate=xlabel_rotate
+                fig,
+                data[member=At(model)],
+                "$model";
+                colors = colors,
+                high_clip = high_clip,
+                low_clip = low_clip,
+                color_range = color_range_limits,
+                pos = pos,
+                pos_legend = pos_legend,
+                xlabel = xlabel,
+                ylabel = ylabel,
+                xlabel_rotate = xlabel_rotate,
             )
         else
             plotValsOnMap!(
-                fig, data[model=At(model)], "$model";
-                colors=colors, high_clip=high_clip, low_clip=low_clip,
-                color_range=color_range_limits, pos=pos, pos_legend=pos_legend,
-                xlabel=xlabel, ylabel=ylabel, xlabel_rotate=xlabel_rotate
+                fig,
+                data[model=At(model)],
+                "$model";
+                colors = colors,
+                high_clip = high_clip,
+                low_clip = low_clip,
+                color_range = color_range_limits,
+                pos = pos,
+                pos_legend = pos_legend,
+                xlabel = xlabel,
+                ylabel = ylabel,
+                xlabel_rotate = xlabel_rotate,
             )
         end
     end
