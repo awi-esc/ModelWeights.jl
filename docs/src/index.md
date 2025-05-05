@@ -9,6 +9,7 @@ within Julia and, on the other hand, to compute weights for different sets of Ea
 The main objects that the package provides are: `DataMap` and two weight 
 objects, `ConfigWeights` and `Weights`.
 
+
 ## DataMap Object
 
 Each Data object refers to some summary data (e.g. climatological average) 

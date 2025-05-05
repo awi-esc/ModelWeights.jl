@@ -20,5 +20,5 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/awi-esc/ModelWeights.git",
+    repo = "github.com/awi-esc/ModelWeights.git"
 )
