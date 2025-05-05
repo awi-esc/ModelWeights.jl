@@ -17,3 +17,7 @@ makedocs(
         "references.md"
     ]
 )
+
+deploydocs(
+    repo = "github.com/awi-esc/ModelWeights.jl.git",
+)
