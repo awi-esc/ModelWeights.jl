@@ -151,7 +151,8 @@ end
         path_recipes::String;
         dir_per_var::Bool=true,
         is_model_data::Bool=true,
-        subset::Union{Dict, Nothing}=nothing
+        subset::Union{Dict, Nothing}=nothing,
+        preview::Bool=false
     )
 
 Loads the data from the config files (ESMValTool recipes) located at 'path_recipes'.
