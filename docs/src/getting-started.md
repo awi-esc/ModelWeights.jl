@@ -124,7 +124,7 @@ For both functions, `loadDataFromESMValToolRecipes` and `loadDataFromYAML`, ther
 
     - `models`: List of models or individual model members, e.g. ["AWI-CM-1-1-MR"]. All filenames must contain at least one of the given strings + "_". The underscore is important since some models have names that are substrings of other models, e.g. "CNRM-CM5" and "CNRM-CM5-C2". 
    
-    - `subdirs`: If given, data will be loaded only from subdirectories of the given base_dir that contain any of the provided values in their name. This is recommended when there are many subdirectories for a specific variable  within base\_dir and you only want data from a specific one (e.g. of a certain date, given that the date is included in the name of the directory).
+    - `subdirs`: If given, data will be loaded only from subdirectories of the given base\_dir that contain any of the provided values in their name. This is recommended when there are many subdirectories for a specific variable  within base\_dir and you only want data from a specific one (e.g. of a certain date, given that the date is included in the name of the directory).
 
 
 
@@ -132,16 +132,17 @@ For both functions, `loadDataFromESMValToolRecipes` and `loadDataFromYAML`, ther
 
 For a full example, see `scripts/run-climwip-simplified.yml`.
 
-```@raw html
-<!-- TODO: update the following -->
-```
 Calling `mw.computeWeights(dists_indep, dists_perform, config)` will compute weights based on the distances for the independence weights and the distances for the performance weights.
 The config parameter is of type `ConfigWeights` defined in `src/data-utils.jl`. It holds information about the contribution of each combination of statistic/diagnostic and climate variable, once for computing independence weights and once for computing performance weights. Further parameters concerning the weighting are specified in the ConfigWeights struct, such as the hyperparameters,  `sigma_performance` and `sigma_independence`. 
 
-```@raw html
-<!-- TODO: update following-->
+
 ```
-The output of the function `computeWeights` is an object of type `Weights` (see `src/data-utils.jl`) which holds the weights for all combinations of statistics/diagnostics and climate variables, for performance as well as independence weights. Further, it contains the overall weights (one for each model, summing up to 1) as well as the performance and independence weights for each variable (summed across statistics/diagnostics).
+The output of the function `computeWeights` is an object of type `Weights` (see `src/data-utils.jl`) which contains the independence and performance weights seperately as well as the overall weights (`wI`, `wP` and `w`), each of which respectively sum up to 1. Further it contains the following data:
+- For all combinations of statistics/diagnostics and climate variables, the distances used for computing performance as well as independence weights (`performance_distances`, `independence_distances`). 
+- For every model, the generalized distances for performance (`Di`) and independence (`Sij`), (distances summed across statistics/diagnostics + variables).
+- Model weights on the basis of members, i.e. the weight for every model is distributed evenly across its members, so this gives one weight per member.
+- the configuration in form of the `ConfigWeights` object used to compute the weights.
+
 
 ```@raw html
 <!-- `weights_variables:`: For each of 'performance' and 'independence' one value per climate variable considered. These values represent the weight of how much each climate variable influences the generalized distance of a model, which is computed by taking a weighted average across the distances with respect to different variables. Should sum up to 1.  -->
