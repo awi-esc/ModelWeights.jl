@@ -1,5 +1,7 @@
 # Computing weights
 
+The weighting method that we use is from Brunner et al. (2020), see [References](@ref).
+
 ## Area-weighted RMSE
 
 ```math
@@ -41,7 +43,7 @@ The generalized distances between models and observations, respectively between 
 w_i = \frac{e^{-(\frac{D_i}{\sigma_D})^2}}{1 + \sum_{j \ne i} e^{-\left( \frac{S_{ij}}{\sigma_S} \right)^2}}
 ```
 
-The parameters, $\sigma_D$ and $\sigma_S$, are free parameters that Brunner et al. estimated using perfect model tests. For now, we just set them to fix values of 0.5 each.
+The parameters, $\sigma_D$ and $\sigma_S$, are free parameters that Brunner et al. estimated using perfect model tests.
 
 ## Computation of performance/independence weights only
 
