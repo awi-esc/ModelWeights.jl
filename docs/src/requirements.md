@@ -1,18 +1,10 @@
 # Requirements
+We assume that you have your preprocessed data ready, so that the data from the different models can be combined, meaning that all models must for instance be defined on the same grid. We do the preprocessing of the data with ESMValTool. A set of recipes to download and preprocess some data can be found in our repository [ESMDataPrep](https://github.com/awi-esc/ESMDataPrep).
 
-## Preprocessed data
-We assume that you have your preprocessed data ready, so that the data from
-the different models can be combined, meaning that all models must for instance 
-have the same grid.
-We do the preprocessing of the data with ESMValTool. A set of recipes to 
-download and preprocess some data can be found in our repository [ESMDataPrep](https://github.com/awi-esc/ESMDataPrep).
+## Data structure
+The structure of the directories where the preprocessed data is stored is expected by our tool to follow a certain structure. If there is one subdirectory for each climate variable (this is, for instance, the case when one ESMValTool recipe is used for a single variable), the structure should be as outline below. 
 
-The structure of the directories where the preprocessed data is stored is
-expected by our tool to follow a certain structure. If there is one subdirectory
-for each climate variable (this is, for instance, the case when one ESMValTool
-recipe is used for a single variable), the structure should be as outline below. 
-Uppercase names refer to variables, lowercase names mean that the names can be
-arbitrary, unless stated differently in the comments to the right. 
+Uppercase names refer to variables, lowercase names mean that the names can be arbitrary, unless stated differently in the comments to the right. 
 
 ```bash
 ├── BASE_DIR
@@ -65,16 +57,8 @@ immediately contains the preproc-subdirectory:
 
 ## Config files
 
-Further, to load the data, we need one or more yaml configuration files.
-From these, we retrieve which combination of variables, statistics, aliases,
-experiments and timeranges will be considered.
+Further, to load the data, we need one or more yaml configuration files. From these, we retrieve which combination of variables, statistics, aliases, experiments and timeranges will be considered.
    
-Since we use ESMValTool to preprocess the data, we can simply use our 
-ESMValTool recipes (the fully spelled out version output by ESMValTool, which
-is stored in the run-folder and has the name of recipe + "_filled.yml") as 
-config files here. Note that not everything in the recipes is actually needed 
-for loading the data. For a minimal example with the unnecessary sections 
-removed, see [this example](https://github.com/awi-esc/SimilarityWeights/blob/main/configs/examples/esmvaltool-recipes/mwe_esmvaltool_config.yml). 
+Since we use ESMValTool to preprocess the data, we can simply use our ESMValTool recipes (the fully spelled out version output by ESMValTool, which is stored in the run-folder and has the name of recipe + "_filled.yml") as config files here. Note that not everything in the recipes is actually needed for loading the data. For a minimal example with the unnecessary sections removed, see [this example](https://github.com/awi-esc/SimilarityWeights/blob/main/configs/examples/esmvaltool-recipes/mwe_esmvaltool_config.yml). 
 
-You may have one centralized directory, where you store the all yaml files
-(i.e., if you used ESMValTool, all recipes used for preprocessing the data).
+You may have one centralized directory, where you store the all yaml files (i.e., if you used ESMValTool, all recipes used for preprocessing the data).
