@@ -39,7 +39,7 @@ ax = Axis(f[1,1], title = "Near-Surface Air Temperature", xlabel="Year");
 label_unc_unw(x) = "Non-weighted quantiles: " * join(x.properties["quantiles"], "-")
 label_unc_w(x) = "Weighted quantiles: " * join(x.properties["quantiles"], "-")
 
-mw.plotTimeseries!(f, ax, historical.avg; 
+mw.plotTimeseries!(ax, historical.avg; 
     uncertainties=coalesce.(historical.uncertainties, missing => NaN), 
     label="Non-weighted mean", label_unc=label_unc_unw(historical.uncertainties), 
     color=:grey)

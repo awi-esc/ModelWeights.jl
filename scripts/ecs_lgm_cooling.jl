@@ -8,68 +8,31 @@ using ColorSchemes
 using NCDatasets
 using Distributions
 using YAXArrays
+using Missings
 
 # Get data from piControl + historical + lgm experiments
 path_config = "./configs/ecs-lgm-cooling.yml";
-#data_meta =  mw.loadDataFromYAML(path_config; preview = true)
-data = mw.loadDataFromYAML(path_config; subset = Dict("level_shared_models" => mw.MODEL))
+data = mw.loadData(path_config; subset = Dict("subset_shared" => mw.MODEL))
+
 
 # for the shared models, make sure that physics of piControl models are the same
 # as physics of lgm models
-
-# get global means
-gms = mw.computeGlobalMeans(data["tas_CLIM_historical"])
-
-mw.addGlobalMeans!(data, ["tas_CLIM_historical"])
-
-df = mw.alignPhysics(
-    data, 
-    data["tas_CLIM_lgm"].properties["member_names"]; 
-    level_shared_models = mw.MODEL
+data = mw.alignPhysics(data, 
+    data["tos_CLIM_lgm"].properties["member_names"];    
+    # data["tas_CLIM_lgm"].properties["member_names"]; 
+    subset_shared = mw.MODEL
 )
-df2 = mw.alignPhysics(
-    data, 
-    data["tas_CLIM_lgm"].properties["member_names"]; 
-    level_shared_models = mw.MEMBER
-)
-df3 = mw.alignPhysics(
-    data, 
-    data["tas_CLIM_lgm"].properties["member_names"]
-)
+mw.setToSummarizedMembers!(data)
+mw.addAnomalies!(data, "tas_CLIM_lgm", "tas_CLIM_piControl")
+#mw.addAnomalies!(data, "tos_CLIM_lgm", "tos_CLIM_piControl")
 
-
-
-
-mw.setToSummarizedMembers!(df)
-# lgm-cooling: here models need to be in same unit for both experiments
-mw.kelvinToCelsius!(df)
-lgm_cooling = df["tas_CLIM_lgm"] .- df["tas_CLIM_piControl"];
-# global lgm-cooling values for each model
-# as we look at differences here, the unit (kelvin or celsius) doesnt matter
-global_means = coalesce.(mw.computeGlobalMeans(lgm_cooling), missing => NaN)
-predictions_gm_tas = coalesce.(Array(global_means), missing => NaN);
-ys = repeat([0], length(global_means));
-
-# plot model data
-begin
-    f1 = Figure(size=(1000,400))
-    t="GMST (LGM-piControl) with fitted normal distribution"
-    ax = Axis(f1[1,1], title = L"$\Delta$ %$(t)")
-    scatter!(ax, predictions_gm_tas, ys, color = :red)
-    mu = Statistics.mean(global_means)
-    sigma = Statistics.std(global_means; corrected=false, mean=mu)
-    Distributions.fit_mle(Normal, global_means.data)
-
-    dist = Distributions.Normal(mu, sigma)
-    samples = rand(dist, 1000);
-    hist!(samples)
-    labels = Array(dims(global_means,:model))
-    text!(ax, predictions_gm_tas, ys.+5, text=labels, rotation=pi/2)
-    f1
-end
+# NaN important for plotting! Type mustn't be Missing
+global_means_tas = coalesce.(mw.computeGlobalMeans(data["tas_ANOM_lgm"]), NaN);
+#global_means_tos = coalesce.(mw.computeGlobalMeans(data["tos_ANOM_lgm"]), NaN);
 
 
 # Assimilated data from Tierney et al. (2020)
+global_means = global_means_tas;
 tierney_data = NCDataset("/albedo/home/brgrus001/ModelWeightsPaper/work/data/Tierney-2020/Tierney2020_DA_atm.nc")
 deltaSAT = YAXArray(
     (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
@@ -79,14 +42,40 @@ errdeltaSAT = YAXArray(
     (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
     Array(tierney_data["errdeltaSAT"])
 )
-gm_deltaSAT = mw.computeGlobalMeans(deltaSAT)
-
+gm_delta = mw.computeGlobalMeans(deltaSAT)[1]
 area_weights_mat = mw.makeAreaWeightMatrix(Array(dims(deltaSAT, :lon)), Array(dims(deltaSAT, :lat)))
-std_gm_deltaSAT = sum(area_weights_mat .* errdeltaSAT)
+std_gm_delta = sum(area_weights_mat .* errdeltaSAT)
+
+
+# Only proxy data from Tierney et al. (2020)
+global_means = global_means_tos;
+tierney_data = NCDataset("/albedo/home/brgrus001/ModelWeightsPaper/work/data/Tierney-2020/Tierney2020_ProxyData_5x5_deltaSST.nc")
+mat = allowmissing(Array(tierney_data["deltaSST"]))
+mat[isnan.(mat)] .= missing
+deltaSST = YAXArray(
+    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
+    mat
+)
+mat = allowmissing(Array(tierney_data["std"]))
+mat[isnan.(mat)] .= missing
+errdeltaSST = YAXArray(
+    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
+    mat
+)
+gm_delta = mw.computeGlobalMeans(deltaSST)[1]
+# also adapt area weight matrix for missing values..!!?
+area_weights_mat = mw.makeAreaWeightMatrix(
+    Array(dims(deltaSST, :lon)), Array(dims(deltaSST, :lat));
+    mask=ismissing.(mat)
+)
+std_gm_delta = sum(skipmissing(area_weights_mat .* errdeltaSST))
+
+
+
 
 begin
-    CI_lower(n) = gm_deltaSAT - n * std_gm_deltaSAT;
-    CI_upper(n) = gm_deltaSAT + n * std_gm_deltaSAT; 
+    CI_lower(n) = gm_delta - n * std_gm_delta;
+    CI_upper(n) = gm_delta + n * std_gm_delta; 
 
     # 68% CI
     l1 = CI_lower(1)
@@ -95,6 +84,9 @@ begin
     l2 = CI_lower(2)
     u2 = CI_upper(2)
 end
+
+
+
 
 begin
     f3 = Figure(size = (1000, 400))
@@ -105,10 +97,10 @@ begin
     scatter!(ax, xs, ys)
     labels = Array(dims(global_means,:model))
     text!(ax, xs, ys.+5, text=labels, rotation=pi/2)
-    dist = Distributions.Normal(gm_deltaSAT, std_gm_deltaSAT)
+    dist = Distributions.Normal(gm_delta, std_gm_delta)
     samples = rand(dist, 1000);
     hist!(samples)
-    vlines!(gm_deltaSAT; color=:grey, linewidth=5, label="Mean")
+    vlines!(gm_delta; color=:grey, linewidth=5, label="Mean")
     lines!([l1, u1], [0, 0]; linewidth=5, color=:red, label="68% CI")
     lines!([l2, u2], [0, 0]; linewidth=5, color=:green, alpha=0.5, label="95% CI")
     axislegend(ax, merge = true, position = :rt)
@@ -124,9 +116,9 @@ reconstruction = (type="Data assimilated", lower=-6.5, upper=-5.7, summary_stat=
     summary_val=-6.1, ci="95%(68%??)", target="plots/ecs-lgm-cooling/lgm_cooling_global_mean_proxy_only.png");
 
 begin
-    f, ax = mw.makeScatterPlot(collect(1:length(global_means)), predictions_gm_tas;
+    f, ax = mw.makeScatterPlot(collect(1:length(global_means_tas)), global_means_tas;
         captions=(x="Models",y="Anomaly area-weighted global mean",title="LGM-cooling (lgm-piControl)"),
-        xtick_labels = Array(dims(global_means, :model)),
+        xtick_labels = Array(dims(global_means_tas, :model)),
         xticklabelrotation = pi/4,
         legend = (label="tas", position=:ct, color=:red),
         greyed_area = (
@@ -142,7 +134,7 @@ end
 ###############################################################################
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "./configs/lgm-cmip5-cmip6";
-lgm_data = mw.loadDataFromESMValToolConfigs(
+lgm_data = mw.loadDataFromESMValToolRecipes(
     path_data, path_recipes; 
     subset = Dict(
         "statistics" => ["CLIM"], 
@@ -199,7 +191,7 @@ global_means = mapslices(x -> Statistics.sum(x),
 
 
 # TODO: config file non existent!
-obs_data = mw.loadDataFromESMValToolConfigs(
+obs_data = mw.loadDataFromESMValToolRecipes(
     "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_tas_tos", 
     "./configs/historical_obs",
     dir_per_var = false,
