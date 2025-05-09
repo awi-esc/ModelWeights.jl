@@ -196,7 +196,11 @@ function plotEnsembleSpread(data::YAXArray, lon::Number, lat::Number)
     return fig
 end
 
+"""
+    plotTimeseries!(ax::Axis, vals::AbstractArray;)
 
+Plot timeseries of data vector `vals`.
+"""
 function plotTimeseries!(
     ax::Axis,
     vals::AbstractArray;
