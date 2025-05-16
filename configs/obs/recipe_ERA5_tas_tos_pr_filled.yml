@@ -1,0 +1,658 @@
+documentation:
+  title: Recipe to preprocess ERA5 data
+  description: Data is regridded to 5x5 and climatological average is taken for different
+    time periods.
+  authors:
+  - grusdt_britta
+preprocessors:
+  general:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+  climatological_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: mean
+      period: full
+  climatological_monthly_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: mean
+      period: monthly
+  climatological_annual_mean:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    annual_statistics:
+      operator: mean
+  standard_dev:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: std_dev
+      period: full
+  standard_dev_monthly:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    climate_statistics:
+      operator: std_dev
+      period: monthly
+  standard_dev_annual:
+    regrid:
+      target_grid: 5x5
+      scheme: linear
+    annual_statistics:
+      operator: std_dev
+  default: {}
+diagnostics:
+  historical:
+    variables:
+      tas_CLIM:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+      tos_CLIM:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+      pr_CLIM:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+      tas_CLIM-mon:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+      tos_CLIM-mon:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+      pr_CLIM-mon:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+      tas_CLIM-ann:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+      tos_CLIM-ann:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+      pr_CLIM-ann:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+    scripts: null
+  historical1:
+    variables:
+      tas_CLIM:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1951/1980
+      tos_CLIM:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1951/1980
+      pr_CLIM:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1951/1980
+      tas_CLIM-mon:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1951/1980
+      tos_CLIM-mon:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1951/1980
+      pr_CLIM-mon:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1951/1980
+      tas_CLIM-ann:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1951/1980
+      tos_CLIM-ann:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1951/1980
+      pr_CLIM-ann:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1951/1980
+    scripts: null
+  historical2:
+    variables:
+      tas_CLIM:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1961/1990
+      tos_CLIM:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1961/1990
+      pr_CLIM:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1961/1990
+      tas_CLIM-mon:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1961/1990
+      tos_CLIM-mon:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1961/1990
+      pr_CLIM-mon:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1961/1990
+      tas_CLIM-ann:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1961/1990
+      tos_CLIM-ann:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1961/1990
+      pr_CLIM-ann:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1961/1990
+    scripts: null
+  historical3:
+    variables:
+      tas_CLIM:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1991/2014
+      tos_CLIM:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1991/2014
+      pr_CLIM:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1991/2014
+      tas_CLIM-mon:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1991/2014
+      tos_CLIM-mon:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1991/2014
+      pr_CLIM-mon:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1991/2014
+      tas_CLIM-ann:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1991/2014
+      tos_CLIM-ann:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1991/2014
+      pr_CLIM-ann:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1991/2014
+    scripts: null
+  historical4:
+    variables:
+      tas_CLIM:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1980/2014
+      tos_CLIM:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1980/2014
+      pr_CLIM:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1980/2014
+      tas_CLIM-mon:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1980/2014
+      tos_CLIM-mon:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1980/2014
+      pr_CLIM-mon:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1980/2014
+      tas_CLIM-ann:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1980/2014
+      tos_CLIM-ann:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1980/2014
+      pr_CLIM-ann:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1980/2014
+    scripts: null
+  historical5:
+    variables:
+      tas_CLIM:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1995/2014
+      tos_CLIM:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1995/2014
+      pr_CLIM:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1995/2014
+      tas_CLIM-mon:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1995/2014
+      tos_CLIM-mon:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1995/2014
+      pr_CLIM-mon:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_monthly_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1995/2014
+      tas_CLIM-ann:
+        short_name: tas
+        variable_long_name: Near-Surface Air Temperature
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1995/2014
+      tos_CLIM-ann:
+        short_name: tos
+        variable_long_name: Sea Surface Temperature
+        mip: Omon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1995/2014
+      pr_CLIM-ann:
+        short_name: pr
+        variable_long_name: Precipitation
+        mip: Amon
+        preprocessor: climatological_annual_mean
+        project: native6
+        type: reanaly
+        version: v1
+        tier: 3
+        exp: historical
+        timerange: 1995/2014
+    scripts: null
+datasets:
+- dataset: ERA5
