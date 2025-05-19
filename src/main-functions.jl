@@ -167,7 +167,7 @@ preprocessed data. If dir_per_var is false, path_data is path to directory that
  directly contains the 'preproc' subdirectory.
 - `path_recipes`: path to directory that contains one or ESMValTool recipes 
 used as config files.
-- `dir_per_var`: if true, directory at path_data has subdirectories, one for
+- `dir_per_var`: if true (default), directory at path_data has subdirectories, one for
 each variable (they must end with _ and the name of the variable), otherwise
 data_path points to the directory that has a subdirectory 'preproc'.
 - `is_model_data`: set true for model data, false for observational data
