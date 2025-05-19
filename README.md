@@ -14,7 +14,7 @@ This just activates the project, i.e. it makes it the active project.
 
 Instead of running ```pkg> activate```, you can also specify the project on startup using --project='', e.g. for running a specific script:
 ```
-julia --project=. scripts/plotting/calculate_weights_climwip.jl
+julia --project=. path_to_your_julia_script.jl
 ```
 
 Then run```pkg> instantiate```. When there is no Manifest.toml file in the project, this will install the latest versions of the dependencies compatible with the project and a Manifest.toml file will be generated (I think this can also be done explicitly by running ```pkg> resolve```). If the project does have a Manifest.toml file, it will install the packages in exactly the same state as given by the manifest file.
