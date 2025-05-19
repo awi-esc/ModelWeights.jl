@@ -508,6 +508,7 @@ function getMetaDataFromYAML(
         req_fields = get_required_fields_config(ds)
         optional_fields = get_optional_fields_config(ds, timerange_to_alias)
         ds_constraint = merge(req_fields, optional_fields)
+        considered_keys = keys(ds_constraint)
         # potentially update with constraint from argument (has precedence over value in yaml file)
         if !isnothing(arg_constraint)
             #setConstraintVal!(ds_constraint, arg_constraint)
@@ -515,10 +516,15 @@ function getMetaDataFromYAML(
                 # if subset_shared is given as argument, it will subset 
                 # considering all loaded datasets, not individual ones!
                 if field != "subset_shared"
-                    ds_constraint[field] = val
+                    if !(field in considered_keys)
+                        @warn "$field is not a valid key to subset data!"
+                    else
+                        ds_constraint[field] = val
+                    end
                 end
             end
         end
+
         # NOTE: if the second arg is an absolute path, joinpath will ignore the 
         # first arg and just use the second
         path_data = joinpath(base_path, req_fields["base_dir"])
