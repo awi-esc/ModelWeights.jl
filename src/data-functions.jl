@@ -321,11 +321,37 @@ end
 
 """
     loadDataFromMetadata(
-        meta_data::Dict{String, Dict{String, Any}}, is_model_data::Bool
+        meta_data::Dict{String, Dict{String, Any}}, 
+        is_model_data::Bool;
+        subset::Union{Dict,Nothing} = nothing
     )
 
+# Load a `DataMap`-instance that contains the data specified in `meta_data` possibly constraint by values in `subset`.
+
+# # Arguments:
+# - `meta_data::Dict`: TODO: add required keys!
+# - `is_model_data::Bool`: true for model data (default), false for observational data.
+# - `subset`: specifies the properties of the subset of data to be loaded. These 
+# have to apply to each loaded dataset specified in the config yaml file. 
+# The following keys are considered:  `models` (used to load only specific set of models 
+# or members of models), `projects` (used to load only data from a given set of
+# projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases` 
+# (super set is loaded, i.e. all data that corresponds to either a given timerange or
+# a given alias will be loaded), `variables`, `statistics`, `subdirs`, `subset_shared` 
+# (if set to MEMBER/MODEL only data loaded from model members/models shared across all
+# datasets is loaded) and `dir_per_var`.
 """
-function loadDataFromMetadata(meta_data::Dict{String,Dict{String,Any}}, is_model_data::Bool)
+function loadDataFromMetadata(
+    meta_data::Dict{String,Dict{String,Any}}, 
+    is_model_data::Bool;
+    subset::Union{Dict,Nothing} = nothing
+)
+    if isempty(meta_data)
+        throw(ArgumentError("No metadata provided!"))
+    end
+    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))
+        filterPathsSharedModels!(meta_data, subset["subset_shared"])
+    end
     results = DataMap()
     for (id, meta) in meta_data
         # loads data at level of model members

@@ -20,7 +20,7 @@ include("main-functions.jl")
 
 
 
-export loadData, loadDataFromESMValToolRecipes, computeWeights
+export loadDataFromYAML, loadDataFromESMValToolRecipes, computeWeights
 
 
 export joinDataMaps

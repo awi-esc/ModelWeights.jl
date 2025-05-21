@@ -104,13 +104,13 @@ begin
         "models" => model_members_lgm,
         "subset_shared" => mw.MEMBER # applies to every loaded dataset
     );
-    data_lgm_v2_meta =  mw.loadData(
+    data_lgm_v2_meta =  mw.loadDataFromYAML(
         path_config; 
         is_model_data,
         subset = subset,
         preview = true
     )
-    data_lgm_v2 = mw.loadData(
+    data_lgm_v2 = mw.loadDataFromYAML(
         path_config; 
         is_model_data,
         subset = subset,

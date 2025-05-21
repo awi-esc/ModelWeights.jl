@@ -208,40 +208,37 @@ function loadDataFromESMValToolRecipes(
             end
         end
     end
-    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))
-        filterPathsSharedModels!(meta_data, subset["subset_shared"])
-    end
-    output = preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
-    return output
+    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data; subset)
 end
 
 
 """
-    loadData(
-        content::Dict;
-        is_model_data::Bool=true,
-        subset::Union{Dict, Nothing}=nothing,
-        preview::Bool=false
+    loadDataFromYAML(
+        path_config::String;
+        is_model_data::Bool = true,
+        subset::Union{Dict,Nothing} = nothing,
+        preview::Bool = false
     )
 
-Load a `DataMap`-instance that contains the data specified in `content`.
+Load a `DataMap`-instance that contains the data specified in yaml file at `path_config`, 
+potentially constraint by values in `subset`.
 
 # Arguments:
-- `content::Dict`: see TODO:add link to documentation?! for required keys.
-- `is_model_data::Bool`: true for model data (default), false for observational data.
-- `subset`: specifies the properties of the subset of data to be loaded. These 
-have to apply to each loaded dataset specified in the config yaml file. 
-The following keys are considered:  `models` (used to load only specific set of models 
-or members of models), `projects` (used to load only data from a given set of
-projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases` 
-(super set is loaded, i.e. all data that corresponds to either a given timerange or
-a given alias will be loaded), `variables`, `statistics`, `subdirs`, `subset_shared` 
-(if set to MEMBER/MODEL only data loaded from model members/models shared across all
-datasets is loaded) and `dir_per_var`.
 - `preview::Bool`: if true (default: false), return metadata without actually 
 loading any data.
 """
-function loadData(
+function loadDataFromYAML(
+    path_config::String;
+    is_model_data::Bool = true,
+    subset::Union{Dict,Nothing} = nothing,
+    preview::Bool = false
+)
+    content = YAML.load_file(path_config)
+    return loadDataFromYAML(content; is_model_data, subset, preview)
+end
+
+
+function loadDataFromYAML(
     content::Dict;
     is_model_data::Bool = true,
     subset::Union{Dict,Nothing} = nothing,
@@ -249,33 +246,8 @@ function loadData(
 )
     meta_data = getMetaDataFromYAML(content, is_model_data; arg_constraint = subset)
     if isempty(meta_data)
-        @warn "No metadata found for subset: $subset, path_config: $path_config (model data: $is_model_data)"
-        return nothing
+        msg = "No metadata found for subset: $subset, $content (model data: $is_model_data)!"
+        throw(ArgumentError(msg))
     end
-    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))
-        filterPathsSharedModels!(meta_data, subset["subset_shared"])
-    end
-    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
-end
-
-
-"""
-    loadData(
-        path_config::String;
-        is_model_data::Bool=true,
-        subset::Union{Dict, Nothing}=nothing,
-        preview::Bool=false
-    )
-
-Load a `DataMap`-instance that contains the data specified in yaml file at 
-`path_config`.
-"""
-function loadData(
-    path_config::String;
-    is_model_data::Bool = true,
-    subset::Union{Dict,Nothing} = nothing,
-    preview::Bool = false,
-)
-    content = YAML.load_file(path_config)
-    return loadData(content; is_model_data, subset, preview)
+    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data; subset)
 end

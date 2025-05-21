@@ -619,7 +619,7 @@ function buildPathsToDataFiles(
         if keep
             push!(paths_to_files, file)
         else
-            @debug "exclude $file because of model subset"
+            @debug "exclude $(basename(file)) because of model subset"
         end
     end
     return paths_to_files
@@ -690,7 +690,7 @@ end
 """
 function buildPathsForMetaAttrib(
     base_path::String,
-    attrib::Dict{String,Any},
+    attrib::Dict{String, <:Any},
     dir_per_var::Bool;
     subdir_constraints::Union{Vector{String},Nothing} = nothing,
 )
