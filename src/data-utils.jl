@@ -684,7 +684,7 @@ end
 
 # Arguments:
 - `base_path`: base directory of stored data specified in `attrib`.
-- `attrib`: meta attributes of data.
+- `attrib`: meta attributes of data. Must have keys: '_variable', '_statistic', '_alias'.
 - `dir_per_var`: true if data of each climate variable is stored in a seperate directory.
 - `subdir_constraints`: if given, paths must contain ANY of the given elements. Existing paths that don't are ignored.
 """
@@ -709,11 +709,10 @@ function buildPathsForMetaAttrib(
             isempty(attrib["_statistic"]) ? attrib["_variable"] :
             join([attrib["_variable"], attrib["_statistic"]], "_")
         path_data = joinpath(p, "preproc", attrib["_alias"], diagnostic)
-        if !isdir(path_data)
-            @debug "$path_data is not an existing directory!"
-        else
+        if isdir(path_data)
             push!(data_paths, path_data)
         end
+        # else @debug "$path_data is not an existing directory!"
     end
     return data_paths
 end
