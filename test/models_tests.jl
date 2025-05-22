@@ -9,10 +9,6 @@ end
 @testset "Test setLookupsFromMemberToModel" begin
 end
 
-# Not used anymore
-# @testset "Test getSharedModelsFromDimensions" begin
-# end
-
 @testset "Test reduceMetaDataSharedModels!" begin 
 end
 

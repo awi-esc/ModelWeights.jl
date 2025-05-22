@@ -36,6 +36,8 @@ end
 end
 
 @testset "Test buildPathsToDataFiles" begin
+    # path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
+    # paths_cems2 = mw.buildPathsToDataFiles(path_data, true; model_constraints=["CESM2"])
 end
 
 @testset "Test getMetaDataID" begin
@@ -45,15 +47,75 @@ end
 end
 
 @testset "Test buildPathsForMetaAttrib" begin
+    base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
+    attribs = Dict(
+        "_variable" => "tas",
+        "_statistic" => "CLIM",
+        "_alias" => "historical",
+    )
+    dir_per_var = true
+    paths = mw.buildPathsForMetaAttrib(base_path, attribs, dir_per_var)
+    subdir = "recipe_cmip5_historical_tas_20250211_094633"
+    diagnostic = attribs["_variable"] * "_" * attribs["_statistic"]
+    p1 = joinpath(base_path, subdir, "preproc", attribs["_alias"], diagnostic)
+    @assert isdir(p1)
+    @test p1 in paths
+
+    p2 = joinpath(base_path, subdir, "preprocessor", attribs["_alias"], diagnostic)
+    @assert !isdir(p2)
+    @test !(p2 in paths)
+
+    subdir = "recipe_cmip5_historical_psl_timeseries_20250228_084113"
+    p3 = joinpath(base_path, subdir, "preproc", attribs["_alias"], "psl_CLIM-ann")
+    @assert isdir(p3)
+    @test !(p3 in paths)
+
+    subdir = "recipe_cmip6_historical_tas_20250207_080843"
+    p4 = joinpath(base_path, subdir, "preproc", attribs["_alias"], diagnostic)
+    @assert isdir(p4)
+    @test p4 in paths
+    paths = mw.buildPathsForMetaAttrib(
+        base_path, attribs, dir_per_var; 
+        subdir_constraints = ["20250211"]
+    )
+    @test !(p4 in paths)
+    @test p1 in paths
 end
+
+
+@testset "Test getPathsToData" begin
+    path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
+    meta = Dict(
+        "_variable" => "tas",
+        "_statistic" => "CLIM",
+        "_alias" => "historical"
+    )
+    dir_per_var = true
+    is_model_data = true
+    ds_constraint = Dict(
+        "models" =>  ["ACCESS-CM2", "CESM2#r1i1p1f1"]
+    )
+    paths_to_files = mw.getPathsToData(
+        meta, path_data, dir_per_var, is_model_data; constraint = ds_constraint,
+    )
+    base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
+    subdir = "recipe_cmip6_historical_tas_20250207_080843"
+    alias = "historical"
+    diagnostic = meta["_variable"] * "_" * meta["_statistic"]
+    p_access = joinpath(base_path, subdir, "preproc", alias, diagnostic, "CMIP6_ACCESS-CM2_Amon_historical_r1i1p1f1_tas_gn.nc")
+    p_cesm2 = joinpath(base_path, subdir, "preproc", alias, diagnostic, "CMIP6_CESM2_Amon_historical_r1i1p1f1_tas_gn.nc")
+    p_other = joinpath(base_path, subdir, "preproc", alias, diagnostic, "CMIP6_BCC-CSM2-MR_Amon_historical_r2i1p1f1_tas_gn.nc")
+    @assert isfile(p_access) && isfile(p_cesm2) && isfile(p_other)
+    @test p_access in paths_to_files
+    @test p_cesm2 in paths_to_files
+    @test !(p_other in paths_to_files)
+end
+
 
 @testset "Test applyDataConstraints!" begin
 end
 
 @testset "Test applyModelConstraints" begin
-end
-
-@testset "Test indexData" begin
 end
 
 @testset "Test getTimerangeAsAlias" begin
@@ -78,6 +140,16 @@ end
 end
 
 @testset "Test searchModelInPaths" begin
+    member_present = "CESM2#r1i1p1f1"
+    model_present = "CESM2"
+    model_absent = "AWI-ESM"
+    paths = [
+        "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM/CMIP6_ACCESS-CM2_Amon_historical_r1i1p1f1_tas_gn.nc",
+        "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM/CMIP6_CESM2_Amon_historical_r1i1p1f1_tas_gn.nc"
+    ]
+    @test mw.searchModelInPaths(member_present, paths)
+    @test mw.searchModelInPaths(model_present, paths)
+    @test !mw.searchModelInPaths(model_absent, paths)
 end
 
 @testset "Test getSharedModelsFromPaths" begin
@@ -92,7 +164,9 @@ end
 @testset "Test loadDataFromESMValToolRecipes" begin
 end
 
-@testset "Test loadData" begin
+@testset "Test loadDataFromYAML" begin
+    # path = "/albedo/home/brgrus001/ModelWeightsPaper/work/configs/climwip/climwip-model-data.yml"
+    # data = mw.loadDataFromYAML(path, preview = true);
 end
 
 @testset "Test averageEnsembleMembers!" begin
@@ -110,13 +184,13 @@ end
 
 
 
-@testset "Test computeGlobalMeans" begin
-    a = [1.0 2.0 3.0 4.0];
-    b = [4.0 5.0 6 5.0];
-    da = YAXArray((Dim{:lon}(longitudes[1:2]), Dim{:lat}(latitudes[1:4])), vcat(a,b))
-    gms = mw.computeGlobalMeans(da)
+# @testset "Test computeGlobalMeans" begin
+#     a = [1.0 2.0 3.0 4.0];
+#     b = [4.0 5.0 6 5.0];
+#     da = YAXArray((Dim{:lon}(longitudes[1:2]), Dim{:lat}(latitudes[1:4])), vcat(a,b))
+#     gms = mw.computeGlobalMeans(da)
 
-    area_weights = mw.makeAreaWeightMatrix(Array(da.lon), Array(da.lat))
-    aw_gm = sum(da .* area_weights)
+#     area_weights = mw.makeAreaWeightMatrix(Array(da.lon), Array(da.lat))
+#     aw_gm = sum(da .* area_weights)
 
-end
+# end
