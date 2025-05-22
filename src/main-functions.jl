@@ -192,7 +192,8 @@ function loadDataFromESMValToolRecipes(
     attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; constraint = subset)
     meta_data = Dict{String,Dict{String,Any}}()
     for meta in attributes
-        addPathsToMetaAttribs!(
+        meta = Dict{String, Any}(meta)
+        meta["_paths"] = getPathsToData(
             meta,
             path_data,
             dir_per_var,

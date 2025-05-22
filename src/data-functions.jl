@@ -480,13 +480,15 @@ function getCMIPModelsKey(meta::Dict)
     attributes = keys(meta)
     if "source_id" in attributes
         if "model_id" in attributes
-            @debug "Dictionary contains keys 'source_id' used in CMIP6 ($(meta["source_id"])) and 'model_id' used in CMIP5 ($(meta["model_id"])). 'source_id' is used!"
+            msg1 = "Dictionary contains keys source_id and model_id, source_id is used! "
+            msg2 = "source_id: $(meta["source_id"]); model_id:$(meta["model_id"])."
+            @debug msg1 * msg2
         end
         return "source_id"
     elseif "model_id" in attributes
         return "model_id"
     else
-        msg = "Metadata must contain one of 'source_id' (pointing to names of CMIP6 models or 'model_id' used for CMIP5 models."
+        msg = "Metadata must contain one of 'source_id' (pointing to names of CMIP6 models) or 'model_id' (CMIP5)."
         throw(ArgumentError(msg))
     end
 end

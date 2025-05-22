@@ -488,7 +488,7 @@ in the argument `subset` are applied to EVERY dataset specified in the config
 file.
 
 # Arguments:
-- `path_config`: path to config yaml file specifying meta attributes and paths of data
+- `content`: content of config yaml file specifying meta attributes and paths of data
 - `is_model_data`: true for model data, false for observational data
 - `arg_constraint`: TODO
 """
@@ -501,9 +501,9 @@ function getMetaDataFromYAML(
     base_path = get(content, "path_data", "")
     timerange_to_alias = get(content, "timerange_to_alias", Dict{String,String}())
 
-    meta_data = Dict{String,Dict{String,Any}}()
+    meta_data = Dict{String, Dict{String, Any}}()
     for ds in datasets
-        meta_ds = Dict{String,Dict{String,Any}}()
+        meta_ds = Dict{String, Dict{String, Any}}()
         # get data from config file
         req_fields = get_required_fields_config(ds)
         optional_fields = get_optional_fields_config(ds, timerange_to_alias)
@@ -539,9 +539,13 @@ function getMetaDataFromYAML(
                         ds_constraint["exp"],
                         stats,
                         alias,
-                        timerange,
+                        timerange
                     )
-                    addPathsToMetaAttribs!(
+                    # for observational data, experiment doesn't make sense
+                    if !is_model_data
+                        meta["_experiment"] = ""
+                    end
+                    meta["_paths"] = getPathsToData(
                         meta,
                         path_data,
                         ds_constraint["dir_per_var"],
@@ -627,47 +631,41 @@ end
 
 
 """
-    addPathsToMetaAttribs!(
-        attrib::Dict{String, Any},
+    getPathsToData(
+        attribs::Dict{String, Any},
         base_path_data::String,
         dir_per_var::Bool,
         is_model_data::Bool;
         constraint::Union{Dict, Nothing}=nothing
     )
 
-Create a metadata Dictionary with the information from `attrib` and the file
-paths to the data files in `base_path_data` taking into account `constraint`.
+Return the paths to the data files in `base_path_data` taking into account `constraint`.
 """
-function addPathsToMetaAttribs!(
-    attrib::Dict{String,Any},
+function getPathsToData(
+    attribs::Dict{String, <:Any},
     base_path_data::String,
     dir_per_var::Bool,
     is_model_data::Bool;
-    constraint::Union{Dict,Nothing} = nothing,
+    constraint::Union{Dict, Nothing} = nothing,
 )
     has_constraint = !isnothing(constraint) && !isempty(constraint)
-    subdir_constraints =
-        !has_constraint ? nothing : get(constraint, "subdirs", Vector{String}())
-    paths_data =
-        buildPathsForMetaAttrib(base_path_data, attrib, dir_per_var; subdir_constraints)
+    subdir_constraints = !has_constraint ? nothing : get(constraint, "subdirs", Vector{String}())
+    paths_data = buildPathsForMetaAttrib(
+        base_path_data, attribs, dir_per_var; subdir_constraints
+    )
     paths_to_files = Vector{String}()
     for path_data in paths_data
-        paths =
-            has_constraint ?
+        paths = has_constraint ?
             buildPathsToDataFiles(
                 path_data,
                 is_model_data;
                 model_constraints = get(constraint, "models", Vector{String}()),
                 project_constraints = get(constraint, "projects", Vector{String}()),
-            ) : buildPathsToDataFiles(path_data, is_model_data)
+            ) : 
+            buildPathsToDataFiles(path_data, is_model_data)
         append!(paths_to_files, paths)
     end
-    # for observational data, experiment doesn't make sense
-    if !is_model_data
-        attrib["_experiment"] = ""
-    end
-    attrib["_paths"] = paths_to_files
-    return nothing
+    return paths_to_files
 end
 
 # if dir_per_var is true, directories at base_paths have subdirectories,
@@ -682,22 +680,30 @@ end
         subdir_constraints::Union{Vector{String}, Nothing}=nothing
     )
 
+Return paths to data specified by `attribs`. 
+
+Assumed data structure: BASE/preproc/ALIAS/VAR_STAT where BASE=`base_path`, 
+ALIAS=`attribs["_alias"]`,VAR=attribs["_variable"] and STAT=attribs["_statistic"]. 
+If `dir_per_var` is true, BASE is path to any subdirectory of `base_path` whose 
+name contains _VAR. If `subdir_constraints` is given, the subdirectory's name must further 
+contain at least one entry in `subdir_constraints`.
+
 # Arguments:
 - `base_path`: base directory of stored data specified in `attrib`.
-- `attrib`: meta attributes of data. Must have keys: '_variable', '_statistic', '_alias'.
+- `attribs`: meta attributes of data. Must have keys: '_variable', '_statistic', '_alias'.
 - `dir_per_var`: true if data of each climate variable is stored in a seperate directory.
 - `subdir_constraints`: if given, paths must contain ANY of the given elements. Existing paths that don't are ignored.
 """
 function buildPathsForMetaAttrib(
     base_path::String,
-    attrib::Dict{String, <:Any},
+    attribs::Dict{String, <:Any},
     dir_per_var::Bool;
     subdir_constraints::Union{Vector{String},Nothing} = nothing,
 )
     base_paths = [base_path]
     if dir_per_var
         base_paths = filter(isdir, readdir(base_path, join = true))
-        filter!(x -> occursin("_" * attrib["_variable"], x), base_paths)
+        filter!(x -> occursin("_" * attribs["_variable"], x), base_paths)
     end
     if !isnothing(subdir_constraints) && !isempty(subdir_constraints)
         filter!(p -> any([occursin(name, p) for name in subdir_constraints]), base_paths)
@@ -706,9 +712,9 @@ function buildPathsForMetaAttrib(
     for p in base_paths
         # NOTE: particular data structure assumed here!
         diagnostic =
-            isempty(attrib["_statistic"]) ? attrib["_variable"] :
-            join([attrib["_variable"], attrib["_statistic"]], "_")
-        path_data = joinpath(p, "preproc", attrib["_alias"], diagnostic)
+            isempty(attribs["_statistic"]) ? attribs["_variable"] :
+            join([attribs["_variable"], attribs["_statistic"]], "_")
+        path_data = joinpath(p, "preproc", attribs["_alias"], diagnostic)
         if isdir(path_data)
             push!(data_paths, path_data)
         end
