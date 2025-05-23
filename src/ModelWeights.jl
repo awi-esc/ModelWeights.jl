@@ -1,10 +1,5 @@
 module ModelWeights
 
-# using Logging
-# DEBUG_LOGGER = ConsoleLogger(stderr, Logging.Debug)
-
-
-
 const MODEL_MEMBER_DELIM = "#"
 const MODEL_NAME_FIXES = Dict("FGOALS_g2" => "FGOALS-g2", "ACCESS1.3" => "ACCESS1-3")
 

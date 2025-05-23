@@ -78,27 +78,6 @@ end
 
 
 """
-    filterPaths(paths::Vector{String}, shared_models::Vector{String})
-
-Return new vector with paths in `paths` that point to models in `shared_models`.
-
-# Arguments:
-- `shared_models`: have form 'modelname#memberID[_grid]' on level of model
-members or just 'modelname' on level of models.
-"""
-function filterPaths(paths::Vector{String}, shared_models::Vector{String})
-    subset_paths = Vector{String}()
-    for path in paths
-        keep = applyModelConstraints(path, shared_models)
-        if keep
-            push!(subset_paths, path)
-        end
-    end
-    return subset_paths
-end
-
-
-"""
     subsetModelData(data::AbstractArray, shared_models::Vector{String})
 
 Return a YAXArray that is the subset of `data` containing only data from 
@@ -320,37 +299,18 @@ end
 
 
 """
-    loadDataFromMetadata(
-        meta_data::Dict{String, Dict{String, Any}}, 
-        is_model_data::Bool;
-        subset::Union{Dict,Nothing} = nothing
-    )
+    loadDataFromMetadata(meta_data::Dict{String, Dict{String, Any}}, is_model_data::Bool)
 
-# Load a `DataMap`-instance that contains the data specified in `meta_data` possibly constraint by values in `subset`.
+Load a `DataMap`-instance that contains the data specified in `meta_data`.
 
-# # Arguments:
-# - `meta_data::Dict`: TODO: add required keys!
-# - `is_model_data::Bool`: true for model data (default), false for observational data.
-# - `subset`: specifies the properties of the subset of data to be loaded. These 
-# have to apply to each loaded dataset specified in the config yaml file. 
-# The following keys are considered:  `models` (used to load only specific set of models 
-# or members of models), `projects` (used to load only data from a given set of
-# projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases` 
-# (super set is loaded, i.e. all data that corresponds to either a given timerange or
-# a given alias will be loaded), `variables`, `statistics`, `subdirs`, `subset_shared` 
-# (if set to MEMBER/MODEL only data loaded from model members/models shared across all
-# datasets is loaded) and `dir_per_var`.
+# Arguments:
+- `meta_data::Dict`: TODO: add required keys!
+- `is_model_data::Bool`: set to true for model data, to false for observational data.
 """
-function loadDataFromMetadata(
-    meta_data::Dict{String,Dict{String,Any}}, 
-    is_model_data::Bool;
-    subset::Union{Dict,Nothing} = nothing
-)
+function loadDataFromMetadata(meta_data::Dict{String,Dict{String,Any}}, is_model_data::Bool)
+    @debug "retrieved metadata:" meta_data
     if isempty(meta_data)
         throw(ArgumentError("No metadata provided!"))
-    end
-    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))
-        filterPathsSharedModels!(meta_data, subset["subset_shared"])
     end
     results = DataMap()
     for (id, meta) in meta_data
@@ -390,10 +350,16 @@ end
 
 
 """
-    searchModelInPaths(model::String, paths::Vector{String})
+    searchModelInPaths(model_id::String, paths::Vector{String})
+
+Return true if `model_id` is found in filename of any path in `paths`, else false.
+
+The paths are assumed to follow the standard CMIP filename structure, i.e. <variable_id>_<table_id>_<source_id>_<experiment_id >_<member_id>_<grid_label>[_<time_range>].nc
+([see](https://docs.google.com/document/d/1h0r8RZr_f3-8egBMMh7aqLwy3snpD6_MrDz1q8n5XUk/edit?tab=t.0)).
 
 # Arguments:
-- `model_id::String`: has form modelname#memberID[_grid]
+- `model_id::String`: has form modelname[#memberID[_grid]]
+- `paths::Vector{String}`: paths to be searched
 """
 function searchModelInPaths(model_id::String, paths::Vector{String})
     model_parts = String.(split(model_id, MODEL_MEMBER_DELIM))
@@ -405,16 +371,18 @@ function searchModelInPaths(model_id::String, paths::Vector{String})
     grid = has_grid ? member_grid[2] : nothing
 
     is_found = false
-    for (_, meta_path) in enumerate(paths)
-        found_model = occursin("_" * model * "_", meta_path)
+    filenames = map(basename, paths)
+    for fn in filenames
+        found_model = occursin("_" * model * "_", fn)
         if !found_model
             continue
         else
             if has_member
-                found_member = occursin("_" * member * "_", meta_path)
+                found_member = occursin("_" * member * "_", fn)
                 if found_member
                     if has_grid
-                        found_grid = occursin("_" * grid, meta_path)
+                        fn_no_ending = splitext(fn)[1]
+                        found_grid = endswith(fn_no_ending, "_" * grid) || occursin("_" * grid * "_", fn)
                         if found_grid
                             is_found = true
                             break
@@ -439,17 +407,11 @@ end
 
 
 """
-    getSharedModelsFromPaths(
-        all_paths::Vector{Vector{String}}, all_models::Vector{String}
-    )
+    getSharedModelsFromPaths(all_paths::Vector{Vector{String}}, all_models::Vector{String})
      
-Return vector with those models in 'all_models' for which a path is given in 
-every subvector of 'meta_data'.
+Return vector with models in `all_models` for which a path is given in every subvector of `all_paths`.
 """
-function getSharedModelsFromPaths(
-    all_paths::Vector{Vector{String}},
-    all_models::Vector{String},
-)
+function getSharedModelsFromPaths(all_paths::Vector{Vector{String}}, all_models::Vector{String})
     indices_shared = []
     for (idx, model) in enumerate(all_models)
         is_found = false
@@ -481,8 +443,7 @@ function getCMIPModelsKey(meta::Dict)
     if "source_id" in attributes
         if "model_id" in attributes
             msg1 = "Dictionary contains keys source_id and model_id, source_id is used! "
-            msg2 = "source_id: $(meta["source_id"]); model_id:$(meta["model_id"])."
-            @debug msg1 * msg2
+            @debug msg1 meta["source_id"] meta["model_id"]
         end
         return "source_id"
     elseif "model_id" in attributes
@@ -497,16 +458,20 @@ end
 
 """
     filterPathsSharedModels!(
-        meta_data::Dict{String, Dict{String, Any}},
-        subset_shared::Union{LEVEL, Nothing}
-    )
+        meta_data::Dict{String, Dict{String, T}}, subset_shared::LEVEL
+    ) where T <: Any
 
-    In particular important before loading data if data should be subset
+For every dataset in `meta_data`, filter '_paths' s.t. the paths vector for each dataset 
+only contains models or model members (given by `subset_shared`) that are shared across all 
+datasets.
+
+# Arguments:
+- `meta_data`: contains a metadata dictionary for for every dataset.
+- `subset_shared`: 
 """
 function filterPathsSharedModels!(
-    meta_data::Dict{String,Dict{String,Any}},
-    subset_shared::Union{LEVEL,Nothing},
-)
+    meta_data::Dict{String, Dict{String, T}}, subset_shared::LEVEL
+) where T <: Any
     all_paths = map(x -> x["_paths"], values(meta_data))
     all_models = getMemberIDsFromPaths(vcat(all_paths...))
     if subset_shared == MODEL
@@ -517,7 +482,8 @@ function filterPathsSharedModels!(
         @warn "No models shared across data!"
     end
     for (id, meta) in meta_data
-        meta_data[id]["_paths"] = filterPaths(meta["_paths"], shared_models)
+        mask = map(p -> applyModelConstraints(p, shared_models), meta["_paths"])
+        meta_data[id]["_paths"] = meta["_paths"][mask]
     end
     return nothing
 end
@@ -580,6 +546,7 @@ function alignPhysics(
     end
     return data
 end
+
 
 """ 
     summarizeEnsembleMembersVector(

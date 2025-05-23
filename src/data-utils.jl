@@ -476,15 +476,14 @@ end
 
 """
     getMetaDataFromYAML(
-        path_config::String,
-        is_model_data::Bool
-        subset::Union{Dict, Nothing} = nothing
+        content::Dict, is_model_data::Bool; arg_constraint::Union{Dict, Nothing} = nothing
     )
 
-Load data as specified in config file located at `path_config`. For constraints
-that are specified in the config file as well as in the `arg_constraint` argument, 
+Return metadata of data specified in `content` possibly constrained by values in `arg_constraint`.
+
+For constraints that are specified in `content` as well as in the `arg_constraint` argument, 
 the values of the latter have precedence over the former. The constraints given
-in the argument `subset` are applied to EVERY dataset specified in the config 
+in the argument `arg_constraint` are applied to EVERY dataset specified in the config 
 file.
 
 # Arguments:
@@ -493,9 +492,7 @@ file.
 - `arg_constraint`: TODO
 """
 function getMetaDataFromYAML(
-    content::Dict,
-    is_model_data::Bool;
-    arg_constraint::Union{Dict,Nothing} = nothing,
+    content::Dict, is_model_data::Bool; arg_constraint::Union{Dict, Nothing} = nothing
 )
     datasets = content["datasets"]
     base_path = get(content, "path_data", "")
@@ -514,7 +511,7 @@ function getMetaDataFromYAML(
             #setConstraintVal!(ds_constraint, arg_constraint)
             for (field, val) in arg_constraint
                 # if subset_shared is given as argument, it will subset 
-                # considering all loaded datasets, not individual ones!
+                # considering ALL loaded datasets, not individual ones!
                 if field != "subset_shared"
                     if !(field in considered_keys)
                         @warn "$field is not a valid key to subset data!"
@@ -561,8 +558,7 @@ function getMetaDataFromYAML(
             end
         end
         # Apply subset_shared if provided inside yaml file for individual datasets
-        if !isnothing(ds_constraint) &&
-           !isnothing(get(ds_constraint, "subset_shared", nothing))
+        if !isnothing(ds_constraint) && !isnothing(get(ds_constraint, "subset_shared", nothing))
             filterPathsSharedModels!(meta_ds, ds_constraint["subset_shared"])
         end
         # merge new dataset with already loaded
@@ -573,6 +569,10 @@ function getMetaDataFromYAML(
                 meta_data[id] = meta
             end
         end
+    end
+    # filter across all datasets
+    if !isnothing(arg_constraint) && !isnothing(get(arg_constraint, "subset_shared", nothing))
+        filterPathsSharedModels!(meta_data, arg_constraint["subset_shared"])
     end
     return meta_data
 end
@@ -602,31 +602,22 @@ function buildPathsToDataFiles(
     if !isdir(path_data)
         throw(ArgumentError(path_data * " does not exist!"))
     end
-    if isempty(project_constraints)
-        project_constraints = is_model_data ? ["CMIP"] : ["ERA5"]
-    end
+    # if isempty(project_constraints)
+    #     project_constraints = is_model_data ? ["CMIP"] : ["ERA5"]
+    # end
     ncFiles = filter(x -> isfile(x) && endswith(x, ".nc"), readdir(path_data; join = true))
-    @debug "$(map(println, ncFiles))"
-    paths_to_files = Vector{String}()
     # constrain files that will be loaded
-    for file in ncFiles
-        keep =
-            !isempty(project_constraints) ?
+    function doIncludeFile(file)
+        keep = !isempty(project_constraints) ?
             any([occursin(name, file) for name in project_constraints]) : true
-        if !keep
-            @debug "exclude $file because of projects subset"
-            continue
-        end
-        keep =
-            !isempty(model_constraints) ? applyModelConstraints(file, model_constraints) :
-            true
         if keep
-            push!(paths_to_files, file)
-        else
-            @debug "exclude $(basename(file)) because of model subset"
+            keep = !isempty(model_constraints) ? 
+                applyModelConstraints(file, model_constraints) : true
         end
+        return keep
     end
-    return paths_to_files
+    mask = map(f -> doIncludeFile(f), ncFiles)
+    return ncFiles[mask]
 end
 
 
@@ -772,16 +763,22 @@ end
         path_model_data::String, model_constraints::Vector{String}
     )
 
-Return true if constraints in `model_constraints` are fulfilled, i.e. if the 
-given `path_model_data` contains any model from `model_constraints`, false 
-otherwise.
+Return true if constraints in `model_constraints` are fulfilled, i.e. if `path_model_data` 
+contains any model from `model_constraints`, false otherwise.
+
+`path_model_data` must follow the standard CMIP filename structure, 
+i.e. <variable_id>_<table_id>_<source_id>_<experiment_id >_<member_id>_<grid_label>[_<time_range>].nc 
+and `model_constraints` can contain models on level of member (e.g. 'MPI-ESM-P#r1i1p2', 
+'MPI-ESM-P#r1i1p2_gn') or on level of model (e.g., 'MPI-ESM-P').
+
 
 # Arguments:
+- `path_model_data`: 
 - `model_constraints`: strings that may contain only model name, e.g. 'MPI-ESM-P', 
 or model_name and member id, e.g. 'MPI-ESM-P#r1i1p2' or model name, member id and 
 grid, e.g. 'MPI-ESM-P#r1i1p2_gn'.
 """
-function applyModelConstraints(path_model_data::String, model_constraints::Vector{String})
+function applyModelConstraints(path_model_data::String, model_constraints::Vector{String})    
     keep_file = false
     for model in model_constraints
         keep_file = searchModelInPaths(model, [path_model_data])

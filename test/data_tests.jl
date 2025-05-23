@@ -112,10 +112,44 @@ end
 end
 
 
+@testset "Test filterPathsSharedModels!" begin
+    p1_tos = "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM/CMIP5_CNRM-CM5_Omon_lgm_r1i1p1_tos.nc"
+    p2_tos = "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM/CMIP5_FGOALS-g2_Omon_lgm_r1i1p1_tos.nc"
+    p1_tas = "LGM/recipe_cmip5_lgm_tas_20241114_150049/preproc/lgm/tas_CLIM/CMIP5_CNRM-CM5_Omon_lgm_r1i1p1_tas.nc"
+    p2_tas = "LGM/recipe_cmip5_lgm_tas_20241114_150049/preproc/lgm/tas_CLIM/CMIP5_FGOALS-g2_Omon_lgm_r1i1p1_tas.nc"
+    meta = Dict(
+        "tos_CLIM_historical" => Dict("_paths" => [p1_tos, p2_tos]),   
+        "tas_CLIM_historical" => Dict("_paths" => [replace(p1_tas, "r1i1p1"=>"r2i1p1"), p2_tas])     
+    )
+    mw.filterPathsSharedModels!(meta, mw.MODEL)
+    @test all(x -> x in meta["tos_CLIM_historical"]["_paths"], [p1_tos, p2_tos])
+    mw.filterPathsSharedModels!(meta, mw.MEMBER)
+    @test p2_tos in meta["tos_CLIM_historical"]["_paths"]
+    @test !(p1_tos  in meta["tos_CLIM_historical"]["_paths"])
+end
+
+
 @testset "Test applyDataConstraints!" begin
 end
 
 @testset "Test applyModelConstraints" begin
+    path_no = "path/to/ACCESS_r1i1p1f1_gr.nc" # does not stick to name convention (model must be in between two underscores (_model_)
+    path_ok = "cmip_ACCESS_r1i1p1f1_gr_1970.nc"
+    path_ok_notime = "cmip_ACCESS_r1i1p1f1_gr.nc"
+    path_other_member = "cmip_ACCESS_r1i1p1f2_gr.nc"
+
+    allowed_models = ["ACCESS#r1i1p1f1"]
+    @test !mw.applyModelConstraints(path_no, allowed_models)
+    @test mw.applyModelConstraints(path_ok, allowed_models)
+    @test mw.applyModelConstraints(path_ok_notime, allowed_models)
+    @test !mw.applyModelConstraints(path_other_member, allowed_models)
+
+    allowed_models = ["ACCESS"]
+    @test mw.applyModelConstraints(path_other_member, allowed_models)
+
+    allowed_models = ["ACCESS#r1i1p1f1_gr"]
+    @test !mw.applyModelConstraints("cmip_ACCESS_r1i1p1f1_gn.nc", allowed_models)
+    @test mw.applyModelConstraints("cmip_ACCESS_r1i1p1f1_gr.nc", allowed_models)
 end
 
 @testset "Test getTimerangeAsAlias" begin

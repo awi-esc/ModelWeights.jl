@@ -190,7 +190,7 @@ function loadDataFromESMValToolRecipes(
     preview::Bool = false,
 )
     attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; constraint = subset)
-    meta_data = Dict{String,Dict{String,Any}}()
+    meta_data = Dict{String, Dict{String, Any}}()
     for meta in attributes
         meta = Dict{String, Any}(meta)
         meta["_paths"] = getPathsToData(
@@ -209,7 +209,10 @@ function loadDataFromESMValToolRecipes(
             end
         end
     end
-    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data; subset)
+    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))
+        filterPathsSharedModels!(meta_data, subset["subset_shared"])
+    end
+    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
 end
 
 
@@ -234,8 +237,7 @@ function loadDataFromYAML(
     subset::Union{Dict,Nothing} = nothing,
     preview::Bool = false
 )
-    content = YAML.load_file(path_config)
-    return loadDataFromYAML(content; is_model_data, subset, preview)
+    return loadDataFromYAML(YAML.load_file(path_config); is_model_data, subset, preview)
 end
 
 
@@ -250,5 +252,5 @@ function loadDataFromYAML(
         msg = "No metadata found for subset: $subset, $content (model data: $is_model_data)!"
         throw(ArgumentError(msg))
     end
-    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data; subset)
+    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
 end
