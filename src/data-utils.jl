@@ -1,5 +1,6 @@
 import YAML
 
+using CSV
 using DataFrames
 using DimensionalData
 using GLM
@@ -1154,4 +1155,29 @@ function createGlobalMetaDataDict(
     metadata["_timerange"] = timerange
     metadata["_id"] = buildMetaDataID(variable, statistic, alias)
     return metadata
+end
+
+
+"""
+    loadModelsFromCSV(
+        path::String, col_models::String; col_variants::Union{String,Nothing}=nothing
+    )
+
+Return a vector with models retrieved from csv file at `path`. If col_variants is provided, 
+returned models are on level of model members (MODEL#variant, e.g. AWI-ESM#r1i1p1f1).
+"""
+function loadModelsFromCSV(
+    path::String, col_models::String; col_variants::Union{String, Nothing}=nothing
+)
+    models = DataFrame(CSV.File(path))
+    dropmissing!(models, col_models)
+    ids = models[!, col_models]
+    if !isnothing(col_variants)
+        variants = map(s -> strip.(split(s, ";")), models[!, col_variants])
+        for (i, m) in enumerate(models[!, col_models])
+            variants[i] = map(v -> join([m, v], MODEL_MEMBER_DELIM), variants[i])
+        end
+        ids = vcat(variants...)
+    end
+    return String.(ids)
 end
