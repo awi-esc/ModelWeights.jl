@@ -10,9 +10,9 @@ Compute a diagnostic by running `fn` with positional arguments `args` and
 keyword arguments `kwargs` and add result to `datamap` at the id of the 
 computed result.
 """
-function addDiagnostic!(datamap::DataMap, fn::Function, id::String, args...; kwargs...)
-    @info "run $(String(Symbol(fn))) for $id..."
+function addDiagnostic!(datamap::DataMap, fn::Function, id::String, args...; kwargs...)   
     data = fn(datamap[id], args...; kwargs...)
+    @info "run $(String(Symbol(fn))) for $id, add new id $(data.properties["_id"])."
     datamap[data.properties["_id"]] = data
     return nothing
 end
@@ -22,6 +22,9 @@ end
     computeLinearTrend(data::YAXArray; full_predictions::Bool=true)
 
 Compute linear trend as ordinary least squares for timeseries data.
+
+The metadata is changed, '-TREND' or '-TREND-pred' is added to the metadata entry for 
+'_statistic' and the entry for '_id' is adapted accordingly.
 
 # Arguments:
 - `data::YAXArray`: must have dimension :time.
@@ -36,6 +39,7 @@ function computeLinearTrend(data::YAXArray; full_predictions::Bool = false)
     x = Dates.year.(Array(data.time))
     meta = deepcopy(data.properties)
     stats = full_predictions ? "TREND-pred" : "TREND"
+    stats = join([meta["_statistic"], stats], "-")
     meta["_id"] = replace(meta["_id"], meta["_statistic"] => stats)
     meta["_statistic"] = stats
 
@@ -59,27 +63,16 @@ end
 
 """
     addLinearTrend!(
-        data::DataMap;     
-        statistic::String="CLIM-ann", 
-        ids_ts::Vector{String}=Vector{String}(), 
-        full_predictions::Bool=true
+        data::DataMap, ids_ts::Vector{String}=Vector{String}(); full_predictions::Bool=true
     )
 
 Add computed linear trend (computeLinearTrend) for all datasets in `data` with an 
-id in `ids_ts`, or if `ids_ts` is not given for all datasets with `statistic` 
-(as specified in metadata _statistic), where the default is the annual 
-climatologies (CLIM-ann).
+id in `ids`, referring to timeseries data.
 """
 function addLinearTrend!(
-    data::DataMap;
-    statistic::String = "CLIM-ann",
-    ids_ts::Vector{String} = Vector{String}(),
-    full_predictions::Bool = true,
+    data::DataMap, ids::Vector{String} = Vector{String}(); full_predictions::Bool=true
 )
-    if isempty(ids_ts)
-        ids_ts = filter(id -> data[id].properties["_statistic"] == statistic, keys(data))
-    end
-    for id in ids_ts
+    for id in ids
         addDiagnostic!(data, computeLinearTrend, id; full_predictions)
     end
     return nothing
@@ -172,7 +165,7 @@ end
 
 """
     addAnomalies!(
-        datamap::DataMap id_data::String, id_ref::String; stats::String="ANOM"
+        data::DataMap, id_data::String, id_ref::String; stats::String="ANOM"
     )
 
 Add entry to `datamap` with difference between `datamap` at `id_data` and `id_ref`.
@@ -240,8 +233,9 @@ function computeTempSTD(data::YAXArray, trend::YAXArray)
         throw(ArgumentError(msg))
     end
     meta_new = deepcopy(data.properties)
-    meta_new["_id"] = replace(meta_new["_id"], meta_new["_statistic"] => "STD-temp")
-    meta_new["_statistic"] = "STD-temp"
+    stats = join([meta_new["_statistic"], "STD-temp"], "-")
+    meta_new["_id"] = replace(meta_new["_id"], meta_new["_statistic"] => stats)
+    meta_new["_statistic"] = stats
 
     if hasdim(trend, :time)
         diffs = @d data .- trend
@@ -256,23 +250,21 @@ end
 
 
 """
-    addTempSTD!(data::DataMap; statistic::String="CLIM-ann")
+    addTempSTD!(data::DataMap, ids::Vector{String})
 
-Compute temporal standard deviation (computeTempSTD) for every dataset with 
-`statistic` in its id (default: CLIM-ann) and add the result to `data`. 
+Add standard deviation of temporally detrended data (result from computeTempSTD) for every 
+dataset with id in `ids`. 
+If not already present, the trend for the respective variable is also added to `data`.
 
-The id of computed temporal standard deviation is the same as before, but with 
-`statistic` replaced by 'TREND'.
+# Arguments:
+- `ids::Vector{String}`: have form VARIABLE_STATISTIC_ALIAS
 """
-function addTempSTD!(data::DataMap; statistic::String = "CLIM-ann")
-    ids = filter(id -> data[id].properties["_statistic"] == statistic, keys(data))
-    if isempty(ids)
-        @warn "No data for statistic $statistic found!"
-        return nothing
-    end
+function addTempSTD!(data::DataMap, ids::Vector{String})
     for id in ids
-        trend_id = replace(id, statistic => "TREND-pred")
-        get!(data, trend_id, computeLinearTrend(data[id]; full_predictions = true))
+        id_parts = String.(split(id, "_"))
+        id_parts[2] = id_parts[2] * "-TREND-pred"
+        trend_id = join(id_parts, "_")
+        get!(data, trend_id, computeLinearTrend(data[id]; full_predictions=true))
         addDiagnostic!(data, computeTempSTD, id, data[trend_id])
     end
     return nothing
