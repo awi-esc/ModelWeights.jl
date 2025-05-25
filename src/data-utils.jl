@@ -84,8 +84,7 @@ end
 """
     writeDataToDisk(data, target_path::String)
 
-Save `data` as Julia obj if `target_path` has ending '.jld2', otherwise save 
-as binary.
+Save `data` as Julia obj if `target_path` has ending '.jld2', otherwise save as binary.
 """
 function writeDataToDisk(data, target_path::String)
     if endswith(target_path, ".jld2")

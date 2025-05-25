@@ -118,7 +118,6 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
     # also subset Metadata vectors!
     attributes = filter(k -> data.properties[k] isa Vector, keys(data.properties))
     for key in attributes
-        #println("$(key): $(length(data.properties[key]))")
         data.properties[key] = data.properties[key][indices]
     end
     return data
