@@ -9,49 +9,30 @@ independence-only weights.
 - `title`: 
 """
 function plotWeights(weights::Weights; title::String = "")
-    models = Array(dims(weights.wP, :model))
-    n_models = length(models)
+    indices = Array(sortperm(weights.w[weight = At("combined")], rev=true))
+    sorted_models = Array(weights.w.model[indices])
+    
+    n_models = length(weights.w.model)
     xs = 1:n_models
     fig = Figure()
     ax = Axis(
         fig[1, 1],
-        xticks = (xs, models),
+        xticks = (xs, sorted_models),
         xticklabelrotation = pi / 4,
         xlabel = "MODEL",
         ylabel = "Weight",
         title = title,
     )
-    ys = [weights.wP, weights.wI, weights.w]
-    colors = [:red, :green, :blue]
-    labels = ["performance", "independence", "overall"]
-    for idx = 1:3
-        scatter!(
-            ax,
-            xs,
-            Array(ys[idx]),
-            color = colors[idx],
-            label = labels[idx],
-            alpha = 0.5,
-        )
-        lines!(
-            ax,
-            xs,
-            Array(ys[idx]),
-            color = colors[idx],
-            label = labels[idx],
-            alpha = 0.5,
-        )
+    labels = ["wP", "wI", "combined"]
+    for label in labels
+        ys = Array(weights.w[weight = At(label)])
+        sorted_ys = ys[indices]
+        scatterlines!(ax, xs, sorted_ys, label = label, alpha = 0.5)
     end
     # add equal weight for reference
-    lines!(
-        ax,
-        xs,
-        [1 / n_models for _ in range(1, n_models)],
-        color = :gray,
-        label = "unweighted",
-        linestyle = :dashdot,
-    )
-    axislegend(ax, position = :lt, merge = true)
+    ys_equal = [1 / n_models for _ in range(1, n_models)]
+    lines!(ax, xs, ys_equal, color = :gray, label = "unweighted", linestyle = :dashdot)
+    axislegend(ax, position = :rt, merge = true)
     return fig
 end
 

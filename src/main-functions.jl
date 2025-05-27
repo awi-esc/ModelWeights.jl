@@ -123,14 +123,15 @@ function computeWeights(
     else
         w_members = weights
     end
+    weights_arr = cat([wP, wI, weights]..., dims=Dim{:weight}(["wP", "wI", "combined"]))
     model_weights = Weights(
         performance_distances = dists_perform_all,
         independence_distances = dists_indep_all,
         Di = Di,
         Sij = Sij,
-        wP = wP,
-        wI = wI,
-        w = weights,
+        w = weights_arr,
+        # wP = wP,
+        # wI = wI,
         w_members = w_members,
         config = config,
         # overall = (wP .* wI) ./ sum(wP .* wI), # just for sanity check

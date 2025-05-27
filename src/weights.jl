@@ -416,7 +416,7 @@ end
 
 """
     saveWeightsAsNCFile(weights::Weights; target_path::String)
-
+TODO: needs to be updated, deprecated
 # Arguments:
 - `weights`: Weights object to be saved.
 - `target_path`: Path to where weights shall be stored.
