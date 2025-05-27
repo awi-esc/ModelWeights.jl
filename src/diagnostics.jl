@@ -14,16 +14,19 @@ Missing data is accounted for in the area-weights.
 # Arguments:
 - `data::YAXArray`: must have dimensions 'lon' and 'lat'.
 """
-function computeGlobalMeans(data::YAXArray; only_newid::Bool=false)
+function computeGlobalMeans(data::YAXArray; stats_name::String="", only_newid::Bool=false)
     if !hasdim(data, :lon) || !hasdim(data, :lat)
         msg = "Global means can only be computed for data with :lon, :lat dimensions! Given: $(dims(data))"
         throw(ArgumentError(msg))
+    end
+    if isempty(stats_name)
+        stats_name = hasdim(data, :time) ? "GM-ts" : "GM"
     end
     longitudes = Array(dims(data, :lon))
     latitudes = Array(dims(data, :lat))
 
     meta = deepcopy(data.properties)
-    meta["_statistic"] = hasdim(data, :time) ? "GM-ts" : "GM"
+    meta["_statistic"] = stats_name
     meta["_id"] = buildMetaDataID(meta)
     if only_newid
         return meta["_id"]
