@@ -122,14 +122,3 @@ function getAllCombinations(v...)
     end
     return combis
 end
-
-
-function makeMetadataGMS(data_meta::Dict{String,Any}, is_timeseries::Bool)
-    meta = deepcopy(data_meta)
-    old_id = get(data_meta, "_id", "")
-    old_stats = get(data_meta, "_statistic", "")
-    new_stats = is_timeseries ? "GM-ts" : "GM"
-    meta["_id"] = isempty(old_id) ? new_stats : replace(old_id, old_stats => new_stats)
-    meta["_statistic"] = new_stats
-    return meta
-end

@@ -43,19 +43,17 @@ function computeModelDataRMSE(model_data::DataMap, obs_data::DataMap, config::Co
         [k for k in keys(config.performance) if config.performance[k] > 0]
     ref_period_alias = config.alias_ref_perform_weights
     if !isValidDataAndWeightInput(model_data, keys_weights_perform, ref_period_alias)
-        msg = "There is MODEL data missing for the given weights (for the combinations of diagnostics and variables: $keys_weights_perform) and reference period ($(ref_period_alias))!"
-        throw(ArgumentError(msg))
+        throw(ArgumentError("There is MODEL data missing!"))
     end
     if !isValidDataAndWeightInput(obs_data, keys_weights_perform, ref_period_alias)
-        msg = "There is OBSERVATIONAL data missing for the given weights (for the combinations of diagnostics and variables: $keys_weights_perform) and reference period ($(ref_period_alias))!"
-        throw(ArgumentError(msg))
+        throw(ArgumentError("There is OBSERVATIONAL data missing!"))
     end
     return computeDistancesAllDiagnostics(
         model_data,
         obs_data,
         config.performance,
         ref_period_alias,
-        true,
+        true
     )
 end
 

@@ -5,6 +5,8 @@ const MODEL_NAME_FIXES = Dict("FGOALS_g2" => "FGOALS-g2", "ACCESS1.3" => "ACCESS
 
 include("helper-functions.jl")
 include("data-utils.jl")
+include("timeseries.jl")
+include("datamap.jl")
 include("diagnostics.jl")
 include("data-functions.jl")
 include("plot-utils.jl")

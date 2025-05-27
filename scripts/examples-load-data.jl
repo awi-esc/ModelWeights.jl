@@ -64,7 +64,7 @@ historical_data_lgm_models = mw.loadDataFromESMValToolRecipes(
 models_historical = unique(historical_data_lgm_models["tos_CLIM_historical"].properties["model_names"]);
 @assert models_historical == models_lgm
 
-# function to join two Datamaps into one
+# function to join two DataMaps into one
 data = mw.joinDataMaps(lgm_data, historical_data_lgm_models)
 data_members = mw.subsetModelData(data; level = mw.MEMBER)
 

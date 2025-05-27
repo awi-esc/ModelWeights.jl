@@ -818,11 +818,15 @@ function computeDistancesAllDiagnostics(
     # compute performance/independence distances for all model members
     var_diagnostic_keys = collect(keys(config))
     diagnostics = String.(unique(map(x -> split(x, "_")[2], var_diagnostic_keys)))
+    variables = String.(unique(map(x -> split(x, "_")[1], var_diagnostic_keys)))
     distances_all = []
     for diagnostic in diagnostics
         distances = []
-        diagnostic_keys = filter(x -> endswith(x, "_" * diagnostic), var_diagnostic_keys)
-        variables = String.(map(x -> split(x, "_")[1], diagnostic_keys))
+        # TODO: for now just compute distances for all diagnostic-variable pairs, s.t. 
+        # in the end we can all put into one YAXArray. Change this later to only compute 
+        # what you really want (not for all variables all diagnostics)
+        #diagnostic_keys = filter(x -> endswith(x, "_" * diagnostic), var_diagnostic_keys)
+        #variables = String.(map(x -> split(x, "_")[1], diagnostic_keys))
         for clim_var in variables
             @debug "compute distances for $diagnostic + $clim_var"
             id = join([clim_var, diagnostic, ref_period_alias], "_")
@@ -840,11 +844,21 @@ function computeDistancesAllDiagnostics(
             end
             push!(distances, dists)
         end
+        # add missing values for variables for which this diagnostic is not needed 
+        # otherwise last step of bringing all together in one YAXArray wont work
+        # vars_not_needed = filter(x -> !(x in variables), variables_all)
+        # for clim_var in vars_not_needed
+        #     if for_performance
+        #         YAXArray((Dim{:}()), Vector{}(missing, ))
+        #     else
+
+        #     end
+        # end
         # TODO: recheck the metadata here! standard_name should be converted 
         # to a vector?!
         if length(unique(map(x -> size(x), distances))) > 1
-            @warn "Not all models are identical for variables for diagnostic $diagnostic !"
-            return nothing
+            msg = "Not all models are identical for variables for diagnostic $diagnostic !"
+            @warn msg
         end
         distances = cat(distances..., dims = Dim{:variable}(String.(collect(variables))))
         push!(distances_all, distances)
@@ -858,13 +872,10 @@ end
         distances_all::YAXArray, weights::DimArray, for_performance::Bool
 )
 
-For every variable in `distances_all`, compute the weighted sum of all 
-diagnostics.
+For every variable in `distances_all`, compute the weighted sum of all diagnostics.
 """
 function computeGeneralizedDistances(
-    distances_all::YAXArray,
-    weights::DimArray,
-    for_performance::Bool,
+    distances_all::YAXArray, weights::DimArray, for_performance::Bool,
 )
     distances_all = distances_all[variable=Where(x->x in dims(weights, :variable))]
     dimensions =
@@ -907,8 +918,12 @@ function isValidDataAndWeightInput(
 )
     actual_ids_data = map(x -> x.properties["_id"], values(data))
     required_keys_data = map(x -> x * "_" * ref_period_alias, keys_weights)
-    # TODO return what exactly is missing?!
-    return all([k in actual_ids_data for k in required_keys_data])
+    keys_absent = filter(id -> !(id in actual_ids_data), required_keys_data)
+    is_valid = isempty(keys_absent)
+    if !is_valid 
+        @warn "data missing for keys:" keys_absent
+    end
+    return is_valid
 end
 
 
@@ -1012,12 +1027,12 @@ function filterTimeseries(
 )
     new_alias_given = !isempty(new_alias)
     if isempty(ids_ts)
-        @info "filter all datasets with :time dimension..."
+        @info "filter all datasets with :time dimension from $start_year to $end_year"
         ids_ts = filter(id -> hasdim(data_all[id], :time), collect(keys(data_all)))
     end
     data_subset = DataMap()
     for id in ids_ts
-        @info "filter timeseries data with id: $id"
+        @info "filter timeseries data with id: $id from $start_year to $end_year"
         try
             df = data_all[id][time=Where(
                 x->Dates.year(x)>=start_year&&Dates.year(x)<=end_year,
@@ -1064,6 +1079,7 @@ function filterTimeseries(
         parts[3] = new_alias
         new_id = join(parts, "_")
         df.properties["_id"] = new_id
+        df.properties["_alias"] = new_alias
         if haskey(data_subset, new_id)
             @warn "$new_id was already present in DataMap, is overwritten!"
         end
