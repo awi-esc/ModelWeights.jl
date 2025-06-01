@@ -122,3 +122,12 @@ function getAllCombinations(v...)
     end
     return combis
 end
+
+function warnIfhasMissing(df::YAXArray; name::String="")
+    base = "Data contains missing values"
+    msg = isempty(name) ? base : base * "; $(name)"
+    if any(ismissing.(df))
+        @warn msg
+    end
+    return nothing
+end

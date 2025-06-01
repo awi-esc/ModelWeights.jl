@@ -8,11 +8,11 @@ independence-only weights.
 - `weights`:
 - `title`: 
 """
-function plotWeights(weights::Weights; title::String = "")
-    indices = Array(sortperm(weights.w[weight = At("combined")], rev=true))
-    sorted_models = Array(weights.w.model[indices])
+function plotWeights(weights::YAXArray; title::String = "")
+    indices = Array(sortperm(weights[weight = At("combined")], rev=true))
+    sorted_models = Array(weights.model[indices])
     
-    n_models = length(weights.w.model)
+    n_models = length(weights.model)
     xs = 1:n_models
     fig = Figure()
     ax = Axis(
@@ -23,9 +23,9 @@ function plotWeights(weights::Weights; title::String = "")
         ylabel = "Weight",
         title = title,
     )
-    labels = ["wP", "wI", "combined"]
+    labels = Array(weights.weight)
     for label in labels
-        ys = Array(weights.w[weight = At(label)])
+        ys = Array(weights[weight = At(label)])
         sorted_ys = ys[indices]
         scatterlines!(ax, xs, sorted_ys, label = label, alpha = 0.5)
     end
