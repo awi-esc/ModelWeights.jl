@@ -486,8 +486,9 @@ function filterPathsSharedModels!(
     return nothing
 end
 
-function getModelsFromMemberIDs(members::Vector{String})
-    return map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members)
+function getModelsFromMemberIDs(members::AbstractVector{<:String}; uniq::Bool=false)
+    models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members)
+    return uniq ? unique(models) : models
 end
 
 
