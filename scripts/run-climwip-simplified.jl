@@ -38,7 +38,7 @@ config_weights = mw.ConfigWeights(
 
 dists_perform = mw.computeModelDataRMSE(model_data, obs_data, config_weights);
 dists_indep = mw.computeModelModelRMSE(model_data, config_weights);
-weights = mw.computeWeights(dists_indep, dists_perform, config_weights);
+weights = mw.climwipWeights(dists_indep, dists_perform, config_weights);
 
 
 # Load weights from disk

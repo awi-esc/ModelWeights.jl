@@ -95,7 +95,7 @@ dists_perform = mw.computeModelDataRMSE(
     historical_data, obs_data, config_weights
 );
 dists_indep = mw.computeModelModelRMSE(historical_data, config_weights);
-weights = mw.computeWeights(dists_indep, dists_perform, config_weights)
+weights = mw.climwipWeights(dists_indep, dists_perform, config_weights)
 
 f1 = mw.plotWeights(weights; title="Weights based on historical data (tas)")
 save("plots/lgm/" * target_fn * ".png", f1)
@@ -180,7 +180,7 @@ config_weights = mw.ConfigWeights(
 
 dists_perform = mw.getModelLogLikelihoods(global_means, distr_tierney)
 # On which values to base independence weights?
-weights = mw.computeWeights(dists_indep, dists_perform, config_weights)
+weights = mw.climwipWeights(dists_indep, dists_perform, config_weights)
 title = "Weights based on lgm-cooling data wrt Tierney DA-reconstruction (tas)"
 f4 = mw.plotWeights(weights; title=title)
 save("plots/lgm/weights-lgm-cooling.png", f4)

@@ -1,12 +1,18 @@
 # Functions for adding data to DataMap objects.
 
-function errorIfIdsNotPresent(data::DataMap, ids::Vector{String})
-    ismissing = map(x -> !haskey(data, x), ids)
-    if any(ismissing)
-        throw(ArgumentError("There is data missing for: $(ids[ismissing])!"))
+function getAvailableIds(data::DataMap, ids::Vector{String})
+    indices_keys = map(id -> haskey(data, id), ids)
+    ids_absent = ids[.!(indices_keys)]
+    if !isempty(ids_absent)
+        if length(ids_absent) == length(ids)
+            throw(ArgumentError("No data found for ids: $(ids)"))
+        else
+            @warn "No data found for ids" ids_absent
+        end
     end
-    return nothing
+    return ids[indices_keys]
 end
+
 
 
 """
@@ -17,7 +23,7 @@ keyword arguments `kwargs` and add result to `datamap` at the id of the
 computed result.
 """
 function addDiagnostic!(datamap::DataMap, fn::Function, id::String, args...; kwargs...)   
-    errorIfIdsNotPresent(datamap, [id])
+    getAvailableIds(datamap, [id])
     data = fn(datamap[id], args...; kwargs...)
     @info "run $(String(Symbol(fn))) for $id, add new id $(data.properties["_id"])."
     datamap[data.properties["_id"]] = data
@@ -26,7 +32,7 @@ end
 
 
 function addDiagnostic!(datamap::DataMap, fn::Function, ids::Vector{String}, args...; kwargs...)
-    errorIfIdsNotPresent(datamap, ids)
+    ids = getAvailableIds(datamap, ids)
     data_ids = collect(keys(datamap))
     new_ids = similar(ids)
     for (i, id) in enumerate(ids)
@@ -39,4 +45,13 @@ function addDiagnostic!(datamap::DataMap, fn::Function, ids::Vector{String}, arg
         new_ids[i] = new_id
     end
     return new_ids
+end
+
+
+function addDiagnostic!(data::ClimateData, fn::Function, ids::Vector{String}, args...; kwargs...)
+    @info "run addDiagnostic! for Model data..."
+    addDiagnostic!(data.models, fn, ids, args...; kwargs...)
+    @info "run addDiagnostic! for Observational data..."
+    addDiagnostic!(data.obs, fn, ids, args...; kwargs...)
+    return nothing
 end

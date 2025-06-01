@@ -1,15 +1,19 @@
 """
-    plotWeights(weights::Weights; title::String="")
+    plotWeights(weights::YAXArray; title::String="", sort_by::String="")
 
-Plot all weights together, i.e. overall weights, performance-only and 
-independence-only weights.
+Plot all weights sorted by weight dimension `sort_by` of `weights` if given, otherwise, 
+sorted by first value in weight dimension.
+
+Equal weights line is added to plot too.
 
 # Arguments:
 - `weights`:
 - `title`: 
+- `sort_by`: value of weight dimension according to which data is sorted
 """
-function plotWeights(weights::YAXArray; title::String = "")
-    indices = Array(sortperm(weights[weight = At("combined")], rev=true))
+function plotWeights(weights::YAXArray; title::String = "", sort_by::String = "")
+    sort_by = isempty(sort_by) ? weights.weight[1] : sort_by
+    indices = Array(sortperm(weights[weight = At(sort_by)], rev=true))
     sorted_models = Array(weights.model[indices])
     
     n_models = length(weights.model)
@@ -31,7 +35,7 @@ function plotWeights(weights::YAXArray; title::String = "")
     end
     # add equal weight for reference
     ys_equal = [1 / n_models for _ in range(1, n_models)]
-    lines!(ax, xs, ys_equal, color = :gray, label = "unweighted", linestyle = :dashdot)
+    lines!(ax, xs, ys_equal, color = :gray, label = "equal weighting", linestyle = :dashdot)
     axislegend(ax, position = :rt, merge = true)
     return fig
 end

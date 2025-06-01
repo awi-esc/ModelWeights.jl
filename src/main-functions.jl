@@ -59,7 +59,7 @@ end
 
 
 """
-    computeWeights(
+    climwipWeights(
         dists_indep_all::YAXArray, 
         dists_perform_all::YAXArray,
         config::ConfigWeights
@@ -81,12 +81,14 @@ data for all combinations variables and diagnostics; has dimensions 'member',
 'variable', 'diagnostic'.
 - `config::ConfigWeights`: Parameters specifiying the relative contributions 
 of each combination of variable and diagnostic.
+- `suffix::String`: added to name of each type of weights, s.t. names are: 
+wP-suffix, wI-suffix, combined-suffix.
 """
-function computeWeights(
+function climwipWeights(
     dists_indep_all::YAXArray,
     dists_perform_all::YAXArray,
-    config::ConfigWeights;
-    target_path::String = "",
+    config::ConfigWeights,
+    suffix::String
 )
     weights_perform = normalizeWeightsVariables(config.performance)
     weights_indep = normalizeWeightsVariables(config.independence)
@@ -123,24 +125,87 @@ function computeWeights(
     else
         w_members = weights
     end
-    weights_arr = cat([wP, wI, weights]..., dims=Dim{:weight}(["wP", "wI", "combined"]))
-    model_weights = Weights(
+    names = String.(map(x -> join([x, suffix], "-"), ["wP", "wI", "combined"]))
+    weights_arr = cat([wP, wI, weights]..., dims=Dim{:weight}(names))
+    model_weights = ClimWIP(
         performance_distances = dists_perform_all,
         independence_distances = dists_indep_all,
         Di = Di,
         Sij = Sij,
         w = weights_arr,
-        # wP = wP,
-        # wI = wI,
         w_members = w_members,
         config = config,
         # overall = (wP .* wI) ./ sum(wP .* wI), # just for sanity check
     )
-    if !isempty(target_path)
-        target_path = validateConfigTargetPath(target_path)
-        writeWeightsToDisk(model_weights, target_path)
-    end
     return model_weights
+end
+
+
+function climwipWeights(data::ClimateData, config_weights::ConfigWeights; suffix::String="climwip")
+    dists_perform = computeModelDataRMSE(data.models, data.obs, config_weights)
+    dists_indep = computeModelModelRMSE(data.models, config_weights)
+    return climwipWeights(dists_indep, dists_perform, config_weights, suffix)
+end
+
+
+function addClimwipWeights!(
+    data::ClimateData, config_weights::ConfigWeights; suffix::String="climwip"
+)
+    weights = climwipWeights(data, config_weights; suffix)
+    addWeights!(data, weights.w)
+    return nothing
+end
+
+
+function addClimwipWeights!(data::ClimateData, weights::ClimWIP)
+    addWeights!(data, weights.w)
+    return nothing
+end
+
+
+
+"""
+    addLikelihoodWeights!(
+        data::ClimateData, 
+        values::Vector{<:Number}, 
+        models::Vector{String}, 
+        distr::Distribution,
+        id::String
+    )
+
+Compute the likelihood weights for `values` with respect to the distribution `distr` and 
+add computed weights to weights Array of `data` with name `id`. 
+If `id` is already present, nothing is added.
+
+"""
+function addLikelihoodWeights!(
+    data::ClimateData, 
+    values::Vector{<:Number}, 
+    models::Vector{String}, 
+    distr::Distribution,
+    id::String
+)
+    addWeights!(data, likelihoodWeights(values, models, distr, id))
+    return nothing
+end
+
+
+
+function addWeights!(data::ClimateData, weights::YAXArray)
+    if isnothing(data.weights)
+        data.weights = weights
+    else
+        names_weights = Array(data.weights.weight)
+        names_new_weights = Array(weights.weight)
+        isPresentID = map(x -> x in names_weights, names_new_weights)
+        if any(isPresentID)
+            @warn "$(names_new_weights[isPresentID]) already present in weights! Nothing added."
+            return nothing
+        end
+        lookups = vcat(names_weights, Array(weights.weight))
+        data.weights = cat(data.weights, weights; dims=Dim{:weight}(lookups))
+    end
+    return nothing
 end
 
 

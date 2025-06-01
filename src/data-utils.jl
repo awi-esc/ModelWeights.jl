@@ -48,7 +48,7 @@ end
 end
 
 
-@kwdef struct Weights
+@kwdef struct ClimWIP
     performance_distances::DimArray
     independence_distances::DimArray
     Di::YAXArray # generalized distances each model wrt performance
@@ -58,12 +58,43 @@ end
     config::ConfigWeights # metadata
 end
 
-function Base.show(io::IO, x::Weights)
+function Base.show(io::IO, x::ClimWIP)
     println(io, "::$(typeof(x)):")
     for m in dims(x.w, :model)
         println(io, "$m: $(round(x.w[model = At(m)].data[1], digits=3))")
     end
 end
+
+
+@kwdef mutable struct ClimateData
+    info::Dict
+    models::DataMap
+    obs::DataMap
+    weights::Union{YAXArray, Nothing}
+end
+
+
+function ClimateData(models::DataMap, observations::DataMap)
+    return ClimateData(info=Dict(), models=models, obs=observations, weights=nothing)
+end
+
+
+function Base.show(io::IO, ::MIME"text/plain", x::ClimateData)
+    println(io, "$(typeof(x))")
+    models = collect(keys(x.models))
+    obs = collect(keys(x.obs))
+    shared = intersect(models, obs)    
+    println("Model AND observational data: $(length(shared))")
+    map(println, shared)
+    println("----")
+    println("Data only for observations: $(length(filter(x-> !(x in models), obs)))")
+    println("Data only for models: $(length(filter(x-> !(x in obs), models)))")
+    println("----")
+    if !isnothing(x.weights)
+        println("Weights: $(x.weights)")
+    end
+end
+
 
 
 """
@@ -1002,100 +1033,6 @@ function getMask(orog_data::YAXArray; mask_out_land::Bool = true)
     meta["_ref_id_mask"] = orog_data.properties["_id"]
     mask_arr = YAXArray(dims(ocean_mask), Bool.(ocean_mask_mat), meta)
     return mask_out_land ? mask_arr : mask_arr .== false
-end
-
-
-"""
-    filterTimeseries(
-        data_all::DataMap, 
-        start_year::Number, 
-        end_year::Number;
-        new_alias::String="",
-        ids_ts::Vector{String}=Vector{String}(),
-        only_models_non_missing_vals::Bool = true
-    )
-"""
-function filterTimeseries(
-    data_all::DataMap,
-    start_year::Number,
-    end_year::Number;
-    new_alias::String = "",
-    ids_ts::Vector{String} = Vector{String}(),
-    only_models_non_missing_vals::Bool = true,
-)
-    new_alias_given = !isempty(new_alias)
-    if isempty(ids_ts)
-        @info "filter all datasets with :time dimension from $start_year to $end_year"
-        ids_ts = filter(id -> hasdim(data_all[id], :time), collect(keys(data_all)))
-    end
-    data_subset = DataMap()
-    for id in ids_ts
-        @info "filter timeseries data with id: $id from $start_year to $end_year"
-        try
-            df = data_all[id][time=Where(
-                x->Dates.year(x)>=start_year&&Dates.year(x)<=end_year,
-            )]
-            df = YAXArray(dims(df), Array(df), deepcopy(df.properties))
-        catch
-            @warn "No data found in between $start_year and $end_year !"
-            return nothing
-        end
-        if only_models_non_missing_vals
-            dim_symbol, _ = getDimsModel(df)
-            models_missing_vals = dropdims(
-                mapslices(
-                    x -> any(ismissing.(x)),
-                    DimArray(df),
-                    dims = otherdims(df, dim_symbol),
-                ),
-                dims = otherdims(df, dim_symbol),
-            )
-            indices_missing = findall(x -> x == true, models_missing_vals)
-            if !isempty(indices_missing)
-                models_missing =
-                    getByIdxModel(models_missing_vals, dim_symbol, indices_missing)
-                models_missing = dims(models_missing, dim_symbol).val
-                df =
-                    dim_symbol == :model ? df[model=Where(x->!(x in models_missing))] :
-                    df[member=Where(x->!(x in models_missing))]
-                # update metadata too
-                k = dim_symbol == :model ? "model_names" : "member_names"
-                indices_keep = findall(x -> !(x in models_missing), df.properties[k])
-                for (k, v) in df.properties
-                    if isa(v, Vector)
-                        df.properties[k] = df.properties[k][indices_keep]
-                    end
-                end
-            end
-        end
-        timesteps = dims(df, :time)
-        if !new_alias_given
-            new_alias =
-                df.properties["_alias"] * "-" * join(string.([start_year, end_year]), "-")
-        end
-        parts = split(id, "_")
-        parts[3] = new_alias
-        new_id = join(parts, "_")
-        df.properties["_id"] = new_id
-        df.properties["_alias"] = new_alias
-        if haskey(data_subset, new_id)
-            @warn "$new_id was already present in DataMap, is overwritten!"
-        end
-        data_subset[new_id] = df
-        # sanity checks for missing values and time range
-        if any(ismissing.(df))
-            @warn "missing values in timeseries for $id"
-        end
-        data_start = Dates.year(timesteps[1])
-        if data_start != start_year
-            @warn "start_year for $id is : $(data_start)"
-        end
-        data_end = Dates.year(timesteps[end])
-        if data_end != end_year
-            @warn "end_year for $id is : $(data_end)"
-        end
-    end
-    return data_subset
 end
 
 

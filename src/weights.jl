@@ -415,13 +415,13 @@ end
 
 
 """
-    saveWeightsAsNCFile(weights::Weights; target_path::String)
+    saveWeightsAsNCFile(weights::ClimWIP; target_path::String)
 TODO: needs to be updated, deprecated
 # Arguments:
-- `weights`: Weights object to be saved.
+- `weights`: ClimWIP object to be saved.
 - `target_path`: Path to where weights shall be stored.
 """
-function saveWeightsAsNCFile(weights::Weights, target_path::String)
+function saveWeightsAsNCFile(weights::ClimWIP, target_path::String)
     ds = NCDataset(target_path, "c")
     models = map(x -> string(x), dims(weights.w, :model))
     defDim(ds, "model", length(models))
@@ -439,7 +439,7 @@ function saveWeightsAsNCFile(weights::Weights, target_path::String)
     addNCDatasetVar!(ds, dims(weights.performance_distances, :diagnostic), "diagnostic")
 
     # Add actual data weights
-    for name in fieldnames(Weights)
+    for name in fieldnames(ClimWIP)
         if String(name) in ["w", "wP", "wI", "Di"]
             v = defVar(ds, String(name), Float64, ("model",))
             data = getfield(weights, name)
@@ -480,7 +480,7 @@ function saveWeightsAsNCFile(weights::Weights, target_path::String)
 end
 
 
-function writeWeightsToDisk(weights::Weights, target_path::String)
+function writeWeightsToDisk(weights::ClimWIP, target_path::String)
     target_path = validateConfigTargetPath(target_path)
     config = weights.config
     config = @set config.target_path = target_path
@@ -566,34 +566,6 @@ end
 
 
 """
-    getModelLogLikelihoods(model_data::YAXArray, distr::Distribution)
-
-Compute the log likelihood of `model_data` to originate from `distr`.
-"""
-function getModelLogLikelihoods(model_data::YAXArray, distr::Distribution)
-    dim_symbol, names_models = getDimsModel(model_data)
-    # TODO: add checks that distribution and data dimensions match
-    likelihoods =
-        dim_symbol == :model ?
-        map(
-            m -> Distributions.pdf(distr, DimArray(model_data)[model=At(m)]),
-            names_models,
-        ) :
-        map(m -> Distributions.pdf(distr, DimArray(model_data)[member=At(m)]), names_models)
-
-    return YAXArray(
-        (
-            Dim{dim_symbol}(Array(names_models)),
-            Dim{:variable}([model_data.properties["_variable"]]),
-            Dim{:diagnostic}([model_data.properties["_statistic"]]),
-        ),
-        reshape(log.(likelihoods), length(likelihoods), 1, 1),
-        deepcopy(model_data.properties),
-    )
-end
-
-
-"""
     getUncertaintyRanges(
         data::AbstractArray; 
         w::Union{DimArray, Nothing}=nothing, 
@@ -634,4 +606,13 @@ function getUncertaintyRanges(
         uncertainty_ranges[time=At(t), confidence=At("upper")] = upper
     end
     return uncertainty_ranges
+end
+
+
+function likelihoodWeights(
+    vec::Vector{<:Number}, models::Vector{String}, distr::Distribution, name::String
+)
+    likelihoods = Distributions.pdf(distr, vec)
+    weights = likelihoods ./ sum(likelihoods)
+    return YAXArray((Dim{:model}(models), Dim{:weight}([name])), reshape(weights, :, 1))
 end

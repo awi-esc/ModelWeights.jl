@@ -13,7 +13,7 @@ end
 @testset "Test getUncertaintyRanges" begin
 end
 
-@testset "Test computeWeights" begin
+@testset "Test climwipWeights" begin
 end
 
 @testset "Test areaWeightedRMSE" begin
