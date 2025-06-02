@@ -152,15 +152,6 @@ end
     @test mw.applyModelConstraints("cmip_ACCESS_r1i1p1f1_gr.nc", allowed_models)
 end
 
-@testset "Test getTimerangeAsAlias" begin
-end
-
-@testset "Test getAliasAsTimerange" begin
-end
-
-@testset "Test getRefPeriodAsTimerangeAndAlias" begin
-end
-
 @testset "Test subsetPaths" begin
 end
 

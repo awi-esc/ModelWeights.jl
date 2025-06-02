@@ -4,59 +4,6 @@ using DimensionalData
 using Serialization
 using Setfield
 
-"""
-     computeModelModelRMSE(model_data::DataMap, config::ConfigWeights)
-
-Compute the Root-mean-squared-error between pairs of models in `model_data` for  
-each combination of variable and diagnostic for which weights > 0 are specified 
-in `config`.
-"""
-function computeModelModelRMSE(model_data::DataMap, config::ConfigWeights)
-    keys_weights_indep =
-        [k for k in keys(config.independence) if config.independence[k] > 0]
-    ref_period_alias = config.alias_ref_indep_weights
-    if !isValidDataAndWeightInput(model_data, keys_weights_indep, ref_period_alias)
-        msg = "There is model data missing for the given weights (for the combinations of diagnostics and variables: $keys_weights_indep) and reference period ($ref_period_alias)!"
-        throw(ArgumentError(msg))
-    end
-    return computeDistancesAllDiagnostics(
-        model_data,
-        nothing,
-        config.independence,
-        ref_period_alias,
-        false,
-    )
-end
-
-
-""" 
-    computeModelDataRMSE(
-        model_data::DataMap, obs_data::DataMap, config::ConfigWeights    
-    )
-
-Compute the Root-mean-squared-error between `model_data` and `obs_data` for 
-each combination of variable and diagnostic for which weights > 0 are specified 
-in `config`.
-"""
-function computeModelDataRMSE(model_data::DataMap, obs_data::DataMap, config::ConfigWeights)
-    keys_weights_perform =
-        [k for k in keys(config.performance) if config.performance[k] > 0]
-    ref_period_alias = config.alias_ref_perform_weights
-    if !isValidDataAndWeightInput(model_data, keys_weights_perform, ref_period_alias)
-        throw(ArgumentError("There is MODEL data missing!"))
-    end
-    if !isValidDataAndWeightInput(obs_data, keys_weights_perform, ref_period_alias)
-        throw(ArgumentError("There is OBSERVATIONAL data missing!"))
-    end
-    return computeDistancesAllDiagnostics(
-        model_data,
-        obs_data,
-        config.performance,
-        ref_period_alias,
-        true
-    )
-end
-
 
 """
     climwipWeights(
@@ -93,18 +40,13 @@ function climwipWeights(
     weights_perform = normalizeWeightsVariables(config.performance)
     weights_indep = normalizeWeightsVariables(config.independence)
 
-    Di = computeGeneralizedDistances(dists_perform_all, weights_perform, true)
-    Sij = computeGeneralizedDistances(dists_indep_all, weights_indep, false)
+    Di = computeGeneralizedDistances(dists_perform_all, weights_perform)
+    Sij = computeGeneralizedDistances(dists_indep_all, weights_indep)
 
     performances = performanceParts(Di, config.sigma_performance)
     independences = independenceParts(Sij, config.sigma_independence)
     weights = performances ./ independences
     weights = weights ./ sum(weights)
-    # ref_period_alias, ref_period_timerange = getRefPeriodAsTimerangeAndAlias(
-    #     map(x -> x.meta.attrib, values(model_data)), config.ref_perform_weights
-    # )
-    #setRefPeriodInWeightsMetadata!(weights.properties, ref_period_alias, ref_period_timerange)
-
     # consider performance and independence weights independently
     # for performance weights, we assume that all models have the same degree of dependence
     # among each other (e.g. all are compeletely independent), i.e. we can 
@@ -117,7 +59,6 @@ function climwipWeights(
     # we just set Di=0 for all models, i.e. the numerator is 1 for all models
     norm_i = sum(1 ./ independences)
     wI = (1 ./ independences) ./ norm_i
-    #setRefPeriodInWeightsMetadata!(wP.properties, ref_period_alias, ref_period_timerange)
 
     if hasdim(dists_perform_all, :member)
         members = Array(dims(dists_perform_all, :member))
@@ -135,15 +76,16 @@ function climwipWeights(
         w = weights_arr,
         w_members = w_members,
         config = config,
-        # overall = (wP .* wI) ./ sum(wP .* wI), # just for sanity check
     )
     return model_weights
 end
 
 
-function climwipWeights(data::ClimateData, config_weights::ConfigWeights; suffix::String="climwip")
-    dists_perform = computeModelDataRMSE(data.models, data.obs, config_weights)
-    dists_indep = computeModelModelRMSE(data.models, config_weights)
+function climwipWeights(
+    data::ClimateData, config_weights::ConfigWeights; suffix::String="climwip"
+)
+    dists_perform = computeDistancesAllDiagnostics(data.models, data.obs, config_weights.performance)
+    dists_indep = computeDistancesAllDiagnostics(data.models, config_weights.independence)
     return climwipWeights(dists_indep, dists_perform, config_weights, suffix)
 end
 

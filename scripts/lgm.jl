@@ -85,16 +85,12 @@ config_weights = mw.ConfigWeights(
     performance = Dict("tas_CLIM" => 1),
     independence = Dict("tas_CLIM" => 1),
     sigma_independence = 0.5,
-    sigma_performance = 0.5,
-    alias_ref_perform_weights = "historical", # alias
-    #ref_perform_weights = "full", # timerange
-    alias_ref_indep_weights = "historical", # alias
-    target_path = target_path
+    sigma_performance = 0.5
 );
-dists_perform = mw.computeModelDataRMSE(
-    historical_data, obs_data, config_weights
+dists_perform = mw.computeDistancesAllDiagnostics(
+    historical_data, obs_data, config_weights.performance
 );
-dists_indep = mw.computeModelModelRMSE(historical_data, config_weights);
+dists_indep = mw.computeDistancesAllDiagnostics(historical_data, config_weights.independence);
 weights = mw.climwipWeights(dists_indep, dists_perform, config_weights)
 
 f1 = mw.plotWeights(weights; title="Weights based on historical data (tas)")
@@ -172,10 +168,7 @@ config_weights = mw.ConfigWeights(
     performance = Dict("tas_lgm-cooling" => 1),
     independence = Dict("tas_CLIM" => 1),
     sigma_independence = 0.5,
-    sigma_performance = 0.5,
-    alias_ref_perform_weights = "lgm",
-    alias_ref_indep_weights = "lgm",
-    target_path = joinpath(weights_dir, target_fn * ".jld2")
+    sigma_performance = 0.5
 );
 
 dists_perform = mw.getModelLogLikelihoods(global_means, distr_tierney)

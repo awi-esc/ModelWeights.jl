@@ -42,9 +42,6 @@ end
     independence::Dict{String,Number} = Dict()
     sigma_performance::Number = 0.5
     sigma_independence::Number = 0.5
-    alias_ref_perform_weights::String = ""
-    alias_ref_indep_weights::String = ""
-    target_path::String = ""
 end
 
 
@@ -819,80 +816,58 @@ function applyModelConstraints(path_model_data::String, model_constraints::Vecto
 end
 
 
+function computeDistancesAllDiagnostics(model_data::DataMap, config::Dict{String, Number})
+    keys_weights = filter(k -> config[k] > 0, collect(keys(config)))
+    ids = getAvailableIds(model_data, keys_weights)
+    if length(ids) != length(keys_weights)
+        throw(ArgumentError("Missing MODEL data!"))
+    end
+    distances_all = []
+    diagnostics_ids = collect(keys(config))
+    for key in diagnostics_ids
+        models = model_data[key]
+        push!(distances_all, getModelDistances(models))
+    end
+    return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics_ids))
+
+
+end
+
 """
     computeDistancesAllDiagnostics(
-        model_data::DataMap, 
-        obs_data::Union{Nothing, DataMap}, 
-        config::Dict{String, Number},
-        ref_period_alias::String,
-        forPerformance::Bool    
+        model_data::DataMap, obs_data::DataMap, config::Dict{String, Number}
     )
 
-Compute RMSEs between models and observations or between predictions of models 
-for all variables and diagnostics for which weights are specified in `config`.
+Compute RMSEs between models and observations for all variables and diagnostics for which 
+weights are specified in `config`.
 
 # Arguments:
-- `config::Dict{String, Number}`: mapping from 'VARIABLE_DIAGNOSTIC' to 
-respective weight.
-- `for_performance::Bool`: true for distances between models and observations, 
-false for distances between model predictions.
+- `config::Dict{String, Number}`: mapping from data ids to respective weights.
 """
 function computeDistancesAllDiagnostics(
-    model_data::DataMap,
-    obs_data::Union{Nothing,DataMap},
-    config::Dict{String,Number},
-    ref_period_alias::String,
-    for_performance::Bool,
+    model_data::DataMap, obs_data::DataMap, config::Dict{String, Number}
 )
-    # compute performance/independence distances for all model members
-    var_diagnostic_keys = collect(keys(config))
-    diagnostics = String.(unique(map(x -> split(x, "_")[2], var_diagnostic_keys)))
-    variables = String.(unique(map(x -> split(x, "_")[1], var_diagnostic_keys)))
-    distances_all = []
-    for diagnostic in diagnostics
-        distances = []
-        # TODO: for now just compute distances for all diagnostic-variable pairs, s.t. 
-        # in the end we can all put into one YAXArray. Change this later to only compute 
-        # what you really want (not for all variables all diagnostics)
-        #diagnostic_keys = filter(x -> endswith(x, "_" * diagnostic), var_diagnostic_keys)
-        #variables = String.(map(x -> split(x, "_")[1], diagnostic_keys))
-        for clim_var in variables
-            @debug "compute distances for $diagnostic + $clim_var"
-            id = join([clim_var, diagnostic, ref_period_alias], "_")
-            models = model_data[id]
-
-            if for_performance
-                observations = obs_data[id]
-                if length(dims(observations, :model)) != 1
-                    @warn "several observational datasets available for computing distances. Only first is used."
-                end
-                observations = observations[model=1]
-                dists = getModelDataDist(models, observations)
-            else
-                dists = getModelDistances(models)
-            end
-            push!(distances, dists)
-        end
-        # add missing values for variables for which this diagnostic is not needed 
-        # otherwise last step of bringing all together in one YAXArray wont work
-        # vars_not_needed = filter(x -> !(x in variables), variables_all)
-        # for clim_var in vars_not_needed
-        #     if for_performance
-        #         YAXArray((Dim{:}()), Vector{}(missing, ))
-        #     else
-
-        #     end
-        # end
-        # TODO: recheck the metadata here! standard_name should be converted 
-        # to a vector?!
-        if length(unique(map(x -> size(x), distances))) > 1
-            msg = "Not all models are identical for variables for diagnostic $diagnostic !"
-            @warn msg
-        end
-        distances = cat(distances..., dims = Dim{:variable}(String.(collect(variables))))
-        push!(distances_all, distances)
+    keys_weights = filter(k -> config[k] > 0, collect(keys(config)))
+    ids = getAvailableIds(model_data, keys_weights)
+    if length(ids) != length(keys_weights)
+        throw(ArgumentError("Missing MODEL data!"))
     end
-    return cat(distances_all..., dims = Dim{:diagnostic}(String.(collect(diagnostics))))
+    ids = getAvailableIds(obs_data, keys_weights)
+    if length(ids) != length(keys_weights)
+        throw(ArgumentError("Missing OBSERVATIONAL data!"))
+    end
+    distances_all = []
+    diagnostics_ids = collect(keys(config))
+    for key in diagnostics_ids
+        models = model_data[key]
+        observations = obs_data[key]
+        if length(dims(observations, :model)) != 1
+            @warn "several observational datasets available for computing distances. Only first is used."
+        end
+        push!(distances_all, getModelDataDist(models, observations[model=1]))
+        # TODO: recheck the metadata here! standard_name should be converted to a vector?!
+    end
+    return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics_ids))
 end
 
 
@@ -903,111 +878,18 @@ end
 
 For every variable in `distances_all`, compute the weighted sum of all diagnostics.
 """
-function computeGeneralizedDistances(
-    distances_all::YAXArray, weights::DimArray, for_performance::Bool,
-)
-    distances_all = distances_all[variable=Where(x->x in dims(weights, :variable))]
-    dimensions =
-        for_performance ? (hasdim(distances_all, :member) ? (:member,) : (:model,)) :
-        (:member1, :member2)
-    norm = mapslices(Statistics.median, DimArray(distances_all), dims = dimensions)
-    normalized_distances =
-        YAXArray(dims(distances_all), distances_all ./ norm, distances_all.properties)
-    if for_performance
-        distances =
-            hasdim(normalized_distances, :model) ? normalized_distances :
-            summarizeEnsembleMembersVector(normalized_distances, false)
-    else
-        distances = averageEnsembleMembersMatrix(normalized_distances, false)
-    end
-    distances =
-        mapslices(x -> x .* weights, DimArray(distances), dims = (:variable, :diagnostic))
-    distances = dropdims(
-        sum(distances, dims = (:variable, :diagnostic)),
-        dims = (:variable, :diagnostic),
-    )
-    return YAXArray(dims(distances), distances.data, distances.metadata)
-end
+function computeGeneralizedDistances(distances_all::YAXArray, weights::YAXArray)
+    model2data = hasdim(distances_all, :member)
+    dimensions = model2data ? (:member,) : (:member1, :member2)
+    norm = dropdims(median(distances_all, dims=dimensions), dims=dimensions)
+    normalized_distances = @d distances_all ./ norm
 
-
-
-"""
-    isValidDataAndWeightInput(
-        data::DataMap, keys_weights::Vector{String}, ref_period_alias::String
-    )
-
-Check that there is data in `data` for all `keys_weights` containing weights 
-balancing the different diagnostics for the given reference period 
-`ref_period_alias`.
-"""
-function isValidDataAndWeightInput(
-    data::DataMap,
-    keys_weights::Vector{String},
-    ref_period_alias::String,
-)
-    actual_ids_data = map(x -> x.properties["_id"], values(data))
-    required_keys_data = map(x -> x * "_" * ref_period_alias, keys_weights)
-    keys_absent = filter(id -> !(id in actual_ids_data), required_keys_data)
-    is_valid = isempty(keys_absent)
-    if !is_valid 
-        @warn "data missing for keys:" keys_absent
-    end
-    return is_valid
-end
-
-
-"""
-    getTimerangeAsAlias(meta_attribs::Vector{MetaAttrib}, timerange::String)
-
-Translate given timerange to corresponding alias in `data_ids`.
-"""
-function getTimerangeAsAlias(meta_attribs::Vector{Dict{String,Any}}, timerange::String)
-    attribs = filter(x -> x["_timerange"] == timerange, meta_attribs)
-    return isempty(attribs) ? nothing : attribs[1]["_alias"]
-end
-
-
-"""
-    getAliasAsTimerange(meta_attribs::Vector{MetaAttrib}, alias::String)
-
-Translate each alias in `meta_attribs`to corresponding timerange.
-"""
-function getAliasAsTimerange(meta_attribs::Vector{Dict{String,Any}}, alias::String)
-    attribs = filter(x -> x["_alias"] == alias, meta_attribs)
-    return isempty(attribs) ? nothing : attribs[1]["_timerange"]
-end
-
-"""
-    getRefPeriodAsTimerangeAndAlias(
-        meta_attribs::Vector{MetaAttrib}, ref_period::String
-    )
-
-Return timerange and alias corresponding to `ref_period` which can be either be 
-a timerange or an alias.
-"""
-function getRefPeriodAsTimerangeAndAlias(
-    meta_attribs::Vector{Dict{String,Any}},
-    ref_period::String,
-)
-    alias = getTimerangeAsAlias(meta_attribs, ref_period)
-    # true : ref_period given as alias, false: ref_period given as timerange
-    timerange =
-        isnothing(alias) ? getAliasAsTimerange(meta_attribs, ref_period) : ref_period
-    alias = isnothing(alias) ? ref_period : alias
-
-    if (isnothing(alias) || isnothing(timerange))
-        throw(ArgumentError("ref period $ref_period not given in data!"))
-    end
-    return (alias = alias, timerange = timerange)
-end
-
-"""
-    setRefPeriodInWeightsMetadata!(meta::Dict, alias::String, timerange::String)
-"""
-function setRefPeriodInWeightsMetadata!(meta::Dict, alias::String, timerange::String)
-    meta["ref_period_alias"] = alias
-    meta["ref_period_timerange"] = timerange
-    return nothing
+    distances = model2data ? 
+        summarizeEnsembleMembersVector(normalized_distances, false) :
+        averageEnsembleMembersMatrix(normalized_distances, false)
+    
+    weighted_dists = @d distances .* weights
+    return dropdims(sum(weighted_dists, dims = :diagnostic), dims=:diagnostic)
 end
 
 

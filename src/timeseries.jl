@@ -16,52 +16,39 @@ entry of `data` for '_statistic' and the new metadata entry for '_id' is adapted
 - `data::YAXArray`: must have dimension :time.
 - `full_predictions::Bool`: if false, return only slope, otherwise return predicted value.
 """
-function computeLinearTrend(
-    data::YAXArray; stats_name::String="", full_predictions::Bool = false, only_newid::Bool=false
-)
+function computeLinearTrend(data::YAXArray; full_predictions::Bool = false)
     if !hasdim(data, :time)
         msg = "Linear trend can only be computed for timeseries data (with dimension :time)!"
         throw(ArgumentError(msg))
     end
-    if isempty(stats_name)
-        stats_name = full_predictions ? "TREND-pred" : "TREND"
-    end
     x = Dates.year.(Array(data.time))
     meta = deepcopy(data.properties)
-    meta["_statistic"] = stats_name
+    meta["_statistic"] = full_predictions ? "TREND-pred" : "TREND"
     meta["_id"] = buildMetaDataID(meta)
-    if only_newid
-        return meta["_id"]
-    else
-        function fn(y)
-            y = Array(y)
-            indices = findall(.!(ismissing.(y)))
-            # TODO: this is slow and should be changed!
-            ols = lm(@formula(Y ~ X), DataFrame(X = x[indices], Y = Float64.(y[indices])))
-            if full_predictions
-                y_hat = Array{Union{Missing,Float64}}(undef, size(y))
-                y_hat[indices] = predict(ols)
-            else
-                y_hat = coef(ols)[2]
-            end
-            return y_hat
+    function fn(y)
+        y = Array(y)
+        indices = findall(.!(ismissing.(y)))
+        # TODO: this is slow and should be changed!
+        ols = lm(@formula(Y ~ X), DataFrame(X = x[indices], Y = Float64.(y[indices])))
+        if full_predictions
+            y_hat = Array{Union{Missing,Float64}}(undef, size(y))
+            y_hat[indices] = predict(ols)
+        else
+            y_hat = coef(ols)[2]
         end
-        trends = mapslices(fn, data; dims = (:time,))
-        return YAXArray(dims(trends), Array(trends), meta)
+        return y_hat
     end
+    trends = mapslices(fn, data; dims = (:time,))
+    return YAXArray(dims(trends), Array(trends), meta)
 end
 
 
-function detrendTimeseries(data::YAXArray; stats_name::String="detrended-ts", only_newid=false)
+function detrendTimeseries(data::YAXArray)
     meta_new = deepcopy(data.properties)
-    meta_new["_statistic"] = stats_name
+    meta_new["_statistic"] = join([meta_new["_statistic"], "detrended-ts"], "-")
     meta_new["_id"] = buildMetaDataID(meta_new)
-    if only_newid
-        return meta_new["_id"]
-    else
-        trend = computeLinearTrend(data; full_predictions = true)
-        diffs = @d data .- trend
-    end
+    trend = computeLinearTrend(data; full_predictions = true)
+    diffs = @d data .- trend
     return YAXArray(dims(data), diffs, meta_new)
 end
 
@@ -138,6 +125,7 @@ function filterTimeseries(
     return df
 end
 
+
 """
     addFilteredTimeseries!(
         data::DataMap, 
@@ -153,7 +141,7 @@ function addFilteredTimeseries!(
     start_year::Number,
     end_year::Number;
     ids_ts::Vector{String} = Vector{String}(),
-    new_alias::String="",
+    new_alias::String = "",
     only_models_non_missing_vals::Bool = true,
 )
     if isempty(ids_ts)
@@ -171,7 +159,7 @@ function addFilteredTimeseries!(
         end
         ids_ts = ids_ts[indices_keys]
     end
-    for (i, id) in enumerate(ids_ts)
+    for id in ids_ts
         df = filterTimeseries(data[id], start_year, end_year; new_alias, only_models_non_missing_vals)
         data[df.properties["_id"]] = df
     end
@@ -192,4 +180,61 @@ function addFilteredTimeseries!(
     @info "addFilteredTimeseries for Observational data..."
     addFilteredTimeseries!(data.obs, start_year, end_year; ids_ts, new_alias, only_models_non_missing_vals)
     return nothing
+end
+
+
+
+"""
+    getUncertaintyRanges(
+        data::AbstractArray; w::Union{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]
+    )
+
+Compute weighted `quantiles` of timeseries `data`.
+
+# Arguments:
+- `data::AbstractArray`: must have dimensions 'time', 'model'.
+- `w::Union{DimArray, Nothing}=nothing`: must have dimensions 'model' and 'weight', each 
+'weight'-vector must sum up to 1.
+- `quantiles=[0.167, 0.833]`: vector with two entries between 0 and 1 representing  the 
+lower and upper bound in this order.
+"""
+function getUncertaintyRanges(
+    data::AbstractArray; w::Union{YAXArray, Nothing} = nothing, quantiles = [0.167, 0.833]
+)
+    timesteps = dims(data, :time)
+    meta = deepcopy(data.properties)
+    meta["_quantiles"] = string.(quantiles)
+    uncertainty_ranges = isnothing(w) ?
+        YAXArray(
+            (dims(data, :time), Dim{:confidence}(["lower", "upper"])),
+            Array{Union{Missing, Float64}}(undef, length(timesteps), 2),
+            meta
+        ) :
+        YAXArray(
+            (dims(data, :time), dims(w, :weight), Dim{:confidence}(["lower", "upper"])),
+            Array{Union{Missing, Float64}}(undef, length(timesteps), length(w.weight), 2),
+            meta
+        )
+    for t in timesteps
+        arr = Array(data[time=At(t)])
+        if sum(ismissing.(arr)) >= length(arr) - 1 # at least two values must be given
+            lower, upper = missing, missing
+        else
+            values = collect(skipmissing(arr))
+            if isnothing(w)
+                lower, upper = computeInterpolatedWeightedQuantiles(quantiles, values)
+                uncertainty_ranges[time=At(t), confidence=At("lower")] = lower
+                uncertainty_ranges[time=At(t), confidence=At("upper")] = upper
+            else
+                for weight_id in collect(w.weight)
+                    lower, upper = computeInterpolatedWeightedQuantiles(
+                        quantiles, values; weights = w[weight = At(weight_id)]
+                    )
+                    uncertainty_ranges[time=At(t), confidence=At("lower"), weight=At(weight_id)] = lower
+                    uncertainty_ranges[time=At(t), confidence=At("upper"), weight=At(weight_id)] = upper
+                end
+            end
+        end
+    end
+    return uncertainty_ranges
 end

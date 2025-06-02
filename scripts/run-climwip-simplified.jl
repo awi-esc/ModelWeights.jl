@@ -29,15 +29,11 @@ config_weights = mw.ConfigWeights(
     performance = Dict("tas_CLIM" => 1, "pr_CLIM" => 2, "psl_CLIM" => 1),
     independence = Dict("tas_CLIM" => 0.5, "pr_CLIM" => 0.25, "psl_CLIM" => 0),
     sigma_independence = 0.5,
-    sigma_performance = 0.5,
-    alias_ref_perform_weights =  "calculate_weights_climwip",
-    alias_ref_indep_weights = "calculate_weights_climwip", # TODO: check this in paper!
-    target_path = joinpath(target_dir, fn_jld2)
-    # target_path = joinpath(target_dir, fn_nc)
+    sigma_performance = 0.5
 );
 
-dists_perform = mw.computeModelDataRMSE(model_data, obs_data, config_weights);
-dists_indep = mw.computeModelModelRMSE(model_data, config_weights);
+dists_perform = mw.computeDistancesAllDiagnostics(model_data, obs_data, config_weights.performance);
+dists_indep = mw.computeDistancesAllDiagnostics(model_data, config_weights.independence);
 weights = mw.climwipWeights(dists_indep, dists_perform, config_weights);
 
 

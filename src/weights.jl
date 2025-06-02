@@ -19,9 +19,7 @@ import StatsBase: countmap
 This implementation follows the one used by Brunner et al.
 """
 function computeInterpolatedWeightedQuantiles(
-    quantiles::Vector{<:Number},
-    vals::Vector;
-    weights = nothing,
+    quantiles::Vector{<:Number}, vals::Vector; weights = nothing
 )
     if isnothing(weights)
         weights = Array{eltype(vals)}(undef, length(vals))
@@ -58,11 +56,8 @@ root mean squared error between `m1` and `m2`.
 """
 function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractArray)
     if dims(m1, :lon) != dims(m2, :lon) || dims(m1, :lat) != dims(m2, :lat)
-        throw(
-            ArgumentError(
-                "To compute area weigehted RMSE, $m1 and $m2 must be defined on the same lon,lat-grid!",
-            ),
-        )
+        msg = "To compute area weigehted RMSE, $m1 and $m2 must be defined on the same lon,lat-grid!"
+        throw(ArgumentError(msg))
     end
     squared_diff = (m1 .- m2) .^ 2
     areaweights_mat =
@@ -144,36 +139,21 @@ end
 """
     normalizeWeightsVariables(weights_dict::Dict{String, Number})
 
-Normalize weights for combinations of variable and diagnostic such that they 
-sum up to 1.
+Normalize weights for diagnostics in `weights_dict` such that they sum up to 1.
 
-# Arguments:
-- `weights_dict`: maps from VARIABLE_DIAGNOSTIC (e.g. tas_CLIM) to weights
-
-# Return:
-DimArray with dimensions 'variable' and 'diagnostic' containig the normalized 
-weights.
+The returned YAXArray has dimension 'diagnostic' whose lookup names are the keys of `weights_dict`.
 """
-function normalizeWeightsVariables(weights_dict::Dict{String,Number})
+function normalizeWeightsVariables(weights_dict::Dict{String, Number})
     filter!(((k, v),) -> v != 0, weights_dict)
     total = sum(values(weights_dict))
-    normalized_weights = Dict{String,Number}()
-    for key in keys(weights_dict)
-        normalized_weights[key] = weights_dict[key] / total
-    end
-    weights = map(x -> split(x, "_"), collect(keys(weights_dict)))
-    variables = unique(map(first, weights))
-    diagnostics = unique(map(x -> x[2], weights))
-
-    w = DimArray(
-        zeros(length(variables), length(diagnostics)),
-        (Dim{:variable}(variables), Dim{:diagnostic}(diagnostics)),
+    normalized_weights = YAXArray(
+        (Dim{:diagnostic}(collect(keys(weights_dict))),), 
+        Array{Float64}(undef, length(weights_dict))
     )
-    for (var, diag) in weights
-        k = var * "_" * diag
-        w[variable=At(var), diagnostic=At(diag)] = normalized_weights[k]
+    for key in keys(weights_dict)
+        normalized_weights[diagnostic = At(key)] = weights_dict[key] / total
     end
-    return w
+    return normalized_weights
 end
 
 
@@ -268,15 +248,16 @@ is distributed among the respective members.
 """
 function computeWeightedAvg(
     data::YAXArray;
-    weights::Union{YAXArray,Nothing} = nothing,
-    use_members_equal_weights::Bool = true,
+    weights::Union{YAXArray, Nothing} = nothing,
+    use_members_equal_weights::Bool = true
 )
     da = DimArray(Array{Union{Missing,Float64}}(undef, size(data)), dims(data))
     da .= Array(data)
     dim_symbol = hasdim(data, :member) ? :member : :model
     models_data = collect(dims(data, dim_symbol))
 
-    if isnothing(weights)
+    equal_weights = isnothing(weights)
+    if equal_weights
         weights = makeEqualWeights(data; use_members = use_members_equal_weights)
         models_weights = collect(dims(weights, dim_symbol))
     else
@@ -291,7 +272,8 @@ function computeWeightedAvg(
             # than the models of the given data. But for all given weights there must be data 
             # for now.
             data_no_weights = [model for model in models_data if !(model in models_weights)]
-            @warn "No weights were computed for these models which are therefore not considered in the weighted average:" data_no_weights
+            msg = "No weights were computed for follwoing models, thus not considered in the weighted average:"
+            @warn msg data_no_weights
             if any(x -> !(x in models_data), models_weights)
                 msg = "Data of models missing for which weights have been computed."
                 throw(ArgumentError(msg))
@@ -299,9 +281,9 @@ function computeWeightedAvg(
         end
         # subset data s.t only data that will be weighted is considered
         if dim_symbol == :member
-            da = da[member=Where(m->m in models_weights)]
+            da = da[member = Where(m -> m in models_weights)]
         else
-            da = da[model=Where(m->m in models_weights)]
+            da = da[model = Where(m -> m in models_weights)]
         end
     end
     @assert isapprox(sum(weights), 1; atol = 10^-4)
@@ -339,7 +321,10 @@ function computeWeightedAvg(
         result[s...] = Array(weighted_avg)
         result[all_missing] .= missing
     end
-    return YAXArray(dims(weighted_avg), result, deepcopy(data.properties))
+    meta = deepcopy(data.properties)
+    meta["_statistic"] = equal_weights ? "unweighted-avg" : "weighted-avg"
+    meta["_id"] = buildMetaDataID(meta)
+    return YAXArray(dims(weighted_avg), result, meta)
 end
 
 
@@ -520,9 +505,9 @@ end
 """ 
     applyWeights(model_data::YAXArray, weights::YAXArray)
 
-Compute the weighted average of model data 'data' with given weights 'weights'.
+Compute the weighted average of model data `data` with given `weights`.
 
-If weights were computed for a superset of the models in 'data', they are normalized
+If weights were computed for a superset of the models in `data`, they are normalized
 and applied to the subset. Only weights per model (not members) are considered
 for now, in the future, members should be considered too.
 
@@ -547,65 +532,16 @@ function applyWeights(model_data::YAXArray, weights::YAXArray)
     if length(shared_models) == 0
         throw(ArgumentError("No models given for which weights had been computed!"))
     else
-        model_data = model_data[model=Where(x->x in shared_models)]
-        weights = weights[model=Where(x->x in shared_models)]
-        weights = weights ./ sum(weights)
-
-        # sanity checks:
-        if any(map(x -> !(x in shared_models), model_data.model))
-            data_out = model_data[model=Where(x->!(x in shared_models))]
-            models_out = dims(data_out, :model)
-            @warn "No weights had been computed for $models_out"
-        end
+        model_data = model_data[model = Where(x -> x in shared_models)]
+        weights = weights[model = Where(x -> x in shared_models)]
+        weights = weights ./ sum(weights; dims=:model)
         if length(shared_models) < length(models_weights)
-            @warn "Weights were computed for a subset of the models of the given data. Weights were renormalized."
+            @warn "Weights were computed for subset of models in the given data. Weights were renormalized."
         end
     end
-    return computeWeightedAvg(model_data; weights)
-end
-
-
-"""
-    getUncertaintyRanges(
-        data::AbstractArray; 
-        w::Union{DimArray, Nothing}=nothing, 
-        quantiles=[0.167, 0.833]}
-    )
-
-Compute weighted `quantiles` of `data`.
-
-# Arguments:
-- `data::AbstractArray`: must have dimensions 'time', 'model'.
-- `w::Union{DimArray, Nothing}=nothing`: must have dimension 'model' and sum up to 1.
-- `quantiles=[0.167, 0.833]`: vector with two entries between 0 and 1 
-representing  the lower and upper bound in this order.
-"""
-function getUncertaintyRanges(
-    data::AbstractArray;
-    w::Union{YAXArray,Nothing} = nothing,
-    quantiles = [0.167, 0.833],
-)
-    timesteps = dims(data, :time)
-    uncertainty_ranges = YAXArray(
-        (dims(data, :time), Dim{:confidence}(["lower", "upper"])),
-        Array{Union{Missing,Float64}}(undef, length(timesteps), 2),
-        Dict{String,Any}("quantiles" => string.(quantiles)),
-    )
-    for t in timesteps
-        arr = Array(data[time=At(t)])
-        if sum(ismissing.(arr)) >= length(arr) - 1 # at least two values must be given
-            lower, upper = missing, missing
-        else
-            lower, upper = computeInterpolatedWeightedQuantiles(
-                quantiles,
-                collect(skipmissing(arr));
-                weights = w,
-            )
-        end
-        uncertainty_ranges[time=At(t), confidence=At("lower")] = lower
-        uncertainty_ranges[time=At(t), confidence=At("upper")] = upper
-    end
-    return uncertainty_ranges
+    results = map(x -> computeWeightedAvg(model_data; weights=weights[weight=At(x)]), weights.weight)
+    results_yax = cat(results...; dims=dims(weights, :weight))
+    return YAXArray(dims(results_yax), Array(results_yax), results_yax.properties)
 end
 
 

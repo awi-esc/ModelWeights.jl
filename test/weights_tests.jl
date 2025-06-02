@@ -4,12 +4,6 @@ end
 @testset "Test computeGeneralizedDistances" begin
 end
 
-@testset "Test isValidDataAndWeightInput" begin
-end
-
-@testset "Test setRefPeriodInWeightsMetadata!" begin
-end
-
 @testset "Test getUncertaintyRanges" begin
 end
 

@@ -89,7 +89,7 @@ function buildMetaDataID(variable::String, statistic::String, alias::String)
     return join([variable, statistic, alias], "_")
 end
 
-function buildMetaDataID(meta::Dict{String,Any})
+function buildMetaDataID(meta::Dict{String, T}) where T <: Any
     return join([meta["_variable"], meta["_statistic"], meta["_alias"]], "_")
 end
 
