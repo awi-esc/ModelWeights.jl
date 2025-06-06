@@ -1,10 +1,3 @@
-using Dates
-using DimensionalData
-using NCDatasets
-using Setfield
-using YAML
-using YAXArrays
-
 """
     getUniqueMemberIds(meta::Dict, model_names::Vector{String})
 
@@ -547,6 +540,43 @@ function alignPhysics(
 end
 
 
+"""
+    averageEnsembleMembersMatrix(data::AbstractArray, updateMeta::Bool)
+
+Compute the average across all members of each model for each given variable 
+for model to model data, e.g. distances between model pairs.
+
+# Arguments:
+- `data`: with at least dimensions 'member1', 'member2'
+- `updateMeta`: set true if the vectors in the metadata refer to different models. 
+Set to false if vectors refer to different variables for instance. 
+"""
+function averageEnsembleMembersMatrix(data::YAXArray, updateMeta::Bool)
+    data = setLookupsFromMemberToModel(data, ["member1", "member2"])
+    models = String.(collect(unique(dims(data, :model1))))
+
+    grouped = groupby(data, :model2 => identity)
+    averages = map(entry -> mapslices(Statistics.mean, entry, dims = (:model2,)), grouped)
+    combined = cat(averages..., dims = (Dim{:model2}(models)))
+
+    grouped = groupby(combined, :model1 => identity)
+    averages = map(entry -> mapslices(Statistics.mean, entry, dims = (:model1,)), grouped)
+    combined = cat(averages..., dims = (Dim{:model1}(models)))
+
+    for m in models
+        combined[model1=At(m), model2=At(m)] .= 0
+    end
+
+    meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
+    combined = rebuild(combined; metadata = meta)
+
+    l = Lookups.Categorical(sort(models); order = Lookups.ForwardOrdered())
+    combined = combined[model1=At(sort(models)), model2=At(sort(models))]
+    combined = DimensionalData.Lookups.set(combined, model1 = l, model2 = l)
+    return combined
+end
+
+
 """ 
     summarizeEnsembleMembersVector(
         data::YAXArray, updateMeta::Bool; fn::Function=Statistics.mean
@@ -641,4 +671,117 @@ function addMasks!(datamap::DataMap, id_orog_data::String)
     datamap["mask_land"] = getMask(orog_data; mask_out_land = false)
     datamap["mask_ocean"] = getMask(orog_data; mask_out_land = true)
     return nothing
+end
+
+
+
+"""
+    loadDataFromESMValToolRecipes(
+        path_data::String,
+        path_recipes::String;
+        dir_per_var::Bool=true,
+        is_model_data::Bool=true,
+        subset::Union{Dict, Nothing}=nothing,
+        preview::Bool=false
+    )
+
+Loads the data from the config files (ESMValTool recipes) located at 'path_recipes'.
+For each variable, experiment, statistic and timerange (alias), an instance of `Data`
+is created.
+
+# Arguments:
+- `path_data`:  path to location where preprocessed data is stored; if 
+dir_per_var is true, paths to directories that contain one or
+more subdirectories that each contains a directory 'preproc' with the
+preprocessed data. If dir_per_var is false, path_data is path to directory that
+ directly contains the 'preproc' subdirectory.
+- `path_recipes`: path to directory that contains one or ESMValTool recipes 
+used as config files.
+- `dir_per_var`: if true (default), directory at path_data has subdirectories, one for
+each variable (they must end with _ and the name of the variable), otherwise
+data_path points to the directory that has a subdirectory 'preproc'.
+- `is_model_data`: set true for model data, false for observational data
+- `subset`: specifies the properties of the subset of data to be loaded. 
+The following keys are considered:  `models` (used to load only specific set of models 
+or members of models), `projects` (used to load only data from a given set of
+projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases`.
+(super set is loaded, i.e. data that corresponds to either a given timerange or
+a given alias will be loaded), `variables`, `statistics`, `subdirs` and `subset_shared` .
+(if set to MEMBER/MODEL only data loaded from model members/models shared across all experiments and variables is loaded).
+- `preview`: used to pre-check which data will be loaded before actually loading
+it. 
+"""
+function loadDataFromESMValToolRecipes(
+    path_data::String,
+    path_recipes::String;
+    dir_per_var::Bool = true,
+    is_model_data::Bool = true,
+    subset::Union{Dict,Nothing} = nothing,
+    preview::Bool = false,
+)
+    attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; constraint = subset)
+    meta_data = Dict{String, Dict{String, Any}}()
+    for meta in attributes
+        meta = Dict{String, Any}(meta)
+        meta["_paths"] = getPathsToData(
+            meta,
+            path_data,
+            dir_per_var,
+            is_model_data;
+            constraint = subset,
+        )
+        if !isempty(meta["_paths"])
+            id = meta["_id"]
+            if haskey(meta_data, id)
+                meta_data[id]["_paths"] = mergeMetaDataPaths(meta_data[id], meta)
+            else
+                meta_data[id] = meta
+            end
+        end
+    end
+    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))
+        filterPathsSharedModels!(meta_data, subset["subset_shared"])
+    end
+    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
+end
+
+
+"""
+    loadDataFromYAML(
+        path_config::String;
+        is_model_data::Bool = true,
+        subset::Union{Dict,Nothing} = nothing,
+        preview::Bool = false
+    )
+
+Load a `DataMap`-instance that contains the data specified in yaml file at `path_config`, 
+potentially constraint by values in `subset`.
+
+# Arguments:
+- `preview::Bool`: if true (default: false), return metadata without actually 
+loading any data.
+"""
+function loadDataFromYAML(
+    path_config::String;
+    is_model_data::Bool = true,
+    subset::Union{Dict,Nothing} = nothing,
+    preview::Bool = false
+)
+    return loadDataFromYAML(YAML.load_file(path_config); is_model_data, subset, preview)
+end
+
+
+
+function loadDataFromYAML(
+    content::Dict;
+    is_model_data::Bool = true,
+    subset::Union{Dict,Nothing} = nothing,
+    preview::Bool = false,
+)
+    meta_data = getMetaDataFromYAML(content, is_model_data; arg_constraint = subset)
+    if isempty(meta_data)
+        msg = "No metadata found for subset: $subset, $content (model data: $is_model_data)!"
+        throw(ArgumentError(msg))
+    end
+    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
 end

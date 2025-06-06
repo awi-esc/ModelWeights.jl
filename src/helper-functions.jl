@@ -1,8 +1,6 @@
-using DimensionalData
-using YAXArrays
+# general helper functions
 
-
-function warn_if_identical_keys(d1, d2)
+function warnIfIdenticalKeys(d1, d2)
     keys1 = collect(keys(d1))
     keys2 = collect(keys(d2))
     duplicates = intersect(keys1, keys2)
@@ -131,3 +129,65 @@ function warnIfhasMissing(df::YAXArray; name::String="")
     end
     return nothing
 end
+
+
+"""
+    individuatePath(target::String)
+
+If file at `target` path exists, concatenate `target` with current timestep, otherwise 
+simply return `target`.
+"""
+function individuatePath(target::String)
+    target_dir = dirname(target)
+    if !isdir(target_dir)
+        mkpath(target_dir)
+    end
+    if isfile(target)
+        msg = "$target already exisits, will use "
+        target = joinpath(target_dir, join([getCurrentTime(), basename(target)], "_"))
+        @info msg * "$target instead."
+    end
+    return target
+end
+
+
+"""
+    kelvinToCelsius(data::AbstractArray)
+
+Return a copy of `data` with values given in Kelvin covnerted into Degree Celsius.
+
+"""
+function kelvinToCelsius(data::YAXArray)
+    units = data.properties["units"]
+    df = deepcopy(data)
+    if isa(units, String) && units == "K"
+        df = df .- 273.15
+        df.properties["units"] = "degC"
+    elseif isa(units, Vector)
+        indices = findall(units .== "K")
+        if !isempty(indices)
+            if hasdim(df, :member)
+                df[member=indices] .= df[member=indices] .- 273.15
+            else
+                df[model=indices] .= df[model=indices] .- 273.15
+            end
+            df.properties["units"] = "degC"
+        end
+    end
+    return df
+end
+
+
+"""
+    kelvinToCelsius!(datamap::DataMap)
+
+Modify entries of `datamap` s.t. all data is given in Degree Celsius (instead) of Kelvin.
+"""
+function kelvinToCelsius!(datamap::DataMap)
+    for (id, da) in datamap
+        datamap[id] = kelvinToCelsius(da)
+    end
+    return nothing
+end
+
+

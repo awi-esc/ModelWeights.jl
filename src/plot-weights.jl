@@ -11,18 +11,17 @@ Equal weights line is added to plot too.
 - `title`: 
 - `sort_by`: value of weight dimension according to which data is sorted
 """
-function plotWeights(weights::YAXArray; title::String = "", sort_by::String = "")
+function plotWeights(weights::YAXArray; title::String="", sort_by::String="")
     sort_by = isempty(sort_by) ? weights.weight[1] : sort_by
     indices = Array(sortperm(weights[weight = At(sort_by)], rev=true))
-    sorted_models = Array(weights.model[indices])
     
     n_models = length(weights.model)
     xs = 1:n_models
     fig = Figure()
     ax = Axis(
         fig[1, 1],
-        xticks = (xs, sorted_models),
-        xticklabelrotation = pi / 4,
+        #xticks = (xs, Array(weights.model[indices])),
+        #xticklabelrotation = pi / 4,
         xlabel = "MODEL",
         ylabel = "Weight",
         title = title,
@@ -31,7 +30,11 @@ function plotWeights(weights::YAXArray; title::String = "", sort_by::String = ""
     for label in labels
         ys = Array(weights[weight = At(label)])
         sorted_ys = ys[indices]
-        scatterlines!(ax, xs, sorted_ys, label = label, alpha = 0.5)
+        if label == sort_by
+            scatterlines!(ax, xs, sorted_ys, label = label, alpha = 0.5)
+        else
+            scatter!(ax, xs, sorted_ys, label = label, alpha = 0.5)
+        end
     end
     # add equal weight for reference
     ys_equal = [1 / n_models for _ in range(1, n_models)]

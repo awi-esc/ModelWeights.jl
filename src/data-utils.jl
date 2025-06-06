@@ -1,106 +1,10 @@
-import YAML
-
-using CSV
-using DataFrames
-using DimensionalData
-using GLM
-using JLD2
-using Setfield
-using YAXArrays
-
-@enum LEVEL MODEL = 0 MEMBER = 1
-
-KEYS_METADATA = [
-    "mip_era",
-    "variant_label",
-    "grid_label",
-    "realization",
-    "physics_version",
-    "initialization_method",
-    "units",
-]
-
-const DataMap = Dict{String,YAXArray}
-
-function Base.show(io::IO, x::Dict{String,YAXArray})
-    println(io, "$(typeof(x))")
-    for (k, v) in x
-        println(io, "$k: $(size(v))")
-    end
-end
-
-function Base.show(io::IO, ::MIME"text/plain", x::Dict{String,YAXArray})
-    println(io, "$(typeof(x))")
-    for (k, v) in x
-        println(io, "$k: $(size(v))")
-    end
-end
-
-
-@kwdef struct ConfigWeights
-    performance::Dict{String,Number} = Dict()
-    independence::Dict{String,Number} = Dict()
-    sigma_performance::Number = 0.5
-    sigma_independence::Number = 0.5
-end
-
-
-@kwdef struct ClimWIP
-    performance_distances::DimArray
-    independence_distances::DimArray
-    Di::YAXArray # generalized distances each model wrt performance
-    Sij::YAXArray # generalized distances between pairs of models
-    w::YAXArray # contains all three types of normalized weights (wI, wP, combined)
-    w_members::YAXArray # weights distributed evenly across resp. model members
-    config::ConfigWeights # metadata
-end
-
-function Base.show(io::IO, x::ClimWIP)
-    println(io, "::$(typeof(x)):")
-    for m in dims(x.w, :model)
-        println(io, "$m: $(round(x.w[model = At(m)].data[1], digits=3))")
-    end
-end
-
-
-@kwdef mutable struct ClimateData
-    info::Dict
-    models::DataMap
-    obs::DataMap
-    weights::Union{YAXArray, Nothing}
-end
-
-
-function ClimateData(models::DataMap, observations::DataMap)
-    return ClimateData(info=Dict(), models=models, obs=observations, weights=nothing)
-end
-
-
-function Base.show(io::IO, ::MIME"text/plain", x::ClimateData)
-    println(io, "$(typeof(x))")
-    models = collect(keys(x.models))
-    obs = collect(keys(x.obs))
-    shared = intersect(models, obs)    
-    println("Model AND observational data: $(length(shared))")
-    map(println, shared)
-    println("----")
-    println("Data only for observations: $(length(filter(x-> !(x in models), obs)))")
-    println("Data only for models: $(length(filter(x-> !(x in obs), models)))")
-    println("----")
-    if !isnothing(x.weights)
-        println("Weights: $(x.weights)")
-    end
-end
-
-
-
 """
     joinDataMaps(v::DataMap...)
 """
 function joinDataMaps(v::DataMap...)
     result = DataMap()
     for dm in v
-        warn_if_identical_keys(result, dm)
+        warnIfIdenticalKeys(result, dm)
         result = merge(result, dm)
     end
     return result
@@ -816,69 +720,133 @@ function applyModelConstraints(path_model_data::String, model_constraints::Vecto
 end
 
 
-function computeDistancesAllDiagnostics(model_data::DataMap, config::Dict{String, Number})
-    keys_weights = filter(k -> config[k] > 0, collect(keys(config)))
-    ids = getAvailableIds(model_data, keys_weights)
-    if length(ids) != length(keys_weights)
-        throw(ArgumentError("Missing MODEL data!"))
+function avgObsDatasets(observations::YAXArray)
+    if !hasdim(observations, :model)
+        throw(ArgumentError("Obs data requires dim :model when averaging across datasets."))
     end
-    distances_all = []
-    diagnostics_ids = collect(keys(config))
-    for key in diagnostics_ids
-        models = model_data[key]
-        push!(distances_all, getModelDistances(models))
+    if length(dims(observations, :model)) > 1
+        return mean(observations, dims=:model)[model=At("combined")]
+    else
+        return observations[model=1]
     end
-    return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics_ids))
-
-
 end
 
-"""
-    computeDistancesAllDiagnostics(
-        model_data::DataMap, obs_data::DataMap, config::Dict{String, Number}
-    )
 
-Compute RMSEs between models and observations for all variables and diagnostics for which 
-weights are specified in `config`.
+function distancesData(model_data::DataMap, obs_data::DataMap, config::Dict{String, Number})
+    return distancesData(model_data, obs_data,  activeDiagnostics(config))
+end
+
+
+"""
+    distancesData(model_data::DataMap, obs_data::DataMap, diagnostics_ids::Vector{String})
+
+Compute RMSEs between models and observations for `diagnostics`.
 
 # Arguments:
-- `config::Dict{String, Number}`: mapping from data ids to respective weights.
+- `diagnostics_ids::Vector{String}`:
 """
-function computeDistancesAllDiagnostics(
-    model_data::DataMap, obs_data::DataMap, config::Dict{String, Number}
-)
-    keys_weights = filter(k -> config[k] > 0, collect(keys(config)))
-    ids = getAvailableIds(model_data, keys_weights)
-    if length(ids) != length(keys_weights)
-        throw(ArgumentError("Missing MODEL data!"))
-    end
-    ids = getAvailableIds(obs_data, keys_weights)
-    if length(ids) != length(keys_weights)
-        throw(ArgumentError("Missing OBSERVATIONAL data!"))
-    end
-    distances_all = []
-    diagnostics_ids = collect(keys(config))
-    for key in diagnostics_ids
+function distancesData(model_data::DataMap, obs_data::DataMap, diagnostics::Vector{String})
+    ensureDiagnosticsAvailable(model_data, diagnostics, "MODEL")
+    ensureDiagnosticsAvailable(obs_data, diagnostics, "OBSERVATIONAL")
+    distances_all = Vector{YAXArray}(undef, length(diagnostics))
+    for (i, key) in enumerate(diagnostics)
         models = model_data[key]
         observations = obs_data[key]
-        if length(dims(observations, :model)) != 1
-            @warn "several observational datasets available for computing distances. Only first is used."
-        end
-        push!(distances_all, getModelDataDist(models, observations[model=1]))
+        distances_all[i] =  distancesData(models, observations)
         # TODO: recheck the metadata here! standard_name should be converted to a vector?!
     end
-    return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics_ids))
+    return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics))
 end
 
 
 """
-    computeGeneralizedDistances(
-        distances_all::YAXArray, weights::DimArray, for_performance::Bool
-)
+    distancesData(models::YAXArray, observations::YAXArray)
+
+Compute the distance as the area-weighted RMSE between model predictions and observations.
+
+If several observational datasets are present, the average across all is taken.
+"""
+function distancesData(models::YAXArray, observations::YAXArray)
+    obs = hasdim(observations, :model) ? avgObsDatasets(observations) : observations
+    # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
+    # I think this is not necessary actually (the deepcopy) 
+    # Write test to be sure!!
+    # models = deepcopy(models)
+    n = length(dims(models, :member))
+    member_names = Vector{String}(undef, n)
+    distances = Vector{Any}(undef, n)
+    for (i, model_i) in enumerate(eachslice(models; dims = :member))
+        name = dims(models, :member)[i]
+        maskNbMissing = (ismissing.(obs) + ismissing.(model_i)) .> 0 # observations or model is missing (or both)
+        maskedObs = ifelse.(maskNbMissing .> 0, 0, obs)
+
+        maskedModel = ifelse.(maskNbMissing .> 0, 0, model_i)
+        mse = areaWeightedRMSE(maskedModel, maskedObs, maskNbMissing)
+
+        member_names[i] = name
+        distances[i] = mse
+    end
+    return YAXArray((Dim{:member}(member_names),), distances, models.properties)
+end
+
+
+function distancesModels(model_data::DataMap, config::Dict{String, Number})
+    return distancesModels(model_data, activeDiagnostics(config))
+end
+
+
+function distancesModels(model_data::DataMap, diagnostics::Vector{String})
+    ensureDiagnosticsAvailable(model_data, diagnostics, "MODEL")
+    distances_all = Vector{YAXArray}(undef, length(diagnostics))
+    for (i, key) in enumerate(diagnostics)
+        models = model_data[key]
+        distances_all[i] = distancesModels(models)
+    end
+    return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics))
+end
+
+
+"""
+    distancesModels(modelData::YAXArray)
+
+Compute the area weighted RMSE between model predictions for each pair of models.
+
+# Arguments:
+- `modelData::YAXArray`: must have dimensions 'lon', 'lat', 'model' or 'member'.
+"""
+function distancesModels(model_data::YAXArray)
+    # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
+    data = deepcopy(model_data)
+    # only take values where none (!) of the models has infinite values!! (Not just the two that are compared to one another)
+    nbModels = length(dims(data, :member))
+    maskMissing = dropdims(any(ismissing, data, dims = :member), dims = :member)
+
+    matrixS = zeros(nbModels, nbModels)
+    for (i, model_i) in enumerate(eachslice(data[:, :, 1:(end-1)]; dims = :member))
+        model_i_mat = Array(model_i)
+        model_i_mat[maskMissing .== 1] .= 0
+        for (j, model_j) in enumerate(eachslice(data[:, :, (i+1):end]; dims = :member))
+            model_j_mat = Array(model_j)
+            idx = j + i
+            model_j_mat[maskMissing .== 1] .= 0
+            s_ij = areaWeightedRMSE(model_i, model_j, maskMissing)
+            matrixS[i, idx] = s_ij
+        end
+    end
+    symDistMatrix = matrixS .+ matrixS'
+    dim = Array(dims(model_data, :member))
+    return YAXArray(
+        (Dim{:member1}(dim), Dim{:member2}(dim)), symDistMatrix, deepcopy(model_data.properties),
+    )
+end
+
+
+"""
+    generalizedDistances(distances_all::YAXArray, weights::DimArray)
 
 For every variable in `distances_all`, compute the weighted sum of all diagnostics.
 """
-function computeGeneralizedDistances(distances_all::YAXArray, weights::YAXArray)
+function generalizedDistances(distances_all::YAXArray, weights::YAXArray)
     model2data = hasdim(distances_all, :member)
     dimensions = model2data ? (:member,) : (:member1, :member2)
     norm = dropdims(median(distances_all, dims=dimensions), dims=dimensions)
@@ -1012,4 +980,138 @@ function loadModelsFromCSV(
         ids = vcat(variants...)
     end
     return String.(ids)
+end
+
+
+"""
+    areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractArray)
+
+Compute the area weighted (approximated by cosine of latitudes in radians) root mean squared 
+error between `m1` and `m2`. 
+
+# Arguments:
+- `m1`: must have dimensions 'lon', 'lat'.
+- `m2`: must have dimensions 'lon', 'lat'.
+- `mask`: has values 0,1. Locations where mask is 1 get a weight of 0.
+"""
+function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractArray)
+    if dims(m1, :lon) != dims(m2, :lon) || dims(m1, :lat) != dims(m2, :lat)
+        msg = "To compute area weigehted RMSE, $m1 and $m2 must be defined on the same lon,lat-grid!"
+        throw(ArgumentError(msg))
+    end
+    squared_diff = (m1 .- m2) .^ 2
+    areaweights_mat =
+        makeAreaWeightMatrix(Array(dims(m1, :lon)), Array(dims(m1, :lat)); mask)
+    weighted_vals = areaweights_mat .* squared_diff
+    return sqrt(sum(skipmissing(weighted_vals)))
+end
+
+
+"""
+    normalizes(data::Dict{String, Number})
+
+Normalize values for every entry in `data` such that they sum up to 1.
+
+The returned YAXArray has dimension 'diagnostic' whose lookup names are the keys of `data`.
+"""
+function normalize(data::Dict{String, Number})
+    data = filter(((k, v),) -> v != 0, data)
+    total = sum(values(data))
+    normalized_data = YAXArray(
+        (Dim{:diagnostic}(collect(keys(data))),), 
+        Array{Float64}(undef, length(data))
+    )
+    for key in keys(data)
+        normalized_data[diagnostic = At(key)] = data[key] / total
+    end
+    return normalized_data
+end
+
+
+
+"""
+    uncertaintyRanges(
+        data::AbstractArray; w::Union{DimArray, Nothing}=nothing, quantiles=[0.167, 0.833]
+    )
+
+Compute weighted `quantiles` of timeseries `data`.
+
+# Arguments:
+- `data::AbstractArray`: must have dimensions 'time', 'model'.
+- `w::Union{DimArray, Nothing}=nothing`: must have dimensions 'model' and 'weight', each 
+'weight'-vector must sum up to 1.
+- `quantiles=[0.167, 0.833]`: vector with two entries between 0 and 1 representing  the 
+lower and upper bound in this order.
+"""
+function uncertaintyRanges(
+    data::AbstractArray; w::Union{YAXArray, Nothing} = nothing, quantiles = [0.167, 0.833]
+)
+    timesteps = dims(data, :time)
+    meta = deepcopy(data.properties)
+    meta["_quantiles"] = string.(quantiles)
+    uncertainty_ranges = isnothing(w) ?
+        YAXArray(
+            (dims(data, :time), Dim{:confidence}(["lower", "upper"])),
+            Array{Union{Missing, Float64}}(undef, length(timesteps), 2),
+            meta
+        ) :
+        YAXArray(
+            (dims(data, :time), dims(w, :weight), Dim{:confidence}(["lower", "upper"])),
+            Array{Union{Missing, Float64}}(undef, length(timesteps), length(w.weight), 2),
+            meta
+        )
+    for t in timesteps
+        arr = Array(data[time=At(t)])
+        if sum(ismissing.(arr)) >= length(arr) - 1 # at least two values must be given
+            lower, upper = missing, missing
+        else
+            values = collect(skipmissing(arr))
+            if isnothing(w)
+                lower, upper = interpolatedWeightedQuantiles(quantiles, values)
+                uncertainty_ranges[time=At(t), confidence=At("lower")] = lower
+                uncertainty_ranges[time=At(t), confidence=At("upper")] = upper
+            else
+                for weight_id in collect(w.weight)
+                    lower, upper = interpolatedWeightedQuantiles(
+                        quantiles, values; weights = w[weight = At(weight_id)]
+                    )
+                    uncertainty_ranges[time=At(t), confidence=At("lower"), weight=At(weight_id)] = lower
+                    uncertainty_ranges[time=At(t), confidence=At("upper"), weight=At(weight_id)] = upper
+                end
+            end
+        end
+    end
+    return uncertainty_ranges
+end
+
+
+"""
+    interpolatedWeightedQuantiles(
+        quantiles::Vector{<:Number}, vals::Vector; weights=nothing
+    )
+
+This implementation follows the one used by Brunner et al.
+"""
+function interpolatedWeightedQuantiles(
+    quantiles::Vector{<:Number}, vals::Vector; weights = nothing
+)
+    if isnothing(weights)
+        weights = Array{eltype(vals)}(undef, length(vals))
+        weights[ismissing.(vals) .== false] .= 1
+    end
+    indicesSorted = Array(sortperm(vals)) # gives indices of smallest to largest data point
+    weightsSorted = weights[indicesSorted]
+    weightedQuantiles = cumsum(weightsSorted) - 0.5 * weightsSorted
+    weightedQuantiles = reshape(weightedQuantiles, length(weightedQuantiles), 1)
+    # TODO: recheck missing values!
+    weightedQuantiles =
+        (weightedQuantiles .- minimum(skipmissing(weightedQuantiles))) ./
+        maximum(skipmissing(weightedQuantiles))
+
+    interp_linear = Interpolations.linear_interpolation(
+        vec(weightedQuantiles),
+        vals[indicesSorted],
+        extrapolation_bc = Interpolations.Line(),
+    )
+    return interp_linear(quantiles)
 end

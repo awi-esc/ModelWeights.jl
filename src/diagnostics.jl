@@ -1,11 +1,5 @@
-using DimensionalData
-using GLM
-using YAXArrays
-
-
-
 """
-    computeGlobalMeans(data::AbtractArray)
+    globalMeans(data::AbtractArray)
 
 Return a YAXArray with area-weighted global means for each model in `data`. 
 
@@ -14,7 +8,7 @@ Missing data is accounted for in the area-weights.
 # Arguments:
 - `data::YAXArray`: must have dimensions 'lon' and 'lat'.
 """
-function computeGlobalMeans(data::YAXArray)
+function globalMeans(data::YAXArray)
     if !hasdim(data, :lon) || !hasdim(data, :lat)
         msg = "Global means can only be computed for data with :lon, :lat dimensions! Given: $(dims(data))"
         throw(ArgumentError(msg))
@@ -46,13 +40,13 @@ end
 
 
 """
-    computeAnomalies(orig_data::YAXArray, ref_data::YAXArray; stats_name::String="ANOM")
+    anomalies(orig_data::YAXArray, ref_data::YAXArray; stats_name::String="ANOM")
 
-Return difference of `orig_data` and `ref_data`.  
+Compute difference of `orig_data` and `ref_data`.  
 
 The id of the original data and of the reference data is added to the metadata.
 """
-function computeAnomalies(orig_data::YAXArray, ref_data::YAXArray; stats_name::String="ANOM")
+function anomalies(orig_data::YAXArray, ref_data::YAXArray; stats_name::String="ANOM")
     dimension, models = getDimsModel(orig_data)
     if !hasdim(ref_data, dimension) || models != Array(dims(ref_data, dimension))
         throw(
@@ -76,18 +70,19 @@ function computeAnomalies(orig_data::YAXArray, ref_data::YAXArray; stats_name::S
     return YAXArray(dims(orig_data), Array(anomalies), anomalies_metadata)
 end
 
-function computeAnomaliesGM(
+
+function anomaliesGM(
     orig_data::YAXArray; ref_data::Union{YAXArray, Nothing}=nothing, stats_name::String="ANOM-GM"
 )
-    gms = isnothing(ref_data) ? computeGlobalMeans(orig_data) : computeGlobalMeans(ref_data)
-    return computeAnomalies(orig_data, gms; stats_name)
+    gms = isnothing(ref_data) ? globalMeans(orig_data) : globalMeans(ref_data)
+    return anomalies(orig_data, gms; stats_name)
 end
 
 
-function computeSTD(data::YAXArray, dimension::Symbol)
+function standardDev(data::YAXArray, dimension::Symbol)
     meta_new = deepcopy(data.properties)
     meta_new["_statistic"] = "STD"
     meta_new["_id"] = buildMetaDataID(meta_new)
-    standard_devs = dropdims(std(data, dims = dimension), dims = dimension)
+    standard_devs = dropdims(Statistics.std(data, dims = dimension), dims = dimension)
     return YAXArray(otherdims(data, dimension), standard_devs, meta_new)
 end

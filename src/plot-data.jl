@@ -1,6 +1,3 @@
-using ColorSchemes
-using Dates
-
 """ plotValsOnMap!(fig::Figure, means::AbstractArray, title::String;
                     colors=nothing, color_range=nothing, high_clip=(1,0,0),
                     low_clip=(0,0,1), pos=(x=1, y=1), pos_legend=nothing

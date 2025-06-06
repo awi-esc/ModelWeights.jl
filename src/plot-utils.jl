@@ -1,28 +1,17 @@
-using ColorSchemes
-using Dates
-using TextWrap
-using Statistics
-using DimensionalData
-
-using CairoMakie
-using GeoMakie
-
-CairoMakie.activate!(type = "svg")
-
 function getFigure(figsize, fontsize)
     size_pt = 72 .* figsize
     fig = Figure(size = size_pt, fontsize = fontsize)
     return fig
 end
 
+function savePlot(fig, target_path::String)
+    target_path = Data.individuatePath(target_path)
+    save(target_path, fig)
+    @info "saved plot to " target_path
+end
 
 function savePlot(fig, target_dir::String, target_fn::String)
-    if !isdir(target_dir)
-        mkpath(target_dir)
-    end
-    path_to_target = joinpath(target_dir, target_fn)
-    save(path_to_target, fig)
-    @info "saved plot to " path_to_target
+    savePlot(fig, joinpath(target_dir, target_fn))
 end
 
 function plotDistMatrices(distMat, diagnostic, models, modelRefs)
@@ -101,7 +90,6 @@ function sortLongitudesWest2East(data::AbstractArray)
     lookup_lon = Lookups.Sampled(
         sorted_lon;
         span = Lookups.Irregular(minimum(lon), maximum(lon)),
-        # order=Lookups.Unordered()
         order = Lookups.ForwardOrdered(),
     )
     data = data[lon=At(sorted_lon)]
@@ -116,9 +104,7 @@ Convert data given in unit 'kg s-1' into Sverdrups (Sv).
 """
 function convertKgsToSv!(data::YAXArray)
     if data.properties["units"] != "kg s-1"
-        msg =
-            "The unit of the data should be 'kg s-1', but it is " * data.properties["units"]
-        throw(ArgumentError(msg))
+        throw(ArgumentError("Required unit: 'kg s-1', found: $(data.properties["units"])"))
     end
     data[1:end] = data .* (10^-9)
     data.properties["units"] = "Sv"
@@ -143,51 +129,6 @@ function getClosestGridPoint(location::Dict, longitudes::Vector, latitudes::Vect
     lat = latitudes[idx_lat]
     lon = longitudes[idx_lon]
     return Dict([("name", location["name"]), ("lon", lon), ("lat", lat)])
-end
-
-"""
-    kelvinToCelsius(data::AbstractArray)
-
-Return a copy of `data` with values given in Kelvin covnerted into Degree Celsius.
-
-# Arguments:
-- `data`:
-"""
-function kelvinToCelsius(data::YAXArray)
-    units = data.properties["units"]
-    df = deepcopy(data)
-    if isa(units, String) && units == "K"
-        df = df .- 273.15
-        df.properties["units"] = "degC"
-    elseif isa(units, Vector)
-        indices = findall(units .== "K")
-        if !isempty(indices)
-            if hasdim(df, :member)
-                df[member=indices] .= df[member=indices] .- 273.15
-            else
-                df[model=indices] .= df[model=indices] .- 273.15
-            end
-            df.properties["units"] = "degC"
-        end
-    end
-    return df
-end
-
-
-"""
-    kelvinToCelsius!(datamap::DataMap)
-
-Modify entries of `datamap` such that all data is given in Degree Celsius (instead) 
-of Kelvin.
-
-# Arguments:
-- `datamap`:
-"""
-function kelvinToCelsius!(datamap::DataMap)
-    for (id, da) in datamap
-        datamap[id] = kelvinToCelsius(da)
-    end
-    return nothing
 end
 
 

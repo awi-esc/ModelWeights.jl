@@ -1,21 +1,16 @@
 module ModelWeights
 
-const MODEL_MEMBER_DELIM = "#"
-const MODEL_NAME_FIXES = Dict("FGOALS_g2" => "FGOALS-g2", "ACCESS1.3" => "ACCESS1-3")
+# include submodules
+include("Data.jl")
+include("Timeseries.jl")
+include("Weights.jl")
+include("Plots.jl")
 
-include("helper-functions.jl")
-include("data-utils.jl")
-include("timeseries.jl")
-include("datamap.jl")
-include("diagnostics.jl")
-include("data-functions.jl")
-include("plot-utils.jl")
-include("weights.jl")
-include("plot-weights.jl")
-include("plot-data.jl")
-include("main-functions.jl")
-
-
+# make submodules available in the scope of main module (ModelWeights)
+using .Data  
+using .Timeseries
+using .Weights
+using .Plots
 
 export loadDataFromYAML, loadDataFromESMValToolRecipes, climwipWeights
 
@@ -24,19 +19,20 @@ export joinDataMaps
 export writeDataToDisk, readDataFromDisk
 
 export getUncertaintyRanges,
-    computeGlobalMeans,
+    globalMeans,
     addAnomalies!,
     approxAreaWeights,
-    computeAnomaliesGM!,
+    anomaliesGM!,
     addAnomaliesGM!
-export addLinearTrend!, computeLinearTrend
+export addLinearTrend!, linearTrend
 export setToSummarizedMembers!, summarizeEnsembleMembersVector
 export getLandMask, getOceanMask, addMasks!, subsetModelData, alignPhysics
 
 
-export computeWeightedAvg, applyWeights, getModelLogLikelihoods
-export makeEqualWeights, distributeWeightsAcrossMembers
+export weightedAvg, applyWeights, getModelLogLikelihoods
+export equalWeights, distributeWeightsAcrossMembers
 export writeWeightsToDisk, saveWeightsAsNCFile
+
 
 
 end # module ModelWeights

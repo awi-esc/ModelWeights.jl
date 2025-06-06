@@ -14,6 +14,22 @@ function getAvailableIds(data::DataMap, ids::Vector{String})
 end
 
 
+function activeDiagnostics(config::Dict{String, Number})
+    return filter(k -> config[k] > 0, collect(keys(config)))
+end
+
+
+function ensureDiagnosticsAvailable(dm::DataMap, diagnostics::Vector{String}, label::String)
+    ids = getAvailableIds(dm, diagnostics)
+    missing_ids = filter(x -> !(x in ids), diagnostics)
+    if isempty(missing_ids)
+        return nothing
+    else 
+        throw(ArgumentError("Missing $label data for $(missing_ids)!"))
+    end
+end
+
+
 
 """
     addDiagnostic!(datamap::DataMap, fn::Function, args...; kwargs..., id_suffix::String="")
