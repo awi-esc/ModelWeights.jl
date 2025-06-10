@@ -178,19 +178,12 @@ Equally distribute weight for each model over its members.
 """
 function distributeWeightsAcrossMembers(weights::YAXArray, members::Vector{String})
     models = Array(dims(weights, :model))
-    counts_models = map(
-        m -> length(findall(x -> startswith(x, m * MODEL_MEMBER_DELIM), members)),
-        models,
-    )
-    w_members = []
-    for (i, m) in enumerate(models)
-        n_members = counts_models[i]
+    w_members = map(models) do m
+        n_members = count(x -> startswith(x, m * MODEL_MEMBER_DELIM), members)
         w = only(weights[model=At(m)])
-        for _ in range(1, n_members)
-            push!(w_members, w / n_members)
-        end
+        fill(w / n_members, n_members)
     end
-    return YAXArray((Dim{:member}(members),), w_members)
+    return YAXArray((Dim{:member}(members),), reduce(vcat, w_members))
 end
 
 

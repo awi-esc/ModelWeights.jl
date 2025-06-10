@@ -93,33 +93,31 @@ end
 
 
 """
-    getAllCombinations(v...)
+    combineAll(v::Vararg{Vector{String}}; sep::String="_")
 
-Generate vector of strings with all possible combinations of input vectors,
-where each combination consists of one element from each input vector, 
-concatenated as a string with underscores separating the elements.
+Generate vector with all possible combinations of strings, each of which is a concatenation 
+of elements from each input vector in the given order, concatenated by `sep` (default: _).
 
 # Arguments
-- `v...`: A variable number of input vectors.
+- `v::Vararg{Vector{String}}`: A variable number of input vectors.
+- `sep::String`: seperator
 
 # Example
 ```jldoctest
-julia> ModelWeights.getAllCombinations(["tos", "tas"], ["CLIM"])
+julia> ModelWeights.Data.combineAll(["tos", "tas"], ["CLIM"])
 2-element Vector{String}:
  "tos_CLIM"
  "tas_CLIM"
 ```
 """
-function getAllCombinations(v...)
+function combineAll(v::Vararg{Vector{String}}; sep::String="_")
     if any(isempty.(v))
         @warn "At least one input vector is empty -> empty vector returned!"
+        return Vector{String}()
     end
-    combis = Vector{String}()
-    for elems in Iterators.product(v...)
-        push!(combis, join(elems, "_"))
-    end
-    return combis
+    return reduce(vcat, map(elems -> join(elems, sep), Iterators.product(v...)))
 end
+
 
 function warnIfhasMissing(df::YAXArray; name::String="")
     base = "Data contains missing values"
