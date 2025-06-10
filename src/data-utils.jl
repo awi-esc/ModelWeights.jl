@@ -732,6 +732,15 @@ function avgObsDatasets(observations::YAXArray)
 end
 
 
+
+function distancesData(data::ClimateData, config::Dict{String, Number})
+    return distancesData(data.models, data.obs, config)
+end
+
+function distancesData(data::ClimateData, diagnostics::Vector{String})
+    return distancesData(data.models, data.obs, diagnostics)
+end
+
 function distancesData(model_data::DataMap, obs_data::DataMap, config::Dict{String, Number})
     return distancesData(model_data, obs_data,  activeDiagnostics(config))
 end
@@ -748,12 +757,9 @@ Compute RMSEs between models and observations for `diagnostics`.
 function distancesData(model_data::DataMap, obs_data::DataMap, diagnostics::Vector{String})
     ensureDiagnosticsAvailable(model_data, diagnostics, "MODEL")
     ensureDiagnosticsAvailable(obs_data, diagnostics, "OBSERVATIONAL")
-    distances_all = Vector{YAXArray}(undef, length(diagnostics))
-    for (i, key) in enumerate(diagnostics)
-        models = model_data[key]
-        observations = obs_data[key]
-        distances_all[i] =  distancesData(models, observations)
-        # TODO: recheck the metadata here! standard_name should be converted to a vector?!
+    # TODO: recheck the metadata here! standard_name should be converted to a vector?!
+    distances_all = map(diagnostics) do key 
+        distancesData(model_data[key], obs_data[key])
     end
     return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics))
 end
@@ -769,8 +775,7 @@ If several observational datasets are present, the average across all is taken.
 function distancesData(models::YAXArray, observations::YAXArray)
     obs = hasdim(observations, :model) ? avgObsDatasets(observations) : observations
     # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
-    # I think this is not necessary actually (the deepcopy) 
-    # Write test to be sure!!
+    # I think this is not necessary actually (the deepcopy) åWrite test to be sure!!
     # models = deepcopy(models)
     n = length(dims(models, :member))
     member_names = Vector{String}(undef, n)
@@ -798,9 +803,8 @@ end
 function distancesModels(model_data::DataMap, diagnostics::Vector{String})
     ensureDiagnosticsAvailable(model_data, diagnostics, "MODEL")
     distances_all = Vector{YAXArray}(undef, length(diagnostics))
-    for (i, key) in enumerate(diagnostics)
-        models = model_data[key]
-        distances_all[i] = distancesModels(models)
+    distances_all = map(diagnostics) do key 
+        distancesModels(model_data[key])
     end
     return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics))
 end
