@@ -582,19 +582,17 @@ end
         data::YAXArray, updateMeta::Bool; fn::Function=Statistics.mean
 )
 
-For each model and variable (if several given), compute a summary statistic 
-(default: mean) across all members of that model. Instead of 'member', the 
-returned YAXArray has dimension 'model'.
+For each model compute a summary statistic (default: mean) across all its members. 
+The returned YAXArray has dimension 'model'.
 
 # Arguments:
-- `data::YAXArray`: a YAXArray with at least dimension 'member'
+- `data::YAXArray`: YAXArray with at least dimension 'member'
 - `updateMeta::Bool`: set true if the vectors in the metadata refer to 
 different models. Set to false if vectors refer to different variables.
+- `fn::Function`: Function to be applied on data
 """
 function summarizeEnsembleMembersVector(
-    data::YAXArray,
-    updateMeta::Bool;
-    fn::Function = Statistics.mean,
+    data::YAXArray, updateMeta::Bool; fn::Function = Statistics.mean
 )
     throwErrorIfModelDimMissing(data)
     data = setLookupsFromMemberToModel(data, ["member"])
@@ -607,10 +605,10 @@ function summarizeEnsembleMembersVector(
         deepcopy(data.properties),
     )
     for m in models
-        dat = data[model=Where(x->x==m)]
+        dat = data[model = Where(x -> x == m)]
         average =
             isempty(dimensions) ? fn(dat) : mapslices(x -> fn(x), dat; dims = (:model,))
-        summarized_data[model=At(m)] = average
+        summarized_data[model = At(m)] = average
     end
     summarized_data = replace(summarized_data, NaN => missing)
 

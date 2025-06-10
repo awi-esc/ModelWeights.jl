@@ -373,7 +373,7 @@ function climwipWeights(
     dists_indep_all::YAXArray,
     dists_perform_all::YAXArray,
     config::ConfigWeights,
-    suffix::String
+    suffix_name::String
 )
     weights_perform = Data.normalize(config.performance)
     weights_indep = Data.normalize(config.independence)
@@ -404,7 +404,7 @@ function climwipWeights(
     else
         w_members = weights
     end
-    names = String.(map(x -> join([x, suffix], "-"), ["wP", "wI", "combined"]))
+    names = String.(map(x -> join([x, suffix_name], "-"), ["wP", "wI", "combined"]))
     weights_arr = cat([wP, wI, weights]..., dims=Dim{:weight}(names))
     model_weights = ClimWIP(
         performance_distances = dists_perform_all,
