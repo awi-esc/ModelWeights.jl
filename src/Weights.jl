@@ -18,8 +18,8 @@ using ..Data
 
 
 @kwdef struct ConfigWeights
-    performance::Dict{String,Number} = Dict()
-    independence::Dict{String,Number} = Dict()
+    performance::Dict{String, Number} = Dict()
+    independence::Dict{String, Number} = Dict()
     sigma_performance::Number = 0.5
     sigma_independence::Number = 0.5
 end

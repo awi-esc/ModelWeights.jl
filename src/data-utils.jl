@@ -745,7 +745,6 @@ function distancesData(model_data::DataMap, obs_data::DataMap, config::Dict{Stri
     return distancesData(model_data, obs_data,  activeDiagnostics(config))
 end
 
-
 """
     distancesData(model_data::DataMap, obs_data::DataMap, diagnostics_ids::Vector{String})
 
@@ -1012,25 +1011,38 @@ end
 
 
 """
-    normalizes(data::Dict{String, Number})
+    normalize(data::Dict{String, <:Number})
 
-Normalize values for every entry in `data` such that they sum up to 1.
-
-The returned YAXArray has dimension 'diagnostic' whose lookup names are the keys of `data`.
+Normalize values for every entry in `data` such that they sum up to 1. If remove_zero is
+true (default), the returned dictionary does not contain entries for which values were 0.
 """
-function normalize(data::Dict{String, Number})
-    data = filter(((k, v),) -> v != 0, data)
+function normalize(data::Dict{String, <:Number}; remove_zero::Bool=true)
+    result = Dict{String, Float64}()
     total = sum(values(data))
-    normalized_data = YAXArray(
-        (Dim{:diagnostic}(collect(keys(data))),), 
-        Array{Float64}(undef, length(data))
-    )
-    for key in keys(data)
-        normalized_data[diagnostic = At(key)] = data[key] / total
+    data = remove_zero ? filter(((k, v),) -> v != 0, data) : data
+    for k in keys(data)
+        result[k] = data[k] ./ total 
     end
-    return normalized_data
+    return result
 end
 
+
+"""
+    normalizeToYAX(data::Dict{String, <:Number})
+
+Normalize values for every entry in `data` such that they sum up to 1 and return a YAXArray 
+with dimension 'diagnostic' whose lookup names are the keys of `data`.
+"""
+function normalizeToYAX(data::Dict{String, <:Number})
+    normed = normalize(data)
+    normalized_yax = YAXArray(
+        (Dim{:diagnostic}(collect(keys(normed))),), Array{Float64}(undef, length(normed))
+    )
+    for key in keys(normed)
+        normalized_yax[diagnostic = At(key)] = normed[key]
+    end
+    return normalized_yax
+end
 
 
 """

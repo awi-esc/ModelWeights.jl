@@ -129,6 +129,12 @@ function warnIfhasMissing(df::YAXArray; name::String="")
 end
 
 
+function currentTime()
+    currentDay = string(Dates.today()) * '_'
+    return currentDay * Dates.format(Dates.now(), "HH_MM")
+end
+
+
 """
     individuatePath(target::String)
 
@@ -142,7 +148,7 @@ function individuatePath(target::String)
     end
     if isfile(target)
         msg = "$target already exisits, will use "
-        target = joinpath(target_dir, join([getCurrentTime(), basename(target)], "_"))
+        target = joinpath(target_dir, join([currentTime(), basename(target)], "_"))
         @info msg * "$target instead."
     end
     return target
@@ -187,5 +193,4 @@ function kelvinToCelsius!(datamap::DataMap)
     end
     return nothing
 end
-
 
