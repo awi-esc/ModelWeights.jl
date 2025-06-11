@@ -4,14 +4,14 @@ function getFigure(figsize, fontsize)
     return fig
 end
 
-function savePlot(fig, target_path::String)
-    target_path = Data.individuatePath(target_path)
+function savePlot(fig, target_path::String; overwrite::Bool=false)
+    target_path = overwrite ? target_path : Data.individuatePath(target_path)
     save(target_path, fig)
     @info "saved plot to " target_path
 end
 
-function savePlot(fig, target_dir::String, target_fn::String)
-    savePlot(fig, joinpath(target_dir, target_fn))
+function savePlot(fig, target_dir::String, target_fn::String; overwrite::Bool=false)
+    savePlot(fig, joinpath(target_dir, target_fn); overwrite)
 end
 
 function plotDistMatrices(distMat, diagnostic, models, modelRefs)
@@ -65,12 +65,6 @@ Convert longitudes measured from -180° to 180° into 0° to 360° scale.
 """
 function lon180to360(lon::Number)
     return ifelse(lon < 0, lon + 360, lon)
-end
-
-function getCurrentTime()
-    currentDay = string(Dates.today()) * '_'
-    currentTime = Dates.format(Dates.now(), "HH_MM")
-    return currentDay * currentTime
 end
 
 
