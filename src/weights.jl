@@ -1,44 +1,3 @@
-"""
-    performance(generalizedDistances::AbstractArray, sigmaD::Number)
-
-Compute the performance part of the overall weight for each model i defined as:
-
-```math
-w^{P}_i = \\frac{e^{-(\\frac{D_i}{\\sigma_D})^2}}{N}
-```
-
-# Arguments:
-- `generalizedDistances::AbstractArray`: contains generalized distances Di for each model
-- `sigmaD::Number`: free shape parameter for impact of performance weights
-"""
-function performance(generalizedDistances::AbstractArray, sigmaD::Number)
-    return exp.(-(generalizedDistances ./ sigmaD) .^ 2)
-end
-
-
-"""
-    independence(generalizedDistances::AbstractArray, sigmaS::Number)
-
-Compute the independence part of the overall weight for each model i defined as:
-
-```math
-w^{I}_i = \\frac{1}{1 + \\sum_{j \\ne i} e^{-\\left( \\frac{S_{ij}}{\\sigma_S} \\right)^2}}
-```
-
-# Arguments:
-- `generalizedDistances`: contains generalized distances S_{i,j} for each model 
-(i.e. not model members) pair has two dimensions, 'model1' and 'model2'
-- `sigmaS`: free shape parameter for impact of independence weights
-"""
-function independence(generalizedDistances::AbstractArray, sigmaS::Number)
-    # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
-    indep_parts = sum(exp.(-(generalizedDistances ./ sigmaS) .^ 2), dims = :model2)
-    indep_parts = dropdims(indep_parts, dims = :model2)
-    indep_parts = DimensionalData.set(indep_parts, :model1 => :model)
-    return indep_parts
-end
-
-
 # TODO: check use_members_equal_weights not only taken into account for equal weights?! Also for weights on level of models?
 """
     weightedAvg(
@@ -84,8 +43,7 @@ function weightedAvg(
         if sort(models_data) != sort(models_weights)
             # weights may have been computed wrt a different set of variables as we use here, 
             # so the list of models for which weights have been computed may be shorter 
-            # than the models of the given data. But for all given weights there must be data 
-            # for now.
+            # than the models of the given data.
             data_no_weights = [model for model in models_data if !(model in models_weights)]
             msg = "No weights were computed for follwoing models, thus not considered in the weighted average:"
             @warn msg data_no_weights
@@ -95,11 +53,9 @@ function weightedAvg(
             end
         end
         # subset data s.t only data that will be weighted is considered
-        if dim_symbol == :member
-            da = da[member = Where(m -> m in models_weights)]
-        else
-            da = da[model = Where(m -> m in models_weights)]
-        end
+        da = dim_symbol == :member ? 
+            da[member = Where(m -> m in models_weights)] :
+            da[model = Where(m -> m in models_weights)]
     end
     @assert isapprox(sum(weights), 1; atol = 10^-4)
     # there shouldnt be data for which there is no weight since it was filtered out above
@@ -347,7 +303,8 @@ end
     climwipWeights(
         dists_indep_all::YAXArray, 
         dists_perform_all::YAXArray,
-        config::ConfigWeights
+        config::ConfigWeights;
+        suffix_name::Stirng = "climwip"
     )
 
 Compute weight for each model in multi-model ensemble according to approach
@@ -359,63 +316,115 @@ Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
 
 # Arguments:
 - `dists_indep_all::YAXArray`: RMSEs between pairs of models for all 
-combinations of variables and diagnostics; has dimensions 'member1', 'member2', 
-'variable', 'diagnostic'.
-- `dists_perform_all::YAXArray`: RMSEs between model and observational 
-data for all combinations variables and diagnostics; has dimensions 'member', 
-'variable', 'diagnostic'.
-- `config::ConfigWeights`: Parameters specifiying the relative contributions 
-of each combination of variable and diagnostic.
-- `suffix::String`: added to name of each type of weights, s.t. names are: 
-wP-suffix, wI-suffix, combined-suffix.
+combinations of variables and diagnostics; has dimensions 'member1', 'member2', 'variable', 
+'diagnostic'.
+- `dists_perform_all::YAXArray`: RMSEs between model and observational data for all 
+combinations of variables and diagnostics; has dimensions 'member', 'variable', 'diagnostic'.
+- `config::ConfigWeights`: Parameters specifiying the relative contributions of each 
+combination of variable and diagnostic.
+- `suffix_name::String`: added to name of each type of weights, s.t. names are: wP-suffix, 
+wI-suffix, combined-suffix (default 'climwip').
 """
 function climwipWeights(
     dists_indep_all::YAXArray,
     dists_perform_all::YAXArray,
-    config::ConfigWeights,
-    suffix_name::String
+    config::ConfigWeights;
+    suffix_name::String = "climwip"
 )
-    weights_perform = Data.normalize(config.performance)
-    weights_indep = Data.normalize(config.independence)
-
+    weights_perform = Data.normalizeToYAX(config.performance)
+    weights_indep = Data.normalizeToYAX(config.independence)
+    
     Di = Data.generalizedDistances(dists_perform_all, weights_perform)
     Sij = Data.generalizedDistances(dists_indep_all, weights_indep)
 
-    performances = performance(Di, config.sigma_performance)
-    independences = independence(Sij, config.sigma_independence)
-    weights = performances ./ independences
-    weights = weights ./ sum(weights)
-    # consider performance and independence weights independently
-    # for performance weights, we assume that all models have the same degree of dependence
-    # among each other (e.g. all are compeletely independent), i.e. we can 
-    # just consider the performance Parts (the denominator would be the same for all models)
-    norm_p = sum(performances)
-    wP = performances ./ norm_p
+    wP = performanceWeights(Di, config.sigma_performance)
+    wI = independenceWeights(Sij, config.sigma_independence)
 
-    # for independence weights, we assume that all models perform equally well, i.e. 
-    # Di = Dj for all models i, j. Thus, the numerator would be the same for all models, 
-    # we just set Di=0 for all models, i.e. the numerator is 1 for all models
-    norm_i = sum(1 ./ independences)
-    wI = (1 ./ independences) ./ norm_i
+    w = wP ./ wI
+    w = w ./ sum(w)
 
     if hasdim(dists_perform_all, :member)
         members = Array(dims(dists_perform_all, :member))
-        w_members = distributeWeightsAcrossMembers(weights, members)
+        w_members = distributeWeightsAcrossMembers(w, members)
     else
-        w_members = weights
+        w_members = w
     end
     names = String.(map(x -> join([x, suffix_name], "-"), ["wP", "wI", "combined"]))
-    weights_arr = cat([wP, wI, weights]..., dims=Dim{:weight}(names))
-    model_weights = ClimWIP(
+    weights_arr = cat([wP, wI, w]..., dims=Dim{:weight}(names))
+    return ClimWIP(
         performance_distances = dists_perform_all,
         independence_distances = dists_indep_all,
         Di = Di,
         Sij = Sij,
         w = weights_arr,
         w_members = w_members,
-        config = config,
+        config = config
     )
-    return model_weights
+end
+
+
+"""
+    performanceWeights(Di::AbstractArray, sigmaD::Number)
+
+Compute the ClimWIP performance weight for each model i with generalized distances `Di`.
+
+```math
+w^{P}_i = a_0 \\cdot \\frac{e^{-(\\frac{D_i}{\\sigma_D})^2}}{N}
+```
+
+# Arguments:
+- `Di::YAXArray`: generalized distances Di for each model
+- `sigmaD::Number`: free shape parameter for impact of performance weights
+"""
+function performanceWeights(Di::YAXArray, sigmaD::Number)
+    performances = exp.(-(Di ./ sigmaD) .^ 2)
+    return performances ./ sum(performances)
+end
+
+function performanceWeights(dists_perform_all::YAXArray, config::ConfigWeights)
+    weights_perform = Data.normalizeToYAX(config.performance)
+    Di = Data.generalizedDistances(dists_perform_all, weights_perform)
+    return performanceWeights(Di, config.sigma_performance)
+end
+
+function performanceWeights(data::ClimateData, config::ConfigWeights)
+    dists = Data.distancesData(data.models, data.obs, config.performance)
+    return performanceWeights(dists, config)
+end
+
+
+"""
+    independenceWeights(Sij::YAXArray, sigmaS::Number)
+
+Compute the independence weight for each model i with generalized distances between pairs of
+models, `Sij`.
+
+```math
+w^{I}_i = a_0 \\cdot \\frac{1}{1 + \\sum_{j \\ne i} e^{-\\left( \\frac{S_{ij}}{\\sigma_S} \\right)^2}}
+```
+
+# Arguments:
+- `Sij`: generalized distances for each pair of models with dimensions 'model1', 'model2'
+- `sigmaS`: free shape parameter for impact of independence weights
+"""
+function independenceWeights(Sij::YAXArray, sigmaS::Number)
+    # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
+    independences = sum(exp.(-(Sij ./ sigmaS) .^ 2), dims = :model2)
+    independences = dropdims(independences, dims = :model2)
+    independences = DimensionalData.set(independences, :model1 => :model)
+    independences = 1 ./ independences
+    return independences ./ sum(independences)
+end
+
+function independenceWeights(dists_indep_all::YAXArray, config::ConfigWeights)
+    weights = Data.normalizeToYAX(config.independence)
+    Sij = Data.generalizedDistances(dists_indep_all, weights)
+    return independenceWeights(Sij, config.sigma_independence)
+end
+
+function independenceWeights(data::ClimateData, config::ConfigWeights)
+    dists = Data.distancesModels(data.models, config.independence)
+    return independenceWeights(dists, config)
 end
 
 
@@ -424,7 +433,7 @@ function climwipWeights(
 )
     dists_perform = Data.distancesData(data.models, data.obs, config_weights.performance)
     dists_indep = Data.distancesModels(data.models, config_weights.independence)
-    return climwipWeights(dists_indep, dists_perform, config_weights, suffix)
+    return climwipWeights(dists_indep, dists_perform, config_weights; suffix_name=suffix)
 end
 
 
@@ -441,7 +450,6 @@ function addClimwipWeights!(data::ClimateData, weights::ClimWIP)
     addWeights!(data, weights.w)
     return nothing
 end
-
 
 
 """
@@ -468,7 +476,6 @@ function addLikelihoodWeights!(
     addWeights!(data, likelihoodWeights(values, models, distr, id))
     return nothing
 end
-
 
 
 function addWeights!(data::ClimateData, weights::YAXArray)
