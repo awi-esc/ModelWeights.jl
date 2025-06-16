@@ -524,10 +524,9 @@ function constrainFilenames(filenames::Vector{String}, constraint::Dict)
 end
 
 
-function constrainVarSubdirs!(base_paths::Vector{String}, constraint::Dict)
-    subdir_constraints = get(constraint, "subdirs", Vector{String}())
-    if !isnothing(subdir_constraints) && !isempty(subdir_constraints)
-        filter!(p -> any([occursin(name, p) for name in subdir_constraints]), base_paths)
+function constrainSubdirs!(paths::Vector{String}, subdir_constraints::Vector{String})
+    if !isempty(subdir_constraints)
+        filter!(p -> any([occursin(name, p) for name in subdir_constraints]), paths)
     end
     return nothing
 end
@@ -567,10 +566,10 @@ function resolvePaths(
 )
     has_constraint = !isnothing(constraint) && !isempty(constraint)
     if dir_per_var
-        base_paths = filter(isdir, readdir(base_path, join = true))
-        filter!(x -> occursin("_" * meta.variable, x), base_paths)
+        base_paths = filter(isdir, readdir(base_path, join = true)) # all subdirectories
+        filter!(x -> occursin("_" * meta.variable, x), base_paths) # just subdirs for variable
         if has_constraint
-            constrainVarSubdirs!(base_paths, constraint)
+            constrainSubdirs!(base_paths, get(constraint, "base_subdirs", Vector{String}()))
         end
     else
         base_paths = [base_path]
