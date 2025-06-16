@@ -25,26 +25,32 @@ const MODEL_NAME_FIXES = Dict("FGOALS_g2" => "FGOALS-g2", "ACCESS1.3" => "ACCESS
 
 @enum LEVEL MODEL = 0 MEMBER = 1
 
-KEYS_METADATA = [
-    "mip_era",
-    "variant_label",
-    "grid_label",
-    "realization",
-    "physics_version",
-    "initialization_method",
-    "units",
-]
+META_CMIP5 = ["physics_version", "realization", "initialization_method"]
+META_CMIP6 = ["mip_era", "variant_label", "grid_label"]
+
+@kwdef mutable struct MetaData
+    paths::Vector{String}
+    variable::String
+    experiment::String
+    timerange::String
+    alias::String
+    subdir::String
+    variable_long::String
+    statistic::String
+    esmvaltoolPreproc::String
+    id::String
+end
 
 const DataMap = Dict{String, YAXArray}
 
-function Base.show(io::IO, x::Dict{String,YAXArray})
+function Base.show(io::IO, x::Dict{String, YAXArray})
     println(io, "$(typeof(x))")
     for (k, v) in x
         println(io, "$k: $(size(v))")
     end
 end
 
-function Base.show(io::IO, ::MIME"text/plain", x::Dict{String,YAXArray})
+function Base.show(io::IO, ::MIME"text/plain", x::Dict{String, YAXArray})
     println(io, "$(typeof(x))")
     for (k, v) in x
         println(io, "$k: $(size(v))")

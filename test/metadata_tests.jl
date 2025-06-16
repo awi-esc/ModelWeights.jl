@@ -1,4 +1,4 @@
-@testset "Test updateMetadata!" begin
+@testset "Test updateMetadataFromMultipleFiles!" begin
 end
 
 @testset "Test joinMetadata" begin
@@ -10,7 +10,7 @@ end
 @testset "Test fixModelNamesMetadata" begin
 end
 
-@testset "Test getUniqueMemberIds" begin
+@testset "Test uniqueMemberID" begin
 end
 
 @testset "Test getCMIPModelsKey" begin

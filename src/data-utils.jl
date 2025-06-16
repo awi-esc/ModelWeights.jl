@@ -79,6 +79,13 @@ function buildCMIP5EnsembleMember(
 end
 
 
+function buildCMIP5EnsembleMember(
+    realization::Number, initialization::Number, physics::Number,
+)
+    return "r" * string(realization) * "i" * string(initialization) * "p" * string(physics)
+end
+
+
 """
     setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
 
@@ -102,68 +109,6 @@ function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
         data = DimensionalData.set(data, Symbol(dim) => Symbol(new_dim_name))
     end
     return data
-end
-
-
-"""
-    updateMetadata!(
-        meta::Dict{String, Any},
-        source_names::Vector{String},
-        is_model_data::Bool
-    )
-
-Update metadata `meta` s.t. attributes that were only present in some 
-files/models are set to missing. 
-
-Further key-value pairs are added concerning the data sources:
-- 'member_names' (for model data only): vector that contains for every model a 
-vector with the unique names of that model's members identifier consisting of 
-variant_label, model_name and for CMIP6 models also grid_label.
-- 'model_names': vector whose length is the sum of the number of all models' 
-members (or vector of filenames of observational data); it contains the model 
-names for each unique model member, i.e. this vector will not be unique if any 
-model had several members.
-
-Arguments:
-- `source_names::Vector{String}`: model names (or filenames of observational 
-data)as retrieved from the original files the data was loaded from. 
-"""
-function updateMetadata!(
-    meta_dict::Dict{String,Any},
-    source_names::Vector{String},
-    is_model_data::Bool,
-)
-    sort_indices = sortperm(source_names)
-    for key in keys(meta_dict)
-        values = meta_dict[key][sort_indices]
-        meta_dict[key] = values
-        # if none was missing and all have the same value, just use a string
-        if !any(ismissing, values) && length(unique(values)) == 1
-            meta_dict[key] = string(values[1])
-        end
-    end
-    # in some cases, the metadata model names do not match the model names as retrieved from the filenames 
-    included_data = fixModelNamesMetadata(source_names[sort_indices])
-    meta_dict["model_names"] = included_data
-
-    if is_model_data
-        member_ids = getUniqueMemberIds(meta_dict, included_data)
-        meta_dict["member_names"] = member_ids
-
-        # if just data from one file is loaded, meta_dict["model_id"] is a string
-        # (and we leave it as a string)
-        get!(meta_dict, "model_id", "")
-        if isa(meta_dict["model_id"], String)
-            meta_dict["model_id"] = fixModelNamesMetadata([meta_dict["model_id"]])[1]
-        else
-            indices_non_missing = findall(map(x -> !ismissing(x), meta_dict["model_id"]))
-            names = String.(meta_dict["model_id"][indices_non_missing])
-            fixed_models = fixModelNamesMetadata(names)
-            meta_dict["model_id"][indices_non_missing] = fixed_models
-        end
-        meta_dict["physics"] = getPhysicsFromMembers(member_ids)
-    end
-    return nothing
 end
 
 
@@ -211,28 +156,25 @@ end
 
 
 """
-    getMetaAttributesFromESMValToolConfigs(
-        base_path_configs::String;
-        constraint::Union{Dict, Nothing} = nothing
-)
+    metaAttributesFromESMValToolRecipes(
+        base_path_configs::String; constraint::Union{Dict, Nothing} = nothing
+    )
 
-Read variable, statistic, experiment and timerange/alias values from ESMValTool 
-recipes stored at `base_path_configs` into a vector of Dictionaries storing the 
-respective readoff values.
+Read variable, statistic, experiment and timerange/alias values from ESMValTool recipes 
+stored at `base_path_configs` into a vector of Dictionaries storing the respective readoff 
+values.
 
-If constraint is given, a combination of 'statistic', 'experiment', etc. is 
-only retained if each of the respective readoff values aligns with the
-the specified constraints if provided.
+If `constraint` is given, a combination of 'statistic', 'experiment', etc. is only retained 
+if each of the respective readoff values aligns with the specified constraints.
 """
-function getMetaAttributesFromESMValToolConfigs(
-    base_path_configs::String;
-    constraint::Union{Dict,Nothing} = nothing,
+function metaAttributesFromESMValToolRecipes(
+    base_path_configs::String; constraint::Union{Dict,Nothing} = nothing
 )
     paths_configs = filter(
         x -> isfile(x) && endswith(x, ".yml"),
         readdir(base_path_configs, join = true),
     )
-    meta_attribs = Vector{Dict{String,Any}}()
+    meta_attribs = Vector{MetaData}()
     for path_config in paths_configs
         config = YAML.load_file(path_config)
         data_all = config["diagnostics"]
@@ -241,30 +183,85 @@ function getMetaAttributesFromESMValToolConfigs(
         for alias in aliases
             data = data_all[alias]["variables"]
             for (k, v) in data
-                variable, statistic = String.(split(k, "_"))
+                #statistic = occursin("_", k) ? String.(split(k, "_"))[2] : ""
+                variable = get(v, "short_name", "")
+                var_long = get(v, "variable_long_name", "")
+                preprocessor = get(v, "preprocessor", "")
                 if typeof(v["exp"]) <: String
                     experiment = v["exp"]
                 else
                     experiment = join(v["exp"], "-")
                 end
                 timerange = replace(get(v, "timerange", "full"), "/" => "-")
-                meta = createGlobalMetaDataDict(
-                    variable,
-                    experiment,
-                    statistic,
-                    alias,
-                    timerange,
+                meta = createMetaDataFromAttribs(
+                    variable, experiment, timerange, k, alias; var_long, preprocessor
                 )
-                if !(meta in meta_attribs)
+                # this may happen for instance if there are different recipes for CMIP5 and CMIP6
+                present = any(x -> isEqual(meta, x), meta_attribs)
+                if !present
                     push!(meta_attribs, meta)
                 end
             end
         end
     end
     if !isnothing(constraint)
-        applyDataConstraints!(meta_attribs, constraint)
+        constrainMetaData!(meta_attribs, constraint)
     end
     return meta_attribs
+end
+
+
+function isEqual(m1::MetaData, m2::MetaData)
+    return all(x -> getfield(m1, x) == getfield(m2, x), fieldnames(MetaData))
+end
+
+function metadataToDict(meta::MetaData; exclude::Union{Vector{Symbol}, Nothing}=nothing)
+    d = Dict{String, Any}()
+    for f in filter(x -> !(x in exclude), fieldnames(MetaData))
+        d[String(f)] = getfield(meta, f)
+    end
+    return d
+end
+
+
+function renameDictKeys!(data::Dict, keys::Vector)
+    for (old_k, new_k) in keys 
+        data[new_k] = data[old_k]
+        delete!(data, old_k)
+    end
+end
+
+
+function alignTimeseries!(data::Vector{YAXArray})
+    if !all(map(x -> hasdim(x, :time), data))
+        throw(ArgumentError("All datasets must have time dimension to align timeseries!"))
+    end
+    year_min = minimum(map(x -> minimum(map(Dates.year, dims(x, :time))), data))
+    year_max = maximum(map(x -> maximum(map(Dates.year, dims(x, :time))), data))
+    nb_years = year_max - year_min + 1
+
+    timerange = DateTime(year_min):Year(1):DateTime(year_max)
+    for (i, ds) in enumerate(data)
+        s = map(length, otherdims(ds, :time))
+            # if ds allows missing values, undef is initialized with missing
+        dat = Array{eltype(ds)}(undef, s..., nb_years)
+        ds_extended = YAXArray((otherdims(ds, :time)..., Dim{:time}(timerange)), dat)
+        ds_extended[time = Where(x->Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds # ds[time=:]
+        data[i] = ds_extended
+    end
+end
+
+
+function addPaths!(
+    attributes::Vector{MetaData}, 
+    path_data::String, 
+    dir_per_var::Bool;
+    constraint::Union{Dict, Nothing} = nothing 
+)
+    for meta in attributes
+        meta.paths = resolvePaths(meta, path_data, dir_per_var; constraint)
+    end
+    return nothing
 end
 
 
@@ -276,13 +273,13 @@ function get_required_fields_config(ds::Dict)
         "variables" => get(ds, "variables", nothing),
     )
     if any(isnothing.(values(data)))
-        msg = "Config yaml file must specify values for the following required keys: $(keys(data))."
+        msg = "Config yaml file must specify values for the following keys: $(keys(data))."
         throw(ArgumentError(msg))
     end
     # for fixed variables, no statistics are computed!
     # may add more than 'orog' for which no warning is thrown.
-    stats = get(ds, "statistics", nothing)
-    if isnothing(stats)
+    stats = get(ds, "statistics", "")
+    if isempty(stats)
         data["statistics"] = ["none"]
         if data["variables"] != ["orog"]
             @warn "No statistics specified for $(data["variables"])."
@@ -405,7 +402,7 @@ end
 
 
 """
-    getMetaDataFromYAML(
+    metaDataFromYAML(
         content::Dict, is_model_data::Bool; arg_constraint::Union{Dict, Nothing} = nothing
     )
 
@@ -421,16 +418,16 @@ file.
 - `is_model_data`: true for model data, false for observational data
 - `arg_constraint`: TODO
 """
-function getMetaDataFromYAML(
+function metaDataFromYAML(
     content::Dict, is_model_data::Bool; arg_constraint::Union{Dict, Nothing} = nothing
 )
     datasets = content["datasets"]
     base_path = get(content, "path_data", "")
     timerange_to_alias = get(content, "timerange_to_alias", Dict{String,String}())
 
-    meta_data = Dict{String, Dict{String, Any}}()
+    meta_data = Dict{String, MetaData}()
     for ds in datasets
-        meta_ds = Dict{String, Dict{String, Any}}()
+        meta_ds = Dict{String, MetaData}()
         # get data from config file
         req_fields = get_required_fields_config(ds)
         optional_fields = get_optional_fields_config(ds, timerange_to_alias)
@@ -440,8 +437,8 @@ function getMetaDataFromYAML(
         if !isnothing(arg_constraint)
             #setConstraintVal!(ds_constraint, arg_constraint)
             for (field, val) in arg_constraint
-                # if subset_shared is given as argument, it will subset 
-                # considering ALL loaded datasets, not individual ones!
+                # if subset_shared is given as argument, it will subset considering ALL 
+                # loaded datasets, not individual ones!
                 if field != "subset_shared"
                     if !(field in considered_keys)
                         @warn "$field is not a valid key to subset data!"
@@ -451,7 +448,6 @@ function getMetaDataFromYAML(
                 end
             end
         end
-
         # NOTE: if the second arg is an absolute path, joinpath will ignore the 
         # first arg and just use the second
         path_data = joinpath(base_path, req_fields["base_dir"])
@@ -460,29 +456,25 @@ function getMetaDataFromYAML(
                 for idx = 1:length(ds_constraint["timeranges"])
                     timerange = ds_constraint["timeranges"][idx]
                     alias = ds_constraint["aliases"][idx]
-
-                    meta = createGlobalMetaDataDict(
+                    meta = createMetaDataFromAttribs(
                         clim_var,
                         ds_constraint["exp"],
-                        stats,
-                        alias,
-                        timerange
+                        timerange,
+                        clim_var * "_" * stats, # TODO should also be possible to accept any name
+                        alias
                     )
                     # for observational data, experiment doesn't make sense
                     if !is_model_data
-                        meta["_experiment"] = ""
+                        meta["experiment"] = ""
                     end
-                    meta["_paths"] = getPathsToData(
-                        meta,
-                        path_data,
-                        ds_constraint["dir_per_var"],
-                        is_model_data;
-                        constraint = ds_constraint,
+                    meta.paths = resolvePaths(
+                        meta, path_data, ds_constraint["dir_per_var"]; 
+                        constraint = ds_constraint
                     )
-                    if !isempty(meta["_paths"])
-                        meta_ds[meta["_id"]] = meta
+                    if !isempty(meta.paths)
+                        meta_ds[meta.id] = meta
                     else
-                        @warn "No data found for $(meta["_id"])"
+                        @warn "No data found for $(meta.id)"
                     end
                 end
             end
@@ -494,7 +486,7 @@ function getMetaDataFromYAML(
         # merge new dataset with already loaded
         for (id, meta) in meta_ds
             if haskey(meta_data, id)
-                meta_data[id]["_paths"] = mergeMetaDataPaths(meta_data[id], meta)
+                meta_data[id].paths = mergeMetaDataPaths(meta_data[id], meta)
             else
                 meta_data[id] = meta
             end
@@ -509,34 +501,15 @@ end
 
 
 """
-    buildPathsToDataFiles(
-        path_data::String,
-        is_model_data::Bool;
-        model_constraints::Vector{String} = Vector{String}(),
-        project_constraints::Vector{String} = Vector{String}()
-    )
+    constrainFilenames(filenames::Vector{String}, constraint::Dict)
 
-Build vector of strings containing paths to data files in `path_data` 
-that were not filtered out by `model_constraints` or `project_constraints`.
-
-# Arguments:
-- `model_constraints::Vector{String}`:
-- `project_constraints::Vector{String}`:
+Return subvector of `filenames` retaining those strings that contain at least one of the 
+elements in `constraints["models"]` and in `constraints["projects"]`, respectively.
 """
-function buildPathsToDataFiles(
-    path_data::String,
-    is_model_data::Bool;
-    model_constraints::Vector{String} = Vector{String}(),
-    project_constraints::Vector{String} = Vector{String}(),
-)
-    if !isdir(path_data)
-        throw(ArgumentError(path_data * " does not exist!"))
-    end
-    # if isempty(project_constraints)
-    #     project_constraints = is_model_data ? ["CMIP"] : ["ERA5"]
-    # end
-    ncFiles = filter(x -> isfile(x) && endswith(x, ".nc"), readdir(path_data; join = true))
-    # constrain files that will be loaded
+function constrainFilenames(filenames::Vector{String}, constraint::Dict)
+    model_constraints = get(constraint, "models", Vector{String}())
+    project_constraints = get(constraint, "projects", Vector{String}())
+    
     function doIncludeFile(file)
         keep = !isempty(project_constraints) ?
             any([occursin(name, file) for name in project_constraints]) : true
@@ -546,124 +519,99 @@ function buildPathsToDataFiles(
         end
         return keep
     end
-    mask = map(f -> doIncludeFile(f), ncFiles)
-    return ncFiles[mask]
+    mask = map(f -> doIncludeFile(f), filenames)
+    return filenames[mask]
+end
+
+
+function constrainVarSubdirs!(base_paths::Vector{String}, constraint::Dict)
+    subdir_constraints = get(constraint, "subdirs", Vector{String}())
+    if !isnothing(subdir_constraints) && !isempty(subdir_constraints)
+        filter!(p -> any([occursin(name, p) for name in subdir_constraints]), base_paths)
+    end
+    return nothing
 end
 
 
 """
-    getPathsToData(
-        attribs::Dict{String, Any},
-        base_path_data::String,
-        dir_per_var::Bool,
-        is_model_data::Bool;
-        constraint::Union{Dict, Nothing}=nothing
+    resolvePaths(
+        meta::MetaData,
+        base_path::String,
+        dir_per_var::Bool;
+        constraint::Union{Dict, Nothing} = nothing
     )
 
-Return the paths to the data files in `base_path_data` taking into account `constraint`.
+Return paths to data files for data specified in `meta`, possibly constraint by values in 
+`constraint`. The paths were the data is stored is expected to follow the following 
+structure (corresponding to the output from ESMValTool used for preprocessing the data):
+
+`base_path` is the top-level directory. If `dir_per_var` is true, `base_path` is assumed to 
+have a (or several) subdirectory for each climate variable with _VAR as part of the 
+subdirectory's name (e.g. _tas, cmip5_tas, etc.). These subdirectories may be constraint by 
+containing at least one of the values in `constraint["subdirs"]`. 
+
+Let BASE refer to `base_path`, or respectively, to the subdirectories for the climate 
+variables. Then the following structure is: BASE/preproc/meta.alias/meta.subdir. 
+In ESMValTool, `meta.alias` corresponds to the (self-chosen) name under the section 
+'diagnostics' and `meta.subdir` to the (self-chosen) name under the section 'variables'.
+
+The returned paths are the paths to all files within this directory, possibly constraint by 
+the filenames containig at least one string in `constraint["projects"]` and respectively 
+at least one string in `constraint["models"]`. 
 """
-function getPathsToData(
-    attribs::Dict{String, <:Any},
-    base_path_data::String,
-    dir_per_var::Bool,
-    is_model_data::Bool;
-    constraint::Union{Dict, Nothing} = nothing,
+function resolvePaths(
+    meta::MetaData, 
+    base_path::String, 
+    dir_per_var::Bool;
+    constraint::Union{Dict, Nothing} = nothing
 )
     has_constraint = !isnothing(constraint) && !isempty(constraint)
-    subdir_constraints = !has_constraint ? nothing : get(constraint, "subdirs", Vector{String}())
-    paths_data = buildPathsForMetaAttrib(
-        base_path_data, attribs, dir_per_var; subdir_constraints
-    )
+    if dir_per_var
+        base_paths = filter(isdir, readdir(base_path, join = true))
+        filter!(x -> occursin("_" * meta.variable, x), base_paths)
+        if has_constraint
+            constrainVarSubdirs!(base_paths, constraint)
+        end
+    else
+        base_paths = [base_path]
+    end
+    # NOTE: particular data structure assumed here!
+    paths_data_dirs = map(base_paths) do p 
+        path_data = joinpath(p, "preproc", meta.alias, meta.subdir)
+        isdir(path_data) ? path_data : ""
+    end
+    filter!(x -> !isempty(x), paths_data_dirs)
+    if isempty(paths_data_dirs)
+        throw(ArgumentError("No directories found at $(base_paths)"))
+    end
+
     paths_to_files = Vector{String}()
-    for path_data in paths_data
-        paths = has_constraint ?
-            buildPathsToDataFiles(
-                path_data,
-                is_model_data;
-                model_constraints = get(constraint, "models", Vector{String}()),
-                project_constraints = get(constraint, "projects", Vector{String}()),
-            ) : 
-            buildPathsToDataFiles(path_data, is_model_data)
+    for target_dir in paths_data_dirs
+        paths = filter(x -> isfile(x) && endswith(x, ".nc"), readdir(target_dir; join=true))
+        paths = has_constraint ? constrainFilenames(paths, constraint) : paths
         append!(paths_to_files, paths)
     end
     return paths_to_files
 end
 
-# if dir_per_var is true, directories at base_paths have subdirectories,
-# one for each variable (they must contain '_VAR', e.g. '_tas'),
-# otherwise base_paths are the paths to the directories that contain
-# a subdirectory 'preproc'
-"""
-    buildPathsForMetaAttrib(
-        base_path::String, 
-        attrib::MetaAttrib,
-        dir_per_var::Bool;
-        subdir_constraints::Union{Vector{String}, Nothing}=nothing
-    )
-
-Return paths to data specified by `attribs`. 
-
-Assumed data structure: BASE/preproc/ALIAS/VAR_STAT where BASE=`base_path`, 
-ALIAS=`attribs["_alias"]`,VAR=attribs["_variable"] and STAT=attribs["_statistic"]. 
-If `dir_per_var` is true, BASE is path to any subdirectory of `base_path` whose 
-name contains _VAR. If `subdir_constraints` is given, the subdirectory's name must further 
-contain at least one entry in `subdir_constraints`.
-
-# Arguments:
-- `base_path`: base directory of stored data specified in `attrib`.
-- `attribs`: meta attributes of data. Must have keys: '_variable', '_statistic', '_alias'.
-- `dir_per_var`: true if data of each climate variable is stored in a seperate directory.
-- `subdir_constraints`: if given, paths must contain ANY of the given elements. Existing paths that don't are ignored.
-"""
-function buildPathsForMetaAttrib(
-    base_path::String,
-    attribs::Dict{String, <:Any},
-    dir_per_var::Bool;
-    subdir_constraints::Union{Vector{String},Nothing} = nothing,
-)
-    base_paths = [base_path]
-    if dir_per_var
-        base_paths = filter(isdir, readdir(base_path, join = true))
-        filter!(x -> occursin("_" * attribs["_variable"], x), base_paths)
-    end
-    if !isnothing(subdir_constraints) && !isempty(subdir_constraints)
-        filter!(p -> any([occursin(name, p) for name in subdir_constraints]), base_paths)
-    end
-    data_paths = Vector{String}()
-    for p in base_paths
-        # NOTE: particular data structure assumed here!
-        diagnostic =
-            isempty(attribs["_statistic"]) ? attribs["_variable"] :
-            join([attribs["_variable"], attribs["_statistic"]], "_")
-        path_data = joinpath(p, "preproc", attribs["_alias"], diagnostic)
-        if isdir(path_data)
-            push!(data_paths, path_data)
-        end
-        # else @debug "$path_data is not an existing directory!"
-    end
-    return data_paths
-end
-
 
 """
-    applyDataConstraints!(meta_attributes::Vector{Dict{String, Any}}, constraint::Dict)
+    constrainMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict)
 
 Subset entries in `meta_attributes` so that only those with properties specified 
 in `constraint` remain.
 
 # Arguments
-- `constraint::Dict`: Mapping to vector specifiying the properties of which at 
-least one must be present for an id to be retained.
+- `constraint::Dict`: Mapping to vector specifiying the properties of which at least one 
+must be present for an id to be retained.
 """
-function applyDataConstraints!(meta_attributes::Vector{Dict{String,Any}}, constraint::Dict)
+function constrainMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict)
     timerange_constraints = get(constraint, "timeranges", Vector{String}())
     alias_constraints = get(constraint, "aliases", Vector{String}())
-    timerangeOk(attrib::Dict{String,Any}) =
-        any(x -> attrib["_timerange"] == x, timerange_constraints)
-    aliasOk(attrib::Dict{String,Any}) = any(x -> attrib["_alias"] == x, alias_constraints)
+    timerangeOk(attrib::MetaData) = any(x -> attrib.timerange == x, timerange_constraints)
+    aliasOk(attrib::MetaData) = any(x -> attrib.alias == x, alias_constraints)
 
-    # timerange and alias don't have to match, it's sufficient if either timerange
-    # or alias match
+    # timerange and alias don't have to match, it's sufficient if either timerange or alias match
     if !isempty(timerange_constraints) && !isempty(alias_constraints)
         filter!(x -> timerangeOk(x) || aliasOk(x), meta_attributes)
         if isempty(meta_attributes)
@@ -675,13 +623,10 @@ function applyDataConstraints!(meta_attributes::Vector{Dict{String,Any}}, constr
     elseif !isempty(alias_constraints)
         filter!(aliasOk, meta_attributes)
     end
-    # constraints wrt variables and statistics
     stats_constraints = get(constraint, "statistics", Vector{String}())
     vars_constraints = get(constraint, "variables", Vector{String}())
-    stats_ok(attrib::Dict{String,Any}) =
-        isempty(stats_constraints) || any(x -> attrib["_statistic"] == x, stats_constraints)
-    vars_ok(attrib::Dict{String,Any}) =
-        isempty(vars_constraints) || any(x -> attrib["_variable"] == x, vars_constraints)
+    stats_ok(attrib::MetaData) = isempty(stats_constraints) || any(x -> attrib.statistic == x, stats_constraints)
+    vars_ok(attrib::MetaData) = isempty(vars_constraints) || any(x -> attrib.variable == x, vars_constraints)
     filter!(stats_ok, meta_attributes)
     filter!(vars_ok, meta_attributes)
     return nothing
@@ -876,6 +821,11 @@ function fixModelNamesMetadata(names::Vector{String})
 end
 
 
+function fixModelNameMetadata(name::String)
+    return get(MODEL_NAME_FIXES, name, name)
+end
+
+
 function getMask(orog_data::YAXArray; mask_out_land::Bool = true)
     ocean_mask = orog_data .== 0
     indices_missing = findall(x -> ismissing(x), ocean_mask)
@@ -883,13 +833,13 @@ function getMask(orog_data::YAXArray; mask_out_land::Bool = true)
     ocean_mask_mat = Array(ocean_mask)
     ocean_mask_mat[indices_missing] .= false
     meta = deepcopy(orog_data.properties)
-    meta["_ref_id_mask"] = orog_data.properties["_id"]
+    meta["_ref_id_mask"] = orog_data.properties["id"]
     mask_arr = YAXArray(dims(ocean_mask), Bool.(ocean_mask_mat), meta)
     return mask_out_land ? mask_arr : mask_arr .== false
 end
 
 
-function getSharedMembers(data::DataMap)
+function sharedMembers(data::DataMap)
     if !(all(((id, dat),) -> hasdim(dat, :member), data))
         throw(ArgumentError("All datasets must have dimension :member!"))
     end
@@ -898,7 +848,7 @@ function getSharedMembers(data::DataMap)
 end
 
 
-function getSharedModels(data::DataMap)
+function sharedModels(data::DataMap)
     all_models = Vector(undef, length(data))
     for (i, id) in enumerate(keys(data))
         ds = data[id]
@@ -941,23 +891,46 @@ function filterModels(data::YAXArray, remaining_models::Vector{String})
 end
 
 
-function createGlobalMetaDataDict(
-    variable,
-    experiment,
-    statistic,
-    alias,
-    timerange;
-    paths = Vector{String}(),
+function metaVecToDict(attributes::Vector{MetaData})
+    datasets_meta = Dict{String, MetaData}()
+    for meta in attributes
+        if !isempty(meta.paths)
+            id = meta.id
+            if haskey(datasets_meta, id)
+                @warn "several times same data id for $id"
+                datasets_meta[id].paths = mergeMetaDataPaths(datasets_meta[id], meta)
+            else
+                datasets_meta[id] = meta
+            end
+        end
+    end
+    return datasets_meta
+end
+
+
+function createMetaDataFromAttribs(
+    var_short::String, 
+    experiment::String, 
+    timerange::String, 
+    subdir::String, 
+    alias::String; 
+    var_long::String = "", 
+    preprocessor::String = "", 
+    paths = Vector{String}()
 )
-    metadata = Dict{String,Any}()
-    metadata["_paths"] = paths
-    metadata["_variable"] = variable
-    metadata["_experiment"] = experiment
-    metadata["_statistic"] = statistic
-    metadata["_alias"] = alias
-    metadata["_timerange"] = timerange
-    metadata["_id"] = buildMetaDataID(variable, statistic, alias)
-    return metadata
+    var_stat = String.(split(subdir, "_"))
+    return MetaData(
+        paths = paths, 
+        variable = var_short, 
+        experiment = experiment,
+        timerange = timerange,
+        alias = alias,
+        subdir = subdir,
+        variable_long = var_long, 
+        statistic = length(var_stat) == 2 ? var_stat[2] : "", # TODO
+        esmvaltoolPreproc = preprocessor,
+        id = buildMetaDataID(subdir, alias)
+    )
 end
 
 

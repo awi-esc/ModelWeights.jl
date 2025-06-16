@@ -15,5 +15,5 @@ end
 @testset "Test getModelsFromModelIDs" begin
 end
 
-@testset "Test getPhysicsFromMembers" begin
+@testset "Test physicsFromMember" begin
 end

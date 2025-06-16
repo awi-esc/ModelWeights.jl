@@ -15,7 +15,7 @@ function globalMeans(data::YAXArray)
     end
     meta = deepcopy(data.properties)
     meta["_statistic"] = hasdim(data, :time) ? "GM-ts" : "GM"
-    meta["_id"] = buildMetaDataID(meta)
+    meta["id"] = buildMetaDataID(meta)
 
     longitudes = Array(dims(data, :lon))
     latitudes = Array(dims(data, :lat))
@@ -60,11 +60,11 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray; stats_name::String="
         return nothing
     end
     anomalies_metadata = deepcopy(orig_data.properties)
-    anomalies_metadata["_statistic"] = stats_name
-    anomalies_metadata["_id"] = buildMetaDataID(anomalies_metadata)
+    anomalies_metadata["statistic"] = stats_name
+    anomalies_metadata["id"] = buildMetaDataID(anomalies_metadata)
 
-    anomalies_metadata["_ref_data_id"] = ref_data.properties["_id"]
-    anomalies_metadata["_orig_data_id"] = orig_data.properties["_id"]
+    anomalies_metadata["_ref_data_id"] = ref_data.properties["id"]
+    anomalies_metadata["_orig_data_id"] = orig_data.properties["id"]
 
     anomalies = @d orig_data .- ref_data
     return YAXArray(dims(orig_data), Array(anomalies), anomalies_metadata)
@@ -82,7 +82,7 @@ end
 function standardDev(data::YAXArray, dimension::Symbol)
     meta_new = deepcopy(data.properties)
     meta_new["_statistic"] = "STD"
-    meta_new["_id"] = buildMetaDataID(meta_new)
+    meta_new["id"] = buildMetaDataID(meta_new)
     standard_devs = dropdims(Statistics.std(data, dims = dimension), dims = dimension)
     return YAXArray(otherdims(data, dimension), standard_devs, meta_new)
 end

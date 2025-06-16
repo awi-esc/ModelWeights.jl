@@ -72,23 +72,27 @@ end
 
 
 """
-    mergeMetaDataPaths(meta1::Dict{String, Any}, meta2::Dict{String, Any})
+    mergeMetaDataPaths(meta1::MetaData, meta2::MetaData)
 
-Return vector of unique paths of mergee set of paths from `meta1` and `meta2`.
+Return vector of unique paths of merged set of paths from `meta1` and `meta2`.
 """
-function mergeMetaDataPaths(meta1::Dict{String,Any}, meta2::Dict{String,Any})
-    paths = copy(meta1["_paths"])
-    append!(paths, meta2["_paths"])
+function mergeMetaDataPaths(meta1::MetaData, meta2::MetaData)
+    paths = copy(meta1.paths)
+    append!(paths, meta2.paths)
     return unique(paths)
 end
 
+# TODO
+# function buildMetaDataID(variable::String, statistic::String, alias::String)
+#     return join([variable, statistic, alias], "_")
+# end
 
-function buildMetaDataID(variable::String, statistic::String, alias::String)
-    return join([variable, statistic, alias], "_")
-end
+# function buildMetaDataID(meta::Dict{String, T}) where T <: Any
+#     return join([meta["_variable"], meta["_statistic"], meta["_alias"]], "_")
+# end
 
-function buildMetaDataID(meta::Dict{String, T}) where T <: Any
-    return join([meta["_variable"], meta["_statistic"], meta["_alias"]], "_")
+function buildMetaDataID(variables_name::String, diagnostics_name::String)
+    return join([variables_name, diagnostics_name], "_")
 end
 
 

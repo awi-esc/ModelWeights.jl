@@ -26,18 +26,18 @@ yax2 = YAXArray((Dim{:row}(["r1", "r2"]),Dim{:column}(["c1", "c2", "c3"]), Dim{:
     @test (@test_logs (:warn,) mwd.joinDataMaps(dm1, mwd.DataMap(Dict("id1" => yax2)))) == mwd.DataMap(Dict("id1" => yax2))
 end
 
-@testset "Test getMetaAttributesFromESMValToolConfigs" begin
+@testset "Test metaAttributesFromESMValToolRecipes" begin
 end
 
 @testset "Test addMetaData!" begin
 end
 
-@testset "Test getMetaDataFromYAML" begin
+@testset "Test metaDataFromYAML" begin
 end
 
-@testset "Test buildPathsToDataFiles" begin
+@testset "Test constrainFilenames" begin
     # path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
-    # paths_cems2 = mwd.buildPathsToDataFiles(path_data, true; model_constraints=["CESM2"])
+    # paths_cems2 = mwd.constrainFilenames(path_data; model_constraints=["CESM2"])
 end
 
 @testset "Test getMetaDataID" begin
@@ -46,44 +46,44 @@ end
 @testset "Test buildMetaData" begin
 end
 
-@testset "Test buildPathsForMetaAttrib" begin
-    base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
-    attribs = Dict(
-        "_variable" => "tas",
-        "_statistic" => "CLIM",
-        "_alias" => "historical",
-    )
-    dir_per_var = true
-    paths = mwd.buildPathsForMetaAttrib(base_path, attribs, dir_per_var)
-    subdir = "recipe_cmip5_historical_tas_20250211_094633"
-    diagnostic = attribs["_variable"] * "_" * attribs["_statistic"]
-    p1 = joinpath(base_path, subdir, "preproc", attribs["_alias"], diagnostic)
-    @assert isdir(p1)
-    @test p1 in paths
+# @testset "Test buildPathsForMetaAttrib" begin
+#     base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
+#     attribs = Dict(
+#         "_variable" => "tas",
+#         "_statistic" => "CLIM",
+#         "_alias" => "historical",
+#     )
+#     dir_per_var = true
+#     paths = mwd.buildPathsForMetaAttrib(base_path, attribs, dir_per_var)
+#     subdir = "recipe_cmip5_historical_tas_20250211_094633"
+#     diagnostic = attribs["_variable"] * "_" * attribs["_statistic"]
+#     p1 = joinpath(base_path, subdir, "preproc", attribs["_alias"], diagnostic)
+#     @assert isdir(p1)
+#     @test p1 in paths
 
-    p2 = joinpath(base_path, subdir, "preprocessor", attribs["_alias"], diagnostic)
-    @assert !isdir(p2)
-    @test !(p2 in paths)
+#     p2 = joinpath(base_path, subdir, "preprocessor", attribs["_alias"], diagnostic)
+#     @assert !isdir(p2)
+#     @test !(p2 in paths)
 
-    subdir = "recipe_cmip5_historical_psl_timeseries_20250228_084113"
-    p3 = joinpath(base_path, subdir, "preproc", attribs["_alias"], "psl_CLIM-ann")
-    @assert isdir(p3)
-    @test !(p3 in paths)
+#     subdir = "recipe_cmip5_historical_psl_timeseries_20250228_084113"
+#     p3 = joinpath(base_path, subdir, "preproc", attribs["_alias"], "psl_CLIM-ann")
+#     @assert isdir(p3)
+#     @test !(p3 in paths)
 
-    subdir = "recipe_cmip6_historical_tas_20250207_080843"
-    p4 = joinpath(base_path, subdir, "preproc", attribs["_alias"], diagnostic)
-    @assert isdir(p4)
-    @test p4 in paths
-    paths = mwd.buildPathsForMetaAttrib(
-        base_path, attribs, dir_per_var; 
-        subdir_constraints = ["20250211"]
-    )
-    @test !(p4 in paths)
-    @test p1 in paths
-end
+#     subdir = "recipe_cmip6_historical_tas_20250207_080843"
+#     p4 = joinpath(base_path, subdir, "preproc", attribs["_alias"], diagnostic)
+#     @assert isdir(p4)
+#     @test p4 in paths
+#     paths = mwd.buildPathsForMetaAttrib(
+#         base_path, attribs, dir_per_var; 
+#         subdir_constraints = ["20250211"]
+#     )
+#     @test !(p4 in paths)
+#     @test p1 in paths
+# end
 
 
-@testset "Test getPathsToData" begin
+@testset "Test resolvePaths" begin
     path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
     meta = Dict(
         "_variable" => "tas",
@@ -95,8 +95,8 @@ end
     ds_constraint = Dict(
         "models" =>  ["ACCESS-CM2", "CESM2#r1i1p1f1"]
     )
-    paths_to_files = mwd.getPathsToData(
-        meta, path_data, dir_per_var, is_model_data; constraint = ds_constraint,
+    paths_to_files = mwd.resolvePaths(
+        meta, path_data, dir_per_var; constraint = ds_constraint
     )
     base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
     subdir = "recipe_cmip6_historical_tas_20250207_080843"
@@ -129,7 +129,7 @@ end
 end
 
 
-@testset "Test applyDataConstraints!" begin
+@testset "Test constrainMetaData!" begin
 end
 
 @testset "Test applyModelConstraints" begin

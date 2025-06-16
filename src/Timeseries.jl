@@ -15,7 +15,7 @@ Compute linear trend as ordinary least squares for timeseries data.
 
 In the metadata of the returned array '-TREND' (if `full_predictions`=false) or 
 '-TREND-pred' (if `full_predictions`=true) is added to the original metadata 
-entry of `data` for '_statistic' and the new metadata entry for '_id' is adapted accordingly.
+entry of `data` for 'statistic' and the new metadata entry for 'id' is adapted accordingly.
 
 # Arguments:
 - `data::YAXArray`: must have dimension :time.
@@ -29,7 +29,7 @@ function linearTrend(data::YAXArray; full_predictions::Bool = false)
     x = Dates.year.(Array(data.time))
     meta = deepcopy(data.properties)
     meta["_statistic"] = full_predictions ? "TREND-pred" : "TREND"
-    meta["_id"] = Data.buildMetaDataID(meta)
+    meta["id"] = Data.buildMetaDataID(meta)
     function fn(y)
         y = Array(y)
         indices = findall(.!(ismissing.(y)))
@@ -51,7 +51,7 @@ end
 function detrend(data::YAXArray)
     meta_new = deepcopy(data.properties)
     meta_new["_statistic"] = join([meta_new["_statistic"], "detrended-ts"], "-")
-    meta_new["_id"] = Data.buildMetaDataID(meta_new)
+    meta_new["id"] = Data.buildMetaDataID(meta_new)
     trend = linearTrend(data; full_predictions = true)
     diffs = @d data .- trend
     return YAXArray(dims(data), diffs, meta_new)
@@ -82,7 +82,7 @@ function filterTimeseries(
     if !hasdim(data, :time)
         throw(ArgumentError("Dimension time is missing, needed to filter timeseries!")) 
     end
-    @info "filter timeseries data with id: $(data.properties["_id"]) from $start_year to $end_year..."
+    @info "filter timeseries data with id: $(data.properties["id"]) from $start_year to $end_year..."
     try
         df = data[time=Where(
             x -> Dates.year(x) >= start_year && Dates.year(x) <= end_year,
@@ -124,7 +124,7 @@ function filterTimeseries(
     df.properties["_alias"] = 
         isempty(new_alias) ? join([df.properties["_alias"], new_timerange], "-") : new_alias
     df.properties["_timerange"] = new_timerange
-    df.properties["_id"] = Data.buildMetaDataID(df.properties)    
+    df.properties["id"] = Data.buildMetaDataID(df.properties)    
     warnIfOutOfTimerange(df, start_year, end_year)
     Data.warnIfhasMissing(df; name="timeseries data")
     return df
@@ -166,7 +166,7 @@ function addFilteredTimeseries!(
     end
     for id in ids_ts
         df = filterTimeseries(data[id], start_year, end_year; new_alias, only_models_non_missing_vals)
-        data[df.properties["_id"]] = df
+        data[df.properties["id"]] = df
     end
     return nothing
 end

@@ -34,16 +34,16 @@ end
 """
     addDiagnostic!(datamap::DataMap, fn::Function, args...; kwargs..., id_suffix::String="")
 
-Compute a diagnostic by running `fn` with positional arguments `args` and 
-keyword arguments `kwargs` and add result to `datamap` at the id of the 
-computed result concatenated with `#id_suffix` if `id_suffix` is not empty.
+Compute a diagnostic by running `fn` with positional arguments `args` and keyword arguments 
+`kwargs` and add result to `datamap` at the id of the computed result concatenated with 
+`#id_suffix` if `id_suffix` is not empty.
 """
 function addDiagnostic!(
     datamap::DataMap, fn::Function, id::String, key_suffix::String, args...; kwargs...
 )
     getAvailableIds(datamap, [id])
     data = fn(datamap[id], args...; kwargs...)
-    new_key = isempty(key_suffix) ? data.properties["_id"] : join([data.properties["_id"], key_suffix], "#")
+    new_key = isempty(key_suffix) ? data.properties["id"] : join([data.properties["id"], key_suffix], "#")
     if new_key in keys(datamap)
         @warn "$new_key overwritten!"
     end

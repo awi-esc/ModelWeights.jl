@@ -1,87 +1,51 @@
 """
-    getUniqueMemberIds(meta::Dict, model_names::Vector{String})
+    uniqueMemberID(meta::Dict, model::String)
 
-Create a vector that contains for every model in `model_names` the unique ids
-of its members, each with the model name followed by '#' as prefix .
+Return member id for `model` which is the model name itself followed by '#' and the variant 
+label (simulation id).
 
 The unique member ids correspond to the variant labels of CMIP6 models, e.g. r1i1p1f1.
+For CMIP5 models this id is built from the respective metadata.
+For CMIP6 models, the grid is further added to the end of the id seperated with _.
 
 # Arguments:
-- `meta::Dict`: For CMIP5 data, must have keys: 'mip_era', 'realization',
-'initialization_method', 'physics_version'. For CMIP6 data must have keys: 
-'variant_label', 'grid_label'.
-- `model_names::Vector{String}`: Vector of strings containing model names for 
-every model member, i.e. length is sum of the number of members over all models.
+- `meta::Dict`: For CMIP5 data, must have keys: 'mip_era', 'realization', 
+'initialization_method', 'physics_version'. For CMIP6 data must have keys: 'variant_label', 
+'grid_label'.
 """
-function getUniqueMemberIds(meta::Dict, model_names::Vector{String})
-    meta_subdict = Dict{String,Vector}()
-    keys_model_ids = [
-        "realization",
-        "physics_version",
-        "initialization_method",
-        "mip_era",
-        "grid_label",
-        "variant_label",
-    ]
-    n_members = length(model_names)
-    members = Vector{String}(undef, n_members)
-    for key in filter(k -> k in keys_model_ids, keys(meta))
-        val = meta[key]
-        if isa(val, String)
-            meta_subdict[key] = repeat([val], outer = n_members)
-        else
-            meta_subdict[key] = deepcopy(val)
-        end
-    end
-    mip_eras = meta_subdict["mip_era"]
-    indices_cmip5 = findall(x -> !ismissing(x) && x == "CMIP5", mip_eras)
-    indices_cmip6 = findall(x -> !ismissing(x) && x == "CMIP6", mip_eras)
-    if !isempty(indices_cmip5)
-        variants = buildCMIP5EnsembleMember(
-            meta_subdict["realization"][indices_cmip5],
-            meta_subdict["initialization_method"][indices_cmip5],
-            meta_subdict["physics_version"][indices_cmip5],
+function uniqueMemberID(meta::Dict, model::String)
+    fn_err(k::String) = throw(ArgumentError("$k not defined in metadata!"))
+    mip_era = get(() -> fn_err("mip_era"), meta, "mip_era")
+    member = ""
+    if lowercase(mip_era) == "cmip5"
+        variant = buildCMIP5EnsembleMember(
+            get(() -> fn_err("realization"), meta, "realization"),
+            get(() -> fn_err("initialization_method"), meta, "initialization_method"),
+            get(() -> fn_err("physics_version"), meta, "physics_version")
         )
-        members[indices_cmip5] = map(
-            x -> join(x, MODEL_MEMBER_DELIM, MODEL_MEMBER_DELIM),
-            zip(model_names[indices_cmip5], variants),
-        )
-        @debug "For CMIP5, full model names dont include grid."
+        member = join([model, variant], MODEL_MEMBER_DELIM)
+    elseif lowercase(mip_era) == "cmip6"
+        variant = get(() -> fn_err("variant_label"), meta, "variant_label")
+        grid = get(() -> fn_err("grid_label"), meta, "grid_label")
+        member = join([model, variant, grid], MODEL_MEMBER_DELIM, "_")
+    else 
+        throw(ArgumentError("Only CMIP5 and CMIP6 supported so far."))
     end
-    if !isempty(indices_cmip6)
-        variants = meta_subdict["variant_label"][indices_cmip6]
-        grids = meta_subdict["grid_label"][indices_cmip6]
-        members[indices_cmip6] = map(
-            x -> join(x, MODEL_MEMBER_DELIM, "_"),
-            zip(model_names[indices_cmip6], variants, grids),
-        )
-    end
-    # from vector of strings of length of sum over members of all models make
-    # a vector of vectors where each subvector contains the unique ids of the
-    # respective model's members
-    models_uniq = unique(model_names)
-    n_models = length(models_uniq)
-    result = Vector{Vector{String}}(undef, n_models)
-    for (i, model) in enumerate(models_uniq)
-        indices = findall(x -> x == model, model_names)
-        result[i] = members[indices]
-    end
-    return vcat(result...)
+    return member
 end
 
 
 """
-    subsetModelData(data::AbstractArray, shared_models::Vector{String})
+    subsetModelData(data::YAXArray, shared_models::Vector{String})
 
-Return a YAXArray that is the subset of `data` containing only data from 
-the models specified in `shared_models`. 
+Return subset of `data` containing only data from models in `shared_models`. 
 
 Takes care of metadata.
 
 # Arguments:
 - `data`: must have dimension 'member' or 'model'
-- `shared_models`: vector of models, which can either be on level of models 
-or members of models ('modelname#memberID[_grid]').
+- `shared_models`: models, which can either be on level of models or members of models 
+('modelname#memberID[_grid]').
 """
 function subsetModelData(data::YAXArray, shared_models::Vector{String})
     if isempty(shared_models)
@@ -100,7 +64,7 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
             indices = findall(m -> m in members, dim_names)
         else
             # important not to use dim_names here, since e.g. model=AWI would be found in dim_names where model is actually AWI-X for instance
-            models_data = getModelsFromMemberIDs(dim_names) # NOTE: should yield same: models_data = data.properties["model_names"]
+            models_data = modelsFromMemberIDs(dim_names) # NOTE: should yield same: models_data = data.properties["model_names"]
             indices = findall(m -> m in models, models_data)
         end
         data = data[member=indices]
@@ -129,7 +93,7 @@ If no models are shared across datasets, return the input `datamap`.
 """
 function subsetModelData(datamap::DataMap; level::LEVEL = MEMBER)
     all_data = collect(values(datamap))
-    shared_models = level == MEMBER ? getSharedMembers(datamap) : getSharedModels(datamap)
+    shared_models = level == MEMBER ? sharedMembers(datamap) : sharedModels(datamap)
     if isempty(shared_models)
         @warn "Vector of models to subset data to is empty!"
         return datamap
@@ -137,37 +101,30 @@ function subsetModelData(datamap::DataMap; level::LEVEL = MEMBER)
     subset = DataMap()
     for data in all_data
         df = deepcopy(data)
-        subset[df.properties["_id"]] = subsetModelData(df, shared_models)
+        subset[df.properties["id"]] = subsetModelData(df, shared_models)
     end
     return subset
 end
 
 
 """
-    loadPreprocData(meta::Dict{String, Any}, is_model_data::Bool)
+    loadPreprocData(meta::MetaData, is_model_data::Bool; sorted::Bool = true)
 
-Create a tuple with a vector of YAXArrays for data specified in `meta` and a 
-Dictionary containing the metadata of all loaded data. 
-
-Load the data from paths specified in `meta.paths` and create a meta dictionary
-that contains the metadata keys from every loaded dataset. Each key maps to a vector 
-of values, one for each loaded dataset, which is set to missing if that key 
-hadn't been present in this datasets own metadata.
+Return data loaded from paths specified in `meta.paths` as single YAXArray.  The names of
+the data files are assumed to follow the CMIP-standard: TODO!
 """
-function loadPreprocData(meta::Dict{String,Any}, is_model_data::Bool)
-    n_files = length(meta["_paths"])
+function loadPreprocData(meta::MetaData, is_model_data::Bool; sorted::Bool = true)
+    n_files = length(meta.paths)
     data = Vector{YAXArray}(undef, n_files)
-    meta_dict = Dict{String,Any}()
-    source_names = repeat([""], outer = n_files)
-
-    filenames = first.(splitext.(basename.(meta["_paths"])))
-    climVars = first.(split.(basename.(dirname.(meta["_paths"])), "_"))
-    for (i, file) in enumerate(meta["_paths"])
-        @debug "processing file.." * file
+    
+    filenames = first.(splitext.(basename.(meta.paths)))
+    climVars = first.(split.(basename.(dirname.(meta.paths)), "_"))
+    for (i, path) in enumerate(meta.paths)
+        @debug "processing file.." * path
         filename = filenames[i]
         climVar = climVars[i]
 
-        ds = NCDataset(file)
+        ds = NCDataset(path)
         dsVar = ds[climVar]
         # if climVar == "amoc"
         #     dsVar = ds["msftmz"]
@@ -179,28 +136,31 @@ function loadPreprocData(meta::Dict{String,Any}, is_model_data::Bool)
                 merge!(attributes, sector.attrib)
             end
         end
+        props = Dict{String, Union{String, Number, Missing}}() # just for this file!
+        props["path"] = path
+
         if is_model_data
-            # add mip_era for models since it is not provided in CMIP5-models
             model_key = getCMIPModelsKey(Dict(ds.attrib))
+            # add mip_era for models since it is not provided in CMIP5-models
             get!(attributes, "mip_era", "CMIP5")
             # check model names as retrieved from the metadata for potential inconsistencies wrt filename
             name = ds.attrib[model_key] # just the model name, e.g. ACCESS1-0 (not the member's id)
             if !occursin(name, filename) && !(name in keys(MODEL_NAME_FIXES))
                 @warn "model name as read from metadata of stored .nc file ($name) and used as dimension name is not identical to name appearing in its path ($filename)"
             end
-            model_id = getMemberIDsFromPaths([file])[1]
-            source_names[i] = split(model_id, MODEL_MEMBER_DELIM)[1]
+            member_id_temp = memberIDsFromPaths([path])[1]
+            model_id_temp = String(split(member_id_temp, MODEL_MEMBER_DELIM)[1])
+            props["model_id"] = fixModelNameMetadata(model_id_temp)
+            props["member_id"] = uniqueMemberID(attributes, props["model_id"])
+            #props["physics"] = physicsFromMember(props["member_id"])
         else
-            source_names[i] = filename
+            props["model_id"] = filename
         end
-        # update metadata-dictionary for all processed files with the
-        # metadata from the current file
 
-        keys_remain = filter(x -> x in KEYS_METADATA, keys(attributes))
-        for key in keys_remain #keys(attributes)
-            values =
-                get!(meta_dict, key, repeat(Union{Missing,Any}[missing], outer = n_files))
-            values[i] = attributes[key]
+        for key in ["units", "mip_era", "grid_label"]
+            if haskey(attributes, key)
+                props[key] = attributes[key]
+            end
         end
 
         dimension_names = dimnames(dsVar)
@@ -212,77 +172,96 @@ function loadPreprocData(meta::Dict{String,Any}, is_model_data::Bool)
             if d == "time"
                 # NOTE: just YEAR and MONTH are saved in the time dimension
                 times = map(x -> DateTime(Dates.year(x), Dates.month(x)), dsVar[d][:])
-                # times = 1:length(dsVar[d][:])
                 dimensions[idx_dim] = Dim{Symbol(d)}(collect(times))
             else
                 dimensions[idx_dim] = Dim{Symbol(d)}(collect(dsVar[d][:]))
             end
         end
-        data[i] = YAXArray(Tuple(dimensions), Array(dsVar))
+        data[i] = YAXArray(Tuple(dimensions), Array(dsVar), props)
         # replace missing values by NaN?
         #data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(dsVar), NaN))
         close(ds)
     end
-    updateMetadata!(meta_dict, collect(source_names), is_model_data)
-    return (data, meta_dict)
+    return mergeDataFromMultipleFiles(data, meta, sorted)
 end
 
 
 """
-    mergeLoadedData(
-        data_vec::Vector{YAXArray}, 
-        meta_dict::Dict{String, Any}, 
-        is_model_data::Bool
+    mergeDataFromMultipleFiles(
+        data::Vector{YAXArray}, meta_dict::Dict{String, Vector}, meta::MetaData, sorted::Bool
     )
 
-All data is assumed to be defined on the same grid.
+Combine arrays in `data` into a single YAXArray with meta combined from all datasets into lists, 
+with missing if key wasnt in a dataset.
 """
-function mergeLoadedData(
-    data_vec::Vector{YAXArray},
-    meta_dict::Dict{String,Any},
-    is_model_data::Bool,
-)
-    if length(data_vec) == 0
+function mergeMetaDataFromMultipleFiles(data::Vector{YAXArray})
+    n_files = length(data)
+    meta_keys = unique(vcat(map(x -> collect(keys(x.properties)), data)...))
+    meta_dict = Dict{String, Any}()
+    for (i, ds) in enumerate(data)
+        for key in meta_keys
+            values = get!(meta_dict, key, repeat(Any[missing], outer=n_files))
+            values[i] = get(ds.properties, key, missing)
+        end
+    end
+    return meta_dict
+end
+
+
+"""
+    mergeDataFromMultipleFiles(data::Vector{YAXArray}, meta::MetaData, sorted::Bool)
+
+Combine arrays in `data` into a single YAXArray with meta combined from all datasets into lists, 
+with missing if key wasnt in a dataset, and with properties in `meta` (except for paths). 
+If `sorted` is true, model dimension of returned data is sorted alphabetically and the 
+entries in the metadata dictionary of the returned array which are vectors are sorted accordingly.
+
+All data must be defined on the same grid. For timeseries data, the time dimension might cover 
+different ranges, in that case they maximal timeseries is used and filled with NaN for missing values. 
+"""
+function mergeDataFromMultipleFiles(data::Vector{YAXArray}, meta::MetaData, sorted::Bool)
+    if isempty(data)
         @warn "No data loaded!"
         return nothing
     end
-    #dimData = cat(data_vec..., dims=3) # way too slow!
-    data_sizes = unique(map(size, data_vec))
+    if !all(x -> haskey(x.properties, "model_id"), data)
+        throw(ArgumentError("All data must have model_id in metadata!"))
+    end
+    #dimData = cat(data..., dims=3) # way too slow!
+    data_sizes = unique(map(size, data))
     if length(data_sizes) != 1
-        if !all(map(x -> hasdim(x, :time), data_vec))
+        if !all(map(x -> hasdim(x, :time), data))
             msg = "Data does not have the same size across all models: $(data_sizes)"
             throw(ArgumentError(msg))
         else
             # if difference only in time, use maximal possible timeseries and add NaNs
-            year_min = minimum(map(x -> minimum(map(Dates.year, dims(x, :time))), data_vec))
-            year_max = maximum(map(x -> maximum(map(Dates.year, dims(x, :time))), data_vec))
-            nb_years = year_max - year_min + 1
-
-            timerange = DateTime(year_min):Year(1):DateTime(year_max)
-            for (i, ds) in enumerate(data_vec)
-                s = map(length, otherdims(ds, :time))
-                dat = Array{eltype(ds)}(undef, s..., nb_years) # if ds allows missing values, undef is initialized with missing
-                ds_extended =
-                    YAXArray((otherdims(ds, :time)..., Dim{:time}(timerange)), dat)
-                ds_extended[time=Where(
-                    x->Dates.year(x) in map(Dates.year, dims(ds, :time)),
-                )] = ds # ds[time=:]
-                data_vec[i] = ds_extended
-            end
+            alignTimeseries!(data)
         end
     end
-    var_axis =
-        is_model_data ? Dim{:member}(meta_dict["member_names"]) :
-        Dim{:model}(meta_dict["model_names"])
-    dimData = concatenatecubes(data_vec, var_axis)
-    dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
 
+    hasMembers = all(x -> haskey(x.properties, "member_id"), data)
+    dim = hasMembers ? :member : :model
+    names = map(x -> x.properties[String(dim) * "_id"], data)
+    if sorted
+        sort_indices = sortperm(names)
+        names = names[sort_indices]
+        data = data[sort_indices]
+    end
+    meta_dict = mergeMetaDataFromMultipleFiles(data)    
+    merge!(meta_dict, metadataToDict(meta; exclude=[:paths]))
+    if hasMembers
+        renameDictKeys!(
+            meta_dict, 
+            [("model_id", "model_names"), ("member_id", "member_names"), ("path", "paths")]
+        )
+    end
+    dimData = concatenatecubes(data, Dim{dim}(names))
+    dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
     # Sanity checks that no dataset exists more than once
-    if is_model_data
+    if hasMembers
         members = dims(dimData, :member)
         if length(members) != length(unique(members))
-            duplicates = [m for m in members if sum(members .== m) > 1]
-            #paths = [filter(x -> occursin(split(dup, MODEL_MEMBER_DELIM)[1], x), meta.paths) for dup in duplicates]
+            duplicates = unique([m for m in members if sum(members .== m) > 1])
             @warn "Some datasets appear more than once" duplicates
         end
     end
@@ -291,41 +270,40 @@ end
 
 
 """
-    loadDataFromMetadata(meta_data::Dict{String, Dict{String, Any}}, is_model_data::Bool)
+    loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::Bool)
 
-Load a `DataMap`-instance that contains the data specified in `meta_data`.
+Load a `DataMap`-instance that contains the data on level of model members specified in `meta_data`.
 
 # Arguments:
-- `meta_data::Dict`: TODO: add required keys!
+- `meta_data::Dict`: keys are ids of datasets to be loaded, values is their MetaData
 - `is_model_data::Bool`: set to true for model data, to false for observational data.
 """
-function loadDataFromMetadata(meta_data::Dict{String,Dict{String,Any}}, is_model_data::Bool)
+function loadDataFromMetadata(
+    meta_data::Dict{String, MetaData}, is_model_data::Bool; sorted::Bool
+)
     @debug "retrieved metadata:" meta_data
     if isempty(meta_data)
         throw(ArgumentError("No metadata provided!"))
     end
     results = DataMap()
     for (id, meta) in meta_data
-        # loads data at level of model members
-        @info "load $id"
-        data_vec, meta_dict = loadPreprocData(meta, is_model_data)
-        data = mergeLoadedData(data_vec, meta_dict, is_model_data)
-        merge!(data.properties, meta)
-        results[meta["_id"]] = data
+        @info "load Data for: $id"
+        data = loadPreprocData(meta, is_model_data; sorted)
+        results[meta.id] = data
     end
     return results
 end
 
 
 """
-    getMemberIDsFromPaths(all_paths::Vector{String})
+    memberIDsFromPaths(all_paths::Vector{String})
 
 For every path in `all_paths` return a string of the form modelname#memberID[_grid]
 that identifies the corresponding model member.
 
 The abbreviation of the grid is added to the model name for CMIP6 models.
 """
-function getMemberIDsFromPaths(all_paths::Vector{String})
+function memberIDsFromPaths(all_paths::Vector{String})
     all_filenames = split.(basename.(all_paths), "_")
     # model names are at predefined position in filenames (ERA_name_mip_exp_id_variable[_grid].nc)
     all_members = Vector{String}(undef, length(all_filenames))
@@ -398,11 +376,11 @@ end
 
 
 """
-    getSharedModelsFromPaths(all_paths::Vector{Vector{String}}, all_models::Vector{String})
+    sharedModelsFromPaths(all_paths::Vector{Vector{String}}, all_models::Vector{String})
      
 Return vector with models in `all_models` for which a path is given in every subvector of `all_paths`.
 """
-function getSharedModelsFromPaths(all_paths::Vector{Vector{String}}, all_models::Vector{String})
+function sharedModelsFromPaths(all_paths::Vector{Vector{String}}, all_models::Vector{String})
     indices_shared = []
     for (idx, model) in enumerate(all_models)
         is_found = false
@@ -446,7 +424,6 @@ function getCMIPModelsKey(meta::Dict)
 end
 
 
-
 """
     filterPathsSharedModels!(
         meta_data::Dict{String, Dict{String, T}}, subset_shared::LEVEL
@@ -457,37 +434,37 @@ only contains models or model members (given by `subset_shared`) that are shared
 datasets.
 
 # Arguments:
-- `meta_data`: contains a metadata dictionary for for every dataset.
-- `subset_shared`: 
+- `meta_data`: contains a metadata dictionary for every dataset.
+- `subset_shared`: level on which datasets must match: they include data from the  same 
+models (MODEL) or from the same model members (MEMBER).
 """
-function filterPathsSharedModels!(
-    meta_data::Dict{String, Dict{String, T}}, subset_shared::LEVEL
-) where T <: Any
-    all_paths = map(x -> x["_paths"], values(meta_data))
-    all_models = getMemberIDsFromPaths(vcat(all_paths...))
+function filterPathsSharedModels!(meta_data::Dict{String, MetaData}, subset_shared::LEVEL)
+    all_paths = map(x -> x.paths, values(meta_data))
+    all_models = memberIDsFromPaths(vcat(all_paths...))
     if subset_shared == MODEL
-        all_models = unique(getModelsFromMemberIDs(all_models))
+        all_models = unique(modelsFromMemberIDs(all_models))
     end
-    shared_models = getSharedModelsFromPaths(all_paths, all_models)
+    shared_models = sharedModelsFromPaths(all_paths, all_models)
     if isempty(shared_models)
         @warn "No models shared across data!"
     end
     for (id, meta) in meta_data
-        mask = map(p -> applyModelConstraints(p, shared_models), meta["_paths"])
-        meta_data[id]["_paths"] = meta["_paths"][mask]
+        mask = map(p -> applyModelConstraints(p, shared_models), meta.paths)
+        meta_data[id].paths = meta.paths[mask]
     end
     return nothing
 end
 
-function getModelsFromMemberIDs(members::AbstractVector{<:String}; uniq::Bool=false)
+
+function modelsFromMemberIDs(members::AbstractVector{<:String}; uniq::Bool=false)
     models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members)
     return uniq ? unique(models) : models
 end
 
 
-function getPhysicsFromMembers(members::Vector{String})
+function physicsFromMember(member::String)
     regex = r"(p\d+)(f\d+)?(_.*)?$"
-    return String.(map(x -> match(regex, x).captures[1], members))
+    return String.(match(regex, member).captures[1])
 end
 
 
@@ -509,11 +486,11 @@ function alignPhysics(
     subset_shared::Union{LEVEL,Nothing} = nothing,
 )
     data = deepcopy(datamap)
-    models = unique(getModelsFromMemberIDs(members))
+    models = unique(modelsFromMemberIDs(members))
     for model in models
         # retrieve allowed physics as given in members 
         member_ids = filter(m -> startswith(m, model * MODEL_MEMBER_DELIM), members)
-        physics = getPhysicsFromMembers(member_ids)
+        physics = physicsFromMember.(member_ids)
         for (_, ds) in data
             # filter data s.t. of current model only members with retrieved physics are kept
             model_indices = findall(
@@ -525,13 +502,13 @@ function alignPhysics(
             if !isempty(indices_out)
                 indices_keep = filter(x -> !(x in indices_out), 1:length(dims(ds, :member)))
                 members_kept = ds.properties["member_names"][indices_keep]
-                data[ds.properties["_id"]] = subsetModelData(ds, members_kept)
+                data[ds.properties["id"]] = subsetModelData(ds, members_kept)
             end
         end
     end
     if !isnothing(subset_shared)
         shared_models =
-            subset_shared == MEMBER ? getSharedMembers(data) : getSharedModels(data)
+            subset_shared == MEMBER ? sharedMembers(data) : sharedModels(data)
         for (id, model_data) in data
             data[id] = subsetModelData(model_data, shared_models)
         end
@@ -714,33 +691,18 @@ function loadDataFromESMValToolRecipes(
     path_recipes::String;
     dir_per_var::Bool = true,
     is_model_data::Bool = true,
-    subset::Union{Dict,Nothing} = nothing,
+    subset::Union{Dict, Nothing} = nothing,
     preview::Bool = false,
+    sorted::Bool = true
 )
-    attributes = getMetaAttributesFromESMValToolConfigs(path_recipes; constraint = subset)
-    meta_data = Dict{String, Dict{String, Any}}()
-    for meta in attributes
-        meta = Dict{String, Any}(meta)
-        meta["_paths"] = getPathsToData(
-            meta,
-            path_data,
-            dir_per_var,
-            is_model_data;
-            constraint = subset,
-        )
-        if !isempty(meta["_paths"])
-            id = meta["_id"]
-            if haskey(meta_data, id)
-                meta_data[id]["_paths"] = mergeMetaDataPaths(meta_data[id], meta)
-            else
-                meta_data[id] = meta
-            end
-        end
-    end
+    attributes = metaAttributesFromESMValToolRecipes(path_recipes; constraint = subset)
+    addPaths!(attributes, path_data, dir_per_var; constraint = subset)
+    meta_data = metaVecToDict(attributes)
+
     if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))
         filterPathsSharedModels!(meta_data, subset["subset_shared"])
     end
-    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
+    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data; sorted)
 end
 
 
@@ -775,11 +737,12 @@ function loadDataFromYAML(
     is_model_data::Bool = true,
     subset::Union{Dict,Nothing} = nothing,
     preview::Bool = false,
+    sorted::Bool = true
 )
-    meta_data = getMetaDataFromYAML(content, is_model_data; arg_constraint = subset)
+    meta_data = metaDataFromYAML(content, is_model_data; arg_constraint = subset)
     if isempty(meta_data)
         msg = "No metadata found for subset: $subset, $content (model data: $is_model_data)!"
         throw(ArgumentError(msg))
     end
-    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data)
+    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data; sorted)
 end
