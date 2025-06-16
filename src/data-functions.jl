@@ -695,6 +695,13 @@ function loadDataFromESMValToolRecipes(
     preview::Bool = false,
     sorted::Bool = true
 )
+    target_folder = basename(path_data)
+    if dir_per_var && target_folder == "preproc"
+        throw(ArgumentError("If dir_per_var is true, path_data should point to a superfolder of folder with name 'preproc'"))
+    elseif !dir_per_var && target_folder != "preproc"
+        throw(ArgumentError("If dir_per_var is false, path_data should point to folder with name 'preproc'"))
+    end
+
     attributes = metaAttributesFromESMValToolRecipes(path_recipes; constraint = subset)
     addPaths!(attributes, path_data, dir_per_var; constraint = subset)
     meta_data = metaVecToDict(attributes)
