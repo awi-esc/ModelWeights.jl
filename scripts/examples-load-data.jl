@@ -1,4 +1,5 @@
 import ModelWeights as mw
+import ModelWeights.Data as mwd
 
 using NCDatasets
 using DimensionalData
@@ -22,21 +23,25 @@ subset = Dict{String, Union{Vector{String}, mw.LEVEL}}(
     "variables" => variables, 
     "projects" => projects,
     "aliases" => ["lgm"], 
-    "subset_shared" => mw.MEMBER
+    "subset_shared" => mwd.MEMBER
 );
-lgm_meta = mw.loadDataFromESMValToolRecipes(
+lgm_meta = mwd.loadDataFromESMValToolRecipes(
     path_data, path_recipes; 
     dir_per_var, is_model_data, subset=subset, preview=true
 )
-lgm_data = mw.loadDataFromESMValToolRecipes(
-    path_data, path_recipes; 
-    dir_per_var, is_model_data, subset=subset, preview = false
+lgm_data = mwd.loadDataFromESMValToolRecipes(
+    path_data, 
+    path_recipes; 
+    dir_per_var, 
+    is_model_data, 
+    subset=subset, 
+    preview = false
 )
 
 # we set subset_shared to mw.MEMBER, so model members are identical for 
 # every loaded data set (variable)
 model_members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"], :member));
-models_lgm = unique(lgm_data["tos_CLIM_lgm"].properties["model_names"]);
+models_lgm = string.(unique(lgm_data["tos_CLIM_lgm"].properties["model_names"]))
 
 # --------------------------------------------------------------------------- #
 # 2. Model data just for historical experiment of models with lgm-experiment
@@ -47,7 +52,7 @@ path_recipes = "./configs/historical";
 # experiment and make sure that across variables, only shared model members 
 # are loaded (subset_shared set to mw.MEMBER) since we want the exact 
 # same simulations for all variables when computing weights
-historical_data_lgm_models = mw.loadDataFromESMValToolRecipes(
+historical_data_lgm_models = mwd.loadDataFromESMValToolRecipes(
     path_data, path_recipes;
     subset = Dict(
         "statistics" => statistics, 
@@ -65,14 +70,14 @@ models_historical = unique(historical_data_lgm_models["tos_CLIM_historical"].pro
 @assert models_historical == models_lgm
 
 # function to join two DataMaps into one
-data = mw.joinDataMaps(lgm_data, historical_data_lgm_models)
-data_members = mw.subsetModelData(data; level = mw.MEMBER)
+data = mwd.joinDataMaps(lgm_data, historical_data_lgm_models)
+data_members = mwd.subsetModelData(data; level = mwd.MEMBER)
 
 # 2.2 Or directly load historical data of the same model MEMBERS as for lgm 
 # (may be less than in 2.1, since the exact simulations now have to match with
 # the lgm models, not only the models)
 begin
-    historical_data_lgm_members = mw.loadDataFromESMValToolRecipes(
+    historical_data_lgm_members = mwd.loadDataFromESMValToolRecipes(
         path_data, path_recipes;
         subset = Dict(
             "statistics" => statistics, 
@@ -102,15 +107,15 @@ begin
     path_config = "./configs/examples/example-lgm-historical.yml";
     subset = Dict{String, Union{Vector{String}, mw.LEVEL}}(
         "models" => model_members_lgm,
-        "subset_shared" => mw.MEMBER # applies to every loaded dataset
+        "subset_shared" => mwd.MEMBER # applies to every loaded dataset
     );
-    data_lgm_v2_meta =  mw.loadDataFromYAML(
+    data_lgm_v2_meta =  mwd.loadDataFromYAML(
         path_config; 
         is_model_data,
         subset = subset,
         preview = true
     )
-    data_lgm_v2 = mw.loadDataFromYAML(
+    data_lgm_v2 = mwd.loadDataFromYAML(
         path_config; 
         is_model_data,
         subset = subset,
@@ -127,7 +132,7 @@ begin
 
     # aliases and timeranges don't have to match, all data will be loaded that 
     # corresponds either to aliases or to timeranges!
-    obs_data = mw.loadDataFromESMValToolRecipes(
+    obs_data = mwd.loadDataFromESMValToolRecipes(
         base_path, config_path;
         dir_per_var = false,
         is_model_data = false,
