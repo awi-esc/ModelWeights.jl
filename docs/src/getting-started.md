@@ -124,7 +124,7 @@ For both functions, `loadDataFromESMValToolRecipes` and `loadDataFromYAML`, ther
 
     - `models`: List of models or individual model members, e.g. ["AWI-CM-1-1-MR"]. All filenames must contain at least one of the given strings + "_". The underscore is important since some models have names that are substrings of other models, e.g. "CNRM-CM5" and "CNRM-CM5-C2". 
    
-    - `subdirs`: If given, data will be loaded only from subdirectories of the given base\_dir that contain any of the provided values in their name. This is recommended when there are many subdirectories for a specific variable  within base\_dir and you only want data from a specific one (e.g. of a certain date, given that the date is included in the name of the directory).
+    - `base_subdirs`: If there is one directory for each climate variable (dir\_per\_var=true), you can use this argument to subset the considered subdirectories: if given, the data will be loaded only from subdirectories of the given base\_dir that contain any of the provided values in `base_subdirs` in their name. That is, it's not necessary to specify full directory names here, parts of it are sufficient.
 
 
 
