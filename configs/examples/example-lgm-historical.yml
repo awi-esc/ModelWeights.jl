@@ -1,48 +1,26 @@
-# can be omitted if inside datasets, base_dir refers to the entire path
-path_data: "/albedo/work/projects/p_forclima/preproc_data_esmvaltool"
+base_path_data: "/albedo/work/projects/p_forclima/preproc_data_esmvaltool"
 
-# optional
-timerange_to_alias:
-  "1850-1900": "historical0"
-  "1951-1980": "historical1"
-  "1961-1990": "historical2"
-  "1991-2014": "historical3"
-  "1980-2014": "historical4"
-
-# -default value for timerange if not provided is "full"
-# -default value for alias is the value of the experiment (exp) if no timerange
-# is provided, otherwise it is looked up in timerange_to_alias above and set to
-# "unknown" if not present.
-# -default value for subdirs is just empty, i.e. all subdirectories would 
-# be loaded 
 datasets: [
   {
     base_dir: "LGM", 
-    exp: "lgm", 
+    exp: "lgm",
     variables: ["tas", "tos"], 
-    statistics: ["CLIM"], 
-    subdirs: ["20241114"]
-  },
-   {
-    base_dir: "LGM", 
-    exp: "lgm", 
-    variables: ["thetao"], 
-    statistics: ["CLIM"]
-  },
-  {    
-    base_dir: "/albedo/work/projects/p_forclima/preproc_data_cdo/LGM",
-    dir_per_var: false, # default: true
-    exp: "lgm", 
-    variables: ["thetao"], 
-    statistics: ["CLIM"]
+    aliases: ["lgm"],
+    statistics: ["CLIM"], # optional (but if not given, subdirs must be given!)
+    subset: {             # optional
+      base_subdirs: ["20241114"],
+      subset_shared: "member"
+    }
   },
   {
-    base_dir: "historical", # required String
-    exp: "historical", # required String
-    variables: ["tas", "tos"], # required Vector
-    statistics: ["CLIM"], # required Vector
+    base_dir: "historical", # required
+    exp: "historical", # required
+    variables: ["tas", "tos"], # required
+    aliases: ["historical"], # required
+    statistics: ["CLIM"], # optional (default: nothing)
     dir_per_var: true, # optional (default: true)
-    timeranges: ["full"], # optional Vector (default: empty)
-    subdirs: ["20241121", "20241118"] # optional Vector (default: empty)
+    subset: {
+      base_subdirs: ["20250211", "20250207", "20250209"] # optional(default: empty) only applies when dir_per_var is true
+    }
   }
 ]

@@ -3,7 +3,6 @@ import ModelWeights.Data as mwd
 
 using NCDatasets
 using DimensionalData
-using Setfield
 
 # --------------------------- Set configurations --------------------------- #
 begin
@@ -18,25 +17,18 @@ end
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
 
-subset = Dict{String, Union{Vector{String}, mw.LEVEL}}(
+subset = Dict{String, Union{Vector{String}, mwd.LEVEL}}(
     "statistics" => statistics, 
-    "variables" => variables, 
+    "variables" => variables,
     "projects" => projects,
     "aliases" => ["lgm"], 
-    "subset_shared" => mwd.MEMBER
+    "subset_shared" => mwd.MEMBER,
+    "base_subdirs" => ["20241114"]
 );
 lgm_meta = mwd.loadDataFromESMValToolRecipes(
-    path_data, path_recipes; 
-    dir_per_var, is_model_data, subset=subset, preview=true
+    path_data, path_recipes; subset=subset, preview=true
 )
-lgm_data = mwd.loadDataFromESMValToolRecipes(
-    path_data, 
-    path_recipes; 
-    dir_per_var, 
-    is_model_data, 
-    subset=subset, 
-    preview = false
-)
+lgm_data = mwd.loadDataFromESMValToolRecipes(path_data, path_recipes; subset = subset)
 
 # we set subset_shared to mw.MEMBER, so model members are identical for 
 # every loaded data set (variable)
@@ -45,7 +37,7 @@ models_lgm = string.(unique(lgm_data["tos_CLIM_lgm"].properties["model_names"]))
 
 # --------------------------------------------------------------------------- #
 # 2. Model data just for historical experiment of models with lgm-experiment
-path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
+path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical";
 path_recipes = "./configs/historical";
 
 # 2.1 use same models (NOT on level of model members) as for the lgm 
@@ -53,17 +45,16 @@ path_recipes = "./configs/historical";
 # are loaded (subset_shared set to mw.MEMBER) since we want the exact 
 # same simulations for all variables when computing weights
 historical_data_lgm_models = mwd.loadDataFromESMValToolRecipes(
-    path_data, path_recipes;
+    path_data, 
+    path_recipes;
     subset = Dict(
         "statistics" => statistics, 
         "variables" => variables, 
         "projects" => projects,
         "aliases" => ["historical"], 
-        "timeranges" => ["full"], 
-        "subdirs" =>  ["20250211", "20250207", "20250209"],
+        #"timeranges" => ["full"], 
         "models" => models_lgm
-    ),
-    preview = false
+    )
 )
 # sanity check: for all lgm models, historical experiment is loaded
 models_historical = unique(historical_data_lgm_models["tos_CLIM_historical"].properties["model_names"]);
@@ -78,24 +69,24 @@ data_members = mwd.subsetModelData(data; level = mwd.MEMBER)
 # the lgm models, not only the models)
 begin
     historical_data_lgm_members = mwd.loadDataFromESMValToolRecipes(
-        path_data, path_recipes;
+        path_data, 
+        path_recipes;
         subset = Dict(
             "statistics" => statistics, 
             "variables" => variables, 
             "projects" => projects,
-            "aliases" => ["historical"], 
+            #"aliases" => ["historical"], 
             "timeranges" => ["full"], 
-            "subdirs" =>   ["20250211", "20250207", "20250209"],
+            "base_subdirs" =>   ["20250211", "20250207", "20250209"],
             "models" => model_members_lgm
-        ),
-        preview = false
+        )
     )
 end
 
 # sanity check: all historical model members must be in lgm model members
-all(map(x -> x in model_members_lgm, dims(historical_data_lgm_members["tos_CLIM_historical"], :member)))
+@assert all(map(x -> x in model_members_lgm, dims(historical_data_lgm_members["tos_CLIM_historical"], :member)))
 
-# sanity check: are there lgm model members that dont appear in historical models?
+# sanity check: are there lgm model MEMBERS that dont appear in historical models?
 members_historical = Array(dims(historical_data_lgm_members["tas_CLIM_historical"], :member));
 filter(x -> !(x in members_historical), model_members_lgm)
 
@@ -105,22 +96,14 @@ filter(x -> !(x in members_historical), model_members_lgm)
 begin
     # yaml config file already contains basic constraints for subset as defined above.
     path_config = "./configs/examples/example-lgm-historical.yml";
-    subset = Dict{String, Union{Vector{String}, mw.LEVEL}}(
+    subset = Dict{String, Union{Vector{String}, mwd.LEVEL}}(
         "models" => model_members_lgm,
         "subset_shared" => mwd.MEMBER # applies to every loaded dataset
     );
     data_lgm_v2_meta =  mwd.loadDataFromYAML(
-        path_config; 
-        is_model_data,
-        subset = subset,
-        preview = true
+        path_config; arg_constraint = subset, preview = true
     )
-    data_lgm_v2 = mwd.loadDataFromYAML(
-        path_config; 
-        is_model_data,
-        subset = subset,
-        preview = false
-    )
+    data_lgm_v2 = mwd.loadDataFromYAML(path_config; arg_constraint = subset)
 end
 
 
@@ -139,7 +122,7 @@ begin
         subset = Dict(
             "statistics" => statistics, 
             "variables" => variables,
-            "projects" => ["ERA5"], # for observational data default value is ["ERA5"]
+            "projects" => ["ERA5"],
             "timeranges" => ["full", "1961-1990"]
             #"aliases" => ["historical", "historical2"],
         ),
