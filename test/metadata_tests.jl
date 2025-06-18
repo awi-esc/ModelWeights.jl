@@ -1,9 +1,3 @@
-@testset "Test updateMetadataFromMultipleFiles!" begin
-end
-
-@testset "Test joinMetadata" begin
-end
-
 @testset "Test updateGroupedDataMetadata" begin
 end
 

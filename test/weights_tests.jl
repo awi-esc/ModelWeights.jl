@@ -28,12 +28,6 @@ end
 @testset "Test averageEnsembleMembersMatrix" begin
 end
 
-@testset "Test performance" begin  
-end
-
-@testset "Test independence" begin 
-end
-
 @testset "Test weightedAvg" begin
 end
 

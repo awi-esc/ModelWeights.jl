@@ -17,8 +17,6 @@
     @test result2 == expected2
 end
 
-@testset "Test computeAreaWeights" begin
-end
 
 @testset "Test individuatePath" begin
 end

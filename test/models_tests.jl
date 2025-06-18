@@ -10,11 +10,5 @@ end
 @testset "Test setLookupsFromMemberToModel" begin
 end
 
-@testset "Test reduceMetaDataSharedModels!" begin 
-end
-
-@testset "Test getModelsFromModelIDs" begin
-end
-
 @testset "Test physicsFromMember" begin
 end

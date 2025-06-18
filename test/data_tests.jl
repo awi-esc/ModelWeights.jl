@@ -29,10 +29,7 @@ end
 @testset "Test metaAttributesFromESMValToolRecipes" begin
 end
 
-@testset "Test addMetaData!" begin
-end
-
-@testset "Test metaDataFromYAML" begin
+@testset "Test metaAttributesFromYAML" begin
 end
 
 @testset "Test constrainFilenames" begin
@@ -40,71 +37,30 @@ end
     # paths_cems2 = mwd.constrainFilenames(path_data; model_constraints=["CESM2"])
 end
 
-@testset "Test getMetaDataID" begin
-end
-
-@testset "Test buildMetaData" begin
-end
-
-# @testset "Test buildPathsForMetaAttrib" begin
-#     base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
-#     attribs = Dict(
-#         "_variable" => "tas",
-#         "_statistic" => "CLIM",
-#         "_alias" => "historical",
-#     )
-#     dir_per_var = true
-#     paths = mwd.buildPathsForMetaAttrib(base_path, attribs, dir_per_var)
-#     subdir = "recipe_cmip5_historical_tas_20250211_094633"
-#     diagnostic = attribs["_variable"] * "_" * attribs["_statistic"]
-#     p1 = joinpath(base_path, subdir, "preproc", attribs["_alias"], diagnostic)
-#     @assert isdir(p1)
-#     @test p1 in paths
-
-#     p2 = joinpath(base_path, subdir, "preprocessor", attribs["_alias"], diagnostic)
-#     @assert !isdir(p2)
-#     @test !(p2 in paths)
-
-#     subdir = "recipe_cmip5_historical_psl_timeseries_20250228_084113"
-#     p3 = joinpath(base_path, subdir, "preproc", attribs["_alias"], "psl_CLIM-ann")
-#     @assert isdir(p3)
-#     @test !(p3 in paths)
-
-#     subdir = "recipe_cmip6_historical_tas_20250207_080843"
-#     p4 = joinpath(base_path, subdir, "preproc", attribs["_alias"], diagnostic)
-#     @assert isdir(p4)
-#     @test p4 in paths
-#     paths = mwd.buildPathsForMetaAttrib(
-#         base_path, attribs, dir_per_var; 
-#         subdir_constraints = ["20250211"]
-#     )
-#     @test !(p4 in paths)
-#     @test p1 in paths
-# end
-
 
 @testset "Test resolvePaths" begin
-    path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
-    meta = Dict(
-        "_variable" => "tas",
-        "_statistic" => "CLIM",
-        "_alias" => "historical"
+    base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
+    alias = "historical"
+    meta = mwd.MetaData(
+        Vector{String}(), 
+        "tas", 
+        "historical",
+        alias;
+        subdir = "tas_CLIM",
+        statistic = "CLIM"
     )
     dir_per_var = true
-    is_model_data = true
-    ds_constraint = Dict(
-        "models" =>  ["ACCESS-CM2", "CESM2#r1i1p1f1"]
-    )
     paths_to_files = mwd.resolvePaths(
-        meta, path_data, dir_per_var; constraint = ds_constraint
+        meta, 
+        base_path, 
+        dir_per_var; 
+        constraint = Dict("models" =>  ["ACCESS-CM2", "CESM2#r1i1p1f1"])
     )
-    base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
-    subdir = "recipe_cmip6_historical_tas_20250207_080843"
-    alias = "historical"
-    diagnostic = meta["_variable"] * "_" * meta["_statistic"]
-    p_access = joinpath(base_path, subdir, "preproc", alias, diagnostic, "CMIP6_ACCESS-CM2_Amon_historical_r1i1p1f1_tas_gn.nc")
-    p_cesm2 = joinpath(base_path, subdir, "preproc", alias, diagnostic, "CMIP6_CESM2_Amon_historical_r1i1p1f1_tas_gn.nc")
-    p_other = joinpath(base_path, subdir, "preproc", alias, diagnostic, "CMIP6_BCC-CSM2-MR_Amon_historical_r2i1p1f1_tas_gn.nc")
+
+    base_subdir = "recipe_cmip6_historical_tas_20250207_080843"
+    p_access = joinpath(base_path, base_subdir, "preproc", alias, meta.subdir, "CMIP6_ACCESS-CM2_Amon_historical_r1i1p1f1_tas_gn.nc")
+    p_cesm2 = joinpath(base_path, base_subdir, "preproc", alias, meta.subdir, "CMIP6_CESM2_Amon_historical_r1i1p1f1_tas_gn.nc")
+    p_other = joinpath(base_path, base_subdir, "preproc", alias, meta.subdir, "CMIP6_BCC-CSM2-MR_Amon_historical_r2i1p1f1_tas_gn.nc")
     @assert isfile(p_access) && isfile(p_cesm2) && isfile(p_other)
     @test p_access in paths_to_files
     @test p_cesm2 in paths_to_files
@@ -116,16 +72,25 @@ end
     p1_tos = "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM/CMIP5_CNRM-CM5_Omon_lgm_r1i1p1_tos.nc"
     p2_tos = "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM/CMIP5_FGOALS-g2_Omon_lgm_r1i1p1_tos.nc"
     p1_tas = "LGM/recipe_cmip5_lgm_tas_20241114_150049/preproc/lgm/tas_CLIM/CMIP5_CNRM-CM5_Omon_lgm_r1i1p1_tas.nc"
-    p2_tas = "LGM/recipe_cmip5_lgm_tas_20241114_150049/preproc/lgm/tas_CLIM/CMIP5_FGOALS-g2_Omon_lgm_r1i1p1_tas.nc"
-    meta = Dict(
-        "tos_CLIM_historical" => Dict("_paths" => [p1_tos, p2_tos]),   
-        "tas_CLIM_historical" => Dict("_paths" => [replace(p1_tas, "r1i1p1"=>"r2i1p1"), p2_tas])     
+    p2_tas = "LGM/recipe_cmip5_lgm_tas_20241114_150049/preproc/lgm/tas_CLIM/CMIP5_FGOALS-g2_Omon_lgm_r1i1p1_tas.nc"  
+    meta_tos = mwd.MetaData(
+        [p1_tos, p2_tos], "tos", "lgm", "lgm";
+        subdir = "tos_CLIM",
+        statistic = "CLIM",
+        id = "tos_CLIM_lgm"
     )
+    meta_tas = mwd.MetaData(
+        [replace(p1_tas, "r1i1p1"=>"r2i1p1"), p2_tas], "tas", "lgm", "lgm";
+        subdir = "tas_CLIM",
+        statistic = "CLIM",
+        id = "tas_CLIM_lgm"
+    )
+    meta = Dict("tos_CLIM_historical" => meta_tos, "tas_CLIM_historical" => meta_tas)
     mwd.filterPathsSharedModels!(meta, mwd.MODEL)
-    @test all(x -> x in meta["tos_CLIM_historical"]["_paths"], [p1_tos, p2_tos])
+    @test all(x -> x in meta["tos_CLIM_historical"].paths, [p1_tos, p2_tos])
     mwd.filterPathsSharedModels!(meta, mwd.MEMBER)
-    @test p2_tos in meta["tos_CLIM_historical"]["_paths"]
-    @test !(p1_tos  in meta["tos_CLIM_historical"]["_paths"])
+    @test p2_tos in meta["tos_CLIM_historical"].paths
+    @test !(p1_tos  in meta["tos_CLIM_historical"].paths)
 end
 
 
@@ -152,16 +117,10 @@ end
     @test mwd.applyModelConstraints("cmip_ACCESS_r1i1p1f1_gr.nc", allowed_models)
 end
 
-@testset "Test subsetPaths" begin
-end
-
 @testset "Test subsetModelData" begin
 end
 
 @testset "Test loadDataFromMetadata" begin
-end
-
-@testset "Test getModelIDsFromPaths" begin
 end
 
 @testset "Test searchModelInPaths" begin
@@ -177,7 +136,7 @@ end
     @test !mwd.searchModelInPaths(model_absent, paths)
 end
 
-@testset "Test getSharedModelsFromPaths" begin
+@testset "Test sharedModelsFromPaths" begin
 end
 
 @testset "Test alignPhysics" begin
@@ -194,10 +153,10 @@ end
     # data = mwd.loadDataFromYAML(path, preview = true);
 end
 
-@testset "Test averageEnsembleMembers!" begin
+@testset "Test averageEnsembleMembers" begin
 end
 
-@testset "Test getPutDimArray" begin
+@testset "Test getAtModel" begin
     a = [1 2 3];
     b = [4 5 6];    
     da = DimArray(vcat(a,b), (Dim{:model}(["m1", "m2"]), Dim{:var}(["tas", "tos", "pr"])))
@@ -206,16 +165,3 @@ end
     mwd.putAtModel!(da, :model, "m2", [17, 2, 1987])
     @test mwd.getAtModel(da, :model, "m2") == [17, 2, 1987]
 end
-
-
-
-# @testset "Test globalMeans" begin
-#     a = [1.0 2.0 3.0 4.0];
-#     b = [4.0 5.0 6 5.0];
-#     da = YAXArray((Dim{:lon}(longitudes[1:2]), Dim{:lat}(latitudes[1:4])), vcat(a,b))
-#     gms = mwd.globalMeans(da)
-
-#     area_weights = mwd.makeAreaWeightMatrix(Array(da.lon), Array(da.lat))
-#     aw_gm = sum(da .* area_weights)
-
-# end
