@@ -148,7 +148,7 @@ Read variable, statistic, experiment and timerange/alias values from ESMValTool 
 stored at `base_path_configs` into a vector of Dictionaries storing the respective readoff 
 values.
 """
-function metaAttributesFromESMValToolRecipes(base_path_configs::String)
+function metaAttributesFromESMValToolRecipes(base_path_configs::String, is_model_data::Bool)
     paths_configs = filter(
         x -> isfile(x) && endswith(x, ".yml"),
         readdir(base_path_configs, join = true),
@@ -181,6 +181,7 @@ function metaAttributesFromESMValToolRecipes(base_path_configs::String)
                     subdir = k,
                     variable_long = var_long,
                     statistic = statistic,
+                    is_model_data = is_model_data,
                     esmvaltoolPreproc = preprocessor
                 )
                 # if there are different recipes for CMIP5 and CMIP6, 'meta' might already 

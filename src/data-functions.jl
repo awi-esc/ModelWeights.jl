@@ -719,7 +719,7 @@ function loadDataFromESMValToolRecipes(
     sorted::Bool = true
 )
     checkDataStructure(path_data, dir_per_var, is_model_data)
-    attribs = metaAttributesFromESMValToolRecipes(path_recipes)
+    attribs = metaAttributesFromESMValToolRecipes(path_recipes, is_model_data)
     meta_data = loadMetaData(attribs, path_data; dir_per_var, subset)
     return preview ? meta_data : loadDataFromMetadata(meta_data, sorted)
 end
