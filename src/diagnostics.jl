@@ -14,7 +14,7 @@ function globalMeans(data::YAXArray)
         throw(ArgumentError(msg))
     end
     meta = deepcopy(data.properties)
-    meta["_statistic"] = hasdim(data, :time) ? "GM-ts" : "GM"
+    meta["statistic"] = hasdim(data, :time) ? "GM-ts" : "GM"
     meta["id"] = buildMetaDataID(meta)
 
     longitudes = Array(dims(data, :lon))
@@ -81,7 +81,7 @@ end
 
 function standardDev(data::YAXArray, dimension::Symbol)
     meta_new = deepcopy(data.properties)
-    meta_new["_statistic"] = "STD"
+    meta_new["statistic"] = "STD"
     meta_new["id"] = buildMetaDataID(meta_new)
     standard_devs = dropdims(Statistics.std(data, dims = dimension), dims = dimension)
     return YAXArray(otherdims(data, dimension), standard_devs, meta_new)

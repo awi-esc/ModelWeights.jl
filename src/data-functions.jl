@@ -108,12 +108,12 @@ end
 
 
 """
-    loadPreprocData(meta::MetaData, is_model_data::Bool; sorted::Bool = true)
+    loadPreprocData(meta::MetaData; sorted::Bool = true)
 
 Return data loaded from paths specified in `meta.paths` as single YAXArray.  The names of
 the data files are assumed to follow the CMIP-standard: TODO!
 """
-function loadPreprocData(meta::MetaData, is_model_data::Bool; sorted::Bool = true)
+function loadPreprocData(meta::MetaData; sorted::Bool = true)
     n_files = length(meta.paths)
     data = Vector{YAXArray}(undef, n_files)
     
@@ -139,7 +139,7 @@ function loadPreprocData(meta::MetaData, is_model_data::Bool; sorted::Bool = tru
         props = Dict{String, Union{String, Number, Missing}}() # just for this file!
         props["path"] = path
 
-        if is_model_data
+        if meta.is_model_data
             model_key = getCMIPModelsKey(Dict(ds.attrib))
             # add mip_era for models since it is not provided in CMIP5-models
             get!(attributes, "mip_era", "CMIP5")
@@ -270,17 +270,15 @@ end
 
 
 """
-    loadDataFromMetadata(meta_data::Dict{String, MetaData}, is_model_data::Bool)
+    loadDataFromMetadata(meta_data::Dict{String, MetaData}, sorted::Bool)
 
 Load a `DataMap`-instance that contains the data on level of model members specified in `meta_data`.
 
 # Arguments:
 - `meta_data::Dict`: keys are ids of datasets to be loaded, values is their MetaData
-- `is_model_data::Bool`: set to true for model data, to false for observational data.
+- `sorted::Bool`: set to true if data should be sorted alphabetically by model names.
 """
-function loadDataFromMetadata(
-    meta_data::Dict{String, MetaData}, is_model_data::Bool; sorted::Bool
-)
+function loadDataFromMetadata(meta_data::MetaDataMap, sorted::Bool)
     @debug "retrieved metadata:" meta_data
     if isempty(meta_data)
         throw(ArgumentError("No metadata provided!"))
@@ -288,7 +286,7 @@ function loadDataFromMetadata(
     results = DataMap()
     for (id, meta) in meta_data
         @info "load Data for: $id"
-        data = loadPreprocData(meta, is_model_data; sorted)
+        data = loadPreprocData(meta; sorted)
         results[meta.id] = data
     end
     return results
@@ -438,7 +436,7 @@ datasets.
 - `subset_shared`: level on which datasets must match: they include data from the  same 
 models (MODEL) or from the same model members (MEMBER).
 """
-function filterPathsSharedModels!(meta_data::Dict{String, MetaData}, subset_shared::LEVEL)
+function filterPathsSharedModels!(meta_data::MetaDataMap, subset_shared::LEVEL)
     all_paths = map(x -> x.paths, values(meta_data))
     all_models = memberIDsFromPaths(vcat(all_paths...))
     if subset_shared == MODEL
@@ -452,6 +450,13 @@ function filterPathsSharedModels!(meta_data::Dict{String, MetaData}, subset_shar
         mask = map(p -> applyModelConstraints(p, shared_models), meta.paths)
         meta_data[id].paths = meta.paths[mask]
     end
+    return nothing
+end
+
+function filterPathsSharedModels!(meta_data::MetaDataMap, subset_shared::String)
+    level = get(() -> throw(ArgumentError("subset_shared can only be one of: $(keys(LEVEL_LOOKUP))")), 
+        LEVEL_LOOKUP, lowercase(subset_shared))
+    filterPathsSharedModels!(meta_data, level)
     return nothing
 end
 
@@ -649,42 +654,60 @@ function addMasks!(datamap::DataMap, id_orog_data::String)
 end
 
 
+function checkDataStructure(path_data::String, dir_per_var::Bool, is_model_data::Bool)
+    target_folder = basename(path_data)
+    if dir_per_var && target_folder == "preproc"
+        throw(ArgumentError("If dir_per_var is true, path_data should point to a parentdirectory of directory with name 'preproc'"))
+    elseif !dir_per_var && is_model_data && target_folder != "preproc"
+        throw(ArgumentError("If dir_per_var is false, path_data should point to folder with name 'preproc'"))
+    end
+    return nothing
+end
+
+
+function loadMetaData(
+    meta_attribs::Vector{MetaData},
+    path_data::String;
+    dir_per_var::Bool = true,
+    subset::Union{Dict, Nothing} = nothing
+)
+    if !isnothing(subset)
+        constrainMetaData!(meta_attribs, subset)
+    end
+    addPaths!(meta_attribs, path_data, dir_per_var; constraint = subset)
+    meta_data = metaVecToDict(meta_attribs)
+    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))        
+        filterPathsSharedModels!(meta_data, subset["subset_shared"])
+    end
+    return meta_data
+end
+
 
 """
     loadDataFromESMValToolRecipes(
         path_data::String,
         path_recipes::String;
-        dir_per_var::Bool=true,
-        is_model_data::Bool=true,
-        subset::Union{Dict, Nothing}=nothing,
-        preview::Bool=false
+        dir_per_var::Bool = true,
+        is_model_data::Bool = true,
+        subset::Union{Dict, Nothing} = nothing,
+        preview::Bool = false,
+        sorted::Bool = true
     )
 
-Loads the data from the config files (ESMValTool recipes) located at 'path_recipes'.
-For each variable, experiment, statistic and timerange (alias), an instance of `Data`
-is created.
+Load the data from the ESMValTool recipes at `path_recipes` or, if `preview` is true, load
+meta data only.
 
 # Arguments:
-- `path_data`:  path to location where preprocessed data is stored; if 
-dir_per_var is true, paths to directories that contain one or
-more subdirectories that each contains a directory 'preproc' with the
-preprocessed data. If dir_per_var is false, path_data is path to directory that
- directly contains the 'preproc' subdirectory.
-- `path_recipes`: path to directory that contains one or ESMValTool recipes 
-used as config files.
-- `dir_per_var`: if true (default), directory at path_data has subdirectories, one for
-each variable (they must end with _ and the name of the variable), otherwise
-data_path points to the directory that has a subdirectory 'preproc'.
-- `is_model_data`: set true for model data, false for observational data
-- `subset`: specifies the properties of the subset of data to be loaded. 
-The following keys are considered:  `models` (used to load only specific set of models 
-or members of models), `projects` (used to load only data from a given set of
-projects, e.g. for loading only CMIP5-data), `timeranges` and `aliases`.
-(super set is loaded, i.e. data that corresponds to either a given timerange or
-a given alias will be loaded), `variables`, `statistics`, `subdirs` and `subset_shared` .
-(if set to MEMBER/MODEL only data loaded from model members/models shared across all experiments and variables is loaded).
-- `preview`: used to pre-check which data will be loaded before actually loading
-it. 
+- `path_data`: top level directory were data is stored.
+- `path_recipes`: directory were ESMValTool recipes are stored; these must be the versions 
+in the run folder generated by ESMValTool named  RECIPENAME_filled.yml.
+- `dir_per_var`: set to true (default) if there is a subdirectory in `path_data` for every 
+climate variable to be loaded.
+- `is_model_data`: set to true (default) for loading CMIP data, to false for observational 
+data.
+- `subset`: TODO!
+- `preview`: set to true if only meta data should be loaded (default: false).
+- `sorted`: if true (default), the data is sorted alphabetically wrt model names.
 """
 function loadDataFromESMValToolRecipes(
     path_data::String,
@@ -695,61 +718,68 @@ function loadDataFromESMValToolRecipes(
     preview::Bool = false,
     sorted::Bool = true
 )
-    target_folder = basename(path_data)
-    if dir_per_var && target_folder == "preproc"
-        throw(ArgumentError("If dir_per_var is true, path_data should point to a superfolder of folder with name 'preproc'"))
-    elseif !dir_per_var && target_folder != "preproc"
-        throw(ArgumentError("If dir_per_var is false, path_data should point to folder with name 'preproc'"))
-    end
-
-    attributes = metaAttributesFromESMValToolRecipes(path_recipes; constraint = subset)
-    addPaths!(attributes, path_data, dir_per_var; constraint = subset)
-    meta_data = metaVecToDict(attributes)
-
-    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))
-        filterPathsSharedModels!(meta_data, subset["subset_shared"])
-    end
-    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data; sorted)
+    checkDataStructure(path_data, dir_per_var, is_model_data)
+    attribs = metaAttributesFromESMValToolRecipes(path_recipes)
+    meta_data = loadMetaData(attribs, path_data; dir_per_var, subset)
+    return preview ? meta_data : loadDataFromMetadata(meta_data, sorted)
 end
 
 
 """
     loadDataFromYAML(
-        path_config::String;
-        is_model_data::Bool = true,
-        subset::Union{Dict,Nothing} = nothing,
-        preview::Bool = false
+        content::Dict;
+        arg_constraint::Union{Dict, Nothing} = nothing,
+        preview::Bool = false,
+        sorted::Bool = true
     )
 
-Load a `DataMap`-instance that contains the data specified in yaml file at `path_config`, 
-potentially constraint by values in `subset`.
+Load a `DataMap`-instance that contains the data specified in `content`, potentially 
+constraint by values in `arg_constraint`.
 
 # Arguments:
 - `preview::Bool`: if true (default: false), return metadata without actually 
 loading any data.
 """
 function loadDataFromYAML(
-    path_config::String;
-    is_model_data::Bool = true,
-    subset::Union{Dict,Nothing} = nothing,
-    preview::Bool = false
-)
-    return loadDataFromYAML(YAML.load_file(path_config); is_model_data, subset, preview)
-end
-
-
-
-function loadDataFromYAML(
     content::Dict;
-    is_model_data::Bool = true,
-    subset::Union{Dict,Nothing} = nothing,
+    arg_constraint::Union{Dict, Nothing} = nothing,
     preview::Bool = false,
     sorted::Bool = true
 )
-    meta_data = metaDataFromYAML(content, is_model_data; arg_constraint = subset)
-    if isempty(meta_data)
-        msg = "No metadata found for subset: $subset, $content (model data: $is_model_data)!"
-        throw(ArgumentError(msg))
+    fn_err(x) = throw(ArgumentError("$(x) must be provided in config yaml file!"))
+    datasets = get(() -> fn_err("datasets"), content, "datasets")
+    base_path = get(() -> fn_err("base_path_data"), content, "base_path_data")
+
+    data = preview ? MetaDataMap() : DataMap()
+    meta_data = MetaDataMap()
+    for ds in datasets
+        dir_per_var = get(ds, "dir_per_var", true)
+        is_model_data = get(ds, "is_model_data", true)
+        path_data = joinpath(base_path, get(() -> fn_err("base_dir"), ds, "base_dir"))
+        checkDataStructure(path_data, dir_per_var, is_model_data)
+        attribs = metaAttributesFromYAML(ds)
+        # merge arg_constraint has precedence over ds_subset here!
+        ds_constraint = get(ds, "subset", nothing)
+        if !isnothing(ds_constraint) && !isnothing(arg_constraint)
+            ds_constraint = joinDicts(ds_constraint, arg_constraint)
+        end
+        meta = loadMetaData(attribs, path_data; dir_per_var, subset = ds_constraint)
+        meta_data = joinDataMaps(meta_data, meta)
     end
-    return preview ? meta_data : loadDataFromMetadata(meta_data, is_model_data; sorted)
+    
+    level_all_data = get(arg_constraint, "subset_shared", nothing)
+    if !isnothing(level_all_data)
+        filterPathsSharedModels!(meta_data, level_all_data)
+    end
+    
+    return preview ? meta_data : loadDataFromMetadata(meta_data, sorted)
+end
+
+function loadDataFromYAML(
+    path_config::String;
+    arg_constraint::Union{Dict,Nothing} = nothing,
+    preview::Bool = false,
+    sorted::Bool = true
+)
+    return loadDataFromYAML(YAML.load_file(path_config); arg_constraint, preview, sorted)
 end

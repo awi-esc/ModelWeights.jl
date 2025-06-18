@@ -93,7 +93,7 @@ function weightedAvg(
         result[all_missing] .= missing
     end
     meta = deepcopy(data.properties)
-    meta["_statistic"] = equal_weights ? "unweighted-avg" : "weighted-avg"
+    meta["statistic"] = equal_weights ? "unweighted-avg" : "weighted-avg"
     meta["id"] = Data.buildMetaDataID(meta)
     return YAXArray(dims(weighted_avg), result, meta)
 end

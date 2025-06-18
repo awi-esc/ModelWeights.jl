@@ -28,7 +28,7 @@ function linearTrend(data::YAXArray; full_predictions::Bool = false)
     end
     x = Dates.year.(Array(data.time))
     meta = deepcopy(data.properties)
-    meta["_statistic"] = full_predictions ? "TREND-pred" : "TREND"
+    meta["statistic"] = full_predictions ? "TREND-pred" : "TREND"
     meta["id"] = Data.buildMetaDataID(meta)
     function fn(y)
         y = Array(y)
@@ -50,7 +50,7 @@ end
 
 function detrend(data::YAXArray)
     meta_new = deepcopy(data.properties)
-    meta_new["_statistic"] = join([meta_new["_statistic"], "detrended-ts"], "-")
+    meta_new["statistic"] = join([meta_new["statistic"], "detrended-ts"], "-")
     meta_new["id"] = Data.buildMetaDataID(meta_new)
     trend = linearTrend(data; full_predictions = true)
     diffs = @d data .- trend
@@ -121,9 +121,9 @@ function filterTimeseries(
         end
     end
     new_timerange = join(string.([start_year, end_year]), "-")
-    df.properties["_alias"] = 
-        isempty(new_alias) ? join([df.properties["_alias"], new_timerange], "-") : new_alias
-    df.properties["_timerange"] = new_timerange
+    df.properties["alias"] = 
+        isempty(new_alias) ? join([df.properties["alias"], new_timerange], "-") : new_alias
+    df.properties["timerange"] = new_timerange
     df.properties["id"] = Data.buildMetaDataID(df.properties)    
     warnIfOutOfTimerange(df, start_year, end_year)
     Data.warnIfhasMissing(df; name="timeseries data")

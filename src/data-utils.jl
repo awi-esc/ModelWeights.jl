@@ -1,13 +1,22 @@
 """
     joinDataMaps(v::DataMap...)
 """
-function joinDataMaps(v::DataMap...)
-    result = DataMap()
+function joinDicts(v::Dict...)
+    result = typeof(v[1])()
     for dm in v
-        warnIfIdenticalKeys(result, dm)
+        shared_keys = sharedKeys(result, dm)
+        if length(shared_keys) > 0
+            msg = "Merged dictionaries both contain keys: $shared_keys. Values from second dictionary are used:"
+            dups = map(x -> (x, dm[x]), shared_keys)
+            @warn msg dups
+        end
         result = merge(result, dm)
     end
     return result
+end
+
+function joinDataMaps(v::Union{MetaDataMap, DataMap}...)
+    return joinDicts(v...)
 end
 
 
@@ -15,8 +24,10 @@ end
     writeDataToDisk(data, target_path::String)
 
 Save `data` as Julia obj if `target_path` has ending '.jld2', otherwise save as binary.
+If file at `target_path` already exists, timestamp is added if `overwrite` is false (default).
 """
-function writeDataToDisk(data, target_path::String)
+function writeDataToDisk(data, target_path::String; overwrite::Bool = false)
+    target_path = overwrite ? target_path : Data.individuatePath(target_path)
     if endswith(target_path, ".jld2")
         jldsave(target_path; data = data)
     else
@@ -49,36 +60,11 @@ end
 
 
 """
-    buildCMIP5EnsembleMember(
-        realizations::Vector, initializations::Vector, physics::Vector
-    )
+    buildCMIP5EnsembleMember(realization::Number, initialization::number, physics::Number)
 
-Concatenate model settings to build ripf-abbreviations for CMIP5 models which 
-do not have it in their metadata. Return a vector of strings.
+Build rip-abbreviations from `realization`, `initialization` and `physics`; especially for 
+CMIP5 models which do not have it in their metadata.
 """
-function buildCMIP5EnsembleMember(
-    realizations::Vector,
-    initializations::Vector,
-    physics::Vector,
-)
-    n = length(realizations)
-    if (n != length(initializations)) || (n != length(physics))
-        msg = "inconsistent input for building up CMIP5EnsembleMembers!"
-        throw(ArgumentError(msg))
-    end
-    function concat(elem, prefix)
-        if !(elem isa Vector)
-            return [prefix * string(elem) for _ in range(1, n)]
-        else
-            return map(x -> prefix * string(x), elem)
-        end
-    end
-    rips = [concat(realizations, "r"), concat(initializations, "i"), concat(physics, "p")]
-    variants = [join(k, "") for k in zip(rips...)]
-    return variants
-end
-
-
 function buildCMIP5EnsembleMember(
     realization::Number, initialization::Number, physics::Number,
 )
@@ -116,15 +102,13 @@ end
     updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
 
 Summarize vectors in `meta`, refering to different models (members), such that 
-each vector only contains N entries (N=number of models (i.e. without unique 
-members)).
+each vector only contains N entries (N=number of models (i.e. without unique members)).
 
 If the metadata for members of a model differ across members, the respective
 entry in the vector will be a vector itself.
 """
 function updateGroupedDataMetadata(
-    meta::Dict,
-    grouped_data::DimensionalData.DimGroupByArray,
+    meta::Dict, grouped_data::DimensionalData.DimGroupByArray,
 )
     meta_new = filter(((k, v),) -> k == "member_names" || !(v isa Vector), meta)
     attributes = filter(x -> meta[x] isa Vector && x != "member_names", keys(meta))
@@ -163,13 +147,8 @@ end
 Read variable, statistic, experiment and timerange/alias values from ESMValTool recipes 
 stored at `base_path_configs` into a vector of Dictionaries storing the respective readoff 
 values.
-
-If `constraint` is given, a combination of 'statistic', 'experiment', etc. is only retained 
-if each of the respective readoff values aligns with the specified constraints.
 """
-function metaAttributesFromESMValToolRecipes(
-    base_path_configs::String; constraint::Union{Dict,Nothing} = nothing
-)
+function metaAttributesFromESMValToolRecipes(base_path_configs::String)
     paths_configs = filter(
         x -> isfile(x) && endswith(x, ".yml"),
         readdir(base_path_configs, join = true),
@@ -182,30 +161,36 @@ function metaAttributesFromESMValToolRecipes(
 
         for alias in aliases
             data = data_all[alias]["variables"]
-            for (k, v) in data
-                #statistic = occursin("_", k) ? String.(split(k, "_"))[2] : ""
+            for (k, v) in data      
                 variable = get(v, "short_name", "")
                 var_long = get(v, "variable_long_name", "")
                 preprocessor = get(v, "preprocessor", "")
+                
+                var_stat = String.(split(k, "_"))
+                statistic = length(var_stat) == 2 && var_stat[1] == variable ? var_stat[2] : nothing
                 if typeof(v["exp"]) <: String
                     experiment = v["exp"]
                 else
+                    # TODO: when would this happen??
                     experiment = join(v["exp"], "-")
                 end
                 timerange = replace(get(v, "timerange", "full"), "/" => "-")
-                meta = createMetaDataFromAttribs(
-                    variable, experiment, timerange, k, alias; var_long, preprocessor
+                meta = MetaData(
+                    Vector{String}(), variable, experiment, alias; 
+                    timerange = timerange,
+                    subdir = k,
+                    variable_long = var_long,
+                    statistic = statistic,
+                    esmvaltoolPreproc = preprocessor
                 )
-                # this may happen for instance if there are different recipes for CMIP5 and CMIP6
+                # if there are different recipes for CMIP5 and CMIP6, 'meta' might already 
+                # have been added to 'meta_attribs'
                 present = any(x -> isEqual(meta, x), meta_attribs)
                 if !present
                     push!(meta_attribs, meta)
                 end
             end
         end
-    end
-    if !isnothing(constraint)
-        constrainMetaData!(meta_attribs, constraint)
     end
     return meta_attribs
 end
@@ -265,144 +250,8 @@ function addPaths!(
 end
 
 
-# for configuration with yaml file
-function get_required_fields_config(ds::Dict)
-    data = Dict(
-        "base_dir" => get(ds, "base_dir", nothing),
-        "exp" => get(ds, "exp", nothing),
-        "variables" => get(ds, "variables", nothing),
-    )
-    if any(isnothing.(values(data)))
-        msg = "Config yaml file must specify values for the following keys: $(keys(data))."
-        throw(ArgumentError(msg))
-    end
-    # for fixed variables, no statistics are computed!
-    # may add more than 'orog' for which no warning is thrown.
-    stats = get(ds, "statistics", "")
-    if isempty(stats)
-        data["statistics"] = ["none"]
-        if data["variables"] != ["orog"]
-            @warn "No statistics specified for $(data["variables"])."
-        end
-    else
-        data["statistics"] = stats
-    end
-    return data
-end
-
-
 """
-    get_optional_fields_config(ds::Dict, timerange_aliases_dict::Dict)
-
-Fill optional fields for a dataset in config file with default values. 
-Returned timeranges and aliases have the same length and correspond to one another.
-
-# Arguments:
-- `ds`:
-- `timerange_aliases_dict`:
-"""
-function get_optional_fields_config(ds::Dict, timerange_aliases_dict::Dict)
-    aliases_timerange_vec = [(tr = k, alias = v) for (k, v) in timerange_aliases_dict]
-    aliases_timerange_dict = Dict{String,String}()
-    for elem in aliases_timerange_vec
-        aliases_timerange_dict[elem.alias] = elem.tr
-    end
-
-    timeranges = unique(get(ds, "timeranges", Vector{String}()))
-    full_included = "full" in timeranges
-    filter!(x -> x != "full", timeranges)
-    aliases = unique(get(ds, "aliases", Vector{String}()))
-
-    if !isempty(timeranges) && !isempty(aliases)
-        # make sure that same data is not loaded once for timerange and once 
-        # for corresponding alias
-        tr_as_aliases = [get(timerange_aliases_dict, tr, nothing) for tr in timeranges]
-        if any(isnothing.(tr_as_aliases))
-            unknowns = timeranges[findall(x -> isnothing(x), tr_as_aliases)]
-            throw(
-                ArgumentError(
-                    "Timeranges $unknowns aren't in timerange to alias dictionary in config file!",
-                ),
-            )
-        end
-        aliases_temp = filter(x -> !(x in tr_as_aliases), aliases)
-        if !isempty(aliases_temp)
-            aliases_as_tr =
-                map(a -> filter(x -> x.alias == a, aliases_timerange_dict), aliases_temp)
-            if any(x -> length(x) != 1, aliases_as_tr)
-                throw(
-                    ArgumentError(
-                        "Unknown alias according to timerange alias dictionary in config file!",
-                    ),
-                )
-            end
-        else
-            aliases_as_tr = Vector{String}()
-        end
-        aliases = vcat(tr_as_aliases, aliases_temp)
-        timeranges = vcat(timeranges, aliases_as_tr)
-    elseif isempty(timeranges)
-        timeranges = [get(aliases_timerange_dict, a, nothing) for a in aliases]
-        if any(isnothing.(timeranges))
-            unknowns = aliases[findall(x -> isnothing(x), timeranges)]
-            throw(
-                ArgumentError(
-                    "Unknown alias according to timerange alias dictionary in config file: $unknowns",
-                ),
-            )
-        end
-    elseif isempty(aliases)
-        aliases = [get(timerange_aliases_dict, tr, nothing) for tr in timeranges]
-        if any(isnothing.(aliases))
-            throw(
-                ArgumentError(
-                    "Unknown timerange according to timerange alias dictionary in config file!",
-                ),
-            )
-        end
-    end
-    if full_included || (isempty(timeranges) && isempty(aliases))
-        # default is "full"
-        push!(timeranges, "full")
-        push!(aliases, ds["exp"])
-    end
-    # sanity check
-    if (length(timeranges) != length(aliases)) || isempty(timeranges)
-        msg = "Merging timeranges and aliases failed! After merging, they must have the same length and match!"
-        throw(ArgumentError(msg))
-    end
-
-    # subset this dataset only 
-    subset_level = lowercase(get(ds, "subset_shared", ""))
-    subset_level =
-        subset_level == "model" ? MODEL : (subset_level == "member" ? MEMBER : nothing)
-
-    return Dict(
-        "timeranges" => timeranges,
-        "aliases" => aliases,
-        "models" => get(ds, "models", Vector{String}()),
-        "projects" => get(ds, "projects", Vector{String}()),
-        "subdirs" => get(ds, "subdirs", Vector{String}()),
-        "dir_per_var" => get(ds, "dir_per_var", true),
-        "subset_shared" => subset_level,
-    )
-end
-
-
-# """
-# If data is constraint by provided argument when loading, the argument takes
-# precedence over the given value inside the config yaml file.
-# """
-# function setConstraintVal!(ds_config::Dict, cs_arg::Dict)
-#     for (field, val) in cs_arg
-#         ds_config[field] = val
-#     end
-#     return nothing
-# end
-
-
-"""
-    metaDataFromYAML(
+    metaAttributesFromYAML(
         content::Dict, is_model_data::Bool; arg_constraint::Union{Dict, Nothing} = nothing
     )
 
@@ -418,85 +267,45 @@ file.
 - `is_model_data`: true for model data, false for observational data
 - `arg_constraint`: TODO
 """
-function metaDataFromYAML(
-    content::Dict, is_model_data::Bool; arg_constraint::Union{Dict, Nothing} = nothing
-)
-    datasets = content["datasets"]
-    base_path = get(content, "path_data", "")
-    timerange_to_alias = get(content, "timerange_to_alias", Dict{String,String}())
+function metaAttributesFromYAML(ds::Dict)
+    fn_err(x) = throw(ArgumentError("$(x) must be provided for each dataset in config yaml file!"))
+    experiment = get(() -> fn_err("exp"), ds, "exp")
+    variables = get(() -> fn_err("variables"), ds, "variables")
+    aliases = get(() -> fn_err("aliases"), ds, "aliases")
+    
+    subdirs = get(ds, "subdirs", nothing)
+    statistics = get(ds, "statistics", nothing)
+    is_model_data = get(ds, "is_model_data", true)
 
-    meta_data = Dict{String, MetaData}()
-    for ds in datasets
-        meta_ds = Dict{String, MetaData}()
-        # get data from config file
-        req_fields = get_required_fields_config(ds)
-        optional_fields = get_optional_fields_config(ds, timerange_to_alias)
-        ds_constraint = merge(req_fields, optional_fields)
-        considered_keys = keys(ds_constraint)
-        # potentially update with constraint from argument (has precedence over value in yaml file)
-        if !isnothing(arg_constraint)
-            #setConstraintVal!(ds_constraint, arg_constraint)
-            for (field, val) in arg_constraint
-                # if subset_shared is given as argument, it will subset considering ALL 
-                # loaded datasets, not individual ones!
-                if field != "subset_shared"
-                    if !(field in considered_keys)
-                        @warn "$field is not a valid key to subset data!"
-                    else
-                        ds_constraint[field] = val
-                    end
+    meta_ds = Vector{MetaData}()
+    if isnothing(subdirs)
+        subdirs = isnothing(statistics) ? 
+            fn_err("if subdirs not provided, statistics") : 
+            combineAll(variables, statistics)
+        for alias in aliases
+            for subdir in subdirs
+                var, stats = string.(split(subdir, "_"))
+                meta = MetaData(
+                    Vector{String}(), var, experiment, alias; 
+                    subdir=subdir, statistic=stats, is_model_data=is_model_data
+                )
+                push!(meta_ds, meta)     
+            end
+        end
+    else
+        for var in variables
+            for alias in aliases
+                for subdir in subdirs
+                    meta = MetaData(
+                        Vector{String}(), var, experiment, alias; 
+                        subdir=subdir, is_model_data = is_model_data
+                    )
+                    push!(meta_ds, meta)
                 end
             end
         end
-        # NOTE: if the second arg is an absolute path, joinpath will ignore the 
-        # first arg and just use the second
-        path_data = joinpath(base_path, req_fields["base_dir"])
-        for clim_var in ds_constraint["variables"]
-            for stats in ds_constraint["statistics"]
-                for idx = 1:length(ds_constraint["timeranges"])
-                    timerange = ds_constraint["timeranges"][idx]
-                    alias = ds_constraint["aliases"][idx]
-                    meta = createMetaDataFromAttribs(
-                        clim_var,
-                        ds_constraint["exp"],
-                        timerange,
-                        clim_var * "_" * stats, # TODO should also be possible to accept any name
-                        alias
-                    )
-                    # for observational data, experiment doesn't make sense
-                    if !is_model_data
-                        meta["experiment"] = ""
-                    end
-                    meta.paths = resolvePaths(
-                        meta, path_data, ds_constraint["dir_per_var"]; 
-                        constraint = ds_constraint
-                    )
-                    if !isempty(meta.paths)
-                        meta_ds[meta.id] = meta
-                    else
-                        @warn "No data found for $(meta.id)"
-                    end
-                end
-            end
-        end
-        # Apply subset_shared if provided inside yaml file for individual datasets
-        if !isnothing(ds_constraint) && !isnothing(get(ds_constraint, "subset_shared", nothing))
-            filterPathsSharedModels!(meta_ds, ds_constraint["subset_shared"])
-        end
-        # merge new dataset with already loaded
-        for (id, meta) in meta_ds
-            if haskey(meta_data, id)
-                meta_data[id].paths = mergeMetaDataPaths(meta_data[id], meta)
-            else
-                meta_data[id] = meta
-            end
-        end
     end
-    # filter across all datasets
-    if !isnothing(arg_constraint) && !isnothing(get(arg_constraint, "subset_shared", nothing))
-        filterPathsSharedModels!(meta_data, arg_constraint["subset_shared"])
-    end
-    return meta_data
+    return meta_ds
 end
 
 
@@ -904,32 +713,6 @@ function metaVecToDict(attributes::Vector{MetaData})
         end
     end
     return datasets_meta
-end
-
-
-function createMetaDataFromAttribs(
-    var_short::String, 
-    experiment::String, 
-    timerange::String, 
-    subdir::String, 
-    alias::String; 
-    var_long::String = "", 
-    preprocessor::String = "", 
-    paths = Vector{String}()
-)
-    var_stat = String.(split(subdir, "_"))
-    return MetaData(
-        paths = paths, 
-        variable = var_short, 
-        experiment = experiment,
-        timerange = timerange,
-        alias = alias,
-        subdir = subdir,
-        variable_long = var_long, 
-        statistic = length(var_stat) == 2 ? var_stat[2] : "", # TODO
-        esmvaltoolPreproc = preprocessor,
-        id = buildMetaDataID(subdir, alias)
-    )
 end
 
 

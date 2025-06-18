@@ -1,13 +1,9 @@
 # general helper functions
 
-function warnIfIdenticalKeys(d1, d2)
+function sharedKeys(d1, d2)
     keys1 = collect(keys(d1))
     keys2 = collect(keys(d2))
-    duplicates = intersect(keys1, keys2)
-    if length(duplicates) > 0
-        @warn "Merged dictionaries both contain keys: $duplicates. Values from second dictionary are used!"
-    end
-    return nothing
+    return intersect(keys1, keys2)
 end
 
 
@@ -82,17 +78,31 @@ function mergeMetaDataPaths(meta1::MetaData, meta2::MetaData)
     return unique(paths)
 end
 
-# TODO
-# function buildMetaDataID(variable::String, statistic::String, alias::String)
-#     return join([variable, statistic, alias], "_")
-# end
 
-# function buildMetaDataID(meta::Dict{String, T}) where T <: Any
-#     return join([meta["_variable"], meta["_statistic"], meta["_alias"]], "_")
-# end
+function buildMetaDataID(meta::MetaData)
+    subdir = meta.subdir
+    if isempty(subdir)
+        subdir = (!isempty(meta.statistic) && !isempty(meta.variable)) ? 
+            join([meta.variable, meta.statistic], "_") :
+            throw(ArgumentError("Neither subdir nor statistic and variable are in metadata!"))
+    end
+    if isempty(meta.alias)
+        throw(ArgumentError("alias (name of diagnostic in ESMValTool) cannot be empty in MetaData!"))
+    end
+    return join([subdir, meta.alias], "_")
+end
 
-function buildMetaDataID(variables_name::String, diagnostics_name::String)
-    return join([variables_name, diagnostics_name], "_")
+function buildMetaDataID(meta::Dict)
+    fn_err(k::String) = throw(ArgumentError("$k not defined in metadata!"))
+    subdir = get(meta, "subdir", nothing)
+    if isnothing(subdir)
+        subdir = join(
+            [get(() -> fn_err("subdir, variable"), meta, "variable"),
+             get(() -> fn_err("subdir, statistic"), meta, "statistic")], 
+             "_"
+        )
+    end
+    return join([subdir, get(() -> fn_err("alias"), meta, "alias")], "_")
 end
 
 
