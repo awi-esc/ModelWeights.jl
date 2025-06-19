@@ -6,9 +6,14 @@ function joinDicts(v::Dict...)
     for dm in v
         shared_keys = sharedKeys(result, dm)
         if length(shared_keys) > 0
-            msg = "Merged dictionaries both contain keys: $shared_keys. Values from second dictionary are used:"
-            dups = map(x -> (x, dm[x]), shared_keys)
-            @warn msg dups
+            dups = filter(!isempty, map(shared_keys) do x
+                    dm[x] != result[x] ? (x, result[x], dm[x]) : ()
+                end
+            )
+            if !isempty(dups)
+                msg = "Merged dictionaries contain identical keys. Values from second dictionary are used:"
+                @warn msg dups
+            end
         end
         result = merge(result, dm)
     end
