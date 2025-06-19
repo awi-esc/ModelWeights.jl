@@ -48,16 +48,15 @@ mutable struct MetaData
         paths::Vector{String},
         variable::String,
         experiment::String,
-        alias::String;
-        timerange::String = "",
-        subdir::String = "",
-        id::String = "",
-        is_model_data::Bool = true,
-        variable_long::Union{String, Nothing} = nothing,
-        statistic::Union{String, Nothing} = nothing,
-        esmvaltoolPreproc::Union{String, Nothing} = nothing
+        alias::String,
+        timerange::String,
+        subdir::String,
+        id::String,
+        is_model_data::Bool,
+        variable_long::Union{String, Nothing},
+        statistic::Union{String, Nothing},
+        esmvaltoolPreproc::Union{String, Nothing}
     )
-        # @info "Constructor called."
         if any(map(isempty, [variable, experiment, alias]))
             throw(ArgumentError("alias (name of diagnostic in ESMValTool), variable and experiment must be provided!"))
         end
@@ -89,10 +88,25 @@ mutable struct MetaData
     end
 end
 
+function MetaData(
+    paths::Vector{String},
+    variable::String,
+    experiment::String,
+    alias::String;
+    timerange::String = "",
+    subdir::String = "",
+    id::String = "",
+    is_model_data::Bool = true,
+    variable_long::Union{String, Nothing} = nothing,
+    statistic::Union{String, Nothing} = nothing,
+    esmvaltoolPreproc::Union{String, Nothing} = nothing
+)
+    return MetaData(paths, variable, experiment, alias, timerange, subdir, id, is_model_data, variable_long, statistic, esmvaltoolPreproc)
+end
+
 # function Base.show(io::IO, x::MetaData)
 #     println(io, "$(typeof(x)): $(x.id): ($(length(x.paths)) files)")
 # end
-
 
 const DataMap = Dict{String, YAXArray}
 const MetaDataMap = Dict{String, MetaData}
