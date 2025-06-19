@@ -655,11 +655,11 @@ end
 
 
 function checkDataStructure(path_data::String, dir_per_var::Bool, is_model_data::Bool)
-    target_folder = basename(path_data)
-    if dir_per_var && target_folder == "preproc"
-        throw(ArgumentError("If dir_per_var is true, path_data should point to a parentdirectory of directory with name 'preproc'"))
-    elseif !dir_per_var && is_model_data && target_folder != "preproc"
-        throw(ArgumentError("If dir_per_var is false, path_data should point to folder with name 'preproc'"))
+    if !dir_per_var && is_model_data
+        subdirs = filter(x -> isdir(joinpath(path_data, x)), readdir(path_data))
+        if !("preproc" in subdirs)
+            throw(ArgumentError("If dir_per_var is false, path_data must contain a directory named 'preproc'"))
+        end
     end
     return nothing
 end
