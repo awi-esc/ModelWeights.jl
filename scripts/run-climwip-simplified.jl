@@ -1,23 +1,20 @@
-import ModelWeights as mw
+import ModelWeights.Data as mwd
+import ModelWeights.Weights as mww
+import ModelWeights.Plots as mwp
 
-using DimensionalData
-using ColorSchemes
-using NCDatasets
 using CairoMakie
+using Colors
+using ColorSchemes
+using DimensionalData
+using NCDatasets
 
 # Load data for computing weights (output from ESMValTool recipe)
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358"; 
 path_configs = "./configs/climwip_config";
 
-model_data = mw.loadDataFromESMValToolRecipes(
+data = mwd.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var = false,
-    subset = Dict("aliases" => ["calculate_weights_climwip"])
-)
-obs_data = mw.loadDataFromESMValToolRecipes(
-    path_data, path_configs;
-    dir_per_var = false,
-    is_model_data = false,
     subset = Dict("aliases" => ["calculate_weights_climwip"])
 )
 
@@ -25,29 +22,37 @@ obs_data = mw.loadDataFromESMValToolRecipes(
 target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/";
 fn_jld2 = "weights-climwip-simplified.jld2";
 fn_nc = "weights-climwip-simplified.nc";
-config_weights = mw.ConfigWeights(
-    performance = Dict("tas_CLIM" => 1, "pr_CLIM" => 2, "psl_CLIM" => 1),
-    independence = Dict("tas_CLIM" => 0.5, "pr_CLIM" => 0.25, "psl_CLIM" => 0),
+config_weights = mww.ConfigWeights(
+    performance = Dict(
+        "tas_CLIM_calculate_weights_climwip" => 1, 
+        "pr_CLIM_calculate_weights_climwip" => 2, 
+        "psl_CLIM_calculate_weights_climwip" => 1
+    ),
+    independence = Dict(
+        "tas_CLIM_calculate_weights_climwip" => 0.5,
+        "pr_CLIM_calculate_weights_climwip" => 0.25,
+        "psl_CLIM_calculate_weights_climwip" => 0
+    ),
     sigma_independence = 0.5,
     sigma_performance = 0.5
 );
 
-dists_perform = mw.computeDistancesAllDiagnostics(model_data, obs_data, config_weights.performance);
-dists_indep = mw.computeDistancesAllDiagnostics(model_data, config_weights.independence);
-weights = mw.climwipWeights(dists_indep, dists_perform, config_weights);
+dists_perform = mwd.distancesData(data.models, data.obs, config_weights.performance);
+dists_indep = mwd.distancesModels(data.models, config_weights.independence);
+weights = mww.climwipWeights(dists_indep, dists_perform, config_weights);
 
 
 # Load weights from disk
 weights = mw.readDataFromDisk(config_weights.target_path; variable="weights");
 
 # make some Plots
-fig_weights = mw.plotWeights(weights; title="Climwip test basic; weights")
-mw.plotWeightContributions(weights.wI, weights.wP)
-figs_performance = mw.plotDistancesByVar(
-    weights.performance_distances, "Performance distances "; is_bar_plot=true
-)
+fig_weights = mwp.plotWeights(weights.w; title="Climwip test basic; weights")
+# mwp.plotWeightContributions(weights.wI, weights.wP)
+# figs_performance = mwp.plotDistancesByVar(
+#     weights.performance_distances, "Performance distances "; is_bar_plot=true
+# )
 
-figs_Sij = mw.plotDistancesIndependence(weights.Sij, "model1")
+figs_Sij = mwp.plotDistancesIndependence(weights.Sij, "model1")
 figs_Sij[1]
 sij_var = dropdims(
     reduce(+, weights.independence_distances, dims=:diagnostic), 
@@ -57,20 +62,20 @@ sij_var = dropdims(
 
 
 # Climwip Plots - Temperature map plots
-data_temp_map_future = mw.loadDataFromESMValToolRecipes(
+data_temp_map_future = mwd.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var=false,
     subset = Dict("aliases" => ["weighted_temperature_map_future"])
 )
-data_temp_map_reference = mw.loadDataFromESMValToolRecipes(
+data_temp_map_reference = mwd.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var = false,
     subset = Dict("aliases" => ["weighted_temperature_map_reference"])
 )
                 
 # compute weighted averages and plot results
-data_ref = data_temp_map_reference["tas_CLIM_weighted_temperature_map_reference"];
-data_future = data_temp_map_future["tas_CLIM_weighted_temperature_map_future"];
+data_ref = data_temp_map_reference.models["tas_CLIM_weighted_temperature_map_reference"];
+data_future = data_temp_map_future.models["tas_CLIM_weighted_temperature_map_future"];
 # just to align with original data
 data_ref = data_ref[lat = Where(x -> x <= 68.75)];
 data_future = data_future[lat = Where(x -> x <= 68.75)];
@@ -85,11 +90,11 @@ function compareToOrigData(data, data_orig)
 end
 
 title_f1 = "Weighted mean temp. change 2081-2100 minus 1995-2014";
-weighted_avg = mw.computeWeightedAvg(diff; weights = weights.w_members);
+weighted_avg = mww.weightedAvg(diff; weights = weights.w_members);
 #weighted_avg = mw.sortLongitudesWest2East(weighted_avg);
 f1 = Figure();
 cmap = cgrad([:white, :salmon, :red, :darkred], 10; categorical = true)
-mw.plotValsOnMap!(
+mwp.plotValsOnMap!(
     f1, weighted_avg, title_f1; 
     color_range = (2.5, 6.5),
     colors = cmap[2:end-1],
@@ -101,13 +106,13 @@ mw.plotValsOnMap!(
 f1
 
 title_f2 = "Weighted minus unweighted mean temp. change: 2081-2100 minus 1995-2014";
-unweighted_avg = mw.computeWeightedAvg(diff; use_members_equal_weights=false);
+unweighted_avg = mww.weightedAvg(diff; use_members_equal_weights=false);
 #unweighted_avg = mw.sortLongitudesWest2East(unweighted_avg);
 diff_wu = weighted_avg .- unweighted_avg;
 
 f2 = Figure();
 cmap = reverse(Colors.colormap("RdBu", logscale=false, mid=0.5))
-mw.plotValsOnMap!(f2, diff_wu, title_f2; 
+mwp.plotValsOnMap!(f2, diff_wu, title_f2; 
     color_range = (-1, 1),
     colors = cmap[2:end-1],
     high_clip = cmap[end],
@@ -134,20 +139,20 @@ end
 
 
 # Apply computed weights - Temperature graph plots
-data_temp_graph = mw.loadDataFromESMValToolRecipes(
+data_temp_graph = mwd.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var = false,
     subset = Dict("aliases" => ["weighted_temperature_graph"])
 );
-data_graph = data_temp_graph["tas_ANOM_weighted_temperature_graph"];
+data_graph = data_temp_graph.models["tas_ANOM_weighted_temperature_graph"];
 # this will compute the weighted avg based on the average across the respective members of each model
 #weighted_avg = mw.applyWeights(data_graph, weights.w_members);
 
-weighted_avg = mw.computeWeightedAvg(data_graph; weights = weights.w_members);
-unweighted_avg = mw.computeWeightedAvg(data_graph; use_members_equal_weights = false);
+weighted_avg = mww.weightedAvg(data_graph; weights = weights.w_members);
+unweighted_avg = mww.weightedAvg(data_graph; use_members_equal_weights = false);
 
-uncertainties_weighted = mw.getUncertaintyRanges(data_graph; w = weights.w_members);
-uncertainties_unweighted = mw.getUncertaintyRanges(data_graph);
+uncertainties_weighted = mwd.uncertaintyRanges(data_graph; w = weights.w_members);
+uncertainties_unweighted = mwd.uncertaintyRanges(data_graph);
 
 f3 = mw.plotTempGraph(
     data_graph, 
@@ -173,7 +178,7 @@ tas_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs
 # diff[indices]
 # compareToOrigData(uncertainties_weighted_orig, uncertainties_weighted)
 
-data_graph_models = mw.summarizeEnsembleMembersVector(data_graph, true);
+data_graph_models = mwd.summarizeEnsembleMembersVector(data_graph, true);
 
 weighted_avg_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/central_estimate_weighted.nc")
 compareToOrigData(weighted_avg_orig["tas"][:], weighted_avg[:])

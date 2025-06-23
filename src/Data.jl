@@ -1,6 +1,6 @@
 module Data
 
-export LEVEL, MODEL_MEMBER_DELIM
+export Level, MODEL_MEMBER_DELIM
 export DataMap, ClimateData
 
 using CSV
@@ -20,13 +20,13 @@ using YAXArrays
 const MODEL_MEMBER_DELIM = "#"
 const MODEL_NAME_FIXES = Dict("FGOALS_g2" => "FGOALS-g2", "ACCESS1.3" => "ACCESS1-3")
 
-
-@enum LEVEL MODEL = 0 MEMBER = 1
-
+@enum Level MODEL_LEVEL = 0 MEMBER_LEVEL = 1
 const LEVEL_LOOKUP = Dict(
-    "model" => MODEL,
-    "member" => MEMBER
+    "model" => MODEL_LEVEL,
+    "member" => MEMBER_LEVEL
 )
+
+@enum DataType MODEL_DATA = 0 OBS_DATA = 1 MODEL_OBS_DATA = 2
 
 META_CMIP5 = ["physics_version", "realization", "initialization_method"]
 META_CMIP6 = ["mip_era", "variant_label", "grid_label"]
@@ -39,7 +39,6 @@ mutable struct MetaData
     timerange::String
     subdir::String
     id::String
-    is_model_data::Bool
     variable_long::Union{String, Nothing}
     statistic::Union{String, Nothing}
     esmvaltoolPreproc::Union{String, Nothing}
@@ -52,7 +51,6 @@ mutable struct MetaData
         timerange::String,
         subdir::String,
         id::String,
-        is_model_data::Bool,
         variable_long::Union{String, Nothing},
         statistic::Union{String, Nothing},
         esmvaltoolPreproc::Union{String, Nothing}
@@ -80,7 +78,6 @@ mutable struct MetaData
             timerange,
             subdir,
             id_built,
-            is_model_data,
             variable_long,
             statistic,
             esmvaltoolPreproc
@@ -96,17 +93,18 @@ function MetaData(
     timerange::String = "",
     subdir::String = "",
     id::String = "",
-    is_model_data::Bool = true,
     variable_long::Union{String, Nothing} = nothing,
     statistic::Union{String, Nothing} = nothing,
     esmvaltoolPreproc::Union{String, Nothing} = nothing
 )
-    return MetaData(paths, variable, experiment, alias, timerange, subdir, id, is_model_data, variable_long, statistic, esmvaltoolPreproc)
+    return MetaData(paths, variable, experiment, alias, timerange, subdir, id, variable_long, statistic, esmvaltoolPreproc)
 end
 
-# function Base.show(io::IO, x::MetaData)
-#     println(io, "$(typeof(x)): $(x.id): ($(length(x.paths)) files)")
-# end
+function Base.show(io::IO, x::MetaData)
+    println(io, "$(typeof(x)): $(x.id): ($(length(x.paths)) files)")
+    fields = map(f -> (f, getfield(x, f)), filter(x -> x != :paths, fieldnames(MetaData)))
+    map(f -> println(io, f), fields)
+end
 
 const DataMap = Dict{String, YAXArray}
 const MetaDataMap = Dict{String, MetaData}
@@ -127,33 +125,26 @@ end
 
 
 @kwdef mutable struct ClimateData
-    info::Dict
     models::DataMap
     obs::DataMap
-    weights::Union{YAXArray, Nothing}
 end
 
-
-function ClimateData(models::DataMap, observations::DataMap)
-    return ClimateData(info=Dict(), models=models, obs=observations, weights=nothing)
+function ClimateData()
+    return ClimateData(models = DataMap(), obs = DataMap())
 end
 
-
-function Base.show(io::IO, ::MIME"text/plain", x::ClimateData)
+function Base.show(io::IO, x::ClimateData)
     println(io, "$(typeof(x))")
-    models = collect(keys(x.models))
-    obs = collect(keys(x.obs))
-    shared = intersect(models, obs)    
-    println("Model AND observational data: $(length(shared))")
-    map(println, shared)
-    println("----")
-    println("Data only for observations: $(length(filter(x-> !(x in models), obs)))")
-    println("Data only for models: $(length(filter(x-> !(x in obs), models)))")
-    println("----")
-    if !isnothing(x.weights)
-        println("Weights: $(x.weights)")
-    end
+    println(io, "models: $(x.models)observations: $(x.obs)")
 end
+
+@kwdef mutable struct ESMEnsemble
+    weights::Union{YAXArray, Nothing} 
+    variables::Dict{Union{Symbol, String}, YAXArray}
+    s::DataFrame   # styles for plotting
+    p::DataFrame   # parameters
+end
+
 
 include("data-utils.jl")
 include("data-functions.jl")

@@ -82,18 +82,17 @@ end
 
 
 """
-    subsetModelData(datamap::DataMap; level::LEVEL=MEMBER)
+    subsetModelData(datamap::DataMap; level::Level=MEMBER_LEVEL)
 
-For those datasets in `datamap` that specify data on the level `level` 
-(i.e. have dimension :member or :model), return a new DataMap with subset of 
-data s.t. the new datasets all have the same models (level=MODEL) or members 
-(level=MEMBER).
+For those datasets in `datamap` that specify data on the level `level` (i.e. have dimension 
+:member or :model), return a new DataMap with subset of data s.t. the new datasets all have 
+the same models (MODEL_LEVEL) or members (MEMBER_LEVEL).
 
 If no models are shared across datasets, return the input `datamap`.
 """
-function subsetModelData(datamap::DataMap; level::LEVEL = MEMBER)
+function subsetModelData(datamap::DataMap; level::Level = MEMBER_LEVEL)
     all_data = collect(values(datamap))
-    shared_models = level == MEMBER ? sharedMembers(datamap) : sharedModels(datamap)
+    shared_models = level == MEMBER_LEVEL ? sharedMembers(datamap) : sharedModels(datamap)
     if isempty(shared_models)
         @warn "Vector of models to subset data to is empty!"
         return datamap
@@ -108,21 +107,22 @@ end
 
 
 """
-    loadPreprocData(meta::MetaData; sorted::Bool = true)
+    loadPreprocData(meta::MetaData; sorted::Bool=true, dtype::DataType=MODEL_OBS_DATA)
 
 Return data loaded from paths specified in `meta.paths` as single YAXArray.  The names of
 the data files are assumed to follow the CMIP-standard: TODO!
 """
-function loadPreprocData(meta::MetaData; sorted::Bool = true)
-    n_files = length(meta.paths)
-    data = Vector{YAXArray}(undef, n_files)
-    
+function loadPreprocData(
+    meta::MetaData; sorted::Bool=true, dtype::DataType=MODEL_OBS_DATA
+)
+    data = Vector{YAXArray}()    
     filenames = first.(splitext.(basename.(meta.paths)))
     climVars = first.(split.(basename.(dirname.(meta.paths)), "_"))
     for (i, path) in enumerate(meta.paths)
         @debug "processing file.." * path
         filename = filenames[i]
         climVar = climVars[i]
+        is_model_data = any(map(x -> startswith(lowercase(filename), x), ["cmip5", "cmip6"]))
 
         ds = NCDataset(path)
         dsVar = ds[climVar]
@@ -139,7 +139,7 @@ function loadPreprocData(meta::MetaData; sorted::Bool = true)
         props = Dict{String, Union{String, Number, Missing}}() # just for this file!
         props["path"] = path
 
-        if meta.is_model_data
+        if is_model_data && dtype in [MODEL_DATA, MODEL_OBS_DATA] 
             model_key = getCMIPModelsKey(Dict(ds.attrib))
             # add mip_era for models since it is not provided in CMIP5-models
             get!(attributes, "mip_era", "CMIP5")
@@ -153,8 +153,10 @@ function loadPreprocData(meta::MetaData; sorted::Bool = true)
             props["model_id"] = fixModelNameMetadata(model_id_temp)
             props["member_id"] = uniqueMemberID(attributes, props["model_id"])
             #props["physics"] = physicsFromMember(props["member_id"])
-        else
+        elseif !is_model_data && dtype in [OBS_DATA, MODEL_OBS_DATA]
             props["model_id"] = filename
+        else
+            continue
         end
 
         for key in ["units", "mip_era", "grid_label"]
@@ -177,12 +179,12 @@ function loadPreprocData(meta::MetaData; sorted::Bool = true)
                 dimensions[idx_dim] = Dim{Symbol(d)}(collect(dsVar[d][:]))
             end
         end
-        data[i] = YAXArray(Tuple(dimensions), Array(dsVar), props)
+        push!(data, YAXArray(Tuple(dimensions), Array(dsVar), props))
         # replace missing values by NaN?
-        #data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(dsVar), NaN))
+        #push!(data, YAXArray(Tuple(dimensions), coalesce.(Array(dsVar), NaN), props)
         close(ds)
     end
-    return mergeDataFromMultipleFiles(data, meta, sorted)
+    return isempty(data) ? nothing : mergeDataFromMultipleFiles(data, meta, sorted)
 end
 
 
@@ -278,7 +280,9 @@ Load a `DataMap`-instance that contains the data on level of model members speci
 - `meta_data::Dict`: keys are ids of datasets to be loaded, values is their MetaData
 - `sorted::Bool`: set to true if data should be sorted alphabetically by model names.
 """
-function loadDataFromMetadata(meta_data::MetaDataMap, sorted::Bool)
+function loadDataFromMetadata(
+    meta_data::MetaDataMap, sorted::Bool; dtype::DataType = MODEL_OBS_DATA
+)
     @debug "retrieved metadata:" meta_data
     if isempty(meta_data)
         throw(ArgumentError("No metadata provided!"))
@@ -286,8 +290,10 @@ function loadDataFromMetadata(meta_data::MetaDataMap, sorted::Bool)
     results = DataMap()
     for (id, meta) in meta_data
         @info "load Data for: $id"
-        data = loadPreprocData(meta; sorted)
-        results[meta.id] = data
+        data = loadPreprocData(meta; sorted, dtype)
+        if !isnothing(data)
+            results[meta.id] = data
+        end
     end
     return results
 end
@@ -424,7 +430,7 @@ end
 
 """
     filterPathsSharedModels!(
-        meta_data::Dict{String, Dict{String, T}}, subset_shared::LEVEL
+        meta_data::Dict{String, Dict{String, T}}, subset_shared::Level
     ) where T <: Any
 
 For every dataset in `meta_data`, filter '_paths' s.t. the paths vector for each dataset 
@@ -434,12 +440,12 @@ datasets.
 # Arguments:
 - `meta_data`: contains a metadata dictionary for every dataset.
 - `subset_shared`: level on which datasets must match: they include data from the  same 
-models (MODEL) or from the same model members (MEMBER).
+models (MODEL_LEVEl) or from the same model members (MEMBER_LEVEL).
 """
-function filterPathsSharedModels!(meta_data::MetaDataMap, subset_shared::LEVEL)
+function filterPathsSharedModels!(meta_data::MetaDataMap, subset_shared::Level)
     all_paths = map(x -> x.paths, values(meta_data))
     all_models = memberIDsFromPaths(vcat(all_paths...))
-    if subset_shared == MODEL
+    if subset_shared == MODEL_LEVEL
         all_models = unique(modelsFromMemberIDs(all_models))
     end
     shared_models = sharedModelsFromPaths(all_paths, all_models)
@@ -454,8 +460,8 @@ function filterPathsSharedModels!(meta_data::MetaDataMap, subset_shared::LEVEL)
 end
 
 function filterPathsSharedModels!(meta_data::MetaDataMap, subset_shared::String)
-    level = get(() -> throw(ArgumentError("subset_shared can only be one of: $(keys(LEVEL_LOOKUP))")), 
-        LEVEL_LOOKUP, lowercase(subset_shared))
+    msg = "subset_shared can only be one of: $(keys(LEVEL_LOOKUP))"
+    level = get(() -> throw(ArgumentError(msg)), LEVEL_LOOKUP, lowercase(subset_shared))
     filterPathsSharedModels!(meta_data, level)
     return nothing
 end
@@ -477,7 +483,7 @@ end
     alignPhysics(
         data::DataMap,
         members::Vector{String}, 
-        subset_shared::Union{LEVEL, Nothing} = nothing)
+        subset_shared::Union{Level, Nothing} = nothing)
     )
 
 Return new DataMap with only the models retained that share the same physics as 
@@ -486,9 +492,7 @@ the respective model's members in `members`.
 If `subset_shared` is set, resulting DataMap is subset accordingly.
 """
 function alignPhysics(
-    datamap::DataMap,
-    members::Vector{String};
-    subset_shared::Union{LEVEL,Nothing} = nothing,
+    datamap::DataMap, members::Vector{String}; subset_shared::Union{Level, Nothing}=nothing,
 )
     data = deepcopy(datamap)
     models = unique(modelsFromMemberIDs(members))
@@ -513,7 +517,7 @@ function alignPhysics(
     end
     if !isnothing(subset_shared)
         shared_models =
-            subset_shared == MEMBER ? sharedMembers(data) : sharedModels(data)
+            subset_shared == MEMBER_LEVEL ? sharedMembers(data) : sharedModels(data)
         for (id, model_data) in data
             data[id] = subsetModelData(model_data, shared_models)
         end
@@ -654,8 +658,8 @@ function addMasks!(datamap::DataMap, id_orog_data::String)
 end
 
 
-function checkDataStructure(path_data::String, dir_per_var::Bool, is_model_data::Bool)
-    if !dir_per_var && is_model_data
+function checkDataStructure(path_data::String, dir_per_var::Bool)
+    if !dir_per_var
         subdirs = filter(x -> isdir(joinpath(path_data, x)), readdir(path_data))
         if !("preproc" in subdirs)
             throw(ArgumentError("If dir_per_var is false, path_data must contain a directory named 'preproc'"))
@@ -683,12 +687,24 @@ function loadMetaData(
 end
 
 
+function loadDataStore(
+    meta_data::MetaDataMap; sorted::Bool=true, dtype::DataType=MODEL_OBS_DATA
+)
+    ds = ClimateData()
+    if dtype != OBS_DATA
+        ds.models = loadDataFromMetadata(meta_data, sorted; dtype = MODEL_DATA)
+    end
+    if dtype != MODEL_DATA
+        ds.obs = loadDataFromMetadata(meta_data, sorted; dtype = OBS_DATA)
+    end
+    return ds
+end
+
 """
     loadDataFromESMValToolRecipes(
         path_data::String,
         path_recipes::String;
         dir_per_var::Bool = true,
-        is_model_data::Bool = true,
         subset::Union{Dict, Nothing} = nothing,
         preview::Bool = false,
         sorted::Bool = true
@@ -703,8 +719,6 @@ meta data only.
 in the run folder generated by ESMValTool named  RECIPENAME_filled.yml.
 - `dir_per_var`: set to true (default) if there is a subdirectory in `path_data` for every 
 climate variable to be loaded.
-- `is_model_data`: set to true (default) for loading CMIP data, to false for observational 
-data.
 - `subset`: TODO!
 - `preview`: set to true if only meta data should be loaded (default: false).
 - `sorted`: if true (default), the data is sorted alphabetically wrt model names.
@@ -713,15 +727,20 @@ function loadDataFromESMValToolRecipes(
     path_data::String,
     path_recipes::String;
     dir_per_var::Bool = true,
-    is_model_data::Bool = true,
     subset::Union{Dict, Nothing} = nothing,
     preview::Bool = false,
-    sorted::Bool = true
+    sorted::Bool = true, 
+    dtype::DataType = MODEL_OBS_DATA
 )
-    checkDataStructure(path_data, dir_per_var, is_model_data)
-    attribs = metaAttributesFromESMValToolRecipes(path_recipes, is_model_data)
+    checkDataStructure(path_data, dir_per_var)
+    attribs = metaAttributesFromESMValToolRecipes(path_recipes)
     meta_data = loadMetaData(attribs, path_data; dir_per_var, subset)
-    return preview ? meta_data : loadDataFromMetadata(meta_data, sorted)
+    if preview
+        return meta_data
+    else
+        ds = loadDataStore(meta_data; sorted, dtype)
+        return dtype == OBS_DATA ? ds.obs : (dtype == MODEL_DATA ? ds.models : ds)
+    end
 end
 
 
@@ -744,19 +763,18 @@ function loadDataFromYAML(
     content::Dict;
     arg_constraint::Union{Dict, Nothing} = nothing,
     preview::Bool = false,
-    sorted::Bool = true
+    sorted::Bool = true, 
+    dtype::DataType = MODEL_OBS_DATA
 )
     fn_err(x) = throw(ArgumentError("$(x) must be provided in config yaml file!"))
     datasets = get(() -> fn_err("datasets"), content, "datasets")
     base_path = get(() -> fn_err("base_path_data"), content, "base_path_data")
 
-    data = preview ? MetaDataMap() : DataMap()
     meta_data = MetaDataMap()
     for ds in datasets
         dir_per_var = get(ds, "dir_per_var", true)
-        is_model_data = get(ds, "is_model_data", true)
         path_data = joinpath(base_path, get(() -> fn_err("base_dir"), ds, "base_dir"))
-        checkDataStructure(path_data, dir_per_var, is_model_data)
+        checkDataStructure(path_data, dir_per_var)
         attribs = metaAttributesFromYAML(ds)
         # merge arg_constraint has precedence over ds_subset here!
         ds_constraint = get(ds, "subset", nothing)
@@ -771,8 +789,7 @@ function loadDataFromYAML(
     if !isnothing(level_all_data)
         filterPathsSharedModels!(meta_data, level_all_data)
     end
-    
-    return preview ? meta_data : loadDataFromMetadata(meta_data, sorted)
+    return preview ? meta_data : loadDataStore(meta_data; sorted, dtype)
 end
 
 function loadDataFromYAML(
@@ -783,3 +800,6 @@ function loadDataFromYAML(
 )
     return loadDataFromYAML(YAML.load_file(path_config); arg_constraint, preview, sorted)
 end
+
+
+

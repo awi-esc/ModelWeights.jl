@@ -153,7 +153,7 @@ Read variable, statistic, experiment and timerange/alias values from ESMValTool 
 stored at `base_path_configs` into a vector of Dictionaries storing the respective readoff 
 values.
 """
-function metaAttributesFromESMValToolRecipes(base_path_configs::String, is_model_data::Bool)
+function metaAttributesFromESMValToolRecipes(base_path_configs::String)
     paths_configs = filter(
         x -> isfile(x) && endswith(x, ".yml"),
         readdir(base_path_configs, join = true),
@@ -186,7 +186,6 @@ function metaAttributesFromESMValToolRecipes(base_path_configs::String, is_model
                     subdir = k,
                     variable_long = var_long,
                     statistic = statistic,
-                    is_model_data = is_model_data,
                     esmvaltoolPreproc = preprocessor
                 )
                 # if there are different recipes for CMIP5 and CMIP6, 'meta' might already 
@@ -257,9 +256,7 @@ end
 
 
 """
-    metaAttributesFromYAML(
-        content::Dict, is_model_data::Bool; arg_constraint::Union{Dict, Nothing} = nothing
-    )
+    metaAttributesFromYAML(content::Dict)
 
 Return metadata of data specified in `content` possibly constrained by values in `arg_constraint`.
 
@@ -270,8 +267,6 @@ file.
 
 # Arguments:
 - `content`: content of config yaml file specifying meta attributes and paths of data
-- `is_model_data`: true for model data, false for observational data
-- `arg_constraint`: TODO
 """
 function metaAttributesFromYAML(ds::Dict)
     fn_err(x) = throw(ArgumentError("$(x) must be provided for each dataset in config yaml file!"))
@@ -281,7 +276,6 @@ function metaAttributesFromYAML(ds::Dict)
     
     subdirs = get(ds, "subdirs", nothing)
     statistics = get(ds, "statistics", nothing)
-    is_model_data = get(ds, "is_model_data", true)
 
     meta_ds = Vector{MetaData}()
     if isnothing(subdirs)
@@ -292,8 +286,7 @@ function metaAttributesFromYAML(ds::Dict)
             for subdir in subdirs
                 var, stats = string.(split(subdir, "_"))
                 meta = MetaData(
-                    Vector{String}(), var, experiment, alias; 
-                    subdir=subdir, statistic=stats, is_model_data=is_model_data
+                    Vector{String}(), var, experiment, alias; subdir=subdir, statistic=stats
                 )
                 push!(meta_ds, meta)     
             end
@@ -302,10 +295,7 @@ function metaAttributesFromYAML(ds::Dict)
         for var in variables
             for alias in aliases
                 for subdir in subdirs
-                    meta = MetaData(
-                        Vector{String}(), var, experiment, alias; 
-                        subdir=subdir, is_model_data = is_model_data
-                    )
+                    meta = MetaData(Vector{String}(), var, experiment, alias; subdir=subdir)
                     push!(meta_ds, meta)
                 end
             end
