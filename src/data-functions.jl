@@ -1,5 +1,3 @@
-# functions for loading/subsetting data
-
 """
     subsetModelData(datamap::DataMap; level::Level=MEMBER_LEVEL)
 
@@ -22,9 +20,11 @@ function subsetModelData(datamap::DataMap; level::Level = MEMBER_LEVEL)
     return subset
 end
 
+
 function sharedModels(data::DataMap, level::Level)
     return level == MEMBER_LEVEL ? sharedLevelMembers(data) : sharedLevelModels(data)
 end
+
 
 function sharedModels(all_paths::Vector{Vector{String}}, subset_shared::Level)
     all_models = memberIDsFromPaths(vcat(all_paths...))
@@ -33,6 +33,7 @@ function sharedModels(all_paths::Vector{Vector{String}}, subset_shared::Level)
     end
     return sharedModelsFromPaths(all_paths, all_models)
 end
+
 
 """
     loadPreprocData(
@@ -124,6 +125,31 @@ function loadPreprocData(
         close(ds)
     end
     return isempty(data) ? nothing : mergeDataFromMultipleFiles(data, sorted; meta)
+end
+
+
+function loadClimateData(
+    all_paths::Vector{Vector{String}},
+    ids::Vector{String};
+    meta_data::Union{Vector{Dict{String, T}}, Nothing} = nothing,
+    sorted::Bool = true,
+    dtype::DataType = MODEL_OBS_DATA
+) where T <: Any
+    absent(x::Union{Vector, Nothing}) = isnothing(x) || isempty(x)
+    if !absent(meta_data) && (length(all_paths) != length(meta_data))
+        throw(ArgumentError("size of paths vector and meta data must be equal. Found: paths: $(length(all_paths)), meta_data: $(length(meta_data))"))
+    end
+
+    getData(dtype::DataType) = map(
+        (paths, meta) -> loadPreprocData(paths; sorted, meta, dtype),
+        all_paths, 
+        absent(meta_data) ? fill(nothing, length(all_paths)) : meta_data
+    )
+    models = dtype != OBS_DATA ? filter(!isnothing, getData(MODEL_DATA)) : []
+    observations = dtype != MODEL_DATA ? filter(!isnothing, getData(OBS_DATA)) : []
+    model_map = !isempty(models) ? buildDataMap(models, ids) : DataMap()
+    obs_map = !isempty(observations) ? buildDataMap(observations, ids) : DataMap()
+    return ClimateData(model_map, obs_map)
 end
 
 
@@ -243,23 +269,6 @@ function addMasks!(datamap::DataMap, id_orog_data::String)
 end
 
 
-function loadClimateData(
-    paths::Vector{Vector{String}},
-    ids::Vector{String};
-    meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
-    sorted::Bool = true,
-    dtype::DataType = MODEL_OBS_DATA
-) where T <: Any
-    models = dtype != OBS_DATA ? 
-        loadData(paths, ids; meta_dicts = meta_data, sorted, dtype = MODEL_DATA) : 
-        DataMap()
-        
-    obs = dtype != MODEL_DATA ? 
-        loadData(paths, ids; meta_dicts = meta_data, sorted, dtype = OBS_DATA) : 
-        DataMap()
-    return ClimateData(models, obs)
-end
-
 """
     loadDataFromESMValToolRecipes(
         path_data::String,
@@ -298,7 +307,8 @@ function loadDataFromESMValToolRecipes(
     if preview
         return collect(zip(meta_data, paths))
     end
-    return loadDataFromMetaData(meta_data, paths; sorted, dtype)
+    ids = map(x -> x.id, meta_data)
+    return loadClimateData(paths, ids; sorted, dtype, meta_data=metadataToDict.(meta_data))
 end
 
 
@@ -356,9 +366,11 @@ function loadDataFromYAML(
     end
     paths = vcat(all_paths...)
     meta_data = vcat(all_meta...)
-    return preview ? 
-        collect(zip(meta_data, paths)) : 
-        loadDataFromMetaData(meta_data, paths; sorted, dtype)
+    if preview
+        return collect(zip(meta_data, paths))
+    end
+    ids = map(x -> x.id, meta_data)
+    return loadClimateData(paths, ids; sorted, dtype, meta_data=metadataToDict.(meta_data))    
 end
 
 function loadDataFromYAML(
@@ -371,70 +383,6 @@ function loadDataFromYAML(
 end
 
 # Loading data for given paths
-
-function addData(
-    dm::DataMap,
-    paths::Vector{String},
-    name::String;
-    sorted::Bool = true, 
-    dtype::DataType = MODEL_OBS_DATA,
-    meta::Dict{String, T} = Dict{String, Any}(),
-    overwrite::Bool = false
-) where T <: Any
-    if !overwrite && haskey(dm, name)
-        @warn "no data added, key $(name) already present."
-        return dm
-    end
-    data = loadPreprocData(paths; sorted, dtype, meta)
-    if !isnothing(data)
-        dm[name] = data
-    end
-    return dm
-end
-
-
-function loadData(
-    paths::Vector{String}, 
-    id::String;
-    meta::Dict{String, T} = Dict{String, Any}(),
-    constraint::Union{Dict, Nothing} = nothing,
-    sorted::Bool = true, 
-    dtype::DataType = MODEL_OBS_DATA
-) where T <: Any
-    return addData(DataMap(), paths, id; constraint, sorted, dtype, meta)
-end
-
-
-
-function loadData(
-    paths_data::Vector{Vector{String}}, 
-    data_ids::Vector{String};
-    meta_dicts::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
-    sorted::Bool = true, 
-    dtype::DataType = MODEL_OBS_DATA
-) where T <: Any
-    n = length(paths_data)
-    if n != length(data_ids)
-        throw(ArgumentError("Arguments `data_paths` and `data_ids` must have same size!"))
-    end
-    if !isempty(meta_dicts) && length(meta_dicts) != n
-        throw(ArgumentError("if meta data is given, it must be given for every datasets!"))
-    end
-    result = DataMap()
-    data = isempty(meta_dicts) ? zip(paths_data, data_ids) : zip(paths_data, data_ids, meta_dicts)
-    for data_tuple in data
-        id = data_tuple[2]
-        # addData!(result, paths, id; sorted, dtype, meta)
-        meta = length(data_tuple) == 3 ? data_tuple[end] : nothing
-        df = loadPreprocData(data_tuple[1]; sorted, dtype, meta)
-        if !isnothing(df)
-            result[id] = df
-        end
-    end
-    return result
-end
-
-
 function loadDataFromDirs(
     paths_data_dirs::Vector{Vector{String}}, 
     data_ids::Vector{String};
@@ -446,5 +394,6 @@ function loadDataFromDirs(
     paths = map(paths_data_dirs) do paths 
         vcat(collectNCFilePaths.(paths; constraint)...)
     end
-    return loadData(paths, data_ids; meta_dicts, sorted, dtype)
+    return loadClimateData(paths, data_ids; meta_data=meta_dicts, sorted, dtype)
 end
+

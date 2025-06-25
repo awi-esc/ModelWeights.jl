@@ -135,32 +135,51 @@ end
 
 # --------- Load the model data Version 3: completely independent of ESMValTool recipes --------- #
 base = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool" 
-paths_lgm = [
-    [joinpath(base, "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM"),
-     joinpath(base, "LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM")],
-    [joinpath(base, "LGM/recipe_cmip6_lgm_tas_20241114_150706/preproc/lgm/tas_CLIM"),
-     joinpath(base, "LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM")]
-]
+paths_lgm_tos = [
+    joinpath(base, "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM"),
+    joinpath(base, "LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM")
+];
+paths_lgm_tas = [
+    joinpath(base, "LGM/recipe_cmip6_lgm_tas_20241114_150706/preproc/lgm/tas_CLIM"),
+    joinpath(base, "LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM")
+];
+paths_lgm = [paths_lgm_tos, paths_lgm_tas];
+
 subset = Dict{String, Union{Vector{String}, mwd.Level}}(
     "subset_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
 );
 lgm = mwd.loadDataFromDirs(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint=subset)
-
-paths_historical = [
-    [joinpath(base, "historical/recipe_cmip5_historical_tas_20250211_094633/preproc/historical/tas_CLIM"), 
-     joinpath(base, "historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM")
-    ],
-    [joinpath(base, "historical/recipe_cmip5_historical_tos_20250211_094633/preproc/historical/tos_CLIM"),
-     joinpath(base, "historical/recipe_cmip6_historical_tos_20250209_144722/preproc/historical/tos_CLIM")
-    ]
-]
-models_lgm = string.(unique(lgm["tos_lgm"].properties["model_names"]))
+model_members_lgm = Array(dims(lgm.models["tas_lgm"], :member));
+models_lgm = string.(unique(lgm.models["tos_lgm"].properties["model_names"]))
 
 
+
+paths_historical_tas = [
+    joinpath(base, "historical/recipe_cmip5_historical_tas_20250211_094633/preproc/historical/tas_CLIM"), 
+    joinpath(base, "historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM")
+];
+paths_historical_tos = [
+    joinpath(base, "historical/recipe_cmip5_historical_tos_20250211_094633/preproc/historical/tos_CLIM"),
+    joinpath(base, "historical/recipe_cmip6_historical_tos_20250209_144722/preproc/historical/tos_CLIM")
+];
+paths_historical = [paths_historical_tas, paths_historical_tos];
 subset = Dict{String, Union{Vector{String}, mwd.Level}}(
-    "models" => members_lgm,
+    "models" => model_members_lgm,
     "subset_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
 );
 historical = mwd.loadDataFromDirs(
     paths_historical, ["tas_historical", "tos_historical"]; constraint = subset
 )
+
+# load from files directly
+paths = map(paths_lgm) do paths 
+        vcat(mwd.collectNCFilePaths.(paths)...)
+end
+ids = ["tos", "tas"]
+data = mwd.loadClimateData(paths, ids) 
+data = mwd.loadClimateData(
+    paths, ids; meta_data=[Dict("variable" => "tos"), Dict("variable" => "tas")]
+)
+
+# load a single Dataset as YAXArray
+data = mwd.loadPreprocData(paths[1]; dtype=mwd.MODEL_DATA, meta=Dict("variable" => "tos"))

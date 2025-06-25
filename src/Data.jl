@@ -114,6 +114,18 @@ end
 
 const DataMap = Dict{String, YAXArray}
 
+function buildDataMap(data::Vector{<:YAXArray}, ids::Vector{String})
+    if length(data) != length(ids)
+        throw(ArgumentError("data and ids must have same size to build up DataMap"))
+    end
+    datamap = DataMap()
+    for (d, id) in zip(data, ids)
+        datamap[id] = d
+    end
+    return datamap
+end
+
+
 function Base.show(io::IO, x::Dict{String, YAXArray})
     println(io, "$(typeof(x))")
     for (k, v) in x

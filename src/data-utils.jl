@@ -82,12 +82,12 @@ end
 
 
 """
-    mergeMetaDataFromMultipleFiles(data::Vector{YAXArray})
+    mergeMetaDataFromMultipleFiles(data::Vector{<:YAXArray})
 
 Combine arrays in `data` into a single YAXArray with meta combined from all datasets into 
 lists, with missing if key wasnt in a dataset.
 """
-function mergeMetaDataFromMultipleFiles(data::Vector{YAXArray})
+function mergeMetaDataFromMultipleFiles(data::Vector{<:YAXArray})
     n_files = length(data)
     meta_keys = unique(vcat(map(x -> collect(keys(x.properties)), data)...))
     meta_dict = Dict{String, Any}()
@@ -103,7 +103,7 @@ end
 
 """
     mergeDataFromMultipleFiles(
-        data::Vector{YAXArray}, sorted::Bool; meta::Union{Dict{String, T}, Nothing}=nothing
+        data::Vector{<:YAXArray}, sorted::Bool; meta::Union{Dict{String, T}, Nothing}=nothing
 ) where T <: Any
 
 Combine arrays in `data` into a single YAXArray with meta combined from all datasets into lists, 
@@ -115,7 +115,7 @@ All data must be defined on the same grid. For timeseries data, the time dimensi
 different ranges, in that case they maximal timeseries is used and filled with NaN for missing values. 
 """
 function mergeDataFromMultipleFiles(
-    data::Vector{YAXArray}, sorted::Bool; meta::Union{Dict{String, T}, Nothing}=nothing
+    data::Vector{<:YAXArray}, sorted::Bool; meta::Union{Dict{String, T}, Nothing}=nothing
 ) where T <: Any
     if isempty(data)
         @warn "Data vector is empty!"
@@ -145,9 +145,7 @@ function mergeDataFromMultipleFiles(
         data = data[sort_indices]
     end
     meta_dict = mergeMetaDataFromMultipleFiles(data)    
-    if !isnothing(meta) 
-        meta_dict["info"] = meta #metadataToDict(meta; exclude=[:paths])
-    end
+    meta_dict["info"] = isnothing(meta) ? Dict() : meta
     if hasMembers
         renameDictKeys!(
             meta_dict, 
@@ -375,23 +373,6 @@ function resolvePathsFromMetaData(
     return paths
 end
 
-"""
-    loadDataFromMetaData(
-        meta_data::Vector{MetaData}, 
-        paths::Vector{Vector{String}};
-        sorted::Bool = true, 
-        dtype::DataType = MODEL_OBS_DATA
-    )
-"""
-function loadDataFromMetaData(
-    meta_data::Vector{MetaData}, 
-    paths::Vector{Vector{String}};
-    sorted::Bool = true, 
-    dtype::DataType = MODEL_OBS_DATA
-)
-    ids = map(x -> x.id, meta_data)
-    return loadClimateData(paths, ids; sorted, dtype, meta_data=metadataToDict.(meta_data))
-end
 
 function buildMetaDataID(meta::Dict)
     fn_err(k::String) = throw(ArgumentError("$k not defined in metadata!"))
@@ -695,7 +676,7 @@ function renameDictKeys!(data::Dict, keys::Vector)
 end
 
 
-function alignTimeseries!(data::Vector{YAXArray})
+function alignTimeseries!(data::Vector{<:YAXArray})
     if !all(map(x -> hasdim(x, :time), data))
         throw(ArgumentError("All datasets must have time dimension to align timeseries!"))
     end
@@ -1011,7 +992,7 @@ end
 
 function distancesModels(model_data::DataMap, diagnostics::Vector{String})
     ensureDiagnosticsAvailable(model_data, diagnostics, "MODEL")
-    distances_all = Vector{YAXArray}(undef, length(diagnostics))
+    distances_all = Vector{<:YAXArray}(undef, length(diagnostics))
     distances_all = map(diagnostics) do key 
         distancesModels(model_data[key])
     end
