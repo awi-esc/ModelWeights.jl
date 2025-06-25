@@ -18,7 +18,11 @@ using YAXArrays
 
 
 const MODEL_MEMBER_DELIM = "#"
-const MODEL_NAME_FIXES = Dict("FGOALS_g2" => "FGOALS-g2", "ACCESS1.3" => "ACCESS1-3")
+const MODEL_NAME_FIXES = Dict(
+    "FGOALS_g2" => "FGOALS-g2", 
+    "ACCESS1.3" => "ACCESS1-3",
+    "fio-esm" => "FIO-ESM"
+)
 
 @enum Level MODEL_LEVEL = 0 MEMBER_LEVEL = 1
 const LEVEL_LOOKUP = Dict(
@@ -28,11 +32,10 @@ const LEVEL_LOOKUP = Dict(
 
 @enum DataType MODEL_DATA = 0 OBS_DATA = 1 MODEL_OBS_DATA = 2
 
-META_CMIP5 = ["physics_version", "realization", "initialization_method"]
-META_CMIP6 = ["mip_era", "variant_label", "grid_label"]
+# META_CMIP5 = ["physics_version", "realization", "initialization_method"]
+# META_CMIP6 = ["mip_era", "variant_label", "grid_label"]
 
 mutable struct MetaData
-    paths::Vector{String}
     variable::String
     experiment::String
     alias::String
@@ -44,7 +47,6 @@ mutable struct MetaData
     esmvaltoolPreproc::Union{String, Nothing}
 
     function MetaData(
-        paths::Vector{String},
         variable::String,
         experiment::String,
         alias::String,
@@ -71,7 +73,6 @@ mutable struct MetaData
             end
         end
         return new(
-            paths,
             variable,
             experiment,
             alias,
@@ -86,7 +87,6 @@ mutable struct MetaData
 end
 
 function MetaData(
-    paths::Vector{String},
     variable::String,
     experiment::String,
     alias::String;
@@ -97,17 +97,16 @@ function MetaData(
     statistic::Union{String, Nothing} = nothing,
     esmvaltoolPreproc::Union{String, Nothing} = nothing
 )
-    return MetaData(paths, variable, experiment, alias, timerange, subdir, id, variable_long, statistic, esmvaltoolPreproc)
+    return MetaData(variable, experiment, alias, timerange, subdir, id, variable_long, statistic, esmvaltoolPreproc)
 end
 
 function Base.show(io::IO, x::MetaData)
-    println(io, "$(typeof(x)): $(x.id): ($(length(x.paths)) files)")
-    fields = map(f -> (f, getfield(x, f)), filter(x -> x != :paths, fieldnames(MetaData)))
+    fields = map(f -> (f, getfield(x, f)), fieldnames(MetaData))
+    fields = filter(x -> !isnothing(x[2]), fields)
     map(f -> println(io, f), fields)
 end
 
 const DataMap = Dict{String, YAXArray}
-const MetaDataMap = Dict{String, MetaData}
 
 function Base.show(io::IO, x::Dict{String, YAXArray})
     println(io, "$(typeof(x))")
@@ -116,21 +115,13 @@ function Base.show(io::IO, x::Dict{String, YAXArray})
     end
 end
 
-function Base.show(io::IO, ::MIME"text/plain", x::Dict{String, YAXArray})
-    println(io, "$(typeof(x))")
-    for (k, v) in x
-        println(io, "$k: $(size(v))")
-    end
+function Base.show(io::IO, x::Tuple{MetaData, Vector{String}})
+    print(io, "$(x[1].id): ($(length(x[2])) files)")
 end
 
-
-@kwdef mutable struct ClimateData
+struct ClimateData
     models::DataMap
     obs::DataMap
-end
-
-function ClimateData()
-    return ClimateData(models = DataMap(), obs = DataMap())
 end
 
 function Base.show(io::IO, x::ClimateData)

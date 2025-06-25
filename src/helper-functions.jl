@@ -68,45 +68,6 @@ end
 
 
 """
-    mergeMetaDataPaths(meta1::MetaData, meta2::MetaData)
-
-Return vector of unique paths of merged set of paths from `meta1` and `meta2`.
-"""
-function mergeMetaDataPaths(meta1::MetaData, meta2::MetaData)
-    paths = copy(meta1.paths)
-    append!(paths, meta2.paths)
-    return unique(paths)
-end
-
-
-function buildMetaDataID(meta::MetaData)
-    subdir = meta.subdir
-    if isempty(subdir)
-        subdir = (!isempty(meta.statistic) && !isempty(meta.variable)) ? 
-            join([meta.variable, meta.statistic], "_") :
-            throw(ArgumentError("Neither subdir nor statistic and variable are in metadata!"))
-    end
-    if isempty(meta.alias)
-        throw(ArgumentError("alias (name of diagnostic in ESMValTool) cannot be empty in MetaData!"))
-    end
-    return join([subdir, meta.alias], "_")
-end
-
-function buildMetaDataID(meta::Dict)
-    fn_err(k::String) = throw(ArgumentError("$k not defined in metadata!"))
-    subdir = get(meta, "subdir", nothing)
-    if isnothing(subdir)
-        subdir = join(
-            [get(() -> fn_err("subdir, variable"), meta, "variable"),
-             get(() -> fn_err("subdir, statistic"), meta, "statistic")], 
-             "_"
-        )
-    end
-    return join([subdir, get(() -> fn_err("alias"), meta, "alias")], "_")
-end
-
-
-"""
     combineAll(v::Vararg{Vector{String}}; sep::String="_")
 
 Generate vector with all possible combinations of strings, each of which is a concatenation 

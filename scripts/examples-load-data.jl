@@ -34,8 +34,8 @@ lgm_data = mwd.loadDataFromESMValToolRecipes(
 
 # we set subset_shared to mw.MEMBER, so model members are identical for 
 # every loaded data set (variable)
-model_members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"], :member));
-models_lgm = string.(unique(lgm_data["tos_CLIM_lgm"].properties["model_names"]))
+model_members_lgm = Array(dims(lgm_data.models["tas_CLIM_lgm"], :member));
+models_lgm = string.(unique(lgm_data.models["tos_CLIM_lgm"].properties["model_names"]))
 
 # --------------------------------------------------------------------------- #
 # 2. Model data just for historical experiment of models with lgm-experiment
@@ -46,7 +46,7 @@ path_recipes = "./configs/historical";
 # experiment and make sure that across variables, only shared model members 
 # are loaded (subset_shared set to mw.MEMBER) since we want the exact 
 # same simulations for all variables when computing weights
-historical_data_lgm_models = mwd.loadDataFromESMValToolRecipes(
+historical_data_lgm = mwd.loadDataFromESMValToolRecipes(
     path_data, 
     path_recipes;
     subset = Dict(
@@ -60,11 +60,11 @@ historical_data_lgm_models = mwd.loadDataFromESMValToolRecipes(
     dtype = mwd.MODEL_DATA
 )
 # sanity check: for all lgm models, historical experiment is loaded
-models_historical = unique(historical_data_lgm_models["tos_CLIM_historical"].properties["model_names"]);
+models_historical = unique(historical_data_lgm.models["tos_CLIM_historical"].properties["model_names"]);
 @assert models_historical == models_lgm
 
 # function to join two DataMaps into one
-data = mwd.joinDataMaps(lgm_data, historical_data_lgm_models)
+data = mwd.joinDataMaps(lgm_data.models, historical_data_lgm.models)
 data_members = mwd.subsetModelData(data; level = mwd.MEMBER_LEVEL)
 
 # 2.2 Or directly load historical data of the same model MEMBERS as for lgm 
@@ -88,10 +88,10 @@ begin
 end
 
 # sanity check: all historical model members must be in lgm model members
-@assert all(map(x -> x in model_members_lgm, dims(historical_data_lgm_members["tos_CLIM_historical"], :member)))
+@assert all(map(x -> x in model_members_lgm, dims(historical_data_lgm_members.models["tos_CLIM_historical"], :member)))
 
 # sanity check: are there lgm model MEMBERS that dont appear in historical models?
-members_historical = Array(dims(historical_data_lgm_members["tas_CLIM_historical"], :member));
+members_historical = Array(dims(historical_data_lgm_members.models["tas_CLIM_historical"], :member));
 filter(x -> !(x in members_historical), model_members_lgm)
 
 
@@ -104,12 +104,11 @@ begin
         "models" => model_members_lgm,
         "subset_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
     );
-    data_lgm_v2_meta =  mwd.loadDataFromYAML(
+    meta_lgm_v2 =  mwd.loadDataFromYAML(
         path_config; arg_constraint = subset, preview = true
     )
     data_lgm_v2 = mwd.loadDataFromYAML(path_config; arg_constraint = subset)
 end
-
 
 
 # -------------------- Load the observational data -------------------------- #
@@ -125,10 +124,43 @@ begin
         subset = Dict(
             "statistics" => statistics, 
             "variables" => variables,
-            "projects" => ["ERA5"],
+            #"projects" => ["ERA5"],
             "timeranges" => ["full", "1961-1990"]
             #"aliases" => ["historical", "historical2"],
         ),
         preview=false
     )
 end
+
+
+# --------- Load the model data Version 3: completely independent of ESMValTool recipes --------- #
+base = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool" 
+paths_lgm = [
+    [joinpath(base, "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM"),
+     joinpath(base, "LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM")],
+    [joinpath(base, "LGM/recipe_cmip6_lgm_tas_20241114_150706/preproc/lgm/tas_CLIM"),
+     joinpath(base, "LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM")]
+]
+subset = Dict{String, Union{Vector{String}, mwd.Level}}(
+    "subset_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
+);
+lgm = mwd.loadDataFromDirs(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint=subset)
+
+paths_historical = [
+    [joinpath(base, "historical/recipe_cmip5_historical_tas_20250211_094633/preproc/historical/tas_CLIM"), 
+     joinpath(base, "historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM")
+    ],
+    [joinpath(base, "historical/recipe_cmip5_historical_tos_20250211_094633/preproc/historical/tos_CLIM"),
+     joinpath(base, "historical/recipe_cmip6_historical_tos_20250209_144722/preproc/historical/tos_CLIM")
+    ]
+]
+models_lgm = string.(unique(lgm["tos_lgm"].properties["model_names"]))
+
+
+subset = Dict{String, Union{Vector{String}, mwd.Level}}(
+    "models" => members_lgm,
+    "subset_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
+);
+historical = mwd.loadDataFromDirs(
+    paths_historical, ["tas_historical", "tos_historical"]; constraint = subset
+)

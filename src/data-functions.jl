@@ -1,85 +1,4 @@
-"""
-    uniqueMemberID(meta::Dict, model::String)
-
-Return member id for `model` which is the model name itself followed by '#' and the variant 
-label (simulation id).
-
-The unique member ids correspond to the variant labels of CMIP6 models, e.g. r1i1p1f1.
-For CMIP5 models this id is built from the respective metadata.
-For CMIP6 models, the grid is further added to the end of the id seperated with _.
-
-# Arguments:
-- `meta::Dict`: For CMIP5 data, must have keys: 'mip_era', 'realization', 
-'initialization_method', 'physics_version'. For CMIP6 data must have keys: 'variant_label', 
-'grid_label'.
-"""
-function uniqueMemberID(meta::Dict, model::String)
-    fn_err(k::String) = throw(ArgumentError("$k not defined in metadata!"))
-    mip_era = get(() -> fn_err("mip_era"), meta, "mip_era")
-    member = ""
-    if lowercase(mip_era) == "cmip5"
-        variant = buildCMIP5EnsembleMember(
-            get(() -> fn_err("realization"), meta, "realization"),
-            get(() -> fn_err("initialization_method"), meta, "initialization_method"),
-            get(() -> fn_err("physics_version"), meta, "physics_version")
-        )
-        member = join([model, variant], MODEL_MEMBER_DELIM)
-    elseif lowercase(mip_era) == "cmip6"
-        variant = get(() -> fn_err("variant_label"), meta, "variant_label")
-        grid = get(() -> fn_err("grid_label"), meta, "grid_label")
-        member = join([model, variant, grid], MODEL_MEMBER_DELIM, "_")
-    else 
-        throw(ArgumentError("Only CMIP5 and CMIP6 supported so far."))
-    end
-    return member
-end
-
-
-"""
-    subsetModelData(data::YAXArray, shared_models::Vector{String})
-
-Return subset of `data` containing only data from models in `shared_models`. 
-
-Takes care of metadata.
-
-# Arguments:
-- `data`: must have dimension 'member' or 'model'
-- `shared_models`: models, which can either be on level of models or members of models 
-('modelname#memberID[_grid]').
-"""
-function subsetModelData(data::YAXArray, shared_models::Vector{String})
-    if isempty(shared_models)
-        @warn "Vector of models to subset data to is empty!"
-        return nothing
-    end
-    data = deepcopy(data)
-    dim_symbol = hasdim(data, :member) ? :member : :model
-    dim_names = Array(dims(data, dim_symbol))
-    if dim_symbol == :member
-        models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
-        # if shared_models is on the level of models, the following should be empty
-        # otherwise, nothing is filtered out, and members is the same as shared_models 
-        members = filter(x -> !(x in models), shared_models)
-        if !isempty(members) # shared models on level of members
-            indices = findall(m -> m in members, dim_names)
-        else
-            # important not to use dim_names here, since e.g. model=AWI would be found in dim_names where model is actually AWI-X for instance
-            models_data = modelsFromMemberIDs(dim_names) # NOTE: should yield same: models_data = data.properties["model_names"]
-            indices = findall(m -> m in models, models_data)
-        end
-        data = data[member=indices]
-    else
-        indices = findall(m -> m in shared_models, dim_names)
-        data = data[model=indices]
-    end
-    # also subset Metadata vectors!
-    attributes = filter(k -> data.properties[k] isa Vector, keys(data.properties))
-    for key in attributes
-        data.properties[key] = data.properties[key][indices]
-    end
-    return data
-end
-
+# functions for loading/subsetting data
 
 """
     subsetModelData(datamap::DataMap; level::Level=MEMBER_LEVEL)
@@ -91,34 +10,54 @@ the same models (MODEL_LEVEL) or members (MEMBER_LEVEL).
 If no models are shared across datasets, return the input `datamap`.
 """
 function subsetModelData(datamap::DataMap; level::Level = MEMBER_LEVEL)
-    all_data = collect(values(datamap))
-    shared_models = level == MEMBER_LEVEL ? sharedMembers(datamap) : sharedModels(datamap)
+    shared_models = sharedModels(datamap, level)
     if isempty(shared_models)
-        @warn "Vector of models to subset data to is empty!"
+        @warn "no shared models in datamap"
         return datamap
     end
     subset = DataMap()
-    for data in all_data
-        df = deepcopy(data)
-        subset[df.properties["id"]] = subsetModelData(df, shared_models)
+    for (id, data) in datamap
+        subset[id] = subsetModelData(deepcopy(data), shared_models)
     end
     return subset
 end
 
+function sharedModels(data::DataMap, level::Level)
+    return level == MEMBER_LEVEL ? sharedLevelMembers(data) : sharedLevelModels(data)
+end
+
+function sharedModels(all_paths::Vector{Vector{String}}, subset_shared::Level)
+    all_models = memberIDsFromPaths(vcat(all_paths...))
+    if subset_shared == MODEL_LEVEL
+        all_models = unique(modelsFromMemberIDs(all_models))
+    end
+    return sharedModelsFromPaths(all_paths, all_models)
+end
 
 """
-    loadPreprocData(meta::MetaData; sorted::Bool=true, dtype::DataType=MODEL_OBS_DATA)
+    loadPreprocData(
+        paths::Vector{String}; 
+        sorted::Bool = true, 
+        dtype::DataType = MODEL_OBS_DATA, 
+        meta::Union{Dict{String, T}, Nothing} = nothing
+    )
 
-Return data loaded from paths specified in `meta.paths` as single YAXArray.  The names of
-the data files are assumed to follow the CMIP-standard: TODO!
+Return data loaded from `paths` as single YAXArray. The names of the data files are assumed 
+to follow the CMIP-standard. 
+
+Filenames that do not start with 'cmip5' or 'cmip6' (upper/lower case doesnt matter), are 
+considered observational data.
 """
 function loadPreprocData(
-    meta::MetaData; sorted::Bool=true, dtype::DataType=MODEL_OBS_DATA
-)
+    paths::Vector{String}; 
+    sorted::Bool = true, 
+    dtype::DataType = MODEL_OBS_DATA, 
+    meta::Union{Dict{String, T}, Nothing} = nothing
+) where T <: Any
     data = Vector{YAXArray}()    
-    filenames = first.(splitext.(basename.(meta.paths)))
-    climVars = first.(split.(basename.(dirname.(meta.paths)), "_"))
-    for (i, path) in enumerate(meta.paths)
+    filenames = first.(splitext.(basename.(paths)))
+    climVars = first.(split.(basename.(dirname.(paths)), "_"))
+    for (i, path) in enumerate(paths)
         @debug "processing file.." * path
         filename = filenames[i]
         climVar = climVars[i]
@@ -136,7 +75,7 @@ function loadPreprocData(
                 merge!(attributes, sector.attrib)
             end
         end
-        props = Dict{String, Union{String, Number, Missing}}() # just for this file!
+        props = Dict{String, Any}() # metadata just for this file!
         props["path"] = path
 
         if is_model_data && dtype in [MODEL_DATA, MODEL_OBS_DATA] 
@@ -158,8 +97,8 @@ function loadPreprocData(
         else
             continue
         end
-
-        for key in ["units", "mip_era", "grid_label"]
+        # meta data that is stored in YAXArrays
+        for key in collect(keys(dsVar.attrib)) #["units", "mip_era", "grid_label"]
             if haskey(attributes, key)
                 props[key] = attributes[key]
             end
@@ -184,292 +123,12 @@ function loadPreprocData(
         #push!(data, YAXArray(Tuple(dimensions), coalesce.(Array(dsVar), NaN), props)
         close(ds)
     end
-    return isempty(data) ? nothing : mergeDataFromMultipleFiles(data, meta, sorted)
+    return isempty(data) ? nothing : mergeDataFromMultipleFiles(data, sorted; meta)
 end
 
 
-"""
-    mergeDataFromMultipleFiles(
-        data::Vector{YAXArray}, meta_dict::Dict{String, Vector}, meta::MetaData, sorted::Bool
-    )
-
-Combine arrays in `data` into a single YAXArray with meta combined from all datasets into lists, 
-with missing if key wasnt in a dataset.
-"""
-function mergeMetaDataFromMultipleFiles(data::Vector{YAXArray})
-    n_files = length(data)
-    meta_keys = unique(vcat(map(x -> collect(keys(x.properties)), data)...))
-    meta_dict = Dict{String, Any}()
-    for (i, ds) in enumerate(data)
-        for key in meta_keys
-            values = get!(meta_dict, key, repeat(Any[missing], outer=n_files))
-            values[i] = get(ds.properties, key, missing)
-        end
-    end
-    return meta_dict
-end
-
-
-"""
-    mergeDataFromMultipleFiles(data::Vector{YAXArray}, meta::MetaData, sorted::Bool)
-
-Combine arrays in `data` into a single YAXArray with meta combined from all datasets into lists, 
-with missing if key wasnt in a dataset, and with properties in `meta` (except for paths). 
-If `sorted` is true, model dimension of returned data is sorted alphabetically and the 
-entries in the metadata dictionary of the returned array which are vectors are sorted accordingly.
-
-All data must be defined on the same grid. For timeseries data, the time dimension might cover 
-different ranges, in that case they maximal timeseries is used and filled with NaN for missing values. 
-"""
-function mergeDataFromMultipleFiles(data::Vector{YAXArray}, meta::MetaData, sorted::Bool)
-    if isempty(data)
-        @warn "No data loaded!"
-        return nothing
-    end
-    if !all(x -> haskey(x.properties, "model_id"), data)
-        throw(ArgumentError("All data must have model_id in metadata!"))
-    end
-    #dimData = cat(data..., dims=3) # way too slow!
-    data_sizes = unique(map(size, data))
-    if length(data_sizes) != 1
-        if !all(map(x -> hasdim(x, :time), data))
-            msg = "Data does not have the same size across all models: $(data_sizes)"
-            throw(ArgumentError(msg))
-        else
-            # if difference only in time, use maximal possible timeseries and add NaNs
-            alignTimeseries!(data)
-        end
-    end
-
-    hasMembers = all(x -> haskey(x.properties, "member_id"), data)
-    dim = hasMembers ? :member : :model
-    names = map(x -> x.properties[String(dim) * "_id"], data)
-    if sorted
-        sort_indices = sortperm(names)
-        names = names[sort_indices]
-        data = data[sort_indices]
-    end
-    meta_dict = mergeMetaDataFromMultipleFiles(data)    
-    merge!(meta_dict, metadataToDict(meta; exclude=[:paths]))
-    if hasMembers
-        renameDictKeys!(
-            meta_dict, 
-            [("model_id", "model_names"), ("member_id", "member_names"), ("path", "paths")]
-        )
-    end
-    dimData = concatenatecubes(data, Dim{dim}(names))
-    dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
-    # Sanity checks that no dataset exists more than once
-    if hasMembers
-        members = dims(dimData, :member)
-        if length(members) != length(unique(members))
-            duplicates = unique([m for m in members if sum(members .== m) > 1])
-            @warn "Some datasets appear more than once" duplicates
-        end
-    end
-    return dimData
-end
-
-
-"""
-    loadDataFromMetadata(meta_data::Dict{String, MetaData}, sorted::Bool)
-
-Load a `DataMap`-instance that contains the data on level of model members specified in `meta_data`.
-
-# Arguments:
-- `meta_data::Dict`: keys are ids of datasets to be loaded, values is their MetaData
-- `sorted::Bool`: set to true if data should be sorted alphabetically by model names.
-"""
-function loadDataFromMetadata(
-    meta_data::MetaDataMap, sorted::Bool; dtype::DataType = MODEL_OBS_DATA
-)
-    @debug "retrieved metadata:" meta_data
-    if isempty(meta_data)
-        throw(ArgumentError("No metadata provided!"))
-    end
-    results = DataMap()
-    for (id, meta) in meta_data
-        @info "load Data for: $id"
-        data = loadPreprocData(meta; sorted, dtype)
-        if !isnothing(data)
-            results[meta.id] = data
-        end
-    end
-    return results
-end
-
-
-"""
-    memberIDsFromPaths(all_paths::Vector{String})
-
-For every path in `all_paths` return a string of the form modelname#memberID[_grid]
-that identifies the corresponding model member.
-
-The abbreviation of the grid is added to the model name for CMIP6 models.
-"""
-function memberIDsFromPaths(all_paths::Vector{String})
-    all_filenames = split.(basename.(all_paths), "_")
-    # model names are at predefined position in filenames (ERA_name_mip_exp_id_variable[_grid].nc)
-    all_members = Vector{String}(undef, length(all_filenames))
-    for (i, fn_parts) in enumerate(all_filenames)
-        model = join(fn_parts[[2, 5]], MODEL_MEMBER_DELIM)
-        # add grid to model name for CMIP6 models:
-        if fn_parts[1] != "CMIP5"
-            model = splitext(model * "_" * fn_parts[7])[1]
-        end
-        all_members[i] = model
-    end
-    return unique(all_members)
-end
-
-
-"""
-    searchModelInPaths(model_id::String, paths::Vector{String})
-
-Return true if `model_id` is found in filename of any path in `paths`, else false.
-
-The paths are assumed to follow the standard CMIP filename structure, i.e. <variable_id>_<table_id>_<source_id>_<experiment_id >_<member_id>_<grid_label>[_<time_range>].nc([see here](https://docs.google.com/document/d/1h0r8RZr_f3-8egBMMh7aqLwy3snpD6_MrDz1q8n5XUk/edit?tab=t.0)).
-
-# Arguments:
-- `model_id::String`: has form modelname[#memberID[_grid]]
-- `paths::Vector{String}`: paths to be searched
-"""
-function searchModelInPaths(model_id::String, paths::Vector{String})
-    model_parts = String.(split(model_id, MODEL_MEMBER_DELIM))
-    model = model_parts[1]
-    has_member = length(model_parts) == 2
-    member_grid = has_member ? split(model_parts[2], "_") : nothing
-    has_grid = !isnothing(member_grid) && length(member_grid) == 2
-    member = has_member ? member_grid[1] : nothing
-    grid = has_grid ? member_grid[2] : nothing
-
-    is_found = false
-    filenames = map(basename, paths)
-    for fn in filenames
-        found_model = occursin("_" * model * "_", fn)
-        if !found_model
-            continue
-        else
-            if has_member
-                found_member = occursin("_" * member * "_", fn)
-                if found_member
-                    if has_grid
-                        fn_no_ending = splitext(fn)[1]
-                        found_grid = endswith(fn_no_ending, "_" * grid) || occursin("_" * grid * "_", fn)
-                        if found_grid
-                            is_found = true
-                            break
-                        else
-                            continue
-                        end
-                    else
-                        is_found = true
-                        break
-                    end
-                else # member not found -> continue with next path
-                    continue
-                end
-            else
-                is_found = true
-                break
-            end
-        end
-    end
-    return is_found
-end
-
-
-"""
-    sharedModelsFromPaths(all_paths::Vector{Vector{String}}, all_models::Vector{String})
-     
-Return vector with models in `all_models` for which a path is given in every subvector of `all_paths`.
-"""
-function sharedModelsFromPaths(all_paths::Vector{Vector{String}}, all_models::Vector{String})
-    indices_shared = []
-    for (idx, model) in enumerate(all_models)
-        is_found = false
-        for paths in all_paths
-            is_found = searchModelInPaths(model, paths)
-            if !is_found
-                break
-            end
-        end
-        if is_found
-            push!(indices_shared, idx)
-        end
-    end
-    return all_models[indices_shared]
-end
-
-
-"""
-    getCMIPModelsKey(meta::Dict)
-
-Return the respective key to retrieve model names in CMIP6 ('source_id') and 
-CMIP5 ('model_id') data.
-
-If both keys are present, 'source_id' used in CMIP6 models is returned, if none 
-is present, throw ArgumentError.
-"""
-function getCMIPModelsKey(meta::Dict)
-    attributes = keys(meta)
-    if "source_id" in attributes
-        if "model_id" in attributes
-            msg1 = "Dictionary contains keys source_id and model_id, source_id is used! "
-            @debug msg1 meta["source_id"] meta["model_id"]
-        end
-        return "source_id"
-    elseif "model_id" in attributes
-        return "model_id"
-    else
-        msg = "Metadata must contain one of 'source_id' (pointing to names of CMIP6 models) or 'model_id' (CMIP5)."
-        throw(ArgumentError(msg))
-    end
-end
-
-
-"""
-    filterPathsSharedModels!(
-        meta_data::Dict{String, Dict{String, T}}, subset_shared::Level
-    ) where T <: Any
-
-For every dataset in `meta_data`, filter '_paths' s.t. the paths vector for each dataset 
-only contains models or model members (given by `subset_shared`) that are shared across all 
-datasets.
-
-# Arguments:
-- `meta_data`: contains a metadata dictionary for every dataset.
-- `subset_shared`: level on which datasets must match: they include data from the  same 
-models (MODEL_LEVEl) or from the same model members (MEMBER_LEVEL).
-"""
-function filterPathsSharedModels!(meta_data::MetaDataMap, subset_shared::Level)
-    all_paths = map(x -> x.paths, values(meta_data))
-    all_models = memberIDsFromPaths(vcat(all_paths...))
-    if subset_shared == MODEL_LEVEL
-        all_models = unique(modelsFromMemberIDs(all_models))
-    end
-    shared_models = sharedModelsFromPaths(all_paths, all_models)
-    if isempty(shared_models)
-        @warn "No models shared across data!"
-    end
-    for (id, meta) in meta_data
-        mask = map(p -> applyModelConstraints(p, shared_models), meta.paths)
-        meta_data[id].paths = meta.paths[mask]
-    end
-    return nothing
-end
-
-function filterPathsSharedModels!(meta_data::MetaDataMap, subset_shared::String)
-    msg = "subset_shared can only be one of: $(keys(LEVEL_LOOKUP))"
-    level = get(() -> throw(ArgumentError(msg)), LEVEL_LOOKUP, lowercase(subset_shared))
-    filterPathsSharedModels!(meta_data, level)
-    return nothing
-end
-
-
-function modelsFromMemberIDs(members::AbstractVector{<:String}; uniq::Bool=false)
-    models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members)
-    return uniq ? unique(models) : models
+function filterPathsSharedModels!(all_paths::Vector{Vector{String}}, subset_shared::Level)
+    filterPathsSharedModels!(all_paths, sharedModels(all_paths, subset_shared))
 end
 
 
@@ -481,9 +140,7 @@ end
 
 """
     alignPhysics(
-        data::DataMap,
-        members::Vector{String}, 
-        subset_shared::Union{Level, Nothing} = nothing)
+        datamap::DataMap, members::Vector{String}; subset_shared::Union{Level, Nothing}=nothing,
     )
 
 Return new DataMap with only the models retained that share the same physics as 
@@ -516,8 +173,7 @@ function alignPhysics(
         end
     end
     if !isnothing(subset_shared)
-        shared_models =
-            subset_shared == MEMBER_LEVEL ? sharedMembers(data) : sharedModels(data)
+        shared_models = sharedModels(data, subset_shared)
         for (id, model_data) in data
             data[id] = subsetModelData(model_data, shared_models)
         end
@@ -622,34 +278,6 @@ function setToSummarizedMembers!(data::DataMap)
 end
 
 
-"""
-    approxAreaWeights(latitudes::Vector{<:Number})
-
-Create a YAXArray with the cosine of `latitudes` which approximates the cell 
-area on the respective latitude.
-"""
-function approxAreaWeights(latitudes::Vector{<:Number})
-    # cosine of the latitudes as proxy for grid cell area
-    area_weights = cos.(deg2rad.(latitudes))
-    return YAXArray((Dim{:lat}(latitudes),), area_weights)
-end
-
-
-function makeAreaWeightMatrix(
-    longitudes::Vector{<:Number},
-    latitudes::Vector{<:Number};
-    mask::Union{AbstractArray,Nothing} = nothing,
-)
-    area_weights = approxAreaWeights(latitudes)
-    area_weighted_mat = repeat(area_weights', length(longitudes), 1)
-    if !isnothing(mask)
-        area_weighted_mat = ifelse.(mask .== 1, 0, area_weighted_mat)
-    end
-    area_weighted_mat = area_weighted_mat ./ sum(area_weighted_mat)
-    return YAXArray((Dim{:lon}(longitudes), Dim{:lat}(latitudes)), area_weighted_mat)
-end
-
-
 function addMasks!(datamap::DataMap, id_orog_data::String)
     orog_data = datamap[id_orog_data]
     datamap["mask_land"] = getMask(orog_data; mask_out_land = false)
@@ -658,46 +286,21 @@ function addMasks!(datamap::DataMap, id_orog_data::String)
 end
 
 
-function checkDataStructure(path_data::String, dir_per_var::Bool)
-    if !dir_per_var
-        subdirs = filter(x -> isdir(joinpath(path_data, x)), readdir(path_data))
-        if !("preproc" in subdirs)
-            throw(ArgumentError("If dir_per_var is false, path_data must contain a directory named 'preproc'"))
-        end
-    end
-    return nothing
-end
-
-
-function loadMetaData(
-    meta_attribs::Vector{MetaData},
-    path_data::String;
-    dir_per_var::Bool = true,
-    subset::Union{Dict, Nothing} = nothing
-)
-    if !isnothing(subset)
-        constrainMetaData!(meta_attribs, subset)
-    end
-    addPaths!(meta_attribs, path_data, dir_per_var; constraint = subset)
-    meta_data = metaVecToDict(meta_attribs)
-    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))        
-        filterPathsSharedModels!(meta_data, subset["subset_shared"])
-    end
-    return meta_data
-end
-
-
-function loadDataStore(
-    meta_data::MetaDataMap; sorted::Bool=true, dtype::DataType=MODEL_OBS_DATA
-)
-    ds = ClimateData()
-    if dtype != OBS_DATA
-        ds.models = loadDataFromMetadata(meta_data, sorted; dtype = MODEL_DATA)
-    end
-    if dtype != MODEL_DATA
-        ds.obs = loadDataFromMetadata(meta_data, sorted; dtype = OBS_DATA)
-    end
-    return ds
+function loadClimateData(
+    paths::Vector{Vector{String}},
+    ids::Vector{String};
+    meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
+    sorted::Bool = true,
+    dtype::DataType = MODEL_OBS_DATA
+) where T <: Any
+    models = dtype != OBS_DATA ? 
+        loadData(paths, ids; meta_dicts = meta_data, sorted, dtype = MODEL_DATA) : 
+        DataMap()
+        
+    obs = dtype != MODEL_DATA ? 
+        loadData(paths, ids; meta_dicts = meta_data, sorted, dtype = OBS_DATA) : 
+        DataMap()
+    return ClimateData(models, obs)
 end
 
 """
@@ -733,14 +336,12 @@ function loadDataFromESMValToolRecipes(
     dtype::DataType = MODEL_OBS_DATA
 )
     checkDataStructure(path_data, dir_per_var)
-    attribs = metaAttributesFromESMValToolRecipes(path_recipes)
-    meta_data = loadMetaData(attribs, path_data; dir_per_var, subset)
+    meta_data = metaDataFromESMValToolRecipes(path_recipes; constraint = subset)   
+    paths = resolvePathsFromMetaData(meta_data, path_data; dir_per_var, subset)
     if preview
-        return meta_data
-    else
-        ds = loadDataStore(meta_data; sorted, dtype)
-        return dtype == OBS_DATA ? ds.obs : (dtype == MODEL_DATA ? ds.models : ds)
+        return collect(zip(meta_data, paths))
     end
+    return loadDataFromMetaData(meta_data, paths; sorted, dtype)
 end
 
 
@@ -749,15 +350,16 @@ end
         content::Dict;
         arg_constraint::Union{Dict, Nothing} = nothing,
         preview::Bool = false,
-        sorted::Bool = true
+        sorted::Bool = true,
+        dtype::DataType = MODEL_OBS_DATA
     )
 
-Load a `DataMap`-instance that contains the data specified in `content`, potentially 
+Load a `ClimateData`-instance that contains the data specified in `content`, potentially 
 constraint by values in `arg_constraint`.
 
 # Arguments:
-- `preview::Bool`: if true (default: false), return metadata without actually 
-loading any data.
+- `preview::Bool`: if true (default: false), return metadata and corresponding paths without 
+actually loading any data.
 """
 function loadDataFromYAML(
     content::Dict;
@@ -770,26 +372,36 @@ function loadDataFromYAML(
     datasets = get(() -> fn_err("datasets"), content, "datasets")
     base_path = get(() -> fn_err("base_path_data"), content, "base_path_data")
 
-    meta_data = MetaDataMap()
-    for ds in datasets
+    all_meta = Vector{}(undef, length(datasets))
+    all_paths = Vector{}(undef, length(datasets))
+    for (i, ds) in enumerate(datasets)
         dir_per_var = get(ds, "dir_per_var", true)
         path_data = joinpath(base_path, get(() -> fn_err("base_dir"), ds, "base_dir"))
         checkDataStructure(path_data, dir_per_var)
-        attribs = metaAttributesFromYAML(ds)
         # merge arg_constraint has precedence over ds_subset here!
         ds_constraint = get(ds, "subset", nothing)
         if !isnothing(ds_constraint) && !isnothing(arg_constraint)
-            ds_constraint = joinDicts(ds_constraint, arg_constraint)
+            warn_msg = "identical subset keys: arg constraint has precedence over constraint in yaml file!"
+            ds_constraint = joinDicts(ds_constraint, arg_constraint; warn_msg) 
         end
-        meta = loadMetaData(attribs, path_data; dir_per_var, subset = ds_constraint)
-        meta_data = joinDataMaps(meta_data, meta)
+        meta_data = metaDataFromYAML(ds)
+        paths = resolvePathsFromMetaData(meta_data, path_data; dir_per_var, subset=ds_constraint)
+        all_paths[i] = paths 
+        all_meta[i] = meta_data 
     end
-    
+    # apply subset shared across all datasets
     level_all_data = get(arg_constraint, "subset_shared", nothing)
     if !isnothing(level_all_data)
-        filterPathsSharedModels!(meta_data, level_all_data)
+        shared_models = sharedModels(vcat(all_paths...), level_all_data)
+        map(all_paths) do paths 
+            filterPathsSharedModels!(paths, shared_models)
+        end
     end
-    return preview ? meta_data : loadDataStore(meta_data; sorted, dtype)
+    paths = vcat(all_paths...)
+    meta_data = vcat(all_meta...)
+    return preview ? 
+        collect(zip(meta_data, paths)) : 
+        loadDataFromMetaData(meta_data, paths; sorted, dtype)
 end
 
 function loadDataFromYAML(
@@ -801,5 +413,81 @@ function loadDataFromYAML(
     return loadDataFromYAML(YAML.load_file(path_config); arg_constraint, preview, sorted)
 end
 
+# Loading data for given paths
+
+function addData(
+    dm::DataMap,
+    paths::Vector{String},
+    name::String;
+    sorted::Bool = true, 
+    dtype::DataType = MODEL_OBS_DATA,
+    meta::Dict{String, T} = Dict{String, Any}(),
+    overwrite::Bool = false
+) where T <: Any
+    if !overwrite && haskey(dm, name)
+        @warn "no data added, key $(name) already present."
+        return dm
+    end
+    data = loadPreprocData(paths; sorted, dtype, meta)
+    if !isnothing(data)
+        dm[name] = data
+    end
+    return dm
+end
 
 
+function loadData(
+    paths::Vector{String}, 
+    id::String;
+    meta::Dict{String, T} = Dict{String, Any}(),
+    constraint::Union{Dict, Nothing} = nothing,
+    sorted::Bool = true, 
+    dtype::DataType = MODEL_OBS_DATA
+) where T <: Any
+    return addData(DataMap(), paths, id; constraint, sorted, dtype, meta)
+end
+
+
+
+function loadData(
+    paths_data::Vector{Vector{String}}, 
+    data_ids::Vector{String};
+    meta_dicts::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
+    sorted::Bool = true, 
+    dtype::DataType = MODEL_OBS_DATA
+) where T <: Any
+    n = length(paths_data)
+    if n != length(data_ids)
+        throw(ArgumentError("Arguments `data_paths` and `data_ids` must have same size!"))
+    end
+    if !isempty(meta_dicts) && length(meta_dicts) != n
+        throw(ArgumentError("if meta data is given, it must be given for every datasets!"))
+    end
+    result = DataMap()
+    data = isempty(meta_dicts) ? zip(paths_data, data_ids) : zip(paths_data, data_ids, meta_dicts)
+    for data_tuple in data
+        id = data_tuple[2]
+        # addData!(result, paths, id; sorted, dtype, meta)
+        meta = length(data_tuple) == 3 ? data_tuple[end] : nothing
+        df = loadPreprocData(data_tuple[1]; sorted, dtype, meta)
+        if !isnothing(df)
+            result[id] = df
+        end
+    end
+    return result
+end
+
+
+function loadDataFromDirs(
+    paths_data_dirs::Vector{Vector{String}}, 
+    data_ids::Vector{String};
+    meta_dicts::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
+    constraint::Union{Dict, Nothing} = nothing,
+    sorted::Bool = true, 
+    dtype::DataType = MODEL_OBS_DATA
+) where T <: Any
+    paths = map(paths_data_dirs) do paths 
+        vcat(collectNCFilePaths.(paths; constraint)...)
+    end
+    return loadData(paths, data_ids; meta_dicts, sorted, dtype)
+end

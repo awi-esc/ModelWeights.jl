@@ -445,7 +445,6 @@ function addClimwipWeights!(
     return nothing
 end
 
-
 function addClimwipWeights!(data::ClimateData, weights::ClimWIP)
     addWeights!(data, weights.w)
     return nothing
