@@ -12,8 +12,7 @@ using .Timeseries
 using .Weights
 using .Plots
 
-export loadDataFromYAML, loadDataFromESMValToolRecipes, climwipWeights
-
+export climwipWeights
 
 export joinDataMaps
 export writeDataToDisk, readDataFromDisk
@@ -25,8 +24,7 @@ export getUncertaintyRanges,
     anomaliesGM!,
     addAnomaliesGM!
 export addLinearTrend!, linearTrend
-export setToSummarizedMembers!, summarizeEnsembleMembersVector
-export getLandMask, getOceanMask, addMasks!, subsetModelData, alignPhysics
+export getLandMask, getOceanMask
 
 
 export weightedAvg, applyWeights, getModelLogLikelihoods

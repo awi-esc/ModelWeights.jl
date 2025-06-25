@@ -442,6 +442,50 @@ function joinDicts(v::Dict...; warn_msg::String="")
     return result
 end
 
+
+function physicsFromMember(member::String)
+    regex = r"(p\d+)(f\d+)?(_.*)?$"
+    return String.(match(regex, member).captures[1])
+end
+
+
+"""
+    averageEnsembleMembersMatrix(data::AbstractArray, updateMeta::Bool)
+
+Compute the average across all members of each model for each given variable 
+for model to model data, e.g. distances between model pairs.
+
+# Arguments:
+- `data`: with at least dimensions 'member1', 'member2'
+- `updateMeta`: set true if the vectors in the metadata refer to different models. 
+Set to false if vectors refer to different variables for instance. 
+"""
+function averageEnsembleMembersMatrix(data::YAXArray, updateMeta::Bool)
+    data = setLookupsFromMemberToModel(data, ["member1", "member2"])
+    models = String.(collect(unique(dims(data, :model1))))
+
+    grouped = groupby(data, :model2 => identity)
+    averages = map(entry -> mapslices(Statistics.mean, entry, dims = (:model2,)), grouped)
+    combined = cat(averages..., dims = (Dim{:model2}(models)))
+
+    grouped = groupby(combined, :model1 => identity)
+    averages = map(entry -> mapslices(Statistics.mean, entry, dims = (:model1,)), grouped)
+    combined = cat(averages..., dims = (Dim{:model1}(models)))
+
+    for m in models
+        combined[model1=At(m), model2=At(m)] .= 0
+    end
+
+    meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
+    combined = rebuild(combined; metadata = meta)
+
+    l = Lookups.Categorical(sort(models); order = Lookups.ForwardOrdered())
+    combined = combined[model1=At(sort(models)), model2=At(sort(models))]
+    combined = DimensionalData.Lookups.set(combined, model1 = l, model2 = l)
+    return combined
+end
+
+
 function joinDataMaps(v::Union{Dict{String, MetaData}, DataMap}...)
     return joinDicts(v...)
 end

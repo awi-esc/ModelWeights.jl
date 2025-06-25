@@ -3,6 +3,12 @@ module Data
 export Level, MODEL_MEMBER_DELIM
 export DataMap, ClimateData
 
+export subsetModelData, sharedModels, filterPathsSharedModels!
+export summarizeEnsembleMembersVector, summarizeEnsembleMembersVector!
+export alignPhysics, addMasks!
+export loadDataFromESMValToolRecipes, loadDataFromYAML
+
+
 using CSV
 using DataFrames
 using Dates
