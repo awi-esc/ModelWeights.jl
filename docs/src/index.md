@@ -79,8 +79,7 @@ TODO: add example of how weights are applied to data
 ## Functions
 
 ```@autodocs
-Modules = [ModelWeights]
-Order = [:function, :type]
+Modules = [ModelWeights.Data, ModelWeights.Plots, ModelWeights.Timeseries, ModelWeights.Weights]
 ```
 
 ## Index
