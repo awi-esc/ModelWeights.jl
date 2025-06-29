@@ -291,6 +291,11 @@ function filterPathsSharedModels(all_paths::Vector{Vector{String}}, level_shared
     return map(paths -> filterPathsSharedModels(paths, shared), all_paths)
 end
 
+function filterPathsSharedModels(all_paths::Vector{Vector{String}}, level_shared::String)
+    return filterPathsSharedModels(all_paths, LEVEL_LOOKUP[level_shared])
+end
+
+
 
 function modelsFromMemberIDs(members::AbstractVector{<:String}; uniq::Bool=false)
     models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members)
