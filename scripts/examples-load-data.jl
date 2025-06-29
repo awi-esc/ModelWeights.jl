@@ -27,7 +27,7 @@ subset = Dict{String, Union{Vector{String}, mwd.Level}}(
 );
 lgm_meta = mwd.loadDataFromESMValToolRecipes(
     path_data, path_recipes; subset=subset, preview=true
-)
+) 
 lgm_data = mwd.loadDataFromESMValToolRecipes(
     path_data, path_recipes; subset=subset, dtype=mwd.MODEL_DATA
 )
@@ -143,15 +143,27 @@ paths_lgm_tas = [
     joinpath(base, "LGM/recipe_cmip6_lgm_tas_20241114_150706/preproc/lgm/tas_CLIM"),
     joinpath(base, "LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM")
 ];
-paths_lgm = [paths_lgm_tos, paths_lgm_tas];
+fn_format = :esmvaltool;
 
+# returns DataMap with 1 entry
+tos = mwd.loadData(paths_lgm_tos, "tos"; fn_format)
+# one directory path for every dataset
+paths_lgm_cmip6 = [joinpath(base, "LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM"), joinpath(base, "LGM/recipe_cmip6_lgm_tas_20241114_150706/preproc/lgm/tas_CLIM")]
+lgm_cmip6 = mwd.loadData(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; fn_format)
+
+# several directory paths for every dataset; returns DataMap with 2 entries
+paths_lgm = [paths_lgm_tos, paths_lgm_tas];
+lgm = mwd.loadData(paths_lgm, ["tos_lgm", "tas_lgm"]; fn_format)
+
+shared_models = mwd.sharedModels(lgm.models, mwd.MODEL_LEVEL);
+shared_members = mwd.sharedModels(lgm.models, mwd.MEMBER_LEVEL);
 subset = Dict{String, Union{Vector{String}, mwd.Level}}(
-    "subset_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
+    "subset_shared" => mwd.MEMBER_LEVEL
 );
-lgm = mwd.loadDataFromDirs(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint=subset)
+lgm = mwd.loadData(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint=subset, fn_format)
+
 model_members_lgm = Array(dims(lgm.models["tas_lgm"], :member));
 models_lgm = string.(unique(lgm.models["tos_lgm"].properties["model_names"]))
-
 
 
 paths_historical_tas = [
@@ -167,19 +179,14 @@ subset = Dict{String, Union{Vector{String}, mwd.Level}}(
     "models" => model_members_lgm,
     "subset_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
 );
-historical = mwd.loadDataFromDirs(
-    paths_historical, ["tas_historical", "tos_historical"]; constraint = subset
+historical = mwd.loadData(
+    paths_historical, ["tas_historical", "tos_historical"]; fn_format, constraint=subset
 )
 
-# load from files directly
-paths = map(paths_lgm) do paths 
-        vcat(mwd.collectNCFilePaths.(paths)...)
-end
-ids = ["tos", "tas"]
-data = mwd.loadClimateData(paths, ids) 
-data = mwd.loadClimateData(
-    paths, ids; meta_data=[Dict("variable" => "tos"), Dict("variable" => "tas")]
+# to load data as YAXArrays from files directly (not from all files within directories), use loadPreprocData
+paths = vcat(mwd.collectNCFilePaths.(paths_lgm_tas)...)
+data = mwd.loadPreprocData(
+    paths, fn_format; dtype=mwd.MODEL_DATA, meta_info=Dict("variable" => "tas")
 )
-
-# load a single Dataset as YAXArray
-data = mwd.loadPreprocData(paths[1]; dtype=mwd.MODEL_DATA, meta=Dict("variable" => "tos"))
+# same data but a ClimateData instance is loaded 
+data = mwd.loadData(paths, "tas"; fn_format, meta_data = Dict("variable" => "tas"))
