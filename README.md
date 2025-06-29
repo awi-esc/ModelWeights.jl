@@ -4,7 +4,7 @@ This repository contains the code for the Julia Package ModelWeights. Besides fu
 
 <!-- This approach assigns lower weights to models that make similar predictions (in a predefined reference period). Models whose predictions are further away (compared to the predictions of the other models in the ensemble) receive larger weights.  -->
 
-The documentation is [here](https://awi-esc.github.io/ModelWeights/).
+The documentation is [here](https://awi-esc.github.io/ModelWeights.jl/).
 
 
 ### Getting started: Initialize project
