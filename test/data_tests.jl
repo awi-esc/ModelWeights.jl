@@ -23,13 +23,13 @@ yax2 = YAXArray((Dim{:row}(["r1", "r2"]),Dim{:column}(["c1", "c2", "c3"]), Dim{:
         "id2" => yax2,
     ))
     # warning is thrown and value of shared key is taken from the second argument
-    @test (@test_logs (:warn,) mwd.joinDataMaps(dm1, mwd.DataMap(Dict("id1" => yax2)))) == mwd.DataMap(Dict("id1" => yax2))
+    @test (@test_logs (:warn,) mwd.joinDataMaps(dm1, mwd.DataMap(Dict("id1" => yax2)); warn_msg="my warning")) == mwd.DataMap(Dict("id1" => yax2))
 end
 
-@testset "Test metaAttributesFromESMValToolRecipes" begin
+@testset "Test metaDataFromESMValToolRecipes" begin
 end
 
-@testset "Test metaAttributesFromYAML" begin
+@testset "Test metaDataFromYAML" begin
 end
 
 @testset "Test constrainFilenames" begin
@@ -38,11 +38,10 @@ end
 end
 
 
-@testset "Test resolvePaths" begin
+@testset "Test resolvePathsFromMetaData" begin
     base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
     alias = "historical"
     meta = mwd.MetaData(
-        Vector{String}(), 
         "tas", 
         "historical",
         alias;
@@ -50,13 +49,12 @@ end
         statistic = "CLIM"
     )
     dir_per_var = true
-    paths_to_files = mwd.resolvePaths(
+    paths_to_files = mwd.resolvePathsFromMetaData(
         meta, 
         base_path, 
         dir_per_var; 
         constraint = Dict("models" =>  ["ACCESS-CM2", "CESM2#r1i1p1f1"])
     )
-
     base_subdir = "recipe_cmip6_historical_tas_20250207_080843"
     p_access = joinpath(base_path, base_subdir, "preproc", alias, meta.subdir, "CMIP6_ACCESS-CM2_Amon_historical_r1i1p1f1_tas_gn.nc")
     p_cesm2 = joinpath(base_path, base_subdir, "preproc", alias, meta.subdir, "CMIP6_CESM2_Amon_historical_r1i1p1f1_tas_gn.nc")
@@ -67,30 +65,28 @@ end
     @test !(p_other in paths_to_files)
 end
 
+@testset "Test filterPathsSharedModels" begin
+    m1_tos = "lgm-cmip5-tos-climatologies/CMIP5_CNRM-CM5_Omon_lgm_r1i1p1_tos.nc"
+    m1_tas = "lgm-cmip5-tas-climatologies/CMIP5_CNRM-CM5_Omon_lgm_r1i1p1_tas.nc"
+    m2_tos = "lgm-cmip5-tos-climatologies/CMIP5_FGOALS-g2_Omon_lgm_r1i1p1_tos.nc"
+    m2_tas = "lgm-cmip5-tas-climatologies/CMIP5_FGOALS-g2_Omon_lgm_r1i1p1_tas.nc"  
+    
+    m31_tas = "lgm-cmip5-tas-climatologies/CMIP5_GISS-E2-R_Amon_lgm_r1i1p150_tas.nc"
+    m32_tas = "lgm-cmip5-tas-climatologies/CMIP5_GISS-E2-R_Amon_lgm_r1i1p151_tas.nc"
+    
+    m31_tos = "lgm-cmip5-tos-climatologies/CMIP5_GISS-E2-R_Amon_lgm_r1i1p150_tos.nc"
+    m32_tos = "lgm-cmip5-tos-climatologies/CMIP5_GISS-E2-R_Amon_lgm_r1i1p151_tos.nc"
+    
+    paths_tas = [m1_tas, m2_tas, m31_tas, m32_tas]
+    paths_tos = [m1_tos, m2_tos, m31_tos]
+    paths_all = [paths_tos, paths_tas]
+    n = length(vcat(paths_all...))
+    paths_filtered = mwd.filterPathsSharedModels(paths_all, mwd.MODEL_LEVEL)
+    @test length(vcat(paths_filtered...)) == n
 
-@testset "Test filterPathsSharedModels!" begin
-    p1_tos = "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM/CMIP5_CNRM-CM5_Omon_lgm_r1i1p1_tos.nc"
-    p2_tos = "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM/CMIP5_FGOALS-g2_Omon_lgm_r1i1p1_tos.nc"
-    p1_tas = "LGM/recipe_cmip5_lgm_tas_20241114_150049/preproc/lgm/tas_CLIM/CMIP5_CNRM-CM5_Omon_lgm_r1i1p1_tas.nc"
-    p2_tas = "LGM/recipe_cmip5_lgm_tas_20241114_150049/preproc/lgm/tas_CLIM/CMIP5_FGOALS-g2_Omon_lgm_r1i1p1_tas.nc"  
-    meta_tos = mwd.MetaData(
-        [p1_tos, p2_tos], "tos", "lgm", "lgm";
-        subdir = "tos_CLIM",
-        statistic = "CLIM",
-        id = "tos_CLIM_lgm"
-    )
-    meta_tas = mwd.MetaData(
-        [replace(p1_tas, "r1i1p1"=>"r2i1p1"), p2_tas], "tas", "lgm", "lgm";
-        subdir = "tas_CLIM",
-        statistic = "CLIM",
-        id = "tas_CLIM_lgm"
-    )
-    meta = Dict("tos_CLIM_historical" => meta_tos, "tas_CLIM_historical" => meta_tas)
-    mwd.filterPathsSharedModels!(meta, mwd.MODEL)
-    @test all(x -> x in meta["tos_CLIM_historical"].paths, [p1_tos, p2_tos])
-    mwd.filterPathsSharedModels!(meta, mwd.MEMBER)
-    @test p2_tos in meta["tos_CLIM_historical"].paths
-    @test !(p1_tos  in meta["tos_CLIM_historical"].paths)
+    paths_filtered = mwd.filterPathsSharedModels(paths_all, mwd.MEMBER_LEVEL)
+    @test !(m32_tas in paths_filtered[1])
+    @test length(vcat(paths_filtered...)) == n-1
 end
 
 
@@ -120,10 +116,7 @@ end
 @testset "Test subsetModelData" begin
 end
 
-@testset "Test loadDataFromMetadata" begin
-end
-
-@testset "Test searchModelInPaths" begin
+@testset "Test findModelInPaths" begin
     member_present = "CESM2#r1i1p1f1"
     model_present = "CESM2"
     model_absent = "AWI-ESM"
@@ -131,9 +124,9 @@ end
         "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM/CMIP6_ACCESS-CM2_Amon_historical_r1i1p1f1_tas_gn.nc",
         "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM/CMIP6_CESM2_Amon_historical_r1i1p1f1_tas_gn.nc"
     ]
-    @test mwd.searchModelInPaths(member_present, paths)
-    @test mwd.searchModelInPaths(model_present, paths)
-    @test !mwd.searchModelInPaths(model_absent, paths)
+    @test mwd.findModelInPaths(member_present, paths)
+    @test mwd.findModelInPaths(model_present, paths)
+    @test !mwd.findModelInPaths(model_absent, paths)
 end
 
 @testset "Test sharedModelsFromPaths" begin
@@ -164,4 +157,36 @@ end
 
     mwd.putAtModel!(da, :model, "m2", [17, 2, 1987])
     @test mwd.getAtModel(da, :model, "m2") == [17, 2, 1987]
+end
+
+
+
+@testset "Test loadData" begin
+    paths_lgm_tas = ["data/lgm-cmip5-tas-climatologies", "data/lgm-cmip6-tas-climatologies"]
+    paths_lgm_tos = ["data/lgm-cmip5-tos-climatologies", "data/lgm-cmip6-tos-climatologies"]
+    base = joinpath(pwd(), "test") 
+    paths_lgm_tas = joinpath.(base, paths_lgm_tas)
+    paths_lgm_tos = joinpath.(base, paths_lgm_tos)
+    fn_format = :esmvaltool
+
+    paths_lgm = [paths_lgm_tas, paths_lgm_tos]
+    ids = ["lgm-tas-data", "tos_lgm"]
+    data = mwd.loadData(paths_lgm, ids; fn_format)
+    @test size(data.models["lgm-tas-data"]) == (72, 36, 17)
+    @test size(data.models["tos_lgm"]) == (72, 36, 16)
+
+    subset = Dict{String, Union{Vector{String}, mwd.Level}}(
+        "subset_shared" => mwd.MEMBER_LEVEL
+    )
+    data = mwd.loadData(paths_lgm, ids; fn_format, constraint=subset)
+    @test data.models["lgm-tas-data"].member == data.models["tos_lgm"].member
+    @test length(data.models["lgm-tas-data"].member) == 15
+
+    subset["models"] = ["GISS-E2-R"]
+    data = mwd.loadData(paths_lgm, ids; fn_format, constraint=subset)
+    @test length(data.models["lgm-tas-data"].member) == 2
+
+    subset["models"] = ["GISS-E2-R#r1i1p150"]
+    data = mwd.loadData(paths_lgm, ids; fn_format, constraint=subset)
+    @test length(data.models["lgm-tas-data"].member) == 1
 end

@@ -6,7 +6,7 @@ export DataMap, ClimateData
 export subsetModelData, sharedModels, filterPathsSharedModels!
 export summarizeEnsembleMembersVector, summarizeEnsembleMembersVector!
 export alignPhysics, addMasks!
-export loadDataFromESMValToolRecipes, loadDataFromYAML
+export loadDataFromESMValToolRecipes, loadDataFromYAML, loadData, loadPreprocData
 
 
 using CSV
@@ -37,7 +37,6 @@ const LEVEL_LOOKUP = Dict(
 )
 
 @enum DataType MODEL_DATA = 0 OBS_DATA = 1 MODEL_OBS_DATA = 2
-
 # META_CMIP5 = ["physics_version", "realization", "initialization_method"]
 # META_CMIP6 = ["mip_era", "variant_label", "grid_label"]
 
@@ -106,11 +105,6 @@ function MetaData(
     return MetaData(variable, experiment, alias, timerange, subdir, id, variable_long, statistic, esmvaltoolPreproc)
 end
 
-function Base.show(io::IO, x::MetaData)
-    fields = map(f -> (f, getfield(x, f)), fieldnames(MetaData))
-    fields = filter(x -> !isnothing(x[2]), fields)
-    map(f -> println(io, f), fields)
-end
 
 const DataMap = Dict{String, YAXArray}
 
@@ -126,6 +120,38 @@ function buildDataMap(data::Vector{<:YAXArray}, ids::Vector{String})
 end
 
 
+struct ClimateData
+    models::DataMap
+    obs::DataMap
+end
+
+
+const FILENAME_FORMATS = Dict(
+    :esmvaltool => ("mip", "model", "table_id", "exp", "variant", "variable", "grid"),
+    :cmip => ("variable", "table_id", "model",  "exp", "variant", "grid", "timerange")
+)
+
+@kwdef struct FilenameMeta
+    variable::String
+    table_id::String
+    model::String
+    exp::String
+    variant::String
+    fn::String
+    grid::Union{String, Nothing} = nothing # only necessary for CMIP6, not CMIP5
+    timerange::Union{String, Nothing} = nothing # only given in filenames of CMIP standard
+    mip::Union{String, Nothing} = nothing # in CMIP standard only given for CMIP5, not CMIP6
+end
+
+
+@kwdef mutable struct ESMEnsemble
+    weights::Union{YAXArray, Nothing} 
+    variables::Dict{Union{Symbol, String}, YAXArray}
+    s::DataFrame   # styles for plotting
+    p::DataFrame   # parameters
+end
+
+
 function Base.show(io::IO, x::Dict{String, YAXArray})
     println(io, "$(typeof(x))")
     for (k, v) in x
@@ -137,21 +163,15 @@ function Base.show(io::IO, x::Tuple{MetaData, Vector{String}})
     print(io, "$(x[1].id): ($(length(x[2])) files)")
 end
 
-struct ClimateData
-    models::DataMap
-    obs::DataMap
-end
-
 function Base.show(io::IO, x::ClimateData)
     println(io, "$(typeof(x))")
     println(io, "models: $(x.models)observations: $(x.obs)")
 end
 
-@kwdef mutable struct ESMEnsemble
-    weights::Union{YAXArray, Nothing} 
-    variables::Dict{Union{Symbol, String}, YAXArray}
-    s::DataFrame   # styles for plotting
-    p::DataFrame   # parameters
+function Base.show(io::IO, x::Union{MetaData, FilenameMeta})
+    fields = map(f -> (f, getfield(x, f)), fieldnames(typeof(x)))
+    fields = filter(x -> !isnothing(x[2]), fields)
+    map(f -> println(io, f), fields)
 end
 
 

@@ -190,7 +190,7 @@ end
 
 
 """
-    searchModelInPaths(model_id::String, paths::Vector{String})
+    findModelInPaths(model_id::String, paths::Vector{String})
 
 Return true if `model_id` is found in filename of any path in `paths`, else false.
 
@@ -200,7 +200,7 @@ The paths are assumed to follow the standard CMIP filename structure, i.e. <vari
 - `model_id::String`: has form modelname[#memberID[_grid]]
 - `paths::Vector{String}`: paths to be searched
 """
-function searchModelInPaths(model_id::String, paths::Vector{String})
+function findModelInPaths(model_id::String, paths::Vector{String})
     model_parts = String.(split(model_id, MODEL_MEMBER_DELIM))
     model = model_parts[1]
     has_member = length(model_parts) == 2
@@ -246,29 +246,6 @@ end
 
 
 """
-    sharedModelsFromPaths(all_paths::Vector{Vector{String}}, all_models::Vector{String})
-     
-Return vector with models in `all_models` for which a path is given in every subvector of `all_paths`.
-"""
-function sharedModelsFromPaths(all_paths::Vector{Vector{String}}, all_models::Vector{String})
-    indices_shared = []
-    for (idx, model) in enumerate(all_models)
-        is_found = false
-        for paths in all_paths
-            is_found = searchModelInPaths(model, paths)
-            if !is_found
-                break
-            end
-        end
-        if is_found
-            push!(indices_shared, idx)
-        end
-    end
-    return all_models[indices_shared]
-end
-
-
-"""
     getCMIPModelsKey(meta::Dict)
 
 Return the respective key to retrieve model names in CMIP6 ('source_id') and 
@@ -293,27 +270,27 @@ function getCMIPModelsKey(meta::Dict)
     end
 end
 
+
 """
-    filterPathsSharedModels!(
-         all_paths::Vector{Vector{String}}, shared_models::Vector{String}
-    )
+    filterPathsSharedModels(paths::Vector{String}, shared_models::Vector{String})
 
 Every vector of paths in `all_paths` is filtered s.t. it only contains models or model 
 members given in `shared_models`.
 """
-function filterPathsSharedModels!(
-    all_paths::Vector{Vector{String}}, shared_models::Vector{String}
-)
+function filterPathsSharedModels(paths::Vector{String}, shared_models::Vector{String})
     if isempty(shared_models)
         @warn "No models shared across data!"
         return nothing
     end
-    for (i, paths) in enumerate(all_paths)
-        mask = map(p -> applyModelConstraints(p, shared_models), paths)
-        all_paths[i] = paths[mask]
-    end
-    return nothing
+    mask = map(p -> applyModelConstraints(p, shared_models), paths)
+    return paths[mask]
 end
+
+function filterPathsSharedModels(all_paths::Vector{Vector{String}}, level_shared::Level)
+    shared = sharedModels(all_paths, level_shared)
+    return map(paths -> filterPathsSharedModels(paths, shared), all_paths)
+end
+
 
 function modelsFromMemberIDs(members::AbstractVector{<:String}; uniq::Bool=false)
     models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members)
@@ -358,21 +335,6 @@ function checkDataStructure(path_data::String, dir_per_var::Bool)
     return nothing
 end
 
-function resolvePathsFromMetaData(
-    meta_data::Vector{MetaData}, 
-    path_data::String;
-    dir_per_var::Bool = true,
-    subset::Union{Dict, Nothing} = nothing
-)
-    paths = map(meta_data) do meta
-        resolvePaths(meta, path_data, dir_per_var; constraint = subset)
-    end
-    if !isnothing(subset) && !isnothing(get(subset, "subset_shared", nothing))        
-        filterPathsSharedModels!(paths, subset["subset_shared"])
-    end
-    return paths
-end
-
 
 function buildMetaDataID(meta::Dict)
     fn_err(k::String) = throw(ArgumentError("$k not defined in metadata!"))
@@ -403,7 +365,7 @@ end
 
 
 """
-    joinDataMaps(v::DataMap...)
+    joinDicts(v::Dict...; warn_msg::String="")
 """
 function joinDicts(v::Dict...; warn_msg::String="")
     result = typeof(v[1])()
@@ -467,8 +429,8 @@ function averageEnsembleMembersMatrix(data::YAXArray, updateMeta::Bool)
 end
 
 
-function joinDataMaps(v::Union{Dict{String, MetaData}, DataMap}...)
-    return joinDicts(v...)
+function joinDataMaps(v::Union{Dict{String, MetaData}, DataMap}...; warn_msg::String="")
+    return joinDicts(v...; warn_msg)
 end
 
 
@@ -775,7 +737,7 @@ end
 
 
 """
-    resolvePaths(
+    resolvePathsFromMetaData( 
         meta::MetaData,
         base_path::String,
         dir_per_var::Bool;
@@ -789,7 +751,7 @@ structure (corresponding to the output from ESMValTool used for preprocessing th
 `base_path` is the top-level directory. If `dir_per_var` is true, `base_path` is assumed to 
 have a (or several) subdirectory for each climate variable with _VAR as part of the 
 subdirectory's name (e.g. _tas, cmip5_tas, etc.). These subdirectories may be constraint by 
-containing at least one of the values in `constraint["subdirs"]`. 
+containing at least one of the values in `constraint["base_subdirs"]`. 
 
 Let BASE refer to `base_path`, or respectively, to the subdirectories for the climate 
 variables. Then the following structure is: BASE/preproc/meta.alias/meta.subdir. 
@@ -800,7 +762,7 @@ The returned paths are the paths to all files within this directory, possibly co
 the filenames containig at least one string in `constraint["projects"]` and respectively 
 at least one string in `constraint["models"]`. 
 """
-function resolvePaths(
+function resolvePathsFromMetaData(
     meta::MetaData, 
     base_path::String, 
     dir_per_var::Bool;
@@ -816,7 +778,6 @@ function resolvePaths(
     else
         base_paths = [base_path]
     end
-    # NOTE: particular data structure assumed here!
     paths_data_dirs = map(base_paths) do p 
         path_data = joinpath(p, "preproc", meta.alias, meta.subdir)
         isdir(path_data) ? path_data : ""
@@ -825,18 +786,42 @@ function resolvePaths(
     if isempty(paths_data_dirs)
         throw(ArgumentError("No directories found at $(base_paths)"))
     end
-
-    return vcat(collectNCFilePaths.(paths_data_dirs; constraint)...)
+    paths_to_files = map(p -> collectNCFilePaths(p; constraint), paths_data_dirs)
+    return vcat(paths_to_files...)
 end
 
 
+function parseFilename(filename::String, format::Symbol)
+    err_msg = "Only filename formats $(keys(FILENAME_FORMATS)) defined. Found: $(format)."
+    attribs = get(() -> throw(ArgumentError(err_msg)), FILENAME_FORMATS, format)
+    values = Vector{Union{String, Nothing}}(split(filename, "_"))
+    diff = length(attribs) - length(values)
+    if diff > 0
+        append!(values, repeat([nothing], diff))
+    elseif diff < 0
+        throw(ArgumentError("$(filename) has more parts than expected for format $format!"))
+    end
+    mapping = Dict(attribs .=> values)
+    return FilenameMeta(
+        variable = mapping["variable"],
+        table_id = mapping["table_id"],
+        model =  mapping["model"],
+        exp = mapping["exp"],
+        variant = mapping["variant"],
+        fn = filename,
+        grid = get(mapping, "grid", nothing),
+        timerange = get(mapping, "timerange", nothing),
+        mip = get(mapping, "mip", nothing)
+    )
+end
+
 function collectNCFilePaths(path_data_dir::String; constraint::Union{Dict, Nothing}=nothing)
     paths_to_files = filter(x -> isfile(x) && endswith(x, ".nc"), readdir(path_data_dir; join=true))
-    if !isnothing(constraint) && !isempty(constraint)
-        paths_to_files = constrainFilenames(paths_to_files, constraint)
-    end
     if isempty(paths_to_files)
         @warn "No .nc files found!"
+    end
+    if !isempty(paths_to_files) && !isnothing(constraint) && !isempty(constraint)
+        paths_to_files = constrainFilenames(paths_to_files, constraint)
     end
     return paths_to_files
 end
@@ -903,7 +888,7 @@ grid, e.g. 'MPI-ESM-P#r1i1p2_gn'.
 function applyModelConstraints(path_model_data::String, model_constraints::Vector{String})    
     keep_file = false
     for model in model_constraints
-        keep_file = searchModelInPaths(model, [path_model_data])
+        keep_file = findModelInPaths(model, [path_model_data])
         if keep_file
             break
         end
@@ -1317,3 +1302,6 @@ function interpolatedWeightedQuantiles(
     )
     return interp_linear(quantiles)
 end
+
+
+
