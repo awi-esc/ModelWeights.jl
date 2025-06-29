@@ -15,9 +15,13 @@ makedocs(
         "Examples" => ["examples/climwip.md", "examples/lgm.md"],
         "references.md"
     ],
-    clean = true,
+    format = Documenter.HTML(
+        edit_link = "main"
+    ),
+    clean = true
 )
 
 deploydocs(
-    repo = "github.com/awi-esc/ModelWeights.git"
+    repo = "github.com/awi-esc/ModelWeights.git",
+    devbranch = "main"
 )
