@@ -1,0 +1,175 @@
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_AWI-ESM-1-1-LR_Omon_lgm_r1i1p1f1_tos_gn.nc
+: activity: PMIP
+  alias: AWI-ESM-1-1-LR
+  dataset: AWI-ESM-1-1-LR
+  diagnostic: lgm
+  ensemble: r1i1p1f1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_AWI-ESM-1-1-LR_Omon_lgm_r1i1p1f1_tos_gn.nc
+  frequency: mon
+  grid: gn
+  institute: AWI
+  long_name: Sea Surface Temperature
+  mip: Omon
+  mip_era: CMIP6
+  modeling_realm:
+  - ocean
+  preprocessor: climatological_mean
+  project: CMIP6
+  recipe_dataset_index: 0
+  short_name: tos
+  standard_name: sea_surface_temperature
+  units: degC
+  variable_group: tos_CLIM
+  variable_long_name: Sea Surface Temperature
+  version: v20200212
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_CESM2-FV2_Omon_lgm_r1i2p2f1_tos_gn.nc
+: activity: PMIP
+  alias: CESM2-FV2
+  dataset: CESM2-FV2
+  diagnostic: lgm
+  ensemble: r1i2p2f1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_CESM2-FV2_Omon_lgm_r1i2p2f1_tos_gn.nc
+  frequency: mon
+  grid: gn
+  institute: NCAR
+  long_name: Sea Surface Temperature
+  mip: Omon
+  mip_era: CMIP6
+  modeling_realm:
+  - ocean
+  preprocessor: climatological_mean
+  project: CMIP6
+  recipe_dataset_index: 1
+  short_name: tos
+  standard_name: sea_surface_temperature
+  units: degC
+  variable_group: tos_CLIM
+  variable_long_name: Sea Surface Temperature
+  version: v20220915
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_CESM2-WACCM-FV2_Omon_lgm_r1i2p2f1_tos_gn.nc
+: activity: PMIP
+  alias: CESM2-WACCM-FV2
+  dataset: CESM2-WACCM-FV2
+  diagnostic: lgm
+  ensemble: r1i2p2f1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_CESM2-WACCM-FV2_Omon_lgm_r1i2p2f1_tos_gn.nc
+  frequency: mon
+  grid: gn
+  institute: NCAR
+  long_name: Sea Surface Temperature
+  mip: Omon
+  mip_era: CMIP6
+  modeling_realm:
+  - ocean
+  preprocessor: climatological_mean
+  project: CMIP6
+  recipe_dataset_index: 2
+  short_name: tos
+  standard_name: sea_surface_temperature
+  units: degC
+  variable_group: tos_CLIM
+  variable_long_name: Sea Surface Temperature
+  version: v20220915
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_INM-CM4-8_Omon_lgm_r1i1p1f1_tos_gr1.nc
+: activity: PMIP
+  alias: INM-CM4-8
+  dataset: INM-CM4-8
+  diagnostic: lgm
+  ensemble: r1i1p1f1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_INM-CM4-8_Omon_lgm_r1i1p1f1_tos_gr1.nc
+  frequency: mon
+  grid: gr1
+  institute: INM
+  long_name: Sea Surface Temperature
+  mip: Omon
+  mip_era: CMIP6
+  modeling_realm:
+  - ocean
+  preprocessor: climatological_mean
+  project: CMIP6
+  recipe_dataset_index: 3
+  short_name: tos
+  standard_name: sea_surface_temperature
+  units: degC
+  variable_group: tos_CLIM
+  variable_long_name: Sea Surface Temperature
+  version: v20201112
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_MIROC-ES2L_Omon_lgm_r1i1p1f2_tos_gn.nc
+: activity: PMIP
+  alias: MIROC-ES2L
+  dataset: MIROC-ES2L
+  diagnostic: lgm
+  ensemble: r1i1p1f2
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_MIROC-ES2L_Omon_lgm_r1i1p1f2_tos_gn.nc
+  frequency: mon
+  grid: gn
+  institute: MIROC
+  long_name: Sea Surface Temperature
+  mip: Omon
+  mip_era: CMIP6
+  modeling_realm:
+  - ocean
+  preprocessor: climatological_mean
+  project: CMIP6
+  recipe_dataset_index: 4
+  short_name: tos
+  standard_name: sea_surface_temperature
+  units: degC
+  variable_group: tos_CLIM
+  variable_long_name: Sea Surface Temperature
+  version: v20191002
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_MIROC-ES2L_Omon_lgm_r1i1p1f2_tos_gr1.nc
+: activity: PMIP
+  alias: MIROC-ES2L
+  dataset: MIROC-ES2L
+  diagnostic: lgm
+  ensemble: r1i1p1f2
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_MIROC-ES2L_Omon_lgm_r1i1p1f2_tos_gr1.nc
+  frequency: mon
+  grid: gr1
+  institute: MIROC
+  long_name: Sea Surface Temperature
+  mip: Omon
+  mip_era: CMIP6
+  modeling_realm:
+  - ocean
+  preprocessor: climatological_mean
+  project: CMIP6
+  recipe_dataset_index: 5
+  short_name: tos
+  standard_name: sea_surface_temperature
+  units: degC
+  variable_group: tos_CLIM
+  variable_long_name: Sea Surface Temperature
+  version: v20200911
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_MPI-ESM1-2-LR_Omon_lgm_r1i1p1f1_tos_gn.nc
+: activity: PMIP
+  alias: MPI-ESM1-2-LR
+  dataset: MPI-ESM1-2-LR
+  diagnostic: lgm
+  ensemble: r1i1p1f1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM/CMIP6_MPI-ESM1-2-LR_Omon_lgm_r1i1p1f1_tos_gn.nc
+  frequency: mon
+  grid: gn
+  institute: MPI-M
+  long_name: Sea Surface Temperature
+  mip: Omon
+  mip_era: CMIP6
+  modeling_realm:
+  - ocean
+  preprocessor: climatological_mean
+  project: CMIP6
+  recipe_dataset_index: 6
+  short_name: tos
+  standard_name: sea_surface_temperature
+  units: degC
+  variable_group: tos_CLIM
+  variable_long_name: Sea Surface Temperature
+  version: v20190710

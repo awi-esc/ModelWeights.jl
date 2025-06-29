@@ -1,0 +1,286 @@
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_CCSM4_Amon_lgm_r1i1p1_tas.nc
+: alias: CCSM4_r1i1p1
+  dataset: CCSM4
+  diagnostic: lgm
+  ensemble: r1i1p1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_CCSM4_Amon_lgm_r1i1p1_tas.nc
+  frequency: mon
+  institute: NCAR
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  mip_era: CMIP5
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 0
+  short_name: tas
+  standard_name: air_temperature
+  units: K
+  variable_group: tas_CLIM
+  variable_long_name: Near-Surface Air Temperature
+  version: v20120203
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_CCSM4_Amon_lgm_r2i1p1_tas.nc
+: alias: CCSM4_r2i1p1
+  dataset: CCSM4
+  diagnostic: lgm
+  ensemble: r2i1p1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_CCSM4_Amon_lgm_r2i1p1_tas.nc
+  frequency: mon
+  institute: NCAR
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  mip_era: CMIP5
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 1
+  short_name: tas
+  standard_name: air_temperature
+  units: K
+  variable_group: tas_CLIM
+  variable_long_name: Near-Surface Air Temperature
+  version: v20120604
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_CNRM-CM5_Amon_lgm_r1i1p1_tas.nc
+: alias: CNRM-CM5
+  dataset: CNRM-CM5
+  diagnostic: lgm
+  ensemble: r1i1p1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_CNRM-CM5_Amon_lgm_r1i1p1_tas.nc
+  frequency: mon
+  institute: CNRM-CERFACS
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  mip_era: CMIP5
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 2
+  short_name: tas
+  standard_name: air_temperature
+  units: K
+  variable_group: tas_CLIM
+  variable_long_name: Near-Surface Air Temperature
+  version: v20120530
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_FGOALS-g2_Amon_lgm_r1i1p1_tas.nc
+: alias: FGOALS-g2
+  dataset: FGOALS-g2
+  diagnostic: lgm
+  ensemble: r1i1p1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_FGOALS-g2_Amon_lgm_r1i1p1_tas.nc
+  frequency: mon
+  institute: LASG-CESS
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  mip_era: CMIP5
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 3
+  short_name: tas
+  standard_name: air_temperature
+  units: K
+  variable_group: tas_CLIM
+  variable_long_name: Near-Surface Air Temperature
+  version: v1
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_GISS-E2-R_Amon_lgm_r1i1p150_tas.nc
+: alias: GISS-E2-R_r1i1p150
+  dataset: GISS-E2-R
+  diagnostic: lgm
+  ensemble: r1i1p150
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_GISS-E2-R_Amon_lgm_r1i1p150_tas.nc
+  frequency: mon
+  institute: NASA-GISS
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  mip_era: CMIP5
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 4
+  short_name: tas
+  standard_name: air_temperature
+  units: K
+  variable_group: tas_CLIM
+  variable_long_name: Near-Surface Air Temperature
+  version: v20160510
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_GISS-E2-R_Amon_lgm_r1i1p151_tas.nc
+: alias: GISS-E2-R_r1i1p151
+  dataset: GISS-E2-R
+  diagnostic: lgm
+  ensemble: r1i1p151
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_GISS-E2-R_Amon_lgm_r1i1p151_tas.nc
+  frequency: mon
+  institute: NASA-GISS
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  mip_era: CMIP5
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 5
+  short_name: tas
+  standard_name: air_temperature
+  units: K
+  variable_group: tas_CLIM
+  variable_long_name: Near-Surface Air Temperature
+  version: v20160510
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_IPSL-CM5A-LR_Amon_lgm_r1i1p1_tas.nc
+: alias: IPSL-CM5A-LR
+  dataset: IPSL-CM5A-LR
+  diagnostic: lgm
+  ensemble: r1i1p1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_IPSL-CM5A-LR_Amon_lgm_r1i1p1_tas.nc
+  frequency: mon
+  institute: IPSL
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  mip_era: CMIP5
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 6
+  short_name: tas
+  standard_name: air_temperature
+  units: K
+  variable_group: tas_CLIM
+  variable_long_name: Near-Surface Air Temperature
+  version: v20120114
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_MIROC-ESM_Amon_lgm_r1i1p1_tas.nc
+: alias: MIROC-ESM
+  dataset: MIROC-ESM
+  diagnostic: lgm
+  ensemble: r1i1p1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_MIROC-ESM_Amon_lgm_r1i1p1_tas.nc
+  frequency: mon
+  institute: MIROC
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  mip_era: CMIP5
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 7
+  short_name: tas
+  standard_name: air_temperature
+  units: K
+  variable_group: tas_CLIM
+  variable_long_name: Near-Surface Air Temperature
+  version: v20120710
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_MPI-ESM-P_Amon_lgm_r1i1p1_tas.nc
+: alias: MPI-ESM-P_r1i1p1
+  dataset: MPI-ESM-P
+  diagnostic: lgm
+  ensemble: r1i1p1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_MPI-ESM-P_Amon_lgm_r1i1p1_tas.nc
+  frequency: mon
+  institute: MPI-M
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  mip_era: CMIP5
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 8
+  short_name: tas
+  standard_name: air_temperature
+  units: K
+  variable_group: tas_CLIM
+  variable_long_name: Near-Surface Air Temperature
+  version: v20120602
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_MPI-ESM-P_Amon_lgm_r1i1p2_tas.nc
+: alias: MPI-ESM-P_r1i1p2
+  dataset: MPI-ESM-P
+  diagnostic: lgm
+  ensemble: r1i1p2
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_MPI-ESM-P_Amon_lgm_r1i1p2_tas.nc
+  frequency: mon
+  institute: MPI-M
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  mip_era: CMIP5
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 9
+  short_name: tas
+  standard_name: air_temperature
+  units: K
+  variable_group: tas_CLIM
+  variable_long_name: Near-Surface Air Temperature
+  version: v20120713
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_MRI-CGCM3_Amon_lgm_r1i1p1_tas.nc
+: alias: MRI-CGCM3
+  dataset: MRI-CGCM3
+  diagnostic: lgm
+  ensemble: r1i1p1
+  exp: lgm
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM/CMIP5_MRI-CGCM3_Amon_lgm_r1i1p1_tas.nc
+  frequency: mon
+  institute: MRI
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  mip_era: CMIP5
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 10
+  short_name: tas
+  standard_name: air_temperature
+  units: K
+  variable_group: tas_CLIM
+  variable_long_name: Near-Surface Air Temperature
+  version: v20120701
