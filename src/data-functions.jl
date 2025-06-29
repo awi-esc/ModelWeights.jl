@@ -384,7 +384,7 @@ constraint by values in `arg_constraint`.
 actually loading any data.
 """
 function loadDataFromYAML(
-    content::Dict;
+    yaml_content::Dict;
     arg_constraint::Union{Dict, Nothing} = nothing,
     preview::Bool = false,
     sorted::Bool = true, 
@@ -392,8 +392,8 @@ function loadDataFromYAML(
     fn_format::Symbol = :esmvaltool
 )
     fn_err(x) = throw(ArgumentError("$(x) must be provided in config yaml file!"))
-    datasets = get(() -> fn_err("datasets"), content, "datasets")
-    base_path = get(() -> fn_err("base_path_data"), content, "base_path_data")
+    datasets = get(() -> fn_err("datasets"), yaml_content, "datasets")
+    base_path = get(() -> fn_err("base_path_data"), yaml_content, "base_path_data")
 
     all_meta = Vector{}(undef, length(datasets))
     all_paths = Vector{}(undef, length(datasets))
@@ -410,7 +410,8 @@ function loadDataFromYAML(
         meta_data = metaDataFromYAML(ds)
         paths = resolvePathsFromMetaData.(meta_data, path_data, dir_per_var; constraint=ds_constraint)
         if !isnothing(ds_constraint) && !isnothing(get(ds_constraint, "subset_shared", nothing))        
-            paths = filterPathsSharedModels(paths, ds_constraint["subset_shared"])
+            level = LEVEL_LOOKUP[ds_constraint["subset_shared"]]
+            paths = filterPathsSharedModels(paths, level)
         end
         all_paths[i] = paths 
         all_meta[i] = meta_data 
@@ -418,7 +419,7 @@ function loadDataFromYAML(
     paths = vcat(all_paths...)
     meta_data = vcat(all_meta...)
     # if argument provided, apply subset shared across all datasets
-    level_all_data = get(arg_constraint, "subset_shared", nothing)
+    level_all_data = isnothing(arg_constraint) ? nothing : get(arg_constraint, "subset_shared", nothing)
     if !isnothing(level_all_data)
         paths = filterPathsSharedModels(paths, level_all_data)
     end

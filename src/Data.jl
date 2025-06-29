@@ -33,7 +33,9 @@ const MODEL_NAME_FIXES = Dict(
 @enum Level MODEL_LEVEL = 0 MEMBER_LEVEL = 1
 const LEVEL_LOOKUP = Dict(
     "model" => MODEL_LEVEL,
-    "member" => MEMBER_LEVEL
+    "member" => MEMBER_LEVEL,
+    :model => MODEL_LEVEL,
+    :member => MEMBER_LEVEL
 )
 
 @enum DataType MODEL_DATA = 0 OBS_DATA = 1 MODEL_OBS_DATA = 2

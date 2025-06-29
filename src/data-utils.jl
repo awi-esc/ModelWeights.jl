@@ -651,7 +651,7 @@ function alignTimeseries!(data::Vector{<:YAXArray})
         s = map(length, otherdims(ds, :time))
         # if ds allows missing values, undef is initialized with missing
         dat = Array{eltype(ds)}(undef, s..., nb_years)
-        ds_extended = YAXArray((otherdims(ds, :time)..., Dim{:time}(timerange)), dat)
+        ds_extended = YAXArray((otherdims(ds, :time)..., Dim{:time}(timerange)), dat, ds.properties)
         ds_extended[time = Where(x->Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds # ds[time=:]
         data[i] = ds_extended
     end

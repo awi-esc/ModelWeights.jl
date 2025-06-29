@@ -1,16 +1,15 @@
-import ModelWeights as mw
+import ModelWeights.Data as mwd
 using DimensionalData
 using CairoMakie
 using YAXArrays
 
 path_config = "./configs/projection-plots.yml";
-
-meta_data = mw.loadData(path_config; preview=true)
-data_all = mw.loadData(path_config)
+meta_data = mwd.loadDataFromYAML(path_config; preview=true)
+data_all = mwd.loadDataFromYAML(path_config)
 # data_all =  mw.loadData(
 #     path_config, subset=Dict("subset_shared" => mw.MODEL)
 # )
-mw.setToSummarizedMembers!(data_all)
+mw.summarizeEnsembleMembersVector!(data_all)
 data_ts = mw.filterTimeseries(data_all, 2015, 2100)
 
 # Brunner paper Fig. 2 with unweighted data
@@ -22,8 +21,8 @@ data_ts = mw.filterTimeseries(data_all, 2015, 2100)
 # compute uncertainty ranges (weighted and unweighted)
 # compute mean for historical (also weighted and unweighted)
 function getDataProjectionPlot(dat::YAXArray)
-    gms = mw.computeGlobalMeansTS(dat)
-    unweighted_avg = mw.computeWeightedAvg(gms)
+    gms = mw.globalMeans(dat)
+    unweighted_avg = mw.weightedAvg(gms)
     uncertainties = mw.getUncertaintyRanges(gms)
     return (avg=unweighted_avg, uncertainties=uncertainties)
 end

@@ -90,7 +90,10 @@ function combineAll(v::Vararg{Vector{String}}; sep::String="_")
         @warn "At least one input vector is empty -> empty vector returned!"
         return Vector{String}()
     end
-    return reduce(vcat, map(elems -> join(elems, sep), Iterators.product(v...)))
+    combinations =  map(elems -> join(elems, sep), Iterators.product(v...))
+    # init in reduce is important! otherwise if combinations is just one element, that 
+    # element would be returned as String!
+    return reduce(vcat, combinations; init=Vector{String}())
 end
 
 
