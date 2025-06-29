@@ -164,9 +164,8 @@ end
 @testset "Test loadData" begin
     paths_lgm_tas = ["data/lgm-cmip5-tas-climatologies", "data/lgm-cmip6-tas-climatologies"]
     paths_lgm_tos = ["data/lgm-cmip5-tos-climatologies", "data/lgm-cmip6-tos-climatologies"]
-    base = joinpath(pwd(), "test") 
-    paths_lgm_tas = joinpath.(base, paths_lgm_tas)
-    paths_lgm_tos = joinpath.(base, paths_lgm_tos)
+    paths_lgm_tas = joinpath.(pwd(), paths_lgm_tas)
+    paths_lgm_tos = joinpath.(pwd(), paths_lgm_tos)
     fn_format = :esmvaltool
 
     paths_lgm = [paths_lgm_tas, paths_lgm_tos]
