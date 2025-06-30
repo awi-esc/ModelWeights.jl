@@ -1,5 +1,5 @@
 """
-    uniqueMemberID(meta::Dict, model::String)
+    buildMemberID(meta::Dict, model::String)
 
 Return member id for `model` which is the model name itself followed by '#' and the variant 
 label (simulation id).
@@ -13,7 +13,7 @@ For CMIP6 models, the grid is further added to the end of the id seperated with 
 'initialization_method', 'physics_version'. For CMIP6 data must have keys: 'variant_label', 
 'grid_label'.
 """
-function uniqueMemberID(meta::Dict, model::String)
+function buildMemberID(meta::Dict, model::String)
     fn_err(k::String) = throw(ArgumentError("$k not defined in metadata!"))
     mip_era = get(() -> fn_err("mip_era"), meta, "mip_era")
     member = ""
@@ -186,6 +186,22 @@ function memberIDsFromPaths(all_paths::Vector{String})
         all_members[i] = model
     end
     return unique(all_members)
+end
+
+
+"""
+    memberIDFromFilenameMeta(fn_meta::FilenameMeta)
+
+Return a string of the form modelname#memberID[_grid] that identifies the corresponding model member.
+
+For CMIP6 models the abbreviation of the grid is added to the model name.
+"""
+function memberIDFromFilenameMeta(fn_meta::FilenameMeta, mip_era::String)
+    id = join([fn_meta.model, fn_meta.variant], MODEL_MEMBER_DELIM)
+    if lowercase(mip_era) == "cmip6"
+        id = join([id, fn_meta.grid], "_")
+    end
+    return id
 end
 
 

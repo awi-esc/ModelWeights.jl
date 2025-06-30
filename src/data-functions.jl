@@ -25,7 +25,6 @@ function sharedModels(data::DataMap, level::Level)
     return level == MEMBER_LEVEL ? sharedLevelMembers(data) : sharedLevelModels(data)
 end
 
-
 function sharedModels(all_paths::Vector{Vector{String}}, subset_shared::Level)
     all_models = memberIDsFromPaths(vcat(all_paths...))
     if subset_shared == MODEL_LEVEL
@@ -171,11 +170,10 @@ end
         meta::Union{Dict{String, T}, Nothing} = nothing
     )
 
-Return data loaded from `paths` as single YAXArray. The names of the data files are assumed 
-to follow the CMIP-standard. 
-
-Filenames that do not start with 'cmip5' or 'cmip6' (upper/lower case doesnt matter), are 
-considered observational data.
+Return data loaded from `paths` as single YAXArray. `Paths` point to model data for a
+particular variable and experiment; each path points to a different model, i.e. the data for 
+one dataset is loaded from multiple files and all datasets in `paths` must share the same 
+dimensions except for the dimension `member` across which the data is merged.
 """
 function loadPreprocData(
     paths::Vector{String},
@@ -231,10 +229,10 @@ function loadPreprocData(
             if !occursin(name, filename) && !(name in keys(MODEL_NAME_FIXES))
                 @warn "model name as read from metadata of stored .nc file ($name) and used as dimension name is not identical to name appearing in its path ($filename)"
             end
-            member_id_temp = memberIDsFromPaths([path])[1]
+            member_id_temp = memberIDFromFilenameMeta(meta, attributes["mip_era"])
             model_id_temp = String(split(member_id_temp, MODEL_MEMBER_DELIM)[1])
             props["model_id"] = fixModelNameMetadata(model_id_temp)
-            props["member_id"] = uniqueMemberID(attributes, props["model_id"])
+            props["member_id"] = buildMemberID(attributes, props["model_id"])
             #props["physics"] = physicsFromMember(props["member_id"])
         elseif !is_model_data && dtype in [OBS_DATA, MODEL_OBS_DATA]
             props["model_id"] = filename

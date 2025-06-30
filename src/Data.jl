@@ -1,7 +1,7 @@
 module Data
 
 export Level, MODEL_MEMBER_DELIM
-export DataMap, ClimateData
+export DataMap, ClimateData, ESMEnsemble
 
 export subsetModelData, sharedModels, filterPathsSharedModels!
 export summarizeEnsembleMembersVector, summarizeEnsembleMembersVector!
