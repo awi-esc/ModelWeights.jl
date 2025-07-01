@@ -6,7 +6,7 @@ export DataMap, ClimateData, ESMEnsemble
 export subsetModelData, sharedModels, filterPathsSharedModels!
 export summarizeEnsembleMembersVector, summarizeEnsembleMembersVector!
 export alignPhysics, addMasks!
-export loadDataFromESMValToolRecipes, loadDataFromYAML, loadData, loadPreprocData
+export loadDataFromESMValToolRecipes, loadDataFromYAML, defineDataMap, loadPreprocData
 
 
 using CSV
@@ -37,10 +37,6 @@ const LEVEL_LOOKUP = Dict(
     :model => MODEL_LEVEL,
     :member => MEMBER_LEVEL
 )
-
-@enum DataType MODEL_DATA = 0 OBS_DATA = 1 MODEL_OBS_DATA = 2
-# META_CMIP5 = ["physics_version", "realization", "initialization_method"]
-# META_CMIP6 = ["mip_era", "variant_label", "grid_label"]
 
 mutable struct MetaData
     variable::String
@@ -110,7 +106,7 @@ end
 
 const DataMap = Dict{String, YAXArray}
 
-function buildDataMap(data::Vector{<:YAXArray}, ids::Vector{String})
+function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String})
     if length(data) != length(ids)
         throw(ArgumentError("data and ids must have same size to build up DataMap"))
     end

@@ -102,29 +102,42 @@ end
 
 
 """
-    mergeDataFromMultipleFiles(
-        data::Vector{<:YAXArray}, sorted::Bool; meta::Union{Dict{String, T}, Nothing}=nothing
+    combineModelsFromMultipleFiles(
+        data::Vector{<:YAXArray}; 
+        names::Vector{String} = Vector{String}(),
+        meta::Union{Dict{String, T}, Nothing} = nothing,
+        dtype::String = "undef",
+        new_dim::Symbol = :model,
+        sorted::Bool = true
 ) where T <: Any
 
-Combine arrays in `data` into a single YAXArray with meta combined from all datasets into lists, 
-with missing if key wasnt in a dataset, and with properties in `meta` (except for paths). 
-If `sorted` is true, model dimension of returned data is sorted alphabetically and the 
-entries in the metadata dictionary of the returned array which are vectors are sorted accordingly.
+Combine `data` from different files into a single YAXArray. 
+The meta data of the returned YAXArray is a combination of all values from all datasets 
+using vectors with missing values for datasets that didn't have the respective metadata 
+entry in their metadata, further combined with the properties in `meta` if provided.
 
-All data must be defined on the same grid. For timeseries data, the time dimension might cover 
-different ranges, in that case they maximal timeseries is used and filled with NaN for missing values. 
+All elements in `data` must share all dimensions except for time (if present).
+For timeseries data, the time dimension may cover different ranges. In that case the 
+maximal timeseries is used and filled with NaN for missing values.  
+
+The combined YAXArray has the additional dimension `new_dim` (default: :model) with `names`
+as values. If `names` is not provided, default values 'model1', 'model2, etc. are used 
+instead.
+
+If `sorted` is true, model dimension of returned data is sorted alphabetically and the 
+vector entries in the metadata dictionary of the returned array are also sorted accordingly.
 """
-function mergeDataFromMultipleFiles(
-    data::Vector{<:YAXArray}, sorted::Bool; meta::Union{Dict{String, T}, Nothing}=nothing
+function combineModelsFromMultipleFiles(
+    data::Vector{<:YAXArray}; 
+    names::Vector{String} = Vector{String}(),
+    meta::Union{Dict{String, T}, Nothing} = nothing,
+    new_dim::Symbol = :model,
+    sorted::Bool = true
 ) where T <: Any
     if isempty(data)
         @warn "Data vector is empty!"
         return nothing
     end
-    if !all(x -> haskey(x.properties, "model_id"), data)
-        throw(ArgumentError("All data must have model_id in metadata!"))
-    end
-    #dimData = cat(data..., dims=3) # way too slow!
     data_sizes = unique(map(size, data))
     if length(data_sizes) != 1
         if !all(map(x -> hasdim(x, :time), data))
@@ -135,35 +148,26 @@ function mergeDataFromMultipleFiles(
             alignTimeseries!(data)
         end
     end
-
-    hasMembers = all(x -> haskey(x.properties, "member_id"), data)
-    dim = hasMembers ? :member : :model
-    names = map(x -> x.properties[String(dim) * "_id"], data)
-    if sorted
+    use_default_names = isempty(names)
+    if use_default_names
+        names = map(x -> string(new_dim) * string(x), 1:length(data))
+    end
+    if sorted && !use_default_names
         sort_indices = sortperm(names)
         names = names[sort_indices]
         data = data[sort_indices]
     end
     meta_dict = mergeMetaDataFromMultipleFiles(data)    
     meta_dict["info"] = isnothing(meta) ? Dict() : meta
-    if hasMembers
-        renameDictKeys!(
-            meta_dict, 
-            [("model_id", "model_names"), ("member_id", "member_names"), ("path", "paths")]
-        )
-    end
-    dimData = concatenatecubes(data, Dim{dim}(names))
+    dimData = concatenatecubes(data, Dim{new_dim}(names))
     dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
-    # Sanity checks that no dataset exists more than once
-    if hasMembers
-        members = dims(dimData, :member)
-        if length(members) != length(unique(members))
-            duplicates = unique([m for m in members if sum(members .== m) > 1])
-            @warn "Some datasets appear more than once" duplicates
-        end
+    if length(names) != length(unique(names))
+        duplicates = unique([m for m in names if sum(names .== m) > 1])
+        @warn "Some datasets appear more than once" duplicates
     end
     return dimData
 end
+
 
 """
     memberIDsFromPaths(all_paths::Vector{String})
@@ -307,10 +311,11 @@ function filterPathsSharedModels(all_paths::Vector{Vector{String}}, level_shared
     return map(paths -> filterPathsSharedModels(paths, shared), all_paths)
 end
 
-function filterPathsSharedModels(all_paths::Vector{Vector{String}}, level_shared::String)
+function filterPathsSharedModels(
+    all_paths::Vector{Vector{String}}, level_shared::Union{String, Symbol}
+)
     return filterPathsSharedModels(all_paths, LEVEL_LOOKUP[level_shared])
 end
-
 
 
 function modelsFromMemberIDs(members::AbstractVector{<:String}; uniq::Bool=false)
@@ -809,6 +814,11 @@ function resolvePathsFromMetaData(
     end
     paths_to_files = map(p -> collectNCFilePaths(p; constraint), paths_data_dirs)
     return vcat(paths_to_files...)
+end
+
+
+function parseFilename(filename::String, format::String)
+    # TODO: parse individual format
 end
 
 
@@ -1325,4 +1335,15 @@ function interpolatedWeightedQuantiles(
 end
 
 
+"""
+    metaDataChecksCMIP(meta::Dict, path::String)
 
+Check model names as retrieved from the metadata for potential inconsistencies wrt filename.
+"""
+function metaDataChecksCMIP(meta::NCDatasets.CommonDataModel.Attributes, path::String)
+    name = meta[getCMIPModelsKey(Dict(meta))]
+    if !occursin(name, basename(path)) && !(name in keys(MODEL_NAME_FIXES))
+        @warn "model name as read from metadata of stored .nc file ($name) and used as dimension name is not identical to name appearing in filename $(basename(path))."
+    end 
+    return nothing
+end

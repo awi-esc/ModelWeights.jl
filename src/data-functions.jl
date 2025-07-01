@@ -164,85 +164,70 @@ end
 """
     loadPreprocData(
         paths::Vector{String},
-        fn_format::Symbol;
+        filename_format::Union{Symbol, String};
         sorted::Bool = true, 
-        dtype::DataType = MODEL_OBS_DATA, 
-        meta::Union{Dict{String, T}, Nothing} = nothing
-    )
+        dtype::String = "undef",
+        names::Vector{String} = Vector{String}(),
+        meta_info::Union{Dict{String, T}, Nothing} = nothing
+    ) where T <: Any
 
-Return data loaded from `paths` as single YAXArray. `Paths` point to model data for a
-particular variable and experiment; each path points to a different model, i.e. the data for 
-one dataset is loaded from multiple files and all datasets in `paths` must share the same 
-dimensions except for the dimension `member` across which the data is merged.
+Return data loaded from `paths` as single YAXArray. 
+
+Each path points to a different model, i.e. the data for one dataset is loaded from multiple 
+files and all datasets in `paths` must share the same dimensions. Which variable is loaded 
+is inferred from the filenames (from `paths`), or if `meta_info` has key 'variable', the 
+respective value is used.
 """
 function loadPreprocData(
     paths::Vector{String},
-    fn_format::Symbol;
+    filename_format::Union{Symbol, String};
     sorted::Bool = true, 
-    dtype::DataType = MODEL_OBS_DATA, 
+    dtype::String = "undef",
+    names::Vector{String} = Vector{String}(),
     meta_info::Union{Dict{String, T}, Nothing} = nothing
 ) where T <: Any
-    data = Vector{YAXArray}()
+    is_cmip = lowercase(dtype) == "cmip"
+    data = Vector{YAXArray}(undef, length(paths))
+    names = isempty(names) && is_cmip ? Vector{String}(undef, length(paths)) : names
+    new_dim = is_cmip ? :member : :model
     filenames = first.(splitext.(basename.(paths)))
-    filenames_meta = parseFilename.(filenames, fn_format)
-    for (path, filename, meta) in zip(paths, filenames, filenames_meta)
+    filenames_meta = parseFilename.(filenames, filename_format)
+    
+    for (i, (path, meta)) in enumerate(zip(paths, filenames_meta))
         @debug "processing file.." * path
         ds = NCDataset(path)
-        # check if data is model data or observational data
-        mip = get(ds.attrib, "project_id", nothing) # for CMIP5
-        mip = isnothing(mip) ? get(ds.attrib, "mip_era", nothing) : mip # for CMIP6
-        is_model_data = !isnothing(mip)
-        
-        @debug "is_model_data: $is_model_data, fn_format: $fn_format, meta:" meta
-        clim_var = (is_model_data || fn_format == :esmvaltool) ? 
-            meta.variable : get(meta_info, "variable", nothing)
-        if isnothing(clim_var)
-            throw(ArgumentError("for observational data, variable must be provided in meta_info if filename format is not based on standard assumed by esmvaltool."))
-        end
-
+        clim_var = !isnothing(meta_info) ? get(meta_info, "variable", meta.variable) : meta.variable
         dsVar = nothing
         try 
             dsVar = ds[clim_var]
         catch e
-            @error "Variable '$clim_var' according to filename format '$fn_format' not found!"
+            @error "Variable '$clim_var' according to filename format '$(string(filename_format))' not found in $path !"
             throw(e)
         end
         # if clim_var == "amoc"
         #     dsVar = ds["msftmz"]
         # end
-        attributes = merge(dsVar.attrib, ds.attrib)
+        props = Dict{String, Any}(dsVar.attrib) # metadata just for this file!
         if clim_var == "msftmz"
             sector = get(ds, "sector", nothing)
             if !isnothing(sector)
-                merge!(attributes, sector.attrib)
+                merge!(props, sector.attrib)
             end
         end
-        props = Dict{String, Any}() # metadata just for this file!
-        props["path"] = path
-
-        if is_model_data && dtype in [MODEL_DATA, MODEL_OBS_DATA] 
-            model_key = getCMIPModelsKey(Dict(ds.attrib))
-            # add mip_era for models since it is not provided in CMIP5-models
-            get!(attributes, "mip_era", "CMIP5")
-            # check model names as retrieved from the metadata for potential inconsistencies wrt filename
-            name = ds.attrib[model_key] # just the model name, e.g. ACCESS1-0 (not the member's id)
-            if !occursin(name, filename) && !(name in keys(MODEL_NAME_FIXES))
-                @warn "model name as read from metadata of stored .nc file ($name) and used as dimension name is not identical to name appearing in its path ($filename)"
-            end
-            member_id_temp = memberIDFromFilenameMeta(meta, attributes["mip_era"])
-            model_id_temp = String(split(member_id_temp, MODEL_MEMBER_DELIM)[1])
-            props["model_id"] = fixModelNameMetadata(model_id_temp)
-            props["member_id"] = buildMemberID(attributes, props["model_id"])
-            #props["physics"] = physicsFromMember(props["member_id"])
-        elseif !is_model_data && dtype in [OBS_DATA, MODEL_OBS_DATA]
-            props["model_id"] = filename
-        else
-            continue
-        end
-        # meta data that is stored in YAXArrays
-        for key in collect(keys(dsVar.attrib)) #["units", "mip_era", "grid_label"]
-            if haskey(attributes, key)
-                props[key] = attributes[key]
+        props["path"] = path 
+        if is_cmip
+            metaDataChecksCMIP(ds.attrib, path)
+            mip = get(ds.attrib, "project_id", nothing) # for CMIP5
+            mip = isnothing(mip) ? get(ds.attrib, "mip_era", nothing) : mip # for CMIP6
+            if isnothing(mip)
+                msg = "dtype set to $(dtype). Only CMIP5+CMIP6 supported, yet neither project_id nor mip_era found in data at $path !"
+                @warn msg
+            else
+                member_id_temp = memberIDFromFilenameMeta(meta, mip)
+                model_id_temp = String(split(member_id_temp, MODEL_MEMBER_DELIM)[1])
+                model_id = fixModelNameMetadata(model_id_temp)
+                names[i] = replace(member_id_temp, model_id_temp => model_id)
+                props["mip_era"] = mip
             end
         end
         dimension_names = dimnames(dsVar)
@@ -259,39 +244,36 @@ function loadPreprocData(
                 dimensions[idx_dim] = Dim{Symbol(d)}(collect(dsVar[d][:]))
             end
         end
-        push!(data, YAXArray(Tuple(dimensions), Array(dsVar), props))
+        data[i] = YAXArray(Tuple(dimensions), Array(dsVar), props)
         # replace missing values by NaN?
-        #push!(data, YAXArray(Tuple(dimensions), coalesce.(Array(dsVar), NaN), props)
+        # data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(dsVar), NaN), props)
         close(ds)
     end
-    return isempty(data) ? nothing : mergeDataFromMultipleFiles(data, sorted; meta=meta_info)
+    return isempty(data) ? nothing : combineModelsFromMultipleFiles(data; names, new_dim, sorted, meta=meta_info)
 end
 
 
-
 """
-    loadClimateData(
+    loadDataMapCore(
         all_paths::Vector{Vector{String}},
         ids::Vector{String};
         meta_data::Union{Vector{Dict{String, T}}, Nothing} = nothing,
         sorted::Bool = true,
-        dtype::DataType = MODEL_OBS_DATA,
-        fn_format::Symbol = :cmip
+        dtype::String = "undef",
+        filename_format::Symbol = :cmip
     ) where T <: Any
 
-Load data at `all_paths`, every subvector refers the the paths of the data of a single 
-dataset. 
+Load a DataMap instance with keys `ids` that map to data at `all_paths`, where every 
+subvector refers the the paths of the data of a single dataset. 
 
-Return a ClimateData instance when `dtype=MODEL_OBS_DATA` (default) and a DataMap with 
-model (obs) data when `dtype=MODEL_DATA` (`dtype=OBS_DATA`).
 """
-function loadClimateData(
+function loadDataMapCore(
     all_paths::Vector{Vector{String}},
     ids::Vector{String};
     meta_data::Union{Vector{Dict{String, T}}, Nothing} = nothing,
     sorted::Bool = true,
-    dtype::DataType = MODEL_OBS_DATA,
-    fn_format::Symbol = :cmip
+    dtype::String = "undef",
+    filename_format::Union{Symbol, String} = :cmip
 ) where T <: Any
     absent(x::Union{Vector, Nothing}) = isnothing(x) || isempty(x)
     if !absent(meta_data) && (length(all_paths) != length(meta_data))
@@ -300,20 +282,17 @@ function loadClimateData(
     if length(all_paths) != length(ids)
         throw(ArgumentError("size of paths vector and ids must be equal. Found: paths: $(length(all_paths)), ids: $(length(ids))"))
     end
-    getData(dtype::DataType) = map(
-        (paths, meta) -> loadPreprocData(paths, fn_format; sorted, dtype, meta_info=meta),
+    data = map((paths, meta) -> loadPreprocData(paths, filename_format; sorted, dtype, meta_info=meta),
         all_paths, 
         absent(meta_data) ? fill(nothing, length(all_paths)) : meta_data
     )
-    models = dtype != OBS_DATA ? filter(!isnothing, getData(MODEL_DATA)) : []
-    observations = dtype != MODEL_DATA ? filter(!isnothing, getData(OBS_DATA)) : []
-    model_map = !isempty(models) ? buildDataMap(models, ids) : DataMap()
-    obs_map = !isempty(observations) ? buildDataMap(observations, ids) : DataMap()
-    return dtype == MODEL_DATA ? 
-        model_map : 
-        (dtype == OBS_DATA ? obs_map : ClimateData(model_map, obs_map))
+    found_data = map(!isnothing, data)
+    if any(x -> x==0, found_data)
+        @warn "no data found for ids: $(ids[.!found_data])"
+        filter!(!isnothing, data)
+    end
+    return defineDataMap(data, ids[found_data])
 end
-
 
 
 """
@@ -346,8 +325,8 @@ function loadDataFromESMValToolRecipes(
     subset::Union{Dict, Nothing} = nothing,
     preview::Bool = false,
     sorted::Bool = true, 
-    dtype::DataType = MODEL_OBS_DATA,
-    fn_format::Symbol = :esmvaltool
+    dtype::String = "undef",
+    filename_format::Union{Symbol, String} = :esmvaltool
 )
     checkDataStructure(path_data, dir_per_var)
     meta_data = metaDataFromESMValToolRecipes(path_recipes; constraint=subset)
@@ -359,8 +338,8 @@ function loadDataFromESMValToolRecipes(
         return collect(zip(meta_data, paths))
     end
     ids = map(x -> x.id, meta_data)
-    return loadClimateData(
-        paths, ids; sorted, dtype, fn_format, meta_data=metadataToDict.(meta_data)
+    return loadDataMapCore(
+        paths, ids; sorted, dtype, filename_format, meta_data=metadataToDict.(meta_data)
     )
 end
 
@@ -371,7 +350,7 @@ end
         arg_constraint::Union{Dict, Nothing} = nothing,
         preview::Bool = false,
         sorted::Bool = true,
-        dtype::DataType = MODEL_OBS_DATA
+        dtype::String = "undef"
     )
 
 Load a `ClimateData`-instance that contains the data specified in `content`, potentially 
@@ -386,8 +365,8 @@ function loadDataFromYAML(
     arg_constraint::Union{Dict, Nothing} = nothing,
     preview::Bool = false,
     sorted::Bool = true, 
-    dtype::DataType = MODEL_OBS_DATA,
-    fn_format::Symbol = :esmvaltool
+    dtype::String = "undef",
+    filename_format::Union{Symbol, String} = :esmvaltool
 )
     fn_err(x) = throw(ArgumentError("$(x) must be provided in config yaml file!"))
     datasets = get(() -> fn_err("datasets"), yaml_content, "datasets")
@@ -408,7 +387,8 @@ function loadDataFromYAML(
         meta_data = metaDataFromYAML(ds)
         paths = resolvePathsFromMetaData.(meta_data, path_data, dir_per_var; constraint=ds_constraint)
         if !isnothing(ds_constraint) && !isnothing(get(ds_constraint, "subset_shared", nothing))        
-            level = LEVEL_LOOKUP[ds_constraint["subset_shared"]]
+            msg = "'subset_shared' in constraint argument must be one of: model, member, :model, :member, found: $(ds_constraint["subset_shared"])."
+            level = get(() -> throw(ArgumentError(msg)), LEVEL_LOOKUP, ds_constraint["subset_shared"])
             paths = filterPathsSharedModels(paths, level)
         end
         all_paths[i] = paths 
@@ -425,9 +405,9 @@ function loadDataFromYAML(
         return collect(zip(meta_data, paths))
     end
     ids = map(x -> x.id, meta_data)
-    return loadClimateData(
-        paths, ids; sorted, dtype, fn_format, meta_data=metadataToDict.(meta_data)
-    )    
+    return loadDataMapCore(
+        paths, ids; sorted, dtype, filename_format, meta_data = metadataToDict.(meta_data)
+    )
 end
 
 function loadDataFromYAML(
@@ -439,78 +419,79 @@ function loadDataFromYAML(
     return loadDataFromYAML(YAML.load_file(path_config); arg_constraint, preview, sorted)
 end
 
+
 # Loading data directly from given directories
 """
-    loadData(
+    defineDataMap(
         path_data_dir::String, 
         id::String;
         meta_data::Dict{String, T} = Dict{String, Any}(),
         constraint::Union{Dict, Nothing} = nothing,
         sorted::Bool = true, 
-        dtype::DataType = MODEL_OBS_DATA,
-        fn_format::Symbol=:cmip
+        dtype::String = "undef",
+        filename_format::Union{Symbol, String} = :cmip
     ) where T <: Any
 
 Return DataMap with entry `id` with the data (model and/or obs depending on `dtype`) from 
 all .nc files in `paths` and all .nc files in all directories in `paths`, possibly 
 constraint by `constraint`.
 """
-function loadData(
+function defineDataMap(
     paths::Vector{String}, 
     id::String;
     meta_data::Dict{String, T} = Dict{String, Any}(),
     constraint::Union{Dict, Nothing} = nothing,
     sorted::Bool = true, 
-    dtype::DataType = MODEL_OBS_DATA,
-    fn_format::Symbol=:cmip
+    dtype::String = "undef",
+    filename_format::Union{Symbol, String} = :cmip
 ) where T <: Any
     paths_dirs = filter(x -> isdir(x), paths)
     paths_ncfiles = filter(x -> isfile(x) && endswith(x, ".nc"), paths)
     paths_to_files = vcat(collectNCFilePaths.(paths_dirs; constraint)..., paths_ncfiles)
-    return loadClimateData([paths_to_files], [id]; meta_data = [meta_data], sorted, dtype, fn_format)    
+    return loadDataMapCore([paths_to_files], [id]; meta_data = [meta_data], sorted, dtype, filename_format)    
 end
 
 
 """
-    loadData(
+    defineDataMap(
         paths_data_dirs::Vector{String}, 
         data_ids::Vector{String};
         meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
         constraint::Union{Dict, Nothing} = nothing,
         sorted::Bool = true, 
-        dtype::DataType = MODEL_OBS_DATA,
-        fn_format::Symbol=:cmip
+        dtype::String = "undef",
+        filename_format::Union{Symbol, String} = :cmip
     ) where T <: Any
 
 Return DataMap with entries `data_ids` with the data (model and/or obs depending on `dtype`) 
 from all .nc files in all directories in `paths_dirs`, possibly constraint by `constraint`.
 """
-function loadData(
+function defineDataMap(
     paths_data_dirs::Vector{String}, 
     data_ids::Vector{String};
     meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
     constraint::Union{Dict, Nothing} = nothing,
     sorted::Bool = true, 
-    dtype::DataType = MODEL_OBS_DATA,
-    fn_format::Symbol=:cmip
+    dtype::String = "undef",
+    filename_format::Union{Symbol, String} = :cmip
 ) where T <: Any
     paths_to_files = collectNCFilePaths.(paths_data_dirs; constraint)
     if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "subset_shared", nothing))        
         paths_to_files = filterPathsSharedModels(paths_to_files, constraint["subset_shared"])
     end
-    return loadClimateData(paths_to_files, data_ids; sorted, dtype, fn_format, meta_data)
+    return loadDataMapCore(paths_to_files, data_ids; sorted, dtype, filename_format, meta_data)
 end
 
 
 """
-    loadData(
+    defineDataMap(
         paths_data_dirs::Vector{String}, 
         data_ids::Vector{String};
         meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
         constraint::Union{Dict, Nothing} = nothing,
         sorted::Bool = true, 
-        dtype::DataType = MODEL_OBS_DATA,
-        fn_format::Symbol=:cmip
+        dtype::String = "undef",
+        filename_format::Union{Symbol, String} = :cmip
     ) where T <: Any
 
 Return DataMap with entries `data_ids` with the data (model and/or obs depending on `dtype`) 
@@ -520,14 +501,14 @@ For every loaded dataset (entry in built DataMap), files are loaded from several
 each entry in `paths_data_dirs` points the the vector of data directories from where data 
 is loaded for that dataset.
 """
-function loadData(
+function defineDataMap(
     paths_data_dirs::Vector{Vector{String}}, 
     data_ids::Vector{String};
     meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
     constraint::Union{Dict, Nothing} = nothing,
     sorted::Bool = true, 
-    dtype::DataType = MODEL_OBS_DATA,
-    fn_format::Symbol=:cmip
+    dtype::String = "undef",
+    filename_format::Union{Symbol, String} = :cmip
 ) where T <: Any
     paths_to_files = map(paths_data_dirs) do paths 
         vcat(collectNCFilePaths.(paths; constraint)...)
@@ -535,5 +516,6 @@ function loadData(
     if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "subset_shared", nothing))        
         paths_to_files = filterPathsSharedModels(paths_to_files, constraint["subset_shared"])
     end
-    return loadClimateData(paths_to_files, data_ids; sorted, dtype, fn_format, meta_data)
+    
+    return loadDataMapCore(paths_to_files, data_ids; sorted, dtype, filename_format, meta_data)
 end
