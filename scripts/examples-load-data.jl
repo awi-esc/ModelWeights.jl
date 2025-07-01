@@ -25,17 +25,17 @@ subset = Dict{String, Union{Vector{String}, mwd.Level}}(
     "subset_shared" => mwd.MEMBER_LEVEL,
     "base_subdirs" => ["20241114"]
 );
-lgm_meta = mwd.loadDataFromESMValToolRecipes(
+lgm_meta = mw.loadDataFromESMValToolRecipes(
     path_data, path_recipes; subset=subset, preview=true
 ) 
-lgm_data = mwd.loadDataFromESMValToolRecipes(
-    path_data, path_recipes; subset=subset, dtype=mwd.MODEL_DATA
+lgm_data = mw.loadDataFromESMValToolRecipes(
+    path_data, path_recipes; subset=subset, dtype="cmip"
 )
 
 # we set subset_shared to mw.MEMBER, so model members are identical for 
 # every loaded data set (variable)
-model_members_lgm = Array(dims(lgm_data.models["tas_CLIM_lgm"], :member));
-models_lgm = string.(unique(lgm_data.models["tos_CLIM_lgm"].properties["model_names"]))
+model_members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"], :member));
+models_lgm = mwd.modelsFromMemberIDs(model_members_lgm; uniq = true)
 
 # --------------------------------------------------------------------------- #
 # 2. Model data just for historical experiment of models with lgm-experiment
@@ -54,17 +54,18 @@ historical_data_lgm = mwd.loadDataFromESMValToolRecipes(
         "variables" => variables, 
         "projects" => projects,
         "aliases" => ["historical"], 
-        #"timeranges" => ["full"], 
         "models" => models_lgm
     ),
-    dtype = mwd.MODEL_DATA
+    dtype = "cmip"
 )
 # sanity check: for all lgm models, historical experiment is loaded
-models_historical = unique(historical_data_lgm.models["tos_CLIM_historical"].properties["model_names"]);
+models_historical = mwd.modelsFromMemberIDs(
+    val(historical_data_lgm["tos_CLIM_historical"].member); uniq = true
+)
 @assert models_historical == models_lgm
 
 # function to join two DataMaps into one
-data = mwd.joinDataMaps(lgm_data.models, historical_data_lgm.models)
+data = mwd.joinDataMaps(lgm_data, historical_data_lgm)
 data_members = mwd.subsetModelData(data; level = mwd.MEMBER_LEVEL)
 
 # 2.2 Or directly load historical data of the same model MEMBERS as for lgm 
@@ -78,20 +79,19 @@ begin
             "statistics" => statistics, 
             "variables" => variables, 
             "projects" => projects,
-            #"aliases" => ["historical"], 
             "timeranges" => ["full"], 
             "base_subdirs" =>   ["20250211", "20250207", "20250209"],
             "models" => model_members_lgm
         ),
-        dtype = mwd.MODEL_DATA
+        dtype = "cmip"
     )
 end
 
 # sanity check: all historical model members must be in lgm model members
-@assert all(map(x -> x in model_members_lgm, dims(historical_data_lgm_members.models["tos_CLIM_historical"], :member)))
+@assert all(map(x -> x in model_members_lgm, dims(historical_data_lgm_members["tos_CLIM_historical"], :member)))
 
 # sanity check: are there lgm model MEMBERS that dont appear in historical models?
-members_historical = Array(dims(historical_data_lgm_members.models["tas_CLIM_historical"], :member));
+members_historical = Array(dims(historical_data_lgm_members["tas_CLIM_historical"], :member));
 filter(x -> !(x in members_historical), model_members_lgm)
 
 
@@ -100,14 +100,12 @@ filter(x -> !(x in members_historical), model_members_lgm)
 begin
     # yaml config file already contains basic constraints for subset as defined above.
     path_config = "./configs/examples/example-lgm-historical.yml";
-    subset = Dict{String, Union{Vector{String}, mwd.Level}}(
+    subset = Dict{String, Union{Vector{String}, Symbol}}(
         "models" => model_members_lgm,
-        "subset_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
+        "subset_shared" => :member # applies to every loaded dataset
     );
-    meta_lgm_v2 =  mwd.loadDataFromYAML(
-        path_config; arg_constraint = subset, preview = true
-    )
-    data_lgm_v2 = mwd.loadDataFromYAML(path_config; arg_constraint = subset)
+    meta_lgm_v2 =  mw.loadDataFromYAML(path_config; arg_constraint=subset, preview=true)
+    data_lgm_v2 = mw.loadDataFromYAML(path_config; arg_constraint=subset)
 end
 
 
@@ -126,9 +124,8 @@ begin
             "variables" => variables,
             #"projects" => ["ERA5"],
             "timeranges" => ["full", "1961-1990"]
-            #"aliases" => ["historical", "historical2"],
         ),
-        preview=false
+        preview = false
     )
 end
 
@@ -143,28 +140,36 @@ paths_lgm_tas = [
     joinpath(base, "LGM/recipe_cmip6_lgm_tas_20241114_150706/preproc/lgm/tas_CLIM"),
     joinpath(base, "LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM")
 ];
-fn_format = :esmvaltool;
+
+filename_format = :esmvaltool;
+dtype = "cmip"
 
 # returns DataMap with 1 entry
-tos = mwd.loadData(paths_lgm_tos, "tos"; fn_format)
+tos = mw.defineDataMap(paths_lgm_tos, "tos"; filename_format) # default dimension names
+tos = mw.defineDataMap(paths_lgm_tos, "tos"; filename_format, dtype) # with inferred dimension names
+
 # one directory path for every dataset
 paths_lgm_cmip6 = [joinpath(base, "LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM"), joinpath(base, "LGM/recipe_cmip6_lgm_tas_20241114_150706/preproc/lgm/tas_CLIM")]
-lgm_cmip6 = mwd.loadData(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; fn_format)
+lgm_cmip6 = mw.defineDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format)
+lgm_cmip6 = mw.defineDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; dtype="cmip", filename_format)
+
 
 # several directory paths for every dataset; returns DataMap with 2 entries
 paths_lgm = [paths_lgm_tos, paths_lgm_tas];
-lgm = mwd.loadData(paths_lgm, ["tos_lgm", "tas_lgm"]; fn_format)
+lgm = mwd.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format)
+lgm = mwd.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; dtype, filename_format)
 
-shared_models = mwd.sharedModels(lgm.models, mwd.MODEL_LEVEL);
-shared_members = mwd.sharedModels(lgm.models, mwd.MEMBER_LEVEL);
+shared_models = mwd.sharedModels(lgm, mwd.MODEL_LEVEL);
+shared_members = mwd.sharedModels(lgm, mwd.MEMBER_LEVEL);
 subset = Dict{String, Union{Vector{String}, mwd.Level}}(
     "subset_shared" => mwd.MEMBER_LEVEL
 );
-lgm = mwd.loadData(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint=subset, fn_format)
+lgm = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint=subset, filename_format)
+lgm = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint=subset, dtype, filename_format)
 
-model_members_lgm = Array(dims(lgm.models["tas_lgm"], :member));
-models_lgm = string.(unique(lgm.models["tos_lgm"].properties["model_names"]))
 
+model_members_lgm = Array(dims(lgm["tas_lgm"], :member));
+model_names =  mwd.modelsFromMemberIDs(model_members_lgm; uniq = true)
 
 paths_historical_tas = [
     joinpath(base, "historical/recipe_cmip5_historical_tas_20250211_094633/preproc/historical/tas_CLIM"), 
@@ -179,14 +184,23 @@ subset = Dict{String, Union{Vector{String}, mwd.Level}}(
     "models" => model_members_lgm,
     "subset_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
 );
-historical = mwd.loadData(
-    paths_historical, ["tas_historical", "tos_historical"]; fn_format, constraint=subset
+historical = mwd.defineDataMap(
+    paths_historical, ["tas_historical", "tos_historical"]; dtype, filename_format, constraint=subset
 )
 
 # to load data as YAXArrays from files directly (not from all files within directories), use loadPreprocData
 paths = vcat(mwd.collectNCFilePaths.(paths_lgm_tas)...)
-data = mwd.loadPreprocData(
-    paths, fn_format; dtype=mwd.MODEL_DATA, meta_info=Dict("variable" => "tas")
-)
-# same data but a ClimateData instance is loaded 
-data = mwd.loadData(paths, "tas"; fn_format, meta_data = Dict("variable" => "tas"))
+data = mwd.loadPreprocData(paths, filename_format; dtype="cmip", meta_info=Dict("variable" => "tas"))
+# when cmip is not defined, default names are used for models
+data = mwd.loadPreprocData(paths, filename_format; meta_info = Dict("variable" => "tas"))
+# same data but a DataMap instance is returned
+data = mwd.loadDataMapCore([paths], ["tas"]; filename_format, meta_data = [Dict("variable" => "tas")])
+
+
+# TODO: merge same models (on exisitng dimension) not yet implemented
+base = "/albedo/work/projects/p_pool_clim_data/CMIP6/CMIP/AWI/AWI-ESM-1-1-LR/historical/r1i1p1f1/Amon/pr/gn/v20200212/"
+paths = [
+    joinpath(base, "pr_Amon_AWI-ESM-1-1-LR_historical_r1i1p1f1_gn_185001-185012.nc"),
+    joinpath(base, "pr_Amon_AWI-ESM-1-1-LR_historical_r1i1p1f1_gn_185101-185112.nc")
+]
+# data = mwd.loadPreprocData(paths, :cmip)
