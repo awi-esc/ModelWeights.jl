@@ -131,6 +131,15 @@ end
 
 
 # --------- Load the model data Version 3: completely independent of ESMValTool recipes --------- #
+# most basic case, where some available data (YAXArrays) are loaded into a DataMap
+longitudes =  [12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5]
+latitudes = [-77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5]
+d1 = YAXArray((Dim{:lat}(latitudes),Dim{:lon}(longitudes)), rand(7, 9))
+d2 = YAXArray((Dim{:lat}(latitudes),Dim{:lon}(longitudes)), rand(7, 9)) 
+models = ["ESM1", "ESM2"]
+data = ModelWeights.defineDataMap([d1, d2], models)
+
+
 base = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool" 
 paths_lgm_tos = [
     joinpath(base, "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM"),
@@ -189,12 +198,18 @@ historical = mwd.defineDataMap(
 )
 
 # to load data as YAXArrays from files directly (not from all files within directories), use loadPreprocData
-paths = vcat(mwd.collectNCFilePaths.(paths_lgm_tas)...)
-data = mwd.loadPreprocData(paths, filename_format; dtype="cmip", meta_info=Dict("variable" => "tas"))
+paths_tas = vcat(mwd.collectNCFilePaths.(paths_lgm_tas)...)
+paths_tos = vcat(mwd.collectNCFilePaths.(paths_lgm_tos)...)
+data = mwd.loadPreprocData(paths_tas, filename_format; dtype="cmip")
 # when cmip is not defined, default names are used for models
-data = mwd.loadPreprocData(paths, filename_format; meta_info = Dict("variable" => "tas"))
+data = mwd.loadPreprocData(paths_tas, filename_format)
 # same data but a DataMap instance is returned
-data = mwd.loadDataMapCore([paths], ["tas"]; filename_format, meta_data = [Dict("variable" => "tas")])
+data = mwd.loadDataMapCore([paths_tas], ["tas"]; filename_format)
+
+# load different variables from same model
+data = mwd.loadPreprocData([paths_tas[end-6], paths_tos[3]], filename_format; dtype="cmip")
+
+
 
 
 # TODO: merge same models (on exisitng dimension) not yet implemented
@@ -203,4 +218,4 @@ paths = [
     joinpath(base, "pr_Amon_AWI-ESM-1-1-LR_historical_r1i1p1f1_gn_185001-185012.nc"),
     joinpath(base, "pr_Amon_AWI-ESM-1-1-LR_historical_r1i1p1f1_gn_185101-185112.nc")
 ]
-# data = mwd.loadPreprocData(paths, :cmip)
+data = mw.loadPreprocData(paths, :cmip)

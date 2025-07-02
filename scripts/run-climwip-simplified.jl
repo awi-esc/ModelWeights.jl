@@ -1,3 +1,4 @@
+import ModelWeights as mw
 import ModelWeights.Data as mwd
 import ModelWeights.Weights as mww
 import ModelWeights.Plots as mwp
@@ -12,7 +13,7 @@ using NCDatasets
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358"; 
 path_configs = "./configs/climwip_config";
 
-data = mwd.loadDataFromESMValToolRecipes(
+data = mw.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var = false,
     subset = Dict("aliases" => ["calculate_weights_climwip"])
