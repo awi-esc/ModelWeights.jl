@@ -17,7 +17,7 @@ end
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
 
-subset = Dict{String, Union{Vector{String}, mwd.Level}}(
+constraint = Dict{String, Union{Vector{String}, mwd.Level}}(
     "statistics" => statistics, 
     "variables" => variables,
     "projects" => projects,
@@ -26,10 +26,10 @@ subset = Dict{String, Union{Vector{String}, mwd.Level}}(
     "base_subdirs" => ["20241114"]
 );
 lgm_meta = mw.loadDataFromESMValToolRecipes(
-    path_data, path_recipes; subset=subset, preview=true
+    path_data, path_recipes; constraint, preview=true
 ) 
 lgm_data = mw.loadDataFromESMValToolRecipes(
-    path_data, path_recipes; subset=subset, dtype="cmip"
+    path_data, path_recipes; constraint, dtype="cmip"
 )
 
 # we set subset_shared to mw.MEMBER, so model members are identical for 
@@ -49,7 +49,7 @@ path_recipes = "./configs/historical";
 historical_data_lgm = mwd.loadDataFromESMValToolRecipes(
     path_data, 
     path_recipes;
-    subset = Dict(
+    constraint = Dict(
         "statistics" => statistics, 
         "variables" => variables, 
         "projects" => projects,
@@ -75,7 +75,7 @@ begin
     historical_data_lgm_members = mwd.loadDataFromESMValToolRecipes(
         path_data, 
         path_recipes;
-        subset = Dict(
+        constraint = Dict(
             "statistics" => statistics, 
             "variables" => variables, 
             "projects" => projects,
@@ -100,12 +100,12 @@ filter(x -> !(x in members_historical), model_members_lgm)
 begin
     # yaml config file already contains basic constraints for subset as defined above.
     path_config = "./configs/examples/example-lgm-historical.yml";
-    subset = Dict{String, Union{Vector{String}, Symbol}}(
+    constraint = Dict{String, Union{Vector{String}, Symbol}}(
         "models" => model_members_lgm,
         "subset_shared" => :member # applies to every loaded dataset
     );
-    meta_lgm_v2 =  mw.loadDataFromYAML(path_config; arg_constraint=subset, preview=true)
-    data_lgm_v2 = mw.loadDataFromYAML(path_config; arg_constraint=subset)
+    meta_lgm_v2 =  mw.loadDataFromYAML(path_config; constraint, preview=true)
+    data_lgm_v2 = mw.loadDataFromYAML(path_config; constraint)
 end
 
 
@@ -119,7 +119,7 @@ begin
     obs_data = mwd.loadDataFromESMValToolRecipes(
         base_path, config_path;
         dir_per_var = false,
-        subset = Dict(
+        constraint = Dict(
             "statistics" => statistics, 
             "variables" => variables,
             #"projects" => ["ERA5"],

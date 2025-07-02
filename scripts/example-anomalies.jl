@@ -110,9 +110,9 @@ f2
 
 
 
-gms_tas_everywhere = mw.computeGlobalMeans(tas_anom_data);
-gms_tas_ocean = mw.computeGlobalMeans(ocean_tas);
-gms_tas_land = mw.computeGlobalMeans(land_tas);
+gms_tas_everywhere = mw.globalMeans(tas_anom_data);
+gms_tas_ocean = mw.globalMeans(ocean_tas);
+gms_tas_land = mw.globalMeans(land_tas);
 gms_ratio = gms_tas_land ./ gms_tas_ocean;
 
 non_missing_indices = findall(x -> !ismissing(x), gms_ratio)
@@ -131,7 +131,7 @@ save("plots/anomalies/gm_anomalies_land_vs_ocean.png", f3)
 
 # plot tas vs. ratio of tas on land/tos (proxy for ratio)
 tos_anom_data = df_historical["tos_ANOM_historical3"];
-gms_tos = mw.computeGlobalMeans(tos_anom_data);
+gms_tos = mw.globalMeans(tos_anom_data);
 
 f4, ax = mw.makeScatterPlot(
     gms_tas_land, gms_tos; 

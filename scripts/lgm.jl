@@ -1,29 +1,32 @@
 import ModelWeights as mw
+import ModelWeights.Data as mwd
+import ModelWeights.Weights as mww
+import ModelWeights.Plots as mwp
 
-using NCDatasets
-using DimensionalData
-using Setfield
-using Distributions
-using Statistics
-using CairoMakie
+    using CairoMakie
 using Colors
+    using DimensionalData
+using Distributions
+using NCDatasets
+using Setfield
+using Statistics
 
 # GET THE DATA
 # 1. Model data for LGM experiment
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "./configs/lgm-cmip5-cmip6";
-lgm_data = mw.loadDataFromESMValToolRecipes(
+lgm_data = mwd.loadDataFromESMValToolRecipes(
     path_data, path_recipes; 
-    subset =  Dict(
+    constraint =  Dict(
         "statistics" => ["CLIM"], 
         "variables" => ["tas", "psl"],
         "projects" => ["CMIP5", "CMIP6"], 
         "aliases" => ["lgm"],
-        "subset_shared" => mw.MEMBER
+        "subset_shared" => mwd.MEMBER
     ),
     preview = false
 )
-mw.kelvinToCelsius!(lgm_data)
+mwd.kelvinToCelsius!(lgm_data)
 members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"], :member));
 models_lgm = unique(lgm_data["tas_CLIM_lgm"].properties["model_names"])
 
@@ -34,7 +37,7 @@ path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/historical";
 # (subset_shared set to mw.MEMBER) since we want the exact same 
 # simulations for all variables when computing weights
 # use same model members as for lgm
-historical_data = mw.loadDataFromESMValToolRecipes(
+historical_data = mwd.loadDataFromESMValToolRecipes(
     path_data, path_recipes;
     subset = Dict(
         "statistics" =>["CLIM"], 
@@ -44,33 +47,32 @@ historical_data = mw.loadDataFromESMValToolRecipes(
         "timeranges" => ["full"],
         "subdirs" => ["20250211", "20250207"],
         "models" => members_lgm,
-        "subset_shared" => mw.MEMBER
+        "subset_shared" => mwd.MEMBER
     )
 )
-mw.kelvinToCelsius!(historical_data)
+mwd.kelvinToCelsius!(historical_data)
 # Load observational data
 base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_obs_historical_tas_tos";
 config_path = "./configs/obs";
-# aliases and timeranges don't have to match, all data will be loaded that 
-# corresponds either to aliases or to timeranges!
-obs_data = mw.loadDataFromESMValToolRecipes(
+# aliases and timeranges don't have to match, all data will be loaded that corresponds either to aliases or to timeranges!
+obs_data = mwd.loadDataFromESMValToolRecipes(
     base_path, config_path;
     dir_per_var = false,
     is_model_data = false,
-    subset = Dict(
+    constraint = Dict(
         "statistics" => ["CLIM"], "variables" => ["tas", "psl"], "timeranges" => ["full"]
     )
 )
-mw.kelvinToCelsius!(obs_data)
+mwd.kelvinToCelsius!(obs_data)
 
 # COMPUTATION WEIGHTS
 weights_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/";
 
-obs_avg = obs_data["tas_CLIM_historical"][source=1]
+obs_avg = obs_data["tas_CLIM_historical"][model=1]
 f = Figure();
 cmap = reverse(Colors.colormap("RdBu", mid=35/80));
-mw.plotValsOnMap!(
-    f, obs_data["tas_CLIM_historical"][source=1], "Climatology ERA5";
+mwp.plotValsOnMap!(
+    f, obs_data["tas_CLIM_historical"][model=1], "Climatology ERA5";
     colors = cmap[2:end-1],
     color_range = (-45, 35), 
     high_clip = cmap[end], low_clip = cmap[1], xlabel_rotate=0
@@ -81,24 +83,24 @@ save("plots/lgm/climatology-observations.png", f)
 # 1. Compute weights based on historical data
 target_fn = "weights-historical-performance";
 target_path = joinpath(weights_dir, target_fn * ".jld2")
-config_weights = mw.ConfigWeights(
-    performance = Dict("tas_CLIM" => 1),
-    independence = Dict("tas_CLIM" => 1),
+config_weights = mw.Weights.ConfigWeights(
+    performance = Dict("tas_CLIM_historical" => 1),
+    independence = Dict("tas_CLIM_historical" => 1),
     sigma_independence = 0.5,
     sigma_performance = 0.5
 );
-dists_perform = mw.computeDistancesAllDiagnostics(
+dists_perform = mwd.distancesData(
     historical_data, obs_data, config_weights.performance
 );
-dists_indep = mw.computeDistancesAllDiagnostics(historical_data, config_weights.independence);
-weights = mw.climwipWeights(dists_indep, dists_perform, config_weights)
+dists_indep = mwd.distancesModels(historical_data, config_weights.independence);
+weights = mw.Weights.climwipWeights(dists_indep, dists_perform, config_weights, "")
 
-f1 = mw.plotWeights(weights; title="Weights based on historical data (tas)")
+f1 = mwp.plotWeights(weights.w; title="Weights based on historical data (tas)")
 save("plots/lgm/" * target_fn * ".png", f1)
 
 # 2. Apply weights on historical period
 df = deepcopy(historical_data);
-mw.setToSummarizedMembers!(df)
+mwd.summarizeEnsembleMembersVector!(df)
 weighted_avg_hist = mw.applyWeights(df["tas_CLIM_historical"], weights.w);
 f2 = Figure();
 cmap = reverse(Colors.colormap("RdBu", mid=25/70));
@@ -125,7 +127,7 @@ mw.kelvinToCelsius!(data)
 # instead better to use computeAnomaly function to ensure metadata is updated too and for checking that units are identical!
 lgm_cooling = data["tas_CLIM_lgm"] .- data["tas_CLIM_piControl"];
 # global lgm-cooling values for each model
-global_means = mw.computeGlobalMeans(lgm_cooling)
+global_means = mw.globalMeans(lgm_cooling)
 
 # values from Tierney et al. (2020)
 mu_tierney = -6.1
@@ -184,7 +186,7 @@ mw.plotDistances(dists_perform, "Likelihoods";is_bar_plot=false)[1]
 
 # 2. apply weights on estimated climatological average of historical period
 df = deepcopy(data);
-mw.setToSummarizedMembers!(df)
+mw.summarizeEnsembleMembersVector!(df)
 weighted_avg_lgm = mw.applyWeights(df["tas_CLIM_historical"], weights.w);
 f5 = Figure();
 title = "Weighted avg historical tas\n(based on lgm-cooling)";
@@ -200,7 +202,7 @@ f6
 save("plots/lgm/weighted-avg-diff.png", f6)
 
 # unweighted average
-unweighted_avg = mw.computeWeightedAvg(
+unweighted_avg = mw.weightedAvg(
     df["tas_CLIM_historical"]; use_members_equal_weights = false
 );
 f7 = Figure();
@@ -235,16 +237,16 @@ save("plots/lgm/diff_unweighted-minus-weighted-based-on-historical.png", f9)
 # uncertainties_unweighted = mw.getUncertaintyRanges(lgm_tas_data);
 
 # simple average across model members
-unweighted_means_members = mw.computeWeightedAvg(model_historical_lgm["tas_CLIM_lgm"])
+unweighted_means_members = mw.weightedAvg(model_historical_lgm["tas_CLIM_lgm"])
 
 # unweighted avg across models
 lgm_tas_data = mw.summarizeEnsembleMembersVector(model_historical_lgm["tas_CLIM_lgm"], true)
-unweighted_means = mw.computeWeightedAvg(lgm_tas_data)
+unweighted_means = mw.weightedAvg(lgm_tas_data)
 f10 = Figure();
 mw.plotValsOnMap!(f10, unweighted_means, "unweighted average LGM: tas_CLIM")
  
 # weighted avg across models
-weighted_means = mw.computeWeightedAvg(lgm_tas_data; weights=weights.w)
+weighted_means = mw.weightedAvg(lgm_tas_data; weights=weights.w)
 f11 = Figure();
 mw.plotValsOnMap!(f11, weighted_means, "weighted means LGM: tas_CLIM")
 

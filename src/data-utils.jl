@@ -314,7 +314,7 @@ end
 function filterPathsSharedModels(
     all_paths::Vector{Vector{String}}, level_shared::Union{String, Symbol}
 )
-    return filterPathsSharedModels(all_paths, LEVEL_LOOKUP[level_shared])
+    return filterPathsSharedModels(all_paths, getLevel(level_shared))
 end
 
 

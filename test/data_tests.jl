@@ -1,6 +1,9 @@
+import ModelWeights as mw
+import ModelWeights.Data as mwd
+
 using DimensionalData
 using YAXArrays
-import ModelWeights.Data as mwd
+
 
 longitudes =  [12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5]
 latitudes = [-77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5]
@@ -161,31 +164,30 @@ end
 
 
 
-@testset "Test loadData" begin
+@testset "Test defineDataMap" begin
     paths_lgm_tas = ["data/lgm-cmip5-tas-climatologies", "data/lgm-cmip6-tas-climatologies"]
     paths_lgm_tos = ["data/lgm-cmip5-tos-climatologies", "data/lgm-cmip6-tos-climatologies"]
     paths_lgm_tas = joinpath.(pwd(), paths_lgm_tas)
     paths_lgm_tos = joinpath.(pwd(), paths_lgm_tos)
-    fn_format = :esmvaltool
+    filename_format = :esmvaltool
+    dtype = "cmip"
 
     paths_lgm = [paths_lgm_tas, paths_lgm_tos]
     ids = ["lgm-tas-data", "tos_lgm"]
-    data = mwd.loadData(paths_lgm, ids; fn_format)
-    @test size(data.models["lgm-tas-data"]) == (72, 36, 17)
-    @test size(data.models["tos_lgm"]) == (72, 36, 16)
+    data = mw.defineDataMap(paths_lgm, ids; dtype, filename_format)
+    @test size(data["lgm-tas-data"]) == (72, 36, 17)
+    @test size(data["tos_lgm"]) == (72, 36, 16)
 
-    subset = Dict{String, Union{Vector{String}, mwd.Level}}(
-        "subset_shared" => mwd.MEMBER_LEVEL
-    )
-    data = mwd.loadData(paths_lgm, ids; fn_format, constraint=subset)
-    @test data.models["lgm-tas-data"].member == data.models["tos_lgm"].member
-    @test length(data.models["lgm-tas-data"].member) == 15
+    constraint = Dict{String, Union{Vector{String}, Symbol}}("subset_shared" => :member)
+    data = mw.defineDataMap(paths_lgm, ids; dtype, filename_format, constraint)
+    @test data["lgm-tas-data"].member == data["tos_lgm"].member
+    @test length(data["lgm-tas-data"].member) == 15
 
-    subset["models"] = ["GISS-E2-R"]
-    data = mwd.loadData(paths_lgm, ids; fn_format, constraint=subset)
-    @test length(data.models["lgm-tas-data"].member) == 2
+    constraint["models"] = ["GISS-E2-R"]
+    data = mw.defineDataMap(paths_lgm, ids; dtype, filename_format, constraint)
+    @test length(data["lgm-tas-data"].member) == 2
 
-    subset["models"] = ["GISS-E2-R#r1i1p150"]
-    data = mwd.loadData(paths_lgm, ids; fn_format, constraint=subset)
-    @test length(data.models["lgm-tas-data"].member) == 1
+    constraint["models"] = ["GISS-E2-R#r1i1p150"]
+    data = mw.defineDataMap(paths_lgm, ids; dtype, filename_format, constraint)
+    @test length(data["lgm-tas-data"].member) == 1
 end

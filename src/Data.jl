@@ -37,6 +37,12 @@ const LEVEL_LOOKUP = Dict(
     :model => MODEL_LEVEL,
     :member => MEMBER_LEVEL
 )
+function getLevel(level::Union{String, Symbol})
+    msg = "Model level must be one of $(keys(LEVEL_LOOKUP)), but found: $(level)."
+    get(() -> throw(ArgumentError(msg)), LEVEL_LOOKUP, level)
+    return level in [:model, "model"] ? MODEL_LEVEL : MEMBER_LEVEL
+end
+
 
 mutable struct MetaData
     variable::String

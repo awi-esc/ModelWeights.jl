@@ -22,13 +22,13 @@ data = mw.alignPhysics(data,
     # data["tas_CLIM_lgm"].properties["member_names"]; 
     subset_shared = mw.MODEL
 )
-mw.setToSummarizedMembers!(data)
+mw.summarizeEnsembleMembersVector!(data)
 mw.addAnomalies!(data, "tas_CLIM_lgm", "tas_CLIM_piControl")
 #mw.addAnomalies!(data, "tos_CLIM_lgm", "tos_CLIM_piControl")
 
 # NaN important for plotting! Type mustn't be Missing
-global_means_tas = coalesce.(mw.computeGlobalMeans(data["tas_ANOM_lgm"]), NaN);
-#global_means_tos = coalesce.(mw.computeGlobalMeans(data["tos_ANOM_lgm"]), NaN);
+global_means_tas = coalesce.(mw.globalMeans(data["tas_ANOM_lgm"]), NaN);
+#global_means_tos = coalesce.(mw.globalMeans(data["tos_ANOM_lgm"]), NaN);
 
 
 # Assimilated data from Tierney et al. (2020)
@@ -42,7 +42,7 @@ errdeltaSAT = YAXArray(
     (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
     Array(tierney_data["errdeltaSAT"])
 )
-gm_delta = mw.computeGlobalMeans(deltaSAT)[1]
+gm_delta = mw.globalMeans(deltaSAT)[1]
 area_weights_mat = mw.makeAreaWeightMatrix(Array(dims(deltaSAT, :lon)), Array(dims(deltaSAT, :lat)))
 std_gm_delta = sum(area_weights_mat .* errdeltaSAT)
 
@@ -62,7 +62,7 @@ errdeltaSST = YAXArray(
     (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
     mat
 )
-gm_delta = mw.computeGlobalMeans(deltaSST)[1]
+gm_delta = mw.globalMeans(deltaSST)[1]
 # also adapt area weight matrix for missing values..!!?
 area_weights_mat = mw.makeAreaWeightMatrix(
     Array(dims(deltaSST, :lon)), Array(dims(deltaSST, :lat));
@@ -136,7 +136,7 @@ path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "./configs/lgm-cmip5-cmip6";
 lgm_data = mw.loadDataFromESMValToolRecipes(
     path_data, path_recipes; 
-    subset = Dict(
+    constraint = Dict(
         "statistics" => ["CLIM"], 
         "variables" => ["tos", "tas"],
         "projects" => ["CMIP5", "CMIP6"],
@@ -196,7 +196,7 @@ obs_data = mw.loadDataFromESMValToolRecipes(
     "./configs/historical_obs",
     dir_per_var = false,
     is_model_data = false,
-    subset = Dict(
+    constraint = Dict(
         "statistics" => ["CLIM"], 
         "variables" => ["tas"],
         "aliases" => ["historical"],

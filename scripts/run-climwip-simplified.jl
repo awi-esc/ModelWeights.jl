@@ -16,7 +16,7 @@ path_configs = "./configs/climwip_config";
 data = mw.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var = false,
-    subset = Dict("aliases" => ["calculate_weights_climwip"])
+    constraint = Dict("aliases" => ["calculate_weights_climwip"])
 )
 
 # Compute Weights (performance based on historical period)
@@ -66,12 +66,12 @@ sij_var = dropdims(
 data_temp_map_future = mwd.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var=false,
-    subset = Dict("aliases" => ["weighted_temperature_map_future"])
+    constraint = Dict("aliases" => ["weighted_temperature_map_future"])
 )
 data_temp_map_reference = mwd.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var = false,
-    subset = Dict("aliases" => ["weighted_temperature_map_reference"])
+    constraint = Dict("aliases" => ["weighted_temperature_map_reference"])
 )
                 
 # compute weighted averages and plot results
@@ -143,7 +143,7 @@ end
 data_temp_graph = mwd.loadDataFromESMValToolRecipes(
     path_data, path_configs;
     dir_per_var = false,
-    subset = Dict("aliases" => ["weighted_temperature_graph"])
+    constraint = Dict("aliases" => ["weighted_temperature_graph"])
 );
 data_graph = data_temp_graph.models["tas_ANOM_weighted_temperature_graph"];
 # this will compute the weighted avg based on the average across the respective members of each model
