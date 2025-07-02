@@ -8,7 +8,7 @@ path_config = "./configs/projection-plots.yml";
 meta_data = mwd.loadDataFromYAML(path_config; preview=true)
 data_all = mwd.loadDataFromYAML(path_config)
 data_all =  mwd.loadDataFromYAML(
-    path_config; constraint = Dict("subset_shared" => mwd.MODEL_LEVEL)
+    path_config; constraint = Dict("level_shared" => mwd.MODEL_LEVEL)
 )
 # hier weiter!
 mwd.summarizeEnsembleMembersVector!(data_all)

@@ -29,9 +29,9 @@ function sharedModels(data::DataMap, level::Union{String, Symbol})
     return sharedModels(data, getLevel(level))
 end
 
-function sharedModels(all_paths::Vector{Vector{String}}, subset_shared::Level)
+function sharedModels(all_paths::Vector{Vector{String}}, level_shared::Level)
     all_models = memberIDsFromPaths(vcat(all_paths...))
-    if subset_shared == MODEL_LEVEL
+    if level_shared == MODEL_LEVEL
         all_models = unique(modelsFromMemberIDs(all_models))
     end
     # check whether models are found in paths for every dataset
@@ -54,16 +54,16 @@ end
 
 """
     alignPhysics(
-        datamap::DataMap, members::Vector{String}; subset_shared::Union{Level, Nothing}=nothing
+        datamap::DataMap, members::Vector{String}; level_shared::Union{Level, Nothing}=nothing
     )
 
 Return new DataMap with only the models retained that share the same physics as 
 the respective model's members in `members`.
 
-If `subset_shared` is set, resulting DataMap is subset accordingly.
+If `level_shared` is set, resulting DataMap is subset accordingly.
 """
 function alignPhysics(
-    datamap::DataMap, members::Vector{String}; subset_shared::Union{Level, Nothing}=nothing
+    datamap::DataMap, members::Vector{String}; level_shared::Union{Level, Nothing}=nothing
 )
     data = deepcopy(datamap)
     models = unique(modelsFromMemberIDs(members))
@@ -86,8 +86,8 @@ function alignPhysics(
             end
         end
     end
-    if !isnothing(subset_shared)
-        shared_models = sharedModels(data, subset_shared)
+    if !isnothing(level_shared)
+        shared_models = sharedModels(data, level_shared)
         for (id, model_data) in data
             data[id] = subsetModelData(model_data, shared_models)
         end
@@ -335,8 +335,8 @@ function loadDataFromESMValToolRecipes(
     checkDataStructure(path_data, dir_per_var)
     meta_data = metaDataFromESMValToolRecipes(path_recipes; constraint)
     paths = resolvePathsFromMetaData.(meta_data, path_data, dir_per_var; constraint)
-    if !isnothing(constraint) && !isnothing(get(constraint, "subset_shared", nothing))        
-        paths = filterPathsSharedModels(paths, constraint["subset_shared"])
+    if !isnothing(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
+        paths = filterPathsSharedModels(paths, constraint["level_shared"])
     end
     if preview
         return collect(zip(meta_data, paths))
@@ -390,9 +390,9 @@ function loadDataFromYAML(
         end
         meta_data = metaDataFromYAML(ds)
         paths = resolvePathsFromMetaData.(meta_data, path_data, dir_per_var; constraint=ds_constraint)
-        if !isnothing(ds_constraint) && !isnothing(get(ds_constraint, "subset_shared", nothing))        
-            msg = "'subset_shared' in constraint argument must be one of: $(keys(LEVEL_LOOKUP)), found: $(ds_constraint["subset_shared"])."
-            level = get(() -> throw(ArgumentError(msg)), LEVEL_LOOKUP, ds_constraint["subset_shared"])
+        if !isnothing(ds_constraint) && !isnothing(get(ds_constraint, "level_shared", nothing))        
+            msg = "'level_shared' in constraint argument must be one of: $(keys(LEVEL_LOOKUP)), found: $(ds_constraint["level_shared"])."
+            level = get(() -> throw(ArgumentError(msg)), LEVEL_LOOKUP, ds_constraint["level_shared"])
             paths = filterPathsSharedModels(paths, level)
         end
         all_paths[i] = paths 
@@ -401,7 +401,7 @@ function loadDataFromYAML(
     paths = vcat(all_paths...)
     meta_data = vcat(all_meta...)
     # if argument provided, apply subset shared across all datasets
-    level_all_data = isnothing(constraint) ? nothing : get(constraint, "subset_shared", nothing)
+    level_all_data = isnothing(constraint) ? nothing : get(constraint, "level_shared", nothing)
     if !isnothing(level_all_data)
         paths = filterPathsSharedModels(paths, level_all_data)
     end
@@ -480,8 +480,8 @@ function defineDataMap(
     filename_format::Union{Symbol, String} = :cmip
 ) where T <: Any
     paths_to_files = collectNCFilePaths.(paths_data_dirs; constraint)
-    if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "subset_shared", nothing))        
-        paths_to_files = filterPathsSharedModels(paths_to_files, constraint["subset_shared"])
+    if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
+        paths_to_files = filterPathsSharedModels(paths_to_files, constraint["level_shared"])
     end
     return loadDataMapCore(paths_to_files, data_ids; sorted, dtype, filename_format, meta_data)
 end
@@ -517,8 +517,8 @@ function defineDataMap(
     paths_to_files = map(paths_data_dirs) do paths 
         vcat(collectNCFilePaths.(paths; constraint)...)
     end
-    if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "subset_shared", nothing))        
-        paths_to_files = filterPathsSharedModels(paths_to_files, constraint["subset_shared"])
+    if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
+        paths_to_files = filterPathsSharedModels(paths_to_files, constraint["level_shared"])
     end
     return loadDataMapCore(paths_to_files, data_ids; sorted, dtype, filename_format, meta_data)
 end

@@ -22,7 +22,7 @@ constraint = Dict{String, Union{Vector{String}, mwd.Level}}(
     "variables" => variables,
     "projects" => projects,
     "aliases" => ["lgm"], 
-    "subset_shared" => mwd.MEMBER_LEVEL,
+    "level_shared" => mwd.MEMBER_LEVEL,
     "base_subdirs" => ["20241114"]
 );
 lgm_meta = mw.loadDataFromESMValToolRecipes(
@@ -32,7 +32,7 @@ lgm_data = mw.loadDataFromESMValToolRecipes(
     path_data, path_recipes; constraint, dtype="cmip"
 )
 
-# we set subset_shared to mw.MEMBER, so model members are identical for 
+# we set level_shared to mw.MEMBER, so model members are identical for 
 # every loaded data set (variable)
 model_members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"], :member));
 models_lgm = mwd.modelsFromMemberIDs(model_members_lgm; uniq = true)
@@ -44,7 +44,7 @@ path_recipes = "./configs/historical";
 
 # 2.1 use same models (NOT on level of model members) as for the lgm 
 # experiment and make sure that across variables, only shared model members 
-# are loaded (subset_shared set to mw.MEMBER) since we want the exact 
+# are loaded (level_shared set to mw.MEMBER) since we want the exact 
 # same simulations for all variables when computing weights
 historical_data_lgm = mwd.loadDataFromESMValToolRecipes(
     path_data, 
@@ -102,7 +102,7 @@ begin
     path_config = "./configs/examples/example-lgm-historical.yml";
     constraint = Dict{String, Union{Vector{String}, Symbol}}(
         "models" => model_members_lgm,
-        "subset_shared" => :member # applies to every loaded dataset
+        "level_shared" => :member # applies to every loaded dataset
     );
     meta_lgm_v2 =  mw.loadDataFromYAML(path_config; constraint, preview=true)
     data_lgm_v2 = mw.loadDataFromYAML(path_config; constraint)
@@ -171,7 +171,7 @@ lgm = mwd.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; dtype, filename_forma
 shared_models = mwd.sharedModels(lgm, mwd.MODEL_LEVEL);
 shared_members = mwd.sharedModels(lgm, mwd.MEMBER_LEVEL);
 subset = Dict{String, Union{Vector{String}, mwd.Level}}(
-    "subset_shared" => mwd.MEMBER_LEVEL
+    "level_shared" => mwd.MEMBER_LEVEL
 );
 lgm = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint=subset, filename_format)
 lgm = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint=subset, dtype, filename_format)
@@ -191,7 +191,7 @@ paths_historical_tos = [
 paths_historical = [paths_historical_tas, paths_historical_tos];
 subset = Dict{String, Union{Vector{String}, mwd.Level}}(
     "models" => model_members_lgm,
-    "subset_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
+    "level_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
 );
 historical = mwd.defineDataMap(
     paths_historical, ["tas_historical", "tos_historical"]; dtype, filename_format, constraint=subset

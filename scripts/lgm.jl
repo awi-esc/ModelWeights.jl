@@ -22,7 +22,7 @@ lgm_data = mwd.loadDataFromESMValToolRecipes(
         "variables" => ["tas", "psl"],
         "projects" => ["CMIP5", "CMIP6"], 
         "aliases" => ["lgm"],
-        "subset_shared" => mwd.MEMBER
+        "level_shared" => mwd.MEMBER
     ),
     preview = false
 )
@@ -34,7 +34,7 @@ models_lgm = unique(lgm_data["tas_CLIM_lgm"].properties["model_names"])
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/historical";
 # Across variables, only shared model members should be loaded 
-# (subset_shared set to mw.MEMBER) since we want the exact same 
+# (level_shared set to mw.MEMBER) since we want the exact same 
 # simulations for all variables when computing weights
 # use same model members as for lgm
 historical_data = mwd.loadDataFromESMValToolRecipes(
@@ -47,7 +47,7 @@ historical_data = mwd.loadDataFromESMValToolRecipes(
         "timeranges" => ["full"],
         "subdirs" => ["20250211", "20250207"],
         "models" => members_lgm,
-        "subset_shared" => mwd.MEMBER
+        "level_shared" => mwd.MEMBER
     )
 )
 mwd.kelvinToCelsius!(historical_data)
@@ -121,7 +121,7 @@ save("plots/lgm/weighted-avg-historical-tas-based-on-historical.png", f2)
 # WEIGHTS BASED ON LGM-COOLING WITH RESPECT TO TIERNEY DATA
 # 0. Get data
 path_config = "/albedo/home/brgrus001/ModelWeights/configs/ecs-lgm-cooling.yml";
-data = mw.loadData(path_config; subset=Dict("subset_shared" => mw.MEMBER))
+data = mw.loadData(path_config; subset=Dict("level_shared" => mw.MEMBER))
 # lgm-cooling: here models need to be in same unit for both experiments
 mw.kelvinToCelsius!(data)
 # instead better to use computeAnomaly function to ensure metadata is updated too and for checking that units are identical!

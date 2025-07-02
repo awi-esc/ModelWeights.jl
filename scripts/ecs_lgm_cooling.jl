@@ -12,7 +12,7 @@ using Missings
 
 # Get data from piControl + historical + lgm experiments
 path_config = "./configs/ecs-lgm-cooling.yml";
-data = mw.loadData(path_config; subset = Dict("subset_shared" => mw.MODEL))
+data = mw.loadData(path_config; subset = Dict("level_shared" => mw.MODEL))
 
 
 # for the shared models, make sure that physics of piControl models are the same
@@ -20,7 +20,7 @@ data = mw.loadData(path_config; subset = Dict("subset_shared" => mw.MODEL))
 data = mw.alignPhysics(data, 
     data["tos_CLIM_lgm"].properties["member_names"];    
     # data["tas_CLIM_lgm"].properties["member_names"]; 
-    subset_shared = mw.MODEL
+    level_shared = mw.MODEL
 )
 mw.summarizeEnsembleMembersVector!(data)
 mw.addAnomalies!(data, "tas_CLIM_lgm", "tas_CLIM_piControl")

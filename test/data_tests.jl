@@ -178,7 +178,7 @@ end
     @test size(data["lgm-tas-data"]) == (72, 36, 17)
     @test size(data["tos_lgm"]) == (72, 36, 16)
 
-    constraint = Dict{String, Union{Vector{String}, Symbol}}("subset_shared" => :member)
+    constraint = Dict{String, Union{Vector{String}, Symbol}}("level_shared" => :member)
     data = mw.defineDataMap(paths_lgm, ids; dtype, filename_format, constraint)
     @test data["lgm-tas-data"].member == data["tos_lgm"].member
     @test length(data["lgm-tas-data"].member) == 15
