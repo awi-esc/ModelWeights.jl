@@ -6,6 +6,8 @@ using DimensionalData
 
 # --------------------------- Set configurations --------------------------- #
 begin
+    filename_format = :esmvaltool;
+    dtype = "cmip"
     dir_per_var = true;
     is_model_data = true;
     statistics = ["CLIM"];
@@ -151,9 +153,6 @@ paths_lgm_tas = [
     joinpath(base, "LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM")
 ];
 
-filename_format = :esmvaltool;
-dtype = "cmip"
-
 # returns DataMap with 1 entry
 tos = mw.defineDataMap(paths_lgm_tos, "tos"; filename_format) # default dimension names
 tos = mw.defineDataMap(paths_lgm_tos, "tos"; filename_format, dtype) # with inferred dimension names
@@ -166,15 +165,15 @@ lgm_cmip6 = mw.defineDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_f
 constraint = Dict("variables" => ["tas"])
 lgm_cmip6_tas = mw.defineDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format, constraint, dtype="cmip")
 
-constraint = Dict("mips" => ["CMIP5"])
-lgm_cmip5 = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format, dtype="cmip") # without constraint
-lgm_cmip5 = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format, constraint, dtype="cmip") # with constraint
-
-
 # several directory paths for every dataset; returns DataMap with 2 entries
 paths_lgm = [paths_lgm_tos, paths_lgm_tas];
 lgm = mwd.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format)
 lgm = mwd.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; dtype, filename_format)
+
+constraint = Dict("mips" => ["CMIP5"])
+lgm_cmip5 = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format, dtype="cmip") # without constraint
+lgm_cmip5 = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format, constraint, dtype="cmip") # with constraint
+
 
 shared_models = mwd.sharedModels(lgm, :model);
 shared_members = mwd.sharedModels(lgm, "member"); #mwd.MEMBER_LEVEL);

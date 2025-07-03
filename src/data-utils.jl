@@ -127,62 +127,6 @@ end
 
 
 """
-    findModelInPaths(model_id::String, paths::Vector{String})
-
-Return true if `model_id` is found in filename of any path in `paths`, else false.
-
-The paths are assumed to follow the standard CMIP filename structure, i.e. <variable_id>_<table_id>_<source_id>_<experiment_id >_<member_id>_<grid_label>[_<time_range>].nc([see here](https://docs.google.com/document/d/1h0r8RZr_f3-8egBMMh7aqLwy3snpD6_MrDz1q8n5XUk/edit?tab=t.0)).
-
-# Arguments:
-- `model_id::String`: has form modelname[#memberID[_grid]]
-- `paths::Vector{String}`: paths to be searched
-"""
-function findModelInPaths(model_id::String, paths::Vector{String})
-    model_parts = String.(split(model_id, MODEL_MEMBER_DELIM))
-    model = model_parts[1]
-    has_member = length(model_parts) == 2
-    member_grid = has_member ? split(model_parts[2], "_") : nothing
-    has_grid = !isnothing(member_grid) && length(member_grid) == 2
-    member = has_member ? member_grid[1] : nothing
-    grid = has_grid ? member_grid[2] : nothing
-
-    is_found = false
-    filenames = map(basename, paths)
-    for fn in filenames
-        found_model = occursin("_" * model * "_", fn)
-        if !found_model
-            continue
-        else
-            if has_member
-                found_member = occursin("_" * member * "_", fn)
-                if found_member
-                    if has_grid
-                        fn_no_ending = splitext(fn)[1]
-                        found_grid = endswith(fn_no_ending, "_" * grid) || occursin("_" * grid * "_", fn)
-                        if found_grid
-                            is_found = true
-                            break
-                        else
-                            continue
-                        end
-                    else
-                        is_found = true
-                        break
-                    end
-                else # member not found -> continue with next path
-                    continue
-                end
-            else
-                is_found = true
-                break
-            end
-        end
-    end
-    return is_found
-end
-
-
-"""
     getCMIPModelsKey(meta::Dict)
 
 Return the respective key to retrieve model names in CMIP6 ('source_id') and 
@@ -209,29 +153,55 @@ end
 
 
 """
-    filterPathsSharedModels(paths::Vector{String}, shared_models::Vector{String})
+    filterPathsSharedModels(
+        paths::Vector{String}, 
+        shared_models::Vector{String}, 
+        fn_format::Union{Symbol, String}
+    )
 
 Every vector of paths in `all_paths` is filtered s.t. it only contains models or model 
 members given in `shared_models`.
+
+# Arguments:
+- `paths`: contains paths to data files
 """
-function filterPathsSharedModels(paths::Vector{String}, shared_models::Vector{String})
+function filterPathsSharedModels(
+    paths::Vector{String}, shared_models::Vector{String}, fn_format::Union{Symbol, String}
+)
     if isempty(shared_models)
         @warn "No models shared across data!"
-        return nothing
+        return Vector{String}()
     end
-    mask = map(p -> applyModelConstraints(p, shared_models), paths)
+    constraint = Dict("models" => shared_models)
+    mask = maskFileConstraints(paths, fn_format, constraint)
     return paths[mask]
 end
 
-function filterPathsSharedModels(all_paths::Vector{Vector{String}}, level_shared::Level)
-    shared = sharedModels(all_paths, level_shared)
-    return map(paths -> filterPathsSharedModels(paths, shared), all_paths)
+"""
+    filterPathsSharedModels(
+        all_paths::Vector{Vector{String}}, 
+        level_shared::Level, 
+        fn_format::Union{Symbol, String}
+    )
+
+# Arguments:
+- `all_paths`: every entry refers to the paths to data files for the respective dataset
+"""
+function filterPathsSharedModels(
+    all_paths::Vector{Vector{String}}, 
+    level_shared::Level,
+    fn_format::Union{Symbol, String}
+)
+    shared = sharedModels(all_paths, level_shared, fn_format)
+    return map(paths -> filterPathsSharedModels(paths, shared, fn_format), all_paths)
 end
 
 function filterPathsSharedModels(
-    all_paths::Vector{Vector{String}}, level_shared::Union{String, Symbol}
+    all_paths::Vector{Vector{String}},
+    level_shared::Union{String, Symbol}, 
+    fn_format::Union{Symbol, String}
 )
-    return filterPathsSharedModels(all_paths, getLevel(level_shared))
+    return filterPathsSharedModels(all_paths, getLevel(level_shared), fn_format)
 end
 
 
@@ -782,6 +752,9 @@ end
 
 
 function collectNCFilePaths(path_data_dir::String)
+    if !isdir(path_data_dir)
+        throw(ArgumentError("$path_dats_dir is not a directory!"))
+    end
     paths_to_files = filter(x -> isfile(x) && endswith(x, ".nc"), readdir(path_data_dir; join=true))
     if isempty(paths_to_files)
         @warn "No .nc files found!"
@@ -825,38 +798,6 @@ function constrainMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict)
     filter!(stats_ok, meta_attributes)
     filter!(vars_ok, meta_attributes)
     return nothing
-end
-
-
-"""
-    applyModelConstraints(
-        path_model_data::String, model_constraints::Vector{String}
-    )
-
-Return true if constraints in `model_constraints` are fulfilled, i.e. if `path_model_data` 
-contains any model from `model_constraints`, false otherwise.
-
-`path_model_data` must follow the standard CMIP filename structure, 
-i.e. <variable_id>_<table_id>_<source_id>_<experiment_id >_<member_id>_<grid_label>[_<time_range>].nc 
-and `model_constraints` can contain models on level of member (e.g. 'MPI-ESM-P#r1i1p2', 
-'MPI-ESM-P#r1i1p2_gn') or on level of model (e.g., 'MPI-ESM-P').
-
-
-# Arguments:
-- `path_model_data`: 
-- `model_constraints`: strings that may contain only model name, e.g. 'MPI-ESM-P', 
-or model_name and member id, e.g. 'MPI-ESM-P#r1i1p2' or model name, member id and 
-grid, e.g. 'MPI-ESM-P#r1i1p2_gn'.
-"""
-function applyModelConstraints(path_model_data::String, model_constraints::Vector{String})    
-    keep_file = false
-    for model in model_constraints
-        keep_file = findModelInPaths(model, [path_model_data])
-        if keep_file
-            break
-        end
-    end
-    return keep_file
 end
 
 
@@ -1252,4 +1193,12 @@ function metaDataChecksCMIP(meta::NCDatasets.CommonDataModel.Attributes, path::S
         @warn "model name as read from metadata of stored .nc file ($name) and used as dimension name is not identical to name appearing in filename $(basename(path))."
     end 
     return nothing
+end
+
+function maskFileConstraints(
+    paths::Vector{String}, fn_format::Union{Symbol, String}, constraint::Dict
+)
+    filenames = first.(splitext.(basename.(paths)))
+    filenames_meta = parseFilename.(filenames, fn_format)
+    return isRetained.(filenames_meta, fill(constraint, length(filenames_meta)))
 end

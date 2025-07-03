@@ -74,26 +74,35 @@ function sharedModels(data::DataMap, level::Union{String, Symbol})
     return sharedModels(data, getLevel(level))
 end
 
-function sharedModels(all_paths::Vector{Vector{String}}, level_shared::Level)
-    all_models = memberIDsFromPaths(vcat(all_paths...))
-    if level_shared == MODEL_LEVEL
-        all_models = unique(modelsFromMemberIDs(all_models))
-    end
-    # check whether models are found in paths for every dataset
-    indices_shared = []
-    for (idx, model) in enumerate(all_models)
-        is_found = false
-        for paths in all_paths
-            is_found = findModelInPaths(model, paths)
-            if !is_found
-                break
+"""
+    sharedModels(
+        all_paths::Vector{Vector{String}},
+        level_shared::Level,
+        fn_format::Union{Symbol, String}
+    )
+
+# Arguments:
+- `all_paths`: every entry refers to the paths to data files for the respective dataset
+"""
+function sharedModels(
+    all_paths::Vector{Vector{String}}, 
+    level_shared::Level, 
+    fn_format::Union{Symbol, String}
+)
+    filenames_all_ds = map(paths -> first.(splitext.(basename.(paths))), all_paths)
+    filenames_meta_all_ds = map(names -> parseFilename.(names, fn_format), filenames_all_ds)
+    models_all = map(meta_data -> map(x -> x.model, meta_data), filenames_meta_all_ds)
+    if level_shared == MEMBER_LEVEL
+        variants_all = map(meta_data -> map(x -> x.variant, meta_data), filenames_meta_all_ds)
+        grids_all = map(meta_data -> map(x -> x.grid, meta_data), filenames_meta_all_ds)
+        models_all = map(models_all, variants_all, grids_all) do models, variants, grids
+            map(models, variants, grids) do m, v, g
+                member = join([m, v], MODEL_MEMBER_DELIM)
+                member = !isnothing(g) ? join([member, g], "_") : member
             end
         end
-        if is_found
-            push!(indices_shared, idx)
-        end
     end
-    return all_models[indices_shared]
+    return reduce(intersect, models_all)
 end
 
 
@@ -108,7 +117,10 @@ the respective model's members in `members`.
 If `level_shared` is set, resulting DataMap is subset accordingly.
 """
 function alignPhysics(
-    datamap::DataMap, members::Vector{String}; level_shared::Union{Level, Nothing}=nothing
+    datamap::DataMap, 
+    members::Vector{String}, 
+    fn_format::Union{Symbol, String}; 
+    level_shared::Union{Level, Nothing} = nothing
 )
     data = deepcopy(datamap)
     models = unique(modelsFromMemberIDs(members))
@@ -132,7 +144,7 @@ function alignPhysics(
         end
     end
     if !isnothing(level_shared)
-        shared_models = sharedModels(data, level_shared)
+        shared_models = sharedModels(data, level_shared, fn_format)
         for (id, model_data) in data
             data[id] = subsetModelData(model_data, shared_models)
         end
@@ -341,11 +353,10 @@ function loadDataMapCore(
         if isnothing(constraint)
             mask = fill(true, length(paths))
         else
-            filenames = first.(splitext.(basename.(paths)))
-            filenames_meta = parseFilename.(filenames, filename_format)
-            mask = isRetained.(filenames_meta, fill(constraint, length(filenames_meta)))
+            mask = maskFileConstraints(paths, filename_format, constraint)
         end
-        preview ? paths[mask] :
+        preview ? 
+            paths[mask] :
             loadPreprocData(paths[mask], filename_format; sorted, dtype, meta_info = meta)
     end
     if preview
@@ -400,7 +411,7 @@ function loadDataFromESMValToolRecipes(
     meta_data = metaDataFromESMValToolRecipes(path_recipes; constraint)
     paths = resolvePathsFromMetaData.(meta_data, path_data, dir_per_var; constraint)
     if !isnothing(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
-        paths = filterPathsSharedModels(paths, constraint["level_shared"])
+        paths = filterPathsSharedModels(paths, constraint["level_shared"], filename_format)
     end
     return loadDataMapCore(
         paths,
@@ -460,7 +471,7 @@ function loadDataFromYAML(
         if !isnothing(ds_constraint) && !isnothing(get(ds_constraint, "level_shared", nothing))        
             msg = "'level_shared' in constraint argument must be one of: $(keys(LEVEL_LOOKUP)), found: $(ds_constraint["level_shared"])."
             level = get(() -> throw(ArgumentError(msg)), LEVEL_LOOKUP, ds_constraint["level_shared"])
-            paths = filterPathsSharedModels(paths, level)
+            paths = filterPathsSharedModels(paths, level, filename_format)
         end
         all_paths[i] = paths 
         all_meta[i] = meta_data 
@@ -470,7 +481,7 @@ function loadDataFromYAML(
     # if argument provided, apply subset shared across all datasets
     level_all_data = isnothing(constraint) ? nothing : get(constraint, "level_shared", nothing)
     if !isnothing(level_all_data)
-        paths = filterPathsSharedModels(paths, level_all_data)
+        paths = filterPathsSharedModels(paths, level_all_data, filename_format)
     end
     return loadDataMapCore(
         paths, 
@@ -562,7 +573,9 @@ function defineDataMap(
 ) where T <: Any
     paths_to_files = collectNCFilePaths.(paths_data_dirs)
     if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
-        paths_to_files = filterPathsSharedModels(paths_to_files, constraint["level_shared"])
+        paths_to_files = filterPathsSharedModels(
+            paths_to_files, constraint["level_shared"], filename_format
+        )
     end
     return loadDataMapCore(
         paths_to_files, 
@@ -609,7 +622,9 @@ function defineDataMap(
         vcat(collectNCFilePaths.(paths)...)
     end
     if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
-        paths_to_files = filterPathsSharedModels(paths_to_files, constraint["level_shared"])
+        paths_to_files = filterPathsSharedModels(
+            paths_to_files, constraint["level_shared"], filename_format
+        )
     end
     return loadDataMapCore(
         paths_to_files, 
