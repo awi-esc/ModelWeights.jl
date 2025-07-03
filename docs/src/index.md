@@ -4,53 +4,24 @@
 ```
 
 The purpose of this package is twofold: on the one hand, we built it to handle preprocessed Earth System data easily
-within Julia and, on the other hand, to compute weights for different sets of Earth System Models following the approach from Brunner et al (2020).
+within Julia and, on the other hand, to compute weights for different sets of Earth System Models following the approach from Brunner et al (2020) and 
+adding the possibility to use and combine different performance metrics.
 
-The main objects that the package provides are: `DataMap` and two weight 
-objects, `ConfigWeights` and `Weights`.
+## Data Representation
 
+The basic representation of data is in form of a dictionary that simply maps from ids 
+(Strings) to the data itself stored as YAXArrays.
+We name this type alias a `DataMap`. 
 
-## DataMap Object
-
-Each Data object refers to some summary data (e.g. climatological average) 
-of a particular experiment for the full time period or part of it.
-
-`DataMap` is a type alias for a dictionary mapping from Strings to YAXArrays.
 The metadata of each dataset (``datamap[id].properties``) contains the 
-metadata loaded from the original files as well as some additional information 
-that we add: 
-- `_variable`
-- `_statistic`
-- `_alias`
-- `_timerange`
-- `_paths`
-- `_id`: concatenates `variable`, `statistic` and `alias` into a single String 
-separated by underscores
+metadata loaded from the original files as well as additional information if it is provided
+in the optional argument `meta_data`.
 
 
-## Weight Objects
+## Weights
 
-### ConfigWeights
-
-````julia
+<!-- ````julia
 import ModelWeights as mw
-
-# load model and observational data
-
-config_weights = mw.ConfigWeights(
-    performance = Dict("tas_CLIM" => 1, "tos_CLIM" => 1),
-    independence = Dict("tas_CLIM" => 1, "tos_CLIM" => 1),
-    sigma_performance = 0.5,
-    sigma_independence = 0.5,
-    alias_ref_perform_weights = "historical",
-    alias_ref_indep_weights = "historical",
-    target_path = ""
-);
-````
-
-### Weights
-
-````julia
 weights = mw.computeWeights(model_data_historical, obs_data, config_weights);
 ````
 
@@ -68,12 +39,12 @@ a matrix of size n x n.
 
 - `wP` and `wI` respectively store the normalized performance/independence weights, 
 both have size 1xn (n: number of models).
-- `w` is the overall weight vector of length n.
+- `w` is the overall weight vector of length n. -->
 
 
 ## Application of weights
 
-TODO: add example of how weights are applied to data
+Add example of how weights are applied to data
 
 
 ## Functions

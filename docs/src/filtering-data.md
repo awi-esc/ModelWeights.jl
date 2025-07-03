@@ -1,11 +1,12 @@
-# Requirements
-We assume that you have your preprocessed data ready, so that the data from the different models can be combined, meaning that all models must for instance be defined on the same grid. We do the preprocessing of the data with ESMValTool. 
- <!-- A set of recipes to download and preprocess some data can be found in our repository [ESMDataPrep](https://github.com/awi-esc/ESMDataPrep). -->
+# Filtering data
 
-## Handling data preprocessed with ESMValTool 
+## General options
+
+
+## Additional options for data preprocessed with ESMValTool
 
 ### Data structure
-The data structure looks as follows when the data was preprocessed with ESMValTool.
+When the data was preprocessed with ESMValTool, the structure of the directories where the data is stored looks as follows.
 Uppercase names refer to variables, lowercase names mean that the names can be arbitrary unless stated differently in the comments to the right. 
 
 ```bash
@@ -68,12 +69,3 @@ If ESMValTool is used, the name of the subdirectories (`subdir1`, `subdir2`) is 
 │       └── possibly other output from ESMValTool
 ....
 ```
-
-
-
-## Config files
-
-If the data is loaded from ESMValToolRecipes, you may have one centralized directory, where you store the all recipe files, namely those output by ESMValTool (inside the run folder, then 'RECIPE_NAME_filled.yml'). Note that not everything in the recipes is actually needed for loading the data. For a minimal example with the unnecessary sections removed, see [this example](https://github.com/awi-esc/SimilarityWeights/blob/main/configs/examples/esmvaltool-recipes/mwe_esmvaltool_config.yml)
-
-
-Further, to load the data, we need one or more yaml configuration files. From these, we retrieve which combination of variables, statistics, aliases, experiments and timeranges will be considered.
