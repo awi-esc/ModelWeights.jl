@@ -35,12 +35,6 @@ end
 @testset "Test metaDataFromYAML" begin
 end
 
-@testset "Test constrainFilenames" begin
-    # path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
-    # paths_cems2 = mwd.constrainFilenames(path_data; model_constraints=["CESM2"])
-end
-
-
 @testset "Test resolvePathsFromMetaData" begin
     base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
     alias = "historical"

@@ -10,7 +10,7 @@ begin
     is_model_data = true;
     statistics = ["CLIM"];
     variables = ["tas", "tos"];
-    projects = ["CMIP5", "CMIP6"];
+    mips = ["CMIP5", "CMIP6"];
 end
 # --------- Load the model data Version 1: from ESMValTool recipes --------- #
 # 1. Model data just for lgm-experiment from ESMValTool recipes
@@ -20,7 +20,7 @@ path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
 constraint = Dict{String, Union{Vector{String}, mwd.Level}}(
     "statistics" => statistics, 
     "variables" => variables,
-    "projects" => projects,
+    "mips" => mips,
     "aliases" => ["lgm"], 
     "level_shared" => mwd.MEMBER_LEVEL,
     "base_subdirs" => ["20241114"]
@@ -39,20 +39,20 @@ models_lgm = mwd.modelsFromMemberIDs(model_members_lgm; uniq = true)
 
 # --------------------------------------------------------------------------- #
 # 2. Model data just for historical experiment of models with lgm-experiment
-path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical";
-path_recipes = "./configs/historical";
 
 # 2.1 use same models (NOT on level of model members) as for the lgm 
 # experiment and make sure that across variables, only shared model members 
 # are loaded (level_shared set to mw.MEMBER) since we want the exact 
 # same simulations for all variables when computing weights
+path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical";
+path_recipes = "./configs/historical";
 historical_data_lgm = mwd.loadDataFromESMValToolRecipes(
     path_data, 
     path_recipes;
     constraint = Dict(
         "statistics" => statistics, 
         "variables" => variables, 
-        "projects" => projects,
+        "mips" => mips,
         "aliases" => ["historical"], 
         "models" => models_lgm
     ),
@@ -78,7 +78,7 @@ begin
         constraint = Dict(
             "statistics" => statistics, 
             "variables" => variables, 
-            "projects" => projects,
+            "mips" => mips,
             "timeranges" => ["full"], 
             "base_subdirs" =>   ["20250211", "20250207", "20250209"],
             "models" => model_members_lgm
@@ -117,12 +117,13 @@ begin
     # aliases and timeranges don't have to match, all data will be loaded that 
     # corresponds either to aliases or to timeranges!
     obs_data = mwd.loadDataFromESMValToolRecipes(
-        base_path, config_path;
+        base_path, 
+        config_path;
         dir_per_var = false,
         constraint = Dict(
             "statistics" => statistics, 
             "variables" => variables,
-            #"projects" => ["ERA5"],
+            #"mips" => ["ERA5"],
             "timeranges" => ["full", "1961-1990"]
         ),
         preview = false
@@ -137,7 +138,7 @@ latitudes = [-77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5]
 d1 = YAXArray((Dim{:lat}(latitudes),Dim{:lon}(longitudes)), rand(7, 9))
 d2 = YAXArray((Dim{:lat}(latitudes),Dim{:lon}(longitudes)), rand(7, 9)) 
 models = ["ESM1", "ESM2"]
-data = ModelWeights.defineDataMap([d1, d2], models)
+data = mw.defineDataMap([d1, d2], models)
 
 
 base = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool" 
@@ -160,7 +161,14 @@ tos = mw.defineDataMap(paths_lgm_tos, "tos"; filename_format, dtype) # with infe
 # one directory path for every dataset
 paths_lgm_cmip6 = [joinpath(base, "LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM"), joinpath(base, "LGM/recipe_cmip6_lgm_tas_20241114_150706/preproc/lgm/tas_CLIM")]
 lgm_cmip6 = mw.defineDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format)
-lgm_cmip6 = mw.defineDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; dtype="cmip", filename_format)
+lgm_cmip6 = mw.defineDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format, dtype="cmip")
+
+constraint = Dict("variables" => ["tas"])
+lgm_cmip6_tas = mw.defineDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format, constraint, dtype="cmip")
+
+constraint = Dict("mips" => ["CMIP5"])
+lgm_cmip5 = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format, dtype="cmip") # without constraint
+lgm_cmip5 = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format, constraint, dtype="cmip") # with constraint
 
 
 # several directory paths for every dataset; returns DataMap with 2 entries
@@ -168,13 +176,13 @@ paths_lgm = [paths_lgm_tos, paths_lgm_tas];
 lgm = mwd.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format)
 lgm = mwd.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; dtype, filename_format)
 
-shared_models = mwd.sharedModels(lgm, mwd.MODEL_LEVEL);
-shared_members = mwd.sharedModels(lgm, mwd.MEMBER_LEVEL);
-subset = Dict{String, Union{Vector{String}, mwd.Level}}(
-    "level_shared" => mwd.MEMBER_LEVEL
+shared_models = mwd.sharedModels(lgm, :model);
+shared_members = mwd.sharedModels(lgm, "member"); #mwd.MEMBER_LEVEL);
+constraint = Dict{String, Union{Vector{String}, String}}(
+    "level_shared" => "member"
 );
-lgm = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint=subset, filename_format)
-lgm = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint=subset, dtype, filename_format)
+lgm = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint, filename_format)
+lgm = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint, dtype, filename_format)
 
 
 model_members_lgm = Array(dims(lgm["tas_lgm"], :member));
@@ -189,12 +197,16 @@ paths_historical_tos = [
     joinpath(base, "historical/recipe_cmip6_historical_tos_20250209_144722/preproc/historical/tos_CLIM")
 ];
 paths_historical = [paths_historical_tas, paths_historical_tos];
-subset = Dict{String, Union{Vector{String}, mwd.Level}}(
+constraint = Dict{String, Union{Vector{String}, Symbol}}(
     "models" => model_members_lgm,
-    "level_shared" => mwd.MEMBER_LEVEL # applies to every loaded dataset
+    "level_shared" => :member # applies to every loaded dataset
 );
 historical = mwd.defineDataMap(
-    paths_historical, ["tas_historical", "tos_historical"]; dtype, filename_format, constraint=subset
+    paths_historical, 
+    ["tas_historical", "tos_historical"]; 
+    dtype, 
+    filename_format, 
+    constraint
 )
 
 # to load data as YAXArrays from files directly (not from all files within directories), use loadPreprocData
@@ -206,7 +218,7 @@ data = mwd.loadPreprocData(paths_tas, filename_format)
 # same data but a DataMap instance is returned
 data = mwd.loadDataMapCore([paths_tas], ["tas"]; filename_format)
 
-# load different variables from same model
+# load different variables from same model (TODO: dimension should be adapble too)
 data = mwd.loadPreprocData([paths_tas[end-6], paths_tos[3]], filename_format; dtype="cmip")
 
 

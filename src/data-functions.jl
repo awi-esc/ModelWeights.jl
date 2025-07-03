@@ -1,4 +1,49 @@
 """
+    subsetModelData(data::YAXArray, shared_models::Vector{String})
+
+Return subset of `data` containing only data from models in `shared_models`. 
+
+Takes care of metadata.
+
+# Arguments:
+- `data`: must have dimension 'member' or 'model'
+- `shared_models`: models, which can either be on level of models or members of models 
+('modelname#memberID[_grid]').
+"""
+function subsetModelData(data::YAXArray, shared_models::Vector{String})
+    if isempty(shared_models)
+        @warn "Vector of models to subset data to is empty!"
+        return data
+    end
+    data = deepcopy(data)
+    dim_symbol = hasdim(data, :member) ? :member : :model
+    dim_names = Array(dims(data, dim_symbol))
+    if dim_symbol == :member
+        models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
+        # if shared_models is on the level of models, the following should be empty
+        # otherwise, nothing is filtered out, and members is the same as shared_models 
+        members = filter(x -> !(x in models), shared_models)
+        if !isempty(members) # shared models on level of members
+            indices = findall(m -> m in members, dim_names)
+        else
+            # important not to use dim_names here, since e.g. model=AWI would be found in dim_names where model is actually AWI-X for instance
+            models_data = modelsFromMemberIDs(dim_names) # NOTE: should yield same: models_data = data.properties["model_names"]
+            indices = findall(m -> m in models, models_data)
+        end
+        data = data[member=indices]
+    else
+        indices = findall(m -> m in shared_models, dim_names)
+        data = data[model=indices]
+    end
+    # also subset Metadata vectors!
+    attributes = filter(k -> data.properties[k] isa Vector, keys(data.properties))
+    for key in attributes
+        data.properties[key] = data.properties[key][indices]
+    end
+    return data
+end
+
+"""
     subsetModelData(datamap::DataMap; level::Level=MEMBER_LEVEL)
 
 For those datasets in `datamap` that specify data on the level `level` (i.e. have dimension 
@@ -261,10 +306,12 @@ end
     loadDataMapCore(
         all_paths::Vector{Vector{String}},
         ids::Vector{String};
-        meta_data::Union{Vector{Dict{String, T}}, Nothing} = nothing,
-        sorted::Bool = true,
+        constraint::Union{Dict, Nothing} = nothing,
         dtype::String = "undef",
-        filename_format::Symbol = :cmip
+        filename_format::Union{Symbol, String} = :cmip,
+        sorted::Bool = true,
+        preview::Bool = false,
+        meta_data::Union{Vector{Dict{String, T}}, Nothing} = nothing
     ) where T <: Any
 
 Load a DataMap instance with keys `ids` that map to data at `all_paths`, where every 
@@ -274,10 +321,12 @@ subvector refers the the paths of the data of a single dataset.
 function loadDataMapCore(
     all_paths::Vector{Vector{String}},
     ids::Vector{String};
-    meta_data::Union{Vector{Dict{String, T}}, Nothing} = nothing,
-    sorted::Bool = true,
+    constraint::Union{Dict, Nothing} = nothing,
     dtype::String = "undef",
-    filename_format::Union{Symbol, String} = :cmip
+    filename_format::Union{Symbol, String} = :cmip,
+    sorted::Bool = true,
+    preview::Bool = false,
+    meta_data::Union{Vector{Dict{String, T}}, Nothing} = nothing
 ) where T <: Any
     absent(x::Union{Vector, Nothing}) = isnothing(x) || isempty(x)
     if !absent(meta_data) && (length(all_paths) != length(meta_data))
@@ -286,16 +335,31 @@ function loadDataMapCore(
     if length(all_paths) != length(ids)
         throw(ArgumentError("size of paths vector and ids must be equal. Found: paths: $(length(all_paths)), ids: $(length(ids))"))
     end
-    data = map((paths, meta) -> loadPreprocData(paths, filename_format; sorted, dtype, meta_info=meta),
-        all_paths, 
-        absent(meta_data) ? fill(nothing, length(all_paths)) : meta_data
-    )
-    found_data = map(!isnothing, data)
-    if any(x -> x==0, found_data)
-        @warn "no data found for ids: $(ids[.!found_data])"
-        filter!(!isnothing, data)
+    all_meta = absent(meta_data) ? fill(nothing, length(all_paths)) : meta_data
+    data = map(all_paths, all_meta)  do paths, meta
+        # if provided, do the filtering
+        if isnothing(constraint)
+            mask = fill(true, length(paths))
+        else
+            filenames = first.(splitext.(basename.(paths)))
+            filenames_meta = parseFilename.(filenames, filename_format)
+            mask = isRetained.(filenames_meta, fill(constraint, length(filenames_meta)))
+        end
+        preview ? paths[mask] :
+            loadPreprocData(paths[mask], filename_format; sorted, dtype, meta_info = meta)
     end
-    return defineDataMap(data, ids[found_data])
+    if preview
+        loaded_data = data
+    else
+        found_data = map(!isnothing, data)
+        if any(x -> x==0, found_data)
+            @warn "no data found for ids: $(ids[.!found_data])"
+            filter!(!isnothing, data)
+            data = YAXArray.(data)
+        end
+        loaded_data = isempty(data) ? nothing : defineDataMap(data, ids[found_data])
+    end
+    return loaded_data
 end
 
 
@@ -338,12 +402,15 @@ function loadDataFromESMValToolRecipes(
     if !isnothing(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
         paths = filterPathsSharedModels(paths, constraint["level_shared"])
     end
-    if preview
-        return collect(zip(meta_data, paths))
-    end
-    ids = map(x -> x.id, meta_data)
     return loadDataMapCore(
-        paths, ids; sorted, dtype, filename_format, meta_data = metadataToDict.(meta_data)
+        paths,
+        map(x -> x.id, meta_data);
+        constraint,
+        dtype,
+        filename_format,
+        sorted,
+        preview, 
+        meta_data = metadataToDict.(meta_data)
     )
 end
 
@@ -405,12 +472,15 @@ function loadDataFromYAML(
     if !isnothing(level_all_data)
         paths = filterPathsSharedModels(paths, level_all_data)
     end
-    if preview
-        return collect(zip(meta_data, paths))
-    end
-    ids = map(x -> x.id, meta_data)
     return loadDataMapCore(
-        paths, ids; sorted, dtype, filename_format, meta_data = metadataToDict.(meta_data)
+        paths, 
+        map(x -> x.id, meta_data); 
+        constraint, 
+        dtype, 
+        filename_format, 
+        sorted, 
+        preview, 
+        meta_data = metadataToDict.(meta_data)
     )
 end
 
@@ -445,14 +515,24 @@ function defineDataMap(
     id::String;
     meta_data::Dict{String, T} = Dict{String, Any}(),
     constraint::Union{Dict, Nothing} = nothing,
-    sorted::Bool = true, 
+    filename_format::Union{Symbol, String} = :cmip,
     dtype::String = "undef",
-    filename_format::Union{Symbol, String} = :cmip
+    preview::Bool = false,
+    sorted::Bool = true
 ) where T <: Any
     paths_dirs = filter(x -> isdir(x), paths)
     paths_ncfiles = filter(x -> isfile(x) && endswith(x, ".nc"), paths)
-    paths_to_files = vcat(collectNCFilePaths.(paths_dirs; constraint)..., paths_ncfiles)
-    return loadDataMapCore([paths_to_files], [id]; meta_data = [meta_data], sorted, dtype, filename_format)    
+    paths_to_files = vcat(collectNCFilePaths.(paths_dirs)..., paths_ncfiles)
+    return loadDataMapCore(
+        [paths_to_files], 
+        [id]; 
+        constraint,
+        dtype, 
+        filename_format,
+        sorted,
+        preview,
+        meta_data = [meta_data]
+    ) 
 end
 
 
@@ -475,15 +555,25 @@ function defineDataMap(
     data_ids::Vector{String};
     meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
     constraint::Union{Dict, Nothing} = nothing,
-    sorted::Bool = true, 
+    filename_format::Union{Symbol, String} = :cmip,
     dtype::String = "undef",
-    filename_format::Union{Symbol, String} = :cmip
+    preview::Bool = false,
+    sorted::Bool = true,
 ) where T <: Any
-    paths_to_files = collectNCFilePaths.(paths_data_dirs; constraint)
+    paths_to_files = collectNCFilePaths.(paths_data_dirs)
     if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
         paths_to_files = filterPathsSharedModels(paths_to_files, constraint["level_shared"])
     end
-    return loadDataMapCore(paths_to_files, data_ids; sorted, dtype, filename_format, meta_data)
+    return loadDataMapCore(
+        paths_to_files, 
+        data_ids; 
+        constraint, 
+        dtype, 
+        filename_format, 
+        sorted, 
+        preview,
+        meta_data
+    )
 end
 
 
@@ -510,15 +600,25 @@ function defineDataMap(
     data_ids::Vector{String};
     meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
     constraint::Union{Dict, Nothing} = nothing,
-    sorted::Bool = true, 
+    filename_format::Union{Symbol, String} = :cmip,
     dtype::String = "undef",
-    filename_format::Union{Symbol, String} = :cmip
+    preview::Bool = false,
+    sorted::Bool = true
 ) where T <: Any
     paths_to_files = map(paths_data_dirs) do paths 
-        vcat(collectNCFilePaths.(paths; constraint)...)
+        vcat(collectNCFilePaths.(paths)...)
     end
     if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
         paths_to_files = filterPathsSharedModels(paths_to_files, constraint["level_shared"])
     end
-    return loadDataMapCore(paths_to_files, data_ids; sorted, dtype, filename_format, meta_data)
+    return loadDataMapCore(
+        paths_to_files, 
+        data_ids; 
+        constraint, 
+        dtype, 
+        filename_format, 
+        sorted, 
+        preview,
+        meta_data
+    )
 end

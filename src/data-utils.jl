@@ -1,87 +1,4 @@
 """
-    buildMemberID(meta::Dict, model::String)
-
-Return member id for `model` which is the model name itself followed by '#' and the variant 
-label (simulation id).
-
-The unique member ids correspond to the variant labels of CMIP6 models, e.g. r1i1p1f1.
-For CMIP5 models this id is built from the respective metadata.
-For CMIP6 models, the grid is further added to the end of the id seperated with _.
-
-# Arguments:
-- `meta::Dict`: For CMIP5 data, must have keys: 'mip_era', 'realization', 
-'initialization_method', 'physics_version'. For CMIP6 data must have keys: 'variant_label', 
-'grid_label'.
-"""
-function buildMemberID(meta::Dict, model::String)
-    fn_err(k::String) = throw(ArgumentError("$k not defined in metadata!"))
-    mip_era = get(() -> fn_err("mip_era"), meta, "mip_era")
-    member = ""
-    if lowercase(mip_era) == "cmip5"
-        variant = buildCMIP5EnsembleMember(
-            get(() -> fn_err("realization"), meta, "realization"),
-            get(() -> fn_err("initialization_method"), meta, "initialization_method"),
-            get(() -> fn_err("physics_version"), meta, "physics_version")
-        )
-        member = join([model, variant], MODEL_MEMBER_DELIM)
-    elseif lowercase(mip_era) == "cmip6"
-        variant = get(() -> fn_err("variant_label"), meta, "variant_label")
-        grid = get(() -> fn_err("grid_label"), meta, "grid_label")
-        member = join([model, variant, grid], MODEL_MEMBER_DELIM, "_")
-    else 
-        throw(ArgumentError("Only CMIP5 and CMIP6 supported so far."))
-    end
-    return member
-end
-
-
-"""
-    subsetModelData(data::YAXArray, shared_models::Vector{String})
-
-Return subset of `data` containing only data from models in `shared_models`. 
-
-Takes care of metadata.
-
-# Arguments:
-- `data`: must have dimension 'member' or 'model'
-- `shared_models`: models, which can either be on level of models or members of models 
-('modelname#memberID[_grid]').
-"""
-function subsetModelData(data::YAXArray, shared_models::Vector{String})
-    if isempty(shared_models)
-        @warn "Vector of models to subset data to is empty!"
-        return data
-    end
-    data = deepcopy(data)
-    dim_symbol = hasdim(data, :member) ? :member : :model
-    dim_names = Array(dims(data, dim_symbol))
-    if dim_symbol == :member
-        models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
-        # if shared_models is on the level of models, the following should be empty
-        # otherwise, nothing is filtered out, and members is the same as shared_models 
-        members = filter(x -> !(x in models), shared_models)
-        if !isempty(members) # shared models on level of members
-            indices = findall(m -> m in members, dim_names)
-        else
-            # important not to use dim_names here, since e.g. model=AWI would be found in dim_names where model is actually AWI-X for instance
-            models_data = modelsFromMemberIDs(dim_names) # NOTE: should yield same: models_data = data.properties["model_names"]
-            indices = findall(m -> m in models, models_data)
-        end
-        data = data[member=indices]
-    else
-        indices = findall(m -> m in shared_models, dim_names)
-        data = data[model=indices]
-    end
-    # also subset Metadata vectors!
-    attributes = filter(k -> data.properties[k] isa Vector, keys(data.properties))
-    for key in attributes
-        data.properties[key] = data.properties[key][indices]
-    end
-    return data
-end
-
-
-"""
     mergeMetaDataFromMultipleFiles(data::Vector{<:YAXArray})
 
 Combine arrays in `data` into a single YAXArray with meta combined from all datasets into 
@@ -500,19 +417,6 @@ end
 
 
 """
-    buildCMIP5EnsembleMember(realization::Number, initialization::number, physics::Number)
-
-Build rip-abbreviations from `realization`, `initialization` and `physics`; especially for 
-CMIP5 models which do not have it in their metadata.
-"""
-function buildCMIP5EnsembleMember(
-    realization::Number, initialization::Number, physics::Number,
-)
-    return "r" * string(realization) * "i" * string(initialization) * "p" * string(physics)
-end
-
-
-"""
     setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
 
 Change the lookup values for the dimension 'member' to refer to the models, i.e.
@@ -656,11 +560,10 @@ function metadataToDict(meta::MetaData; exclude::Vector{Symbol}=Vector{Symbol}()
 end
 
 
-function renameDictKeys!(data::Dict, keys::Vector)
-    for (old_k, new_k) in keys 
-        data[new_k] = data[old_k]
-        delete!(data, old_k)
-    end
+function structToDict(data)
+    return Dict(
+        name => getfield(data, name) for name in fieldnames(typeof(data))
+    )
 end
 
 
@@ -730,30 +633,6 @@ function metaDataFromYAML(ds::Dict)
 end
 
 
-"""
-    constrainFilenames(filenames::Vector{String}, constraint::Dict)
-
-Return subvector of `filenames` retaining those strings that contain at least one of the 
-elements in `constraints["models"]` and in `constraints["projects"]`, respectively.
-"""
-function constrainFilenames(filenames::Vector{String}, constraint::Dict)
-    model_constraints = get(constraint, "models", Vector{String}())
-    project_constraints = get(constraint, "projects", Vector{String}())
-    
-    function doIncludeFile(file)
-        keep = !isempty(project_constraints) ?
-            any([occursin(name, file) for name in project_constraints]) : true
-        if keep
-            keep = !isempty(model_constraints) ? 
-                applyModelConstraints(file, model_constraints) : true
-        end
-        return keep
-    end
-    mask = map(f -> doIncludeFile(f), filenames)
-    return filenames[mask]
-end
-
-
 function constrainSubdirs!(paths::Vector{String}, subdir_constraints::Vector{String})
     if !isempty(subdir_constraints)
         filter!(p -> any([occursin(name, p) for name in subdir_constraints]), paths)
@@ -798,8 +677,15 @@ function resolvePathsFromMetaData(
     if dir_per_var
         base_paths = filter(isdir, readdir(base_path, join = true)) # all subdirectories
         filter!(x -> occursin("_" * meta.variable, x), base_paths) # just subdirs for variable
+        if isempty(base_paths)
+            throw(ArgumentError("$(base_path) doesnt contain directories for variable $(meta.variable)!"))
+        end
         if has_constraint
+            bps = copy(base_paths)
             constrainSubdirs!(base_paths, get(constraint, "base_subdirs", Vector{String}()))
+            if isempty(base_paths)
+                throw(ArgumentError("$(bps) dont match with constraint base_subdirs: $(constraint["base_subdirs"])!"))
+            end
         end
     else
         base_paths = [base_path]
@@ -812,7 +698,7 @@ function resolvePathsFromMetaData(
     if isempty(paths_data_dirs)
         throw(ArgumentError("No directories found at $(base_paths)"))
     end
-    paths_to_files = map(p -> collectNCFilePaths(p; constraint), paths_data_dirs)
+    paths_to_files = map(p -> collectNCFilePaths(p), paths_data_dirs)
     return vcat(paths_to_files...)
 end
 
@@ -820,7 +706,6 @@ end
 function parseFilename(filename::String, format::String)
     # TODO: parse individual format
 end
-
 
 function parseFilename(filename::String, format::Symbol)
     err_msg = "Only filename formats $(keys(FILENAME_FORMATS)) defined. Found: $(format)."
@@ -837,7 +722,7 @@ function parseFilename(filename::String, format::Symbol)
         variable = mapping["variable"],
         table_id = mapping["table_id"],
         model =  mapping["model"],
-        exp = mapping["exp"],
+        experiment = mapping["exp"],
         variant = mapping["variant"],
         fn = filename,
         grid = get(mapping, "grid", nothing),
@@ -846,13 +731,60 @@ function parseFilename(filename::String, format::Symbol)
     )
 end
 
-function collectNCFilePaths(path_data_dir::String; constraint::Union{Dict, Nothing}=nothing)
+
+function isRetained(fn_meta::FilenameMeta, constraint::Dict)
+    isOk(meta::Dict, key_meta::Symbol, constraint_vals::Vector{String}) = begin
+        keep = true
+        if !isempty(constraint_vals)
+            value = get(meta, key_meta, nothing)
+            grid_val = get(meta, :grid, nothing)
+            variant_val = get(meta, :variant, nothing)
+            if isnothing(value)
+                keep = true
+            else
+                # Model constraint can refer to model or member (given as model#variant)
+                if key_meta == :model
+                    constraint_mms = map(x -> string.(split(x, MODEL_MEMBER_DELIM)), constraint_vals)
+                    constraint_models = map(x -> x[1], constraint_mms)
+                    constraint_members = map(constraint_mms) do x
+                        length(x) == 2 ? string.(split(x[2], "_")) : [nothing]
+                    end
+                    constraint_variants = map(x -> x[1], constraint_members)
+                    # for cmip6 models we added the grids to the member id (model#variant_grid)
+                    constraint_grids = map(constraint_members) do x
+                        length(x) == 2 ? x[2] : nothing
+                    end
+                    values_ok = map(constraint_models, constraint_variants, constraint_grids) do model, variant, grid
+                        value == model && (isnothing(variant) || variant_val == variant) && (isnothing(grid) || grid_val == grid)
+                    end
+                    keep = any(values_ok)
+                else
+                    keep = value in constraint_vals
+                end
+            end
+        end
+        if !keep
+            @debug "File with meta info $fn_meta excluded due to constraint $key_meta ($constraint_vals)"
+        end
+        return keep
+    end
+    meta = structToDict(fn_meta)
+    @debug "For the basic filterinng, only constraint keys: variables, models, variants, experiments, mips, timeranges, grids, table_ids are taken into account."
+    return isOk(meta, :variable, get(constraint, "variables", Vector{String}())) &&
+        isOk(meta, :model, get(constraint, "models", Vector{String}())) &&
+        isOk(meta, :variant, get(constraint, "variants", Vector{String}())) &&
+        isOk(meta, :experiment, get(constraint, "experiments", Vector{String}())) &&
+        isOk(meta, :mip, get(constraint, "mips", Vector{String}())) &&
+        isOk(meta, :timerange, get(constraint, "timeranges", Vector{String}())) &&
+        isOk(meta, :grid, get(constraint, "grids", Vector{String}())) &&
+        isOk(meta, :table_id, get(constraint, "table_ids", Vector{String}()))
+end
+
+
+function collectNCFilePaths(path_data_dir::String)
     paths_to_files = filter(x -> isfile(x) && endswith(x, ".nc"), readdir(path_data_dir; join=true))
     if isempty(paths_to_files)
         @warn "No .nc files found!"
-    end
-    if !isempty(paths_to_files) && !isnothing(constraint) && !isempty(constraint)
-        paths_to_files = constrainFilenames(paths_to_files, constraint)
     end
     return paths_to_files
 end
@@ -1134,32 +1066,6 @@ function sharedLevelModels(data::DataMap)
         end
     end
     return reduce(intersect, all_models)
-end
-
-
-"""
-    filterModels(data::YAXArray, remaining_models::Vector{String})
-
-Remove models from `data` that aren't in `remaining_models` and adapt the 
-metadata of `data` accordingly such that 'member_names' and 'model_names' 
-corresponds to the remaining data.
-"""
-function filterModels(data::YAXArray, remaining_models::Vector{String})
-    meta = deepcopy(data.properties)
-    data =
-        hasdim(data, :member) ? data[member=Where(x->x in remaining_models)] :
-        data[model=Where(x->x in remaining_models)]
-
-    if haskey(meta, "member_names") && haskey(meta, "model_names")
-        indices_out =
-            hasdim(data, :member) ?
-            findall(x -> !(x in remaining_models), meta["member_names"]) :
-            findall(x -> !(x in remaining_models), meta["model_names"])
-        deleteat!(meta["model_names"], indices_out)
-        deleteat!(meta["member_names"], indices_out)
-        data = YAXArray(dims(data), Array(data), meta)
-    end
-    return data
 end
 
 

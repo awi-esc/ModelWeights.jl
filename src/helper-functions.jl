@@ -172,3 +172,9 @@ function kelvinToCelsius!(datamap::DataMap)
     return nothing
 end
 
+# function renameDictKeys!(data::Dict, keys::Vector)
+#     for (old_k, new_k) in keys 
+#         data[new_k] = data[old_k]
+#         delete!(data, old_k)
+#     end
+# end

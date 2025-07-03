@@ -139,7 +139,7 @@ const FILENAME_FORMATS = Dict(
     variable::String
     table_id::String
     model::String
-    exp::String
+    experiment::String
     variant::String
     fn::String
     grid::Union{String, Nothing} = nothing # only necessary for CMIP6, not CMIP5
@@ -161,10 +161,6 @@ function Base.show(io::IO, x::Dict{String, YAXArray})
     for (k, v) in x
         println(io, "$k: $(size(v))")
     end
-end
-
-function Base.show(io::IO, x::Tuple{MetaData, Vector{String}})
-    print(io, "$(x[1].id): ($(length(x[2])) files)")
 end
 
 function Base.show(io::IO, x::ClimateData)
