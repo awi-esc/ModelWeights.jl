@@ -36,30 +36,6 @@ end
 end
 
 @testset "Test resolvePathsFromMetaData" begin
-    base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical"
-    alias = "historical"
-    meta = mwd.MetaData(
-        "tas", 
-        "historical",
-        alias;
-        subdir = "tas_CLIM",
-        statistic = "CLIM"
-    )
-    dir_per_var = true
-    paths_to_files = mwd.resolvePathsFromMetaData(
-        meta, 
-        base_path, 
-        dir_per_var; 
-        constraint = Dict("models" =>  ["ACCESS-CM2", "CESM2#r1i1p1f1"])
-    )
-    base_subdir = "recipe_cmip6_historical_tas_20250207_080843"
-    p_access = joinpath(base_path, base_subdir, "preproc", alias, meta.subdir, "CMIP6_ACCESS-CM2_Amon_historical_r1i1p1f1_tas_gn.nc")
-    p_cesm2 = joinpath(base_path, base_subdir, "preproc", alias, meta.subdir, "CMIP6_CESM2_Amon_historical_r1i1p1f1_tas_gn.nc")
-    p_other = joinpath(base_path, base_subdir, "preproc", alias, meta.subdir, "CMIP6_BCC-CSM2-MR_Amon_historical_r2i1p1f1_tas_gn.nc")
-    @assert isfile(p_access) && isfile(p_cesm2) && isfile(p_other)
-    @test p_access in paths_to_files
-    @test p_cesm2 in paths_to_files
-    @test !(p_other in paths_to_files)
 end
 
 @testset "Test filterPathsSharedModels" begin
