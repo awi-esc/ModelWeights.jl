@@ -7,6 +7,8 @@ using YAXArrays
 
 longitudes =  [12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5]
 latitudes = [-77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5]
+arr1 = YAXArray((Dim{:lat}(latitudes),Dim{:lon}(longitudes), Dim{:member}(["ESM1#r1i1p1f1", "ESM2#r1i1p1f1", "ESM2#r1i1p1f2"])), rand(7, 9, 3))
+arr2 = YAXArray((Dim{:lat}(latitudes),Dim{:lon}(longitudes), Dim{:member}(["ESM1#r1i1p1f1", "ESM2#r1i1p1f1"])), rand(7, 9, 2)) 
 
 a = [1.0 2.0 missing 4];
 b = [5.0 missing missing 8];
@@ -54,10 +56,11 @@ end
     paths_tos = [m1_tos, m2_tos, m31_tos]
     paths_all = [paths_tos, paths_tas]
     n = length(vcat(paths_all...))
-    paths_filtered = mwd.filterPathsSharedModels(paths_all, mwd.MODEL_LEVEL)
+    fn_format = :esmvaltool
+    paths_filtered = mwd.filterPathsSharedModels(paths_all, mwd.MODEL_LEVEL, fn_format)
     @test length(vcat(paths_filtered...)) == n
 
-    paths_filtered = mwd.filterPathsSharedModels(paths_all, mwd.MEMBER_LEVEL)
+    paths_filtered = mwd.filterPathsSharedModels(paths_all, mwd.MEMBER_LEVEL, fn_format)
     @test !(m32_tas in paths_filtered[1])
     @test length(vcat(paths_filtered...)) == n-1
 end
@@ -66,41 +69,10 @@ end
 @testset "Test constrainMetaData!" begin
 end
 
-@testset "Test applyModelConstraints" begin
-    path_no = "path/to/ACCESS_r1i1p1f1_gr.nc" # does not stick to name convention (model must be in between two underscores (_model_)
-    path_ok = "cmip_ACCESS_r1i1p1f1_gr_1970.nc"
-    path_ok_notime = "cmip_ACCESS_r1i1p1f1_gr.nc"
-    path_other_member = "cmip_ACCESS_r1i1p1f2_gr.nc"
-
-    allowed_models = ["ACCESS#r1i1p1f1"]
-    @test !mwd.applyModelConstraints(path_no, allowed_models)
-    @test mwd.applyModelConstraints(path_ok, allowed_models)
-    @test mwd.applyModelConstraints(path_ok_notime, allowed_models)
-    @test !mwd.applyModelConstraints(path_other_member, allowed_models)
-
-    allowed_models = ["ACCESS"]
-    @test mwd.applyModelConstraints(path_other_member, allowed_models)
-
-    allowed_models = ["ACCESS#r1i1p1f1_gr"]
-    @test !mwd.applyModelConstraints("cmip_ACCESS_r1i1p1f1_gn.nc", allowed_models)
-    @test mwd.applyModelConstraints("cmip_ACCESS_r1i1p1f1_gr.nc", allowed_models)
-end
 
 @testset "Test subsetModelData" begin
 end
 
-@testset "Test findModelInPaths" begin
-    member_present = "CESM2#r1i1p1f1"
-    model_present = "CESM2"
-    model_absent = "AWI-ESM"
-    paths = [
-        "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM/CMIP6_ACCESS-CM2_Amon_historical_r1i1p1f1_tas_gn.nc",
-        "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM/CMIP6_CESM2_Amon_historical_r1i1p1f1_tas_gn.nc"
-    ]
-    @test mwd.findModelInPaths(member_present, paths)
-    @test mwd.findModelInPaths(model_present, paths)
-    @test !mwd.findModelInPaths(model_absent, paths)
-end
 
 @testset "Test sharedModelsFromPaths" begin
 end
@@ -160,4 +132,12 @@ end
     constraint["models"] = ["GISS-E2-R#r1i1p150"]
     data = mw.defineDataMap(paths_lgm, ids; dtype, filename_format, constraint)
     @test length(data["lgm-tas-data"].member) == 1
+end
+
+@testset "Test sharedLevels" begin
+    data = mw.defineDataMap([arr1, arr2],  ["lgm-tos", "lgm-tas"])
+    shared_members = mwd.sharedLevelMembers(data)
+    @test all(x -> x in shared_members, ["ESM1#r1i1p1f1", "ESM2#r1i1p1f1"]) && !("ESM2#r1i1p1f2" in shared_members)
+    shared_models = mwd.sharedLevelModels(data)
+    @test all(x -> x in shared_models, ["ESM1", "ESM2"]) && all(x -> !(x in shared_models), ["ESM1#r1i1p1f1", "ESM2#r1i1p1f1", "ESM2#r1i1p1f2"])
 end
