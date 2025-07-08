@@ -674,42 +674,53 @@ end
 
 
 function parseFilename(filename::String, format::String)
-    # TODO: parse individual format
+    parts_format = split(format, "_")
+    parts_fn = split(basename(splitext(filename)[1]) , "_")
+    if length(parts_format) != length(parts_fn)
+        throw(ArgumentError("File $filename doesn't align with format $format !"))
+    end
+    d = Dict{Symbol, String}()
+    for k in fieldnames(FilenameMeta)
+        indices = findall(x -> Symbol(lowercase(x)) == k, parts_format)
+        if length(indices) > 1
+            throw(ArgumentError("Invalid filename format: $format, $x appears more than once!"))
+        elseif !isempty(indices)
+            d[k] = parts_fn[indices[1]]
+        end
+    end
+    return FilenameMeta(
+        variable = get(d, :variable, ""),
+        tableid = get(d, :tableid, ""),
+        model =  get(d, :model, ""),
+        experiment = get(d, :experiment, ""),
+        variant = get(d, :variant, ""),
+        fn = filename,
+        grid = get(d, :grid, ""),
+        timerange = get(d, :timerange, ""),
+        mip = get(d, :mip, "")
+    )
 end
 
 function parseFilename(filename::String, format::Symbol)
-    err_msg = "Only filename formats $(keys(FILENAME_FORMATS)) defined. Found: $(format)."
-    attribs = get(() -> throw(ArgumentError(err_msg)), FILENAME_FORMATS, format)
-    values = Vector{Union{String, Nothing}}(split(filename, "_"))
-    diff = length(attribs) - length(values)
-    if diff > 0
-        append!(values, repeat([nothing], diff))
-    elseif diff < 0
-        throw(ArgumentError("$(filename) has more parts than expected for format $format!"))
+    if format == :esmvaltool
+        n = length(split(filename, "_"))
+        format = n == length(split(ESMVT_FORMAT_CMIP5, "_")) ? :esmvaltool_cmip5 : :esmvaltool_cmip6
     end
-    mapping = Dict(attribs .=> values)
-    return FilenameMeta(
-        variable = mapping["variable"],
-        table_id = mapping["table_id"],
-        model =  mapping["model"],
-        experiment = mapping["exp"],
-        variant = mapping["variant"],
-        fn = filename,
-        grid = get(mapping, "grid", nothing),
-        timerange = get(mapping, "timerange", nothing),
-        mip = get(mapping, "mip", nothing)
-    )
+    err_msg = "Only filename formats $(keys(FILENAME_FORMATS)) and :esmvaltool are defined. Found: $format."
+    fn_format = get(() -> throw(ArgumentError(err_msg)), FILENAME_FORMATS, format)
+    return parseFilename(filename, fn_format)
 end
 
 
 function isRetained(fn_meta::FilenameMeta, constraint::Dict)
+    fn_err(k::Symbol) = throw(ArgumentError("$k is not a valid metadata key for filenames. Allowed are: $(fieldnames(FilenameMeta))"))
     isOk(meta::Dict, key_meta::Symbol, constraint_vals::Vector{String}) = begin
         keep = true
         if !isempty(constraint_vals)
-            value = get(meta, key_meta, nothing)
-            grid_val = get(meta, :grid, nothing)
-            variant_val = get(meta, :variant, nothing)
-            if isnothing(value)
+            value = get(() -> fn_err(key_meta), meta, key_meta)
+            grid_val = get(() -> fn_err(:grid), meta, :grid)
+            variant_val = get(() -> fn_err(:variant), meta, :variant)
+            if isempty(value)
                 keep = true
             else
                 # Model constraint can refer to model or member (given as model#variant)
@@ -725,7 +736,7 @@ function isRetained(fn_meta::FilenameMeta, constraint::Dict)
                         length(x) == 2 ? x[2] : nothing
                     end
                     values_ok = map(constraint_models, constraint_variants, constraint_grids) do model, variant, grid
-                        value == model && (isnothing(variant) || variant_val == variant) && (isnothing(grid) || grid_val == grid)
+                        value == model && (absent(variant) || variant_val == variant) && (absent(grid) || grid_val == grid)
                     end
                     keep = any(values_ok)
                 else
@@ -747,7 +758,7 @@ function isRetained(fn_meta::FilenameMeta, constraint::Dict)
         isOk(meta, :mip, get(constraint, "mips", Vector{String}())) &&
         isOk(meta, :timerange, get(constraint, "timeranges", Vector{String}())) &&
         isOk(meta, :grid, get(constraint, "grids", Vector{String}())) &&
-        isOk(meta, :table_id, get(constraint, "table_ids", Vector{String}()))
+        isOk(meta, :tableid, get(constraint, "table_ids", Vector{String}()))
 end
 
 

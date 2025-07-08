@@ -28,10 +28,10 @@ constraint = Dict{String, Union{Vector{String}, String}}(
     "base_subdirs" => ["20241114"]
 );
 lgm_meta = mw.defineDataMap(
-    path_data, path_recipes, :esmvaltool_recipes; constraint, preview=true
+    path_data, path_recipes, :esmvaltool_recipes; constraint, preview = true
 ) 
 lgm_data = mw.defineDataMap(
-    path_data, path_recipes, :esmvaltool_recipes; constraint, dtype="cmip"
+    path_data, path_recipes, :esmvaltool_recipes; constraint, dtype = "cmip"
 )
 
 # we set level_shared to mw.MEMBER, so model members are identical for 
@@ -143,7 +143,7 @@ latitudes = [-77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5]
 v1 = YAXArray((Dim{:lat}(latitudes), Dim{:lon}(longitudes)), rand(7, 9))
 v2 = YAXArray((Dim{:lat}(latitudes), Dim{:lon}(longitudes)), rand(7, 9)) 
 
-variables = mw.defineDataMap([d1, d2], ["ESM1", "ESM2"])
+variables = mw.defineDataMap([v1, v2], ["ESM1", "ESM2"])
 
 
 base = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool" 

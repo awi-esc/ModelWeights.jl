@@ -340,7 +340,6 @@ function loadDataMapCore(
     preview::Bool = false,
     meta_data::Union{Vector{Dict{String, T}}, Nothing} = nothing
 ) where T <: Any
-    absent(x::Union{Vector, Nothing}) = isnothing(x) || isempty(x)
     if !absent(meta_data) && (length(all_paths) != length(meta_data))
         throw(ArgumentError("size of paths vector and meta data must be equal. Found: paths: $(length(all_paths)), meta_data: $(length(meta_data))"))
     end

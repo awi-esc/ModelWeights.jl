@@ -69,7 +69,6 @@ mutable struct MetaData
         if any(map(isempty, [variable, experiment, alias]))
             throw(ArgumentError("alias (name of diagnostic in ESMValTool), variable and experiment must be provided!"))
         end
-        absent(x) = isnothing(x) || isempty(x) 
         if absent(subdir)
             subdir = !absent(statistic) ? join([variable, statistic], "_") :
                 throw(ArgumentError("Either subdir or statistic must be provided!"))
@@ -130,21 +129,26 @@ struct ClimateData
 end
 
 
+const ESMVT_FORMAT_CMIP5 = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
+const ESMVT_FORMAT_CMIP6 = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
+const CMIP_FORMAT = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
+
 const FILENAME_FORMATS = Dict(
-    :esmvaltool => ("mip", "model", "table_id", "exp", "variant", "variable", "grid"),
-    :cmip => ("variable", "table_id", "model",  "exp", "variant", "grid", "timerange")
+    :cmip => CMIP_FORMAT,
+    :esmvaltool_cmip5 => ESMVT_FORMAT_CMIP5,
+    :esmvaltool_cmip6 => ESMVT_FORMAT_CMIP6
 )
 
 @kwdef struct FilenameMeta
     variable::String
-    table_id::String
+    tableid::String
     model::String
     experiment::String
     variant::String
     fn::String
-    grid::Union{String, Nothing} = nothing # only necessary for CMIP6, not CMIP5
-    timerange::Union{String, Nothing} = nothing # only given in filenames of CMIP standard
-    mip::Union{String, Nothing} = nothing # in CMIP standard only given for CMIP5, not CMIP6
+    grid::String # in CMIP standard only given for CMIP6, not CMIP5
+    timerange::String # only given in filenames of CMIP standard
+    mip::String # in CMIP standard only given for CMIP5, not CMIP6
 end
 
 
