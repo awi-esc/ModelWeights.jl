@@ -495,13 +495,49 @@ function loadDataFromYAML(
     )
 end
 
-function loadDataFromYAML(
+function defineDataMap(
+    yaml_content::Dict;
+    constraint::Union{Dict,Nothing} = nothing,
+    preview::Bool = false,
+    sorted::Bool = true,
+    dtype::String = "undef",
+    filename_format::Union{Symbol, String} = :esmvaltool
+)
+    return loadDataFromYAML(yaml_content; constraint, preview, sorted, dtype, filename_format)
+end
+
+
+function defineDataMap(
     path_config::String;
     constraint::Union{Dict,Nothing} = nothing,
     preview::Bool = false,
-    sorted::Bool = true
+    sorted::Bool = true,
+    dtype::String = "undef",
+    filename_format::Union{Symbol, String} = :esmvaltool
 )
-    return loadDataFromYAML(YAML.load_file(path_config); constraint, preview, sorted)
+    return loadDataFromYAML(
+        YAML.load_file(path_config); constraint, preview, sorted, dtype, filename_format
+    )
+end
+
+
+function defineDataMap(
+    path_data::String,
+    path_recipes::String,
+    source::Symbol;
+    dir_per_var::Bool = true,
+    constraint::Union{Dict, Nothing} = nothing,
+    preview::Bool = false,
+    sorted::Bool = true, 
+    dtype::String = "undef",
+    filename_format::Union{Symbol, String} = :esmvaltool
+)
+    if source != :esmvaltool_recipes
+        throw(ArgumentError("To load data from esmvaltool recipes, set source argument to :esmvaltool_recipes, found: $(source)."))
+    end
+    return loadDataFromESMValToolRecipes(
+        path_data, path_recipes; dir_per_var, constraint, preview, sorted, dtype, filename_format
+    )
 end
 
 

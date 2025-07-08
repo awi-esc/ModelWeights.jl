@@ -6,7 +6,7 @@ export DataMap, ClimateData, ESMEnsemble
 export subsetModelData, sharedModels, filterPathsSharedModels!
 export summarizeEnsembleMembersVector, summarizeEnsembleMembersVector!
 export alignPhysics, addMasks!
-export loadDataFromESMValToolRecipes, loadDataFromYAML, defineDataMap, loadPreprocData
+export defineDataMap, loadPreprocData
 
 
 using CSV

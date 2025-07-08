@@ -1,37 +1,37 @@
 import ModelWeights as mw
 import ModelWeights.Data as mwd
 
-using NCDatasets
 using DimensionalData
+using NCDatasets
+using YAXArrays
 
-# --------------------------- Set configurations --------------------------- #
-begin
-    filename_format = :esmvaltool;
-    dtype = "cmip"
-    dir_per_var = true;
-    is_model_data = true;
-    statistics = ["CLIM"];
-    variables = ["tas", "tos"];
-    mips = ["CMIP5", "CMIP6"];
-end
+# --------------------------- Set general configurations --------------------------- #
+filename_format = :esmvaltool;
+dtype = "cmip"
+
 # --------- Load the model data Version 1: from ESMValTool recipes --------- #
+dir_per_var = true;
+statistics = ["CLIM"];
+variables = ["tas", "tos"];
+mips = ["CMIP5", "CMIP6"];
+
 # 1. Model data just for lgm-experiment from ESMValTool recipes
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
 
-constraint = Dict{String, Union{Vector{String}, mwd.Level}}(
+constraint = Dict{String, Union{Vector{String}, String}}(
     "statistics" => statistics, 
     "variables" => variables,
     "mips" => mips,
     "aliases" => ["lgm"], 
-    "level_shared" => mwd.MEMBER_LEVEL,
+    "level_shared" => "member",
     "base_subdirs" => ["20241114"]
 );
-lgm_meta = mw.loadDataFromESMValToolRecipes(
-    path_data, path_recipes; constraint, preview=true
+lgm_meta = mw.defineDataMap(
+    path_data, path_recipes, :esmvaltool_recipes; constraint, preview=true
 ) 
-lgm_data = mw.loadDataFromESMValToolRecipes(
-    path_data, path_recipes; constraint, dtype="cmip"
+lgm_data = mw.defineDataMap(
+    path_data, path_recipes, :esmvaltool_recipes; constraint, dtype="cmip"
 )
 
 # we set level_shared to mw.MEMBER, so model members are identical for 
@@ -48,9 +48,10 @@ models_lgm = mwd.modelsFromMemberIDs(model_members_lgm; uniq = true)
 # same simulations for all variables when computing weights
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical";
 path_recipes = "./configs/historical";
-historical_data_lgm = mwd.loadDataFromESMValToolRecipes(
+historical_data_lgm = mw.defineDataMap(
     path_data, 
-    path_recipes;
+    path_recipes,
+    :esmvaltool_recipes;
     constraint = Dict(
         "statistics" => statistics, 
         "variables" => variables, 
@@ -74,9 +75,10 @@ data_members = mwd.subsetModelData(data; level = mwd.MEMBER_LEVEL)
 # (may be less than in 2.1, since the exact simulations now have to match with
 # the lgm models, not only the models)
 begin
-    historical_data_lgm_members = mwd.loadDataFromESMValToolRecipes(
+    historical_data_lgm_members = mwd.defineDataMap(
         path_data, 
-        path_recipes;
+        path_recipes,
+        :esmvaltool_recipes;
         constraint = Dict(
             "statistics" => statistics, 
             "variables" => variables, 
@@ -104,10 +106,10 @@ begin
     path_config = "./configs/examples/example-lgm-historical.yml";
     constraint = Dict{String, Union{Vector{String}, Symbol}}(
         "models" => model_members_lgm,
-        "level_shared" => :member # applies to every loaded dataset
+        "level_shared" => :member # applies to every variable
     );
-    meta_lgm_v2 =  mw.loadDataFromYAML(path_config; constraint, preview=true)
-    data_lgm_v2 = mw.loadDataFromYAML(path_config; constraint)
+    meta_lgm_v2 =  mw.defineDataMap(path_config; constraint, preview=true)
+    data_lgm_v2 = mw.defineDataMap(path_config; constraint)
 end
 
 
@@ -118,14 +120,14 @@ begin
 
     # aliases and timeranges don't have to match, all data will be loaded that 
     # corresponds either to aliases or to timeranges!
-    obs_data = mwd.loadDataFromESMValToolRecipes(
+    obs_data = mw.defineDataMap(
         base_path, 
-        config_path;
+        config_path,
+        :esmvaltool_recipes;
         dir_per_var = false,
         constraint = Dict(
             "statistics" => statistics, 
             "variables" => variables,
-            #"mips" => ["ERA5"],
             "timeranges" => ["full", "1961-1990"]
         ),
         preview = false
@@ -137,10 +139,11 @@ end
 # most basic case, where some available data (YAXArrays) are loaded into a DataMap
 longitudes =  [12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5]
 latitudes = [-77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5]
-d1 = YAXArray((Dim{:lat}(latitudes),Dim{:lon}(longitudes)), rand(7, 9))
-d2 = YAXArray((Dim{:lat}(latitudes),Dim{:lon}(longitudes)), rand(7, 9)) 
-models = ["ESM1", "ESM2"]
-data = mw.defineDataMap([d1, d2], models)
+
+v1 = YAXArray((Dim{:lat}(latitudes), Dim{:lon}(longitudes)), rand(7, 9))
+v2 = YAXArray((Dim{:lat}(latitudes), Dim{:lon}(longitudes)), rand(7, 9)) 
+
+variables = mw.defineDataMap([d1, d2], ["ESM1", "ESM2"])
 
 
 base = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool" 
@@ -176,7 +179,7 @@ lgm_cmip5 = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format,
 
 
 shared_models = mwd.sharedModels(lgm, :model);
-shared_members = mwd.sharedModels(lgm, "member"); #mwd.MEMBER_LEVEL);
+shared_members = mwd.sharedModels(lgm, "member");
 constraint = Dict{String, Union{Vector{String}, String}}(
     "level_shared" => "member"
 );
@@ -198,7 +201,7 @@ paths_historical_tos = [
 paths_historical = [paths_historical_tas, paths_historical_tos];
 constraint = Dict{String, Union{Vector{String}, Symbol}}(
     "models" => model_members_lgm,
-    "level_shared" => :member # applies to every loaded dataset
+    "level_shared" => :member # applies to every variable
 );
 historical = mwd.defineDataMap(
     paths_historical, 
@@ -221,12 +224,10 @@ data = mwd.loadDataMapCore([paths_tas], ["tas"]; filename_format)
 data = mwd.loadPreprocData([paths_tas[end-6], paths_tos[3]], filename_format; dtype="cmip")
 
 
-
-
 # TODO: merge same models (on exisitng dimension) not yet implemented
 base = "/albedo/work/projects/p_pool_clim_data/CMIP6/CMIP/AWI/AWI-ESM-1-1-LR/historical/r1i1p1f1/Amon/pr/gn/v20200212/"
 paths = [
     joinpath(base, "pr_Amon_AWI-ESM-1-1-LR_historical_r1i1p1f1_gn_185001-185012.nc"),
     joinpath(base, "pr_Amon_AWI-ESM-1-1-LR_historical_r1i1p1f1_gn_185101-185112.nc")
 ]
-data = mw.loadPreprocData(paths, :cmip)
+# data = mw.loadPreprocData(paths, :cmip)
