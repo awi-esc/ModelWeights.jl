@@ -14,7 +14,7 @@ data_all = mw.defineDataMap(path_config; dtype)
 data_all =  mw.defineDataMap(path_config; dtype, constraint=Dict("level_shared" => "model"))
 
 mw.summarizeMembers!(data_all)
-data_ts = mwt.filterTimeseries(data_all, 2015, 2100)
+mwd.apply!(data_all, mwt.filterTimeseries, 2015, 2100)
 
 # Brunner paper Fig. 2 with unweighted data
 # required data: (Fig. 2a/2b for CMIP6/CMIP5)

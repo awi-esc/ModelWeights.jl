@@ -393,18 +393,53 @@ function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
     return data
 end
 
+
 """
     summarizeMeta(meta::Dict, models::Vector{String})
 
+If simplify is true, use single value when all remaining elements in a vector in `meta` are 
+identical, otherwise just keep vector.
+
 # Arguments:
-- `models`: 
+- `meta`:
+- `indices`: indices to remain in vectors mapped to in `meta`. 
 """
-function summarizeMeta(meta::Dict, indices::Vector{<:Int})    
+function summarizeMeta!(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)    
+    for (k, v) in meta
+        if isa(v, Vector)
+            vals = v[indices]
+            if simplify
+                vals = unique(v[indices])
+                vals = length(vals) == 1 ? vals[1] : vals
+            end
+        else 
+            vals = deepcopy(v)
+        end
+        meta[k] = vals
+    end
+    return nothing
+end
+
+
+"""
+    summarizeMeta(meta::Dict, models::Vector{String})
+
+If simplify is true, use single value when all remaining elements in a vector in `meta` are 
+identical, otherwise just keep vector.
+
+# Arguments:
+- `meta`:
+- `indices`: indices to remain in vectors mapped to in `meta`. 
+"""
+function summarizeMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)    
     meta_new = Dict()    
     for (k, v) in meta
-        if isa(v, Vector) 
-            vals = unique(v[indices])
-            vals = length(vals) == 1 ? vals[1] : vals
+        if isa(v, Vector)
+            vals = v[indices]
+            if simplify
+                vals = unique(v[indices])
+                vals = length(vals) == 1 ? vals[1] : vals
+            end
         else 
             vals = deepcopy(v)
         end
@@ -1227,4 +1262,18 @@ function modelDim(data::YAXArray)
     err_msg = "Data must have either dimension :member or :model, found: $(dims(data))."
     return hasdim(data, :model) ? :model : 
         hasdim(data, :member) ? :member : throw(ArgumentError(err_msg))
+end
+
+function apply!(
+    dm::DataMap,
+    fn::Function,
+    args...; 
+    ids::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
+    kwargs...
+)
+    ids = isempty(ids) ? collect(keys(dm)) : ids
+    for (id, dat) in dm
+        dm[id] = fn(dat, args...; kwargs...)
+    end
+    return nothing
 end

@@ -76,15 +76,12 @@ function filterTimeseries(
     data::YAXArray,
     start_year::Number,
     end_year::Number;
-    new_alias::String = "",
-    only_models_non_missing_vals::Bool = true,
+    only_models_non_missing_vals::Bool = true
 )
-    if !hasdim(data, :time)
-        throw(ArgumentError("Dimension time is missing, needed to filter timeseries!")) 
-    end
-    @info "filter timeseries data with id: $(data.properties["id"]) from $start_year to $end_year..."
+    Data.throwErrorIfDimMissing(data, :time)
+    @info "filter timeseries data from $start_year to $end_year..."
     try
-        df = data[time=Where(
+        df = data[time = Where(
             x -> Dates.year(x) >= start_year && Dates.year(x) <= end_year,
         )]
         df = YAXArray(dims(df), Array(df), deepcopy(df.properties))
@@ -94,39 +91,22 @@ function filterTimeseries(
     end
     if only_models_non_missing_vals
         dim_symbol = Data.modelDim(df)
-        models_missing_vals = dropdims(
-            mapslices(
-                x -> any(ismissing.(x)),
-                DimArray(df),
-                dims = otherdims(df, dim_symbol),
-            ),
-            dims = otherdims(df, dim_symbol),
-        )
+        models_missing_vals = mapslices(x -> any(ismissing.(x)), df, dims = otherdims(df, dim_symbol))
+        n_models = length(dims(models_missing_vals, dim_symbol))
         indices_missing = findall(x -> x == true, models_missing_vals)
         if !isempty(indices_missing)
-            models_missing =
-                Data.getByIdxModel(models_missing_vals, dim_symbol, indices_missing)
+            models_missing = Data.getByIdxModel(models_missing_vals, dim_symbol, indices_missing)
             models_missing = dims(models_missing, dim_symbol).val
-            df =
-                dim_symbol == :model ? df[model=Where(x->!(x in models_missing))] :
-                df[member=Where(x->!(x in models_missing))]
+            df = dim_symbol == :model ? df[model = Where(x -> !(x in models_missing))] :
+                df[member = Where(x -> !(x in models_missing))]
             # update metadata too
-            k = dim_symbol == :model ? "model_names" : "member_names"
-            indices_keep = findall(x -> !(x in models_missing), df.properties[k])
-            for (k, v) in df.properties
-                if isa(v, Vector)
-                    df.properties[k] = df.properties[k][indices_keep]
-                end
-            end
+            indices_keep = filter(x -> !(x in indices_missing), 1:n_models)
+            Data.summarizeMeta!(df.properties, indices_keep)
         end
     end
-    new_timerange = join(string.([start_year, end_year]), "-")
-    df.properties["alias"] = 
-        isempty(new_alias) ? join([df.properties["alias"], new_timerange], "-") : new_alias
-    df.properties["timerange"] = new_timerange
-    df.properties["id"] = Data.buildMetaDataID(df.properties)    
+    df.properties["timerange"] = join(string.([start_year, end_year]), "-")
     warnIfOutOfTimerange(df, start_year, end_year)
-    Data.warnIfhasMissing(df; name="timeseries data")
+    Data.warnIfhasMissing(df; name = "timeseries data")
     return df
 end
 
