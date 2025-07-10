@@ -4,7 +4,7 @@ export Level, MODEL_MEMBER_DELIM
 export DataMap, ClimateData, ESMEnsemble
 
 export subsetModelData, sharedModels, filterPathsSharedModels!
-export summarizeEnsembleMembersVector, summarizeEnsembleMembersVector!
+export summarizeMembers, summarizeMembers!
 export alignPhysics, addMasks!
 export defineDataMap, loadPreprocData
 

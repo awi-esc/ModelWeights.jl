@@ -56,11 +56,12 @@ historical_data_lgm = mw.defineDataMap(
         "statistics" => statistics, 
         "variables" => variables, 
         "mips" => mips,
-        "aliases" => ["historical"], 
+        "aliases" => ["historical"],
         "models" => models_lgm
     ),
     dtype = "cmip"
 )
+
 # sanity check: for all lgm models, historical experiment is loaded
 models_historical = mwd.modelsFromMemberIDs(
     val(historical_data_lgm["tos_CLIM_historical"].member); uniq = true

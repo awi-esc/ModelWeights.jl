@@ -1,17 +1,19 @@
+import ModelWeights as mw
 import ModelWeights.Data as mwd
 import ModelWeights.Timeseries as mwt
+
 using DimensionalData
 using CairoMakie
 using YAXArrays
 
+dtype = "cmip"
+
 path_config = "./configs/projection-plots.yml";
-meta_data = mwd.loadDataFromYAML(path_config; preview=true)
-data_all = mwd.loadDataFromYAML(path_config)
-data_all =  mwd.loadDataFromYAML(
-    path_config; constraint = Dict("level_shared" => mwd.MODEL_LEVEL)
-)
-# hier weiter!
-mwd.summarizeEnsembleMembersVector!(data_all)
+meta_data = mw.defineDataMap(path_config; preview=true)
+data_all = mw.defineDataMap(path_config; dtype)
+data_all =  mw.defineDataMap(path_config; dtype, constraint=Dict("level_shared" => "model"))
+
+mw.summarizeMembers!(data_all)
 data_ts = mwt.filterTimeseries(data_all, 2015, 2100)
 
 # Brunner paper Fig. 2 with unweighted data

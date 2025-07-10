@@ -179,7 +179,7 @@ tas_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs
 # diff[indices]
 # compareToOrigData(uncertainties_weighted_orig, uncertainties_weighted)
 
-data_graph_models = mwd.summarizeEnsembleMembersVector(data_graph, true);
+data_graph_models = mw.summarizeMembers(data_graph, true);
 
 weighted_avg_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/central_estimate_weighted.nc")
 compareToOrigData(weighted_avg_orig["tas"][:], weighted_avg[:])

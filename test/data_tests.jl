@@ -97,7 +97,7 @@ end
 @testset "Test getAtModel" begin
     a = [1 2 3];
     b = [4 5 6];    
-    da = DimArray(vcat(a,b), (Dim{:model}(["m1", "m2"]), Dim{:var}(["tas", "tos", "pr"])))
+    da = YAXArray((Dim{:model}(["m1", "m2"]), Dim{:var}(["tas", "tos", "pr"])), vcat(a, b))
     @test mwd.getAtModel(da, :model, "m1") == [1, 2, 3]
 
     mwd.putAtModel!(da, :model, "m2", [17, 2, 1987])

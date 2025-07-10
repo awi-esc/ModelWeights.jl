@@ -264,11 +264,11 @@ yield one value per model.
 """
 function applyWeights(model_data::YAXArray, weights::YAXArray)
     if hasdim(weights, :member)
-        weights = Data.summarizeEnsembleMembersVector(weights, true; fn = sum)
+        weights = Data.summarizeMembersVector(weights; fn = sum)
     end
     if hasdim(model_data, :member)
         # take average over model predictions of members of same model
-        model_data = Data.summarizeEnsembleMembersVector(model_data, true; fn = Statistics.mean)
+        model_data = Data.summarizeMembersVector(model_data; fn = Statistics.mean)
     end
     models_weights = dims(weights, :model)
     models = dims(model_data, :model)

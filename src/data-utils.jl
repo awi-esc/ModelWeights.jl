@@ -249,6 +249,25 @@ function checkDataStructure(path_data::String, dir_per_var::Bool)
 end
 
 
+"""
+    checkConstraint(constraint::Union{Dict, Nothing})
+
+Throw error if entries (except for level_shared) do not map to a vector of Strings.
+
+Used to provide specific error messages of values that were not specified correctly.
+"""
+function checkConstraint(constraint::Union{Dict, Nothing})
+    if !isnothing(constraint)
+        for (k, v) in constraint
+            if k!= "level_shared" && !isa(v, Vector{String})
+                throw(ArgumentError("Constraint must map to a vector of Strings for key $k, found: $(typeof(v))"))
+            end
+        end
+    end
+    return nothing
+end
+
+
 function buildMetaDataID(meta::Dict)
     fn_err(k::String) = throw(ArgumentError("$k not defined in metadata!"))
     subdir = get(meta, "subdir", nothing)
@@ -302,43 +321,6 @@ end
 function physicsFromMember(member::String)
     regex = r"(p\d+)(f\d+)?(_.*)?$"
     return String.(match(regex, member).captures[1])
-end
-
-
-"""
-    averageEnsembleMembersMatrix(data::AbstractArray, updateMeta::Bool)
-
-Compute the average across all members of each model for each given variable 
-for model to model data, e.g. distances between model pairs.
-
-# Arguments:
-- `data`: with at least dimensions 'member1', 'member2'
-- `updateMeta`: set true if the vectors in the metadata refer to different models. 
-Set to false if vectors refer to different variables for instance. 
-"""
-function averageEnsembleMembersMatrix(data::YAXArray, updateMeta::Bool)
-    data = setLookupsFromMemberToModel(data, ["member1", "member2"])
-    models = String.(collect(unique(dims(data, :model1))))
-
-    grouped = groupby(data, :model2 => identity)
-    averages = map(entry -> mapslices(Statistics.mean, entry, dims = (:model2,)), grouped)
-    combined = cat(averages..., dims = (Dim{:model2}(models)))
-
-    grouped = groupby(combined, :model1 => identity)
-    averages = map(entry -> mapslices(Statistics.mean, entry, dims = (:model1,)), grouped)
-    combined = cat(averages..., dims = (Dim{:model1}(models)))
-
-    for m in models
-        combined[model1=At(m), model2=At(m)] .= 0
-    end
-
-    meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
-    combined = rebuild(combined; metadata = meta)
-
-    l = Lookups.Categorical(sort(models); order = Lookups.ForwardOrdered())
-    combined = combined[model1=At(sort(models)), model2=At(sort(models))]
-    combined = DimensionalData.Lookups.set(combined, model1 = l, model2 = l)
-    return combined
 end
 
 
@@ -411,6 +393,25 @@ function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
     return data
 end
 
+"""
+    summarizeMeta(meta::Dict, models::Vector{String})
+
+# Arguments:
+- `models`: 
+"""
+function summarizeMeta(meta::Dict, indices::Vector{<:Int})    
+    meta_new = Dict()    
+    for (k, v) in meta
+        if isa(v, Vector) 
+            vals = unique(v[indices])
+            vals = length(vals) == 1 ? vals[1] : vals
+        else 
+            vals = deepcopy(v)
+        end
+        meta_new[k] = vals
+    end
+    return meta_new
+end
 
 """
     updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
@@ -947,8 +948,8 @@ function generalizedDistances(distances_all::YAXArray, weights::YAXArray)
     normalized_distances = @d distances_all ./ norm
 
     distances = model2data ? 
-        summarizeEnsembleMembersVector(normalized_distances, false) :
-        averageEnsembleMembersMatrix(normalized_distances, false)
+        summarizeMembersVector(normalized_distances, false) :
+        summarizeMembersMatrix(normalized_distances, false)
     
     weighted_dists = @d distances .* weights
     return dropdims(sum(weighted_dists, dims = :diagnostic), dims=:diagnostic)
@@ -1212,4 +1213,18 @@ function maskFileConstraints(
     filenames = first.(splitext.(basename.(paths)))
     filenames_meta = parseFilename.(filenames, fn_format)
     return isRetained.(filenames_meta, fill(constraint, length(filenames_meta)))
+end
+
+
+"""
+    modelDim(data::YAXArray)
+
+Return the model dimension of `data` which must either be :model or :member.
+
+If none is present, throw ArgumentError.
+"""
+function modelDim(data::YAXArray)
+    err_msg = "Data must have either dimension :member or :model, found: $(dims(data))."
+    return hasdim(data, :model) ? :model : 
+        hasdim(data, :member) ? :member : throw(ArgumentError(err_msg))
 end

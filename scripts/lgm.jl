@@ -100,7 +100,7 @@ save("plots/lgm/" * target_fn * ".png", f1)
 
 # 2. Apply weights on historical period
 df = deepcopy(historical_data);
-mwd.summarizeEnsembleMembersVector!(df)
+mwd.summarizeMembers!(df)
 weighted_avg_hist = mw.applyWeights(df["tas_CLIM_historical"], weights.w);
 f2 = Figure();
 cmap = reverse(Colors.colormap("RdBu", mid=25/70));
@@ -186,7 +186,7 @@ mw.plotDistances(dists_perform, "Likelihoods";is_bar_plot=false)[1]
 
 # 2. apply weights on estimated climatological average of historical period
 df = deepcopy(data);
-mw.summarizeEnsembleMembersVector!(df)
+mw.summarizeMembers!(df)
 weighted_avg_lgm = mw.applyWeights(df["tas_CLIM_historical"], weights.w);
 f5 = Figure();
 title = "Weighted avg historical tas\n(based on lgm-cooling)";
@@ -240,7 +240,7 @@ save("plots/lgm/diff_unweighted-minus-weighted-based-on-historical.png", f9)
 unweighted_means_members = mw.weightedAvg(model_historical_lgm["tas_CLIM_lgm"])
 
 # unweighted avg across models
-lgm_tas_data = mw.summarizeEnsembleMembersVector(model_historical_lgm["tas_CLIM_lgm"], true)
+lgm_tas_data = mw.summarizeMembers(model_historical_lgm["tas_CLIM_lgm"], true)
 unweighted_means = mw.weightedAvg(lgm_tas_data)
 f10 = Figure();
 mw.plotValsOnMap!(f10, unweighted_means, "unweighted average LGM: tas_CLIM")

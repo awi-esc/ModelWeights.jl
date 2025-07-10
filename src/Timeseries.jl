@@ -93,7 +93,7 @@ function filterTimeseries(
         return nothing
     end
     if only_models_non_missing_vals
-        dim_symbol, _ = Data.getDimsModel(df)
+        dim_symbol = Data.modelDim(df)
         models_missing_vals = dropdims(
             mapslices(
                 x -> any(ismissing.(x)),

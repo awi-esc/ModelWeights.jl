@@ -8,60 +8,59 @@ end
 
 
 """
-    throwErrorIfModelDimMissing(data::AbstractArray)
+    throwErrorIfDimMissing(data::YAXArray)
 """
-function throwErrorIfModelDimMissing(data::AbstractArray)
-    if !hasdim(data, :model) && !hasdim(data, :member)
-        throw(ArgumentError("Data must have dimension 'model' or 'member'."))
+function throwErrorIfDimMissing(data::YAXArray, dim::Symbol)
+    if !hasdim(data, dim)
+        throw(ArgumentError("Data must have dimension $(dim). Found: $(dims(data))"))
+    end
+    return nothing
+end
+
+"""
+    throwErrorIfDimMissing(data::YAXArray, dims::Vector{Symbol})
+
+Throw ArgumentError if `data` does not have ALL dimensions in `dims`.
+"""
+function throwErrorIfDimMissing(data::YAXArray, dims::Vector{Symbol})
+    if any(x -> !hasdim(data, x), dims)
+        throw(ArgumentError("Data must have dimensions $(dims). Found: $(dims(data))"))
     end
     return nothing
 end
 
 
 """
-    getDimsModel(data::AbstractArray)
-
-Return Tuple with the model dimension of `data` ('model' or 'member')
-as Symbol at position 1 and the respetive dimension names at position 2.
-"""
-function getDimsModel(data::AbstractArray)
-    throwErrorIfModelDimMissing(data)
-    dim_symbol = hasdim(data, :model) ? :model : :member
-    return (dim_symbol, Array(dims(data, dim_symbol)))
-end
-
-
-"""
-    getAtModel(data::AbstractArray, dimension::Symbol, model::String)
+    getAtModel(data::YAXArray, dimension::Symbol, model::String)
 
 Return `data` where `dimension` (member or model) has value `model`.
 """
-function getAtModel(data::AbstractArray, dimension::Symbol, model::String)
-    throwErrorIfModelDimMissing(data)
+function getAtModel(data::YAXArray, dimension::Symbol, model::String)
+    throwErrorIfDimMissing(data, dimension)
     return dimension == :model ? data[model=At(model)] : data[member=At(model)]
 end
 
 
 """
-    getByIdxModel(data::AbstractArray, dimension::Symbol, indices::Vector)
+    getByIdxModel(data::YAXArray, dimension::Symbol, indices::Vector)
 
 Return `data` where `dimension` (member or model) has value `model`.
 """
-function getByIdxModel(data::AbstractArray, dimension::Symbol, indices::Vector)
-    throwErrorIfModelDimMissing(data)
+function getByIdxModel(data::YAXArray, dimension::Symbol, indices::Vector)
+    throwErrorIfDimMissing(data, dimension)
     return dimension == :model ? data[model=indices] : data[member=indices]
 end
 
 
 """ 
-    putAtModel!(data::AbstractArray, dimension::Symbol, model::String, input)
+    putAtModel!(data::YAXArray, dimension::Symbol, model::String, input)
 """
-function putAtModel!(data::AbstractArray, dimension::Symbol, model::String, input)
-    throwErrorIfModelDimMissing(data)
+function putAtModel!(data::YAXArray, dimension::Symbol, model::String, input)
+    throwErrorIfDimMissing(data, dimension)
     if dimension == :model
-        data[model=At(model)] = input
+        data[model = At(model)] = input
     else
-        data[member=At(model)] = input
+        data[member = At(model)] = input
     end
     return nothing
 end

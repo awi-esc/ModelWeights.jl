@@ -154,62 +154,114 @@ end
 
 
 """ 
-    summarizeEnsembleMembersVector(
-        data::YAXArray, updateMeta::Bool; fn::Function=Statistics.mean
-)
+    summarizeMembers(data::YAXArray; fn::Function=Statistics.mean)
 
 For each model compute a summary statistic (default: mean) across all its members. 
+
 The returned YAXArray has dimension 'model'.
 
 # Arguments:
-- `data::YAXArray`: YAXArray with at least dimension 'member'
+- `data::YAXArray`: YAXArray; must have dimension 'member'
 - `updateMeta::Bool`: set true if the vectors in the metadata refer to 
 different models. Set to false if vectors refer to different variables.
 - `fn::Function`: Function to be applied on data
 """
-function summarizeEnsembleMembersVector(
-    data::YAXArray, updateMeta::Bool; fn::Function = Statistics.mean
-)
-    throwErrorIfModelDimMissing(data)
-    data = setLookupsFromMemberToModel(data, ["member"])
-    models = unique(Array(dims(data, :model)))
-    dimensions = otherdims(data, :model)
-    s = isempty(dimensions) ? (length(models),) : (size(dimensions)..., length(models))
-    summarized_data = YAXArray(
-        (otherdims(data, :model)..., Dim{:model}(models)),
-        Array{eltype(data)}(undef, s),
-        deepcopy(data.properties),
-    )
-    for m in models
-        dat = data[model = Where(x -> x == m)]
-        average =
-            isempty(dimensions) ? fn(dat) : mapslices(x -> fn(x), dat; dims = (:model,))
-        summarized_data[model = At(m)] = average
-    end
-    summarized_data = replace(summarized_data, NaN => missing)
-
-    meta = deepcopy(data.properties)
-    # TODO: fix updateMetadat
-    #meta = updateMeta ? updateGroupedDataMetadata(meta, grouped) : meta
-    return YAXArray(dims(summarized_data), summarized_data.data, meta)
+function summarizeMembers(data::YAXArray; fn::Function = Statistics.mean)
+    return hasdim(data, :member) ? summarizeMembersVector(data; fn) :
+        (hasdim(data, :member1) && hasdim(data, :member2) ? 
+        summarizeMembersMatrix(data, true; fn) :
+        throw(ArgumentError("Data must have dimension :member or :member1 and :member2. Found: $(dims(data))"))
+        )
 end
 
-
 """
-    summarizeEnsembleMembersVector!(data::DataMap)
+    summarizeMembers!(data::DataMap)
 
 Set values for every dataset in `data` to the average across all members of 
 each model.
 """
-function  summarizeEnsembleMembersVector!(data::DataMap)
+function summarizeMembers!(data::DataMap; fn::Function=Statistics.mean)
     for (k, ds) in data
         if hasdim(ds, :member)
             @info "average ensemble members for $k"
-            data[k] = summarizeEnsembleMembersVector(ds, true)
+            data[k] = summarizeMembers(ds; fn)
         end
     end
     return nothing
 end
+
+""" 
+    summarizeMembersVector(data::YAXArray; fn::Function=Statistics.mean)
+
+For each model compute a summary statistic (default: mean) across all its members. 
+The returned YAXArray has dimension :model (instead of :member).
+
+# Arguments:
+- `data::YAXArray`: YAXArray; must have dimension 'member'
+- `fn::Function`: Function to be applied on data
+"""
+function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
+    throwErrorIfDimMissing(data, :member)
+    data = setLookupsFromMemberToModel(data, ["member"])
+    models = Array(dims(data, :model))
+    models_uniq = unique(models)
+    n_models = length(models_uniq)
+    # save indices for each model
+    model_indices = Dict{String, Vector{Int}}()
+    for (i, m) in pairs(models)
+        get!(model_indices, m, Vector{Int}()) 
+        push!(model_indices[m], i)
+    end
+    summarized_data_all = Vector{YAXArray}(undef, n_models)
+    for (i, m) in enumerate(models_uniq)
+        dat = data[model = model_indices[m]]
+        summarized = fn(dat; dims = (:model,))[model = At("combined")]
+        meta = summarizeMeta(data.properties, model_indices[m])
+        summarized_data_all[i] = YAXArray(dims(summarized), summarized.data, meta)
+    end
+    summarized_data = combineModelsFromMultipleFiles(summarized_data_all; names = models_uniq)
+    summarized_data = replace(summarized_data, NaN => missing)
+    return summarized_data
+end
+
+
+"""
+    summarizeMembersMatrix(data::AbstractArray, updateMeta::Bool; fn::Function=Statistics.mean)
+
+Compute the average across all members of each model for each given variable 
+for model to model data, e.g. distances between model pairs.
+
+# Arguments:
+- `data`: with at least dimensions 'member1', 'member2'
+- `updateMeta`: set true if the vectors in the metadata refer to different models. 
+Set to false if vectors refer to different variables for instance. 
+"""
+function summarizeMembersMatrix(data::YAXArray, updateMeta::Bool; fn::Function=Statistics.mean)
+    throwErrorIfDimMissing(data, [:member1, :member2])
+    data = setLookupsFromMemberToModel(data, ["member1", "member2"])
+    models = String.(collect(unique(dims(data, :model1))))
+
+    grouped = groupby(data, :model2 => identity)
+    averages = map(entry -> mapslices(fn, entry, dims = (:model2,)), grouped)
+    combined = cat(averages..., dims = (Dim{:model2}(models)))
+
+    grouped = groupby(combined, :model1 => identity)
+    averages = map(entry -> mapslices(fn, entry, dims = (:model1,)), grouped)
+    combined = cat(averages..., dims = (Dim{:model1}(models)))
+
+    for m in models
+        combined[model1=At(m), model2=At(m)] .= 0
+    end
+
+    meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
+    combined = rebuild(combined; metadata = meta)
+
+    l = Lookups.Categorical(sort(models); order = Lookups.ForwardOrdered())
+    combined = combined[model1=At(sort(models)), model2=At(sort(models))]
+    combined = DimensionalData.Lookups.set(combined, model1 = l, model2 = l)
+    return combined
+end
+
 
 
 function addMasks!(datamap::DataMap, id_orog_data::String)
@@ -340,6 +392,7 @@ function loadDataMapCore(
     preview::Bool = false,
     meta_data::Union{Vector{Dict{String, T}}, Nothing} = nothing
 ) where T <: Any
+    checkConstraint(constraint)
     if !absent(meta_data) && (length(all_paths) != length(meta_data))
         throw(ArgumentError("size of paths vector and meta data must be equal. Found: paths: $(length(all_paths)), meta_data: $(length(meta_data))"))
     end

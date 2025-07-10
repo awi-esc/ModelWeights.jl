@@ -22,10 +22,30 @@ end
 @testset "Test normalize" begin
 end
 
-@testset "Test summarizeEnsembleMembersVector" begin
+@testset "Test summarizeMembers vectors" begin
+    members = ["ACCESS-CM2#r10i1p1f1_gn", "CNRM-CM6-1#r13i1p1f2_gr", "CNRM-CM6-1#r15i1p1f2_gr", "MIROC6#r23i1p1f1_gn"]
+    vals = [1, 2, 3, 4, 5.5, 6.5, 7.5, 8.5]
+    meta = Dict(
+        "id" => ["ACCESS-CM2", "CNRM-CM6-1#r13i1p1f2_gr", "CNRM-CM6-1#r15i1p1f2_gr", "MIROC6"],
+        "variable" => ["tas", "tas", "tas", "tas"],
+        "info" => Dict("any-key" => "any-value")
+    )
+    data = YAXArray((
+        Dim{:member}(members), Dim{:time}(["Jan", "Feb"])), reshape(vals, 4, 2), meta
+    )
+    averaged = mwd.summarizeMembers(data)
+    @test Array(averaged[model = At("CNRM-CM6-1")]) == [2.5, 7.0]
+    @test length(averaged.model) == 3
+    # test if metadata also has the correct size
+    @test length(averaged.properties["id"]) == 3
+    @test length(averaged.properties["id"][2]) == 2
+    @test length(averaged.properties["variable"]) == 3
+    
+    info = get(averaged.properties, "info", nothing)
+    @test !isnothing(info) && !isempty(info)
 end
 
-@testset "Test averageEnsembleMembersMatrix" begin
+@testset "Test summarizeMembers matrices" begin
 end
 
 @testset "Test weightedAvg" begin

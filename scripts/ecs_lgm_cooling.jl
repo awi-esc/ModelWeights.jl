@@ -22,7 +22,7 @@ data = mw.alignPhysics(data,
     # data["tas_CLIM_lgm"].properties["member_names"]; 
     level_shared = mw.MODEL
 )
-mw.summarizeEnsembleMembersVector!(data)
+mw.summarizeMembers!(data)
 mw.addAnomalies!(data, "tas_CLIM_lgm", "tas_CLIM_piControl")
 #mw.addAnomalies!(data, "tos_CLIM_lgm", "tos_CLIM_piControl")
 

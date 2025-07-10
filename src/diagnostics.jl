@@ -47,13 +47,10 @@ Compute difference of `orig_data` and `ref_data`.
 The id of the original data and of the reference data is added to the metadata.
 """
 function anomalies(orig_data::YAXArray, ref_data::YAXArray; stats_name::String="ANOM")
-    dimension, models = getDimsModel(orig_data)
-    if !hasdim(ref_data, dimension) || models != Array(dims(ref_data, dimension))
-        throw(
-            ArgumentError(
-                "Original and reference data must contain exactly the same models!",
-            ),
-        )
+    dimension = modelDim(orig_data)
+    if !hasdim(ref_data, dimension) || (Array(dims(orig_data, dimension))) != Array(dims(ref_data, dimension))
+        err_msg = "To compute anomalies, original and reference data must contain exactly the same models!"
+        throw(ArgumentError(err_msg))
     end
     if orig_data.properties["units"] != orig_data.properties["units"]
         @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
