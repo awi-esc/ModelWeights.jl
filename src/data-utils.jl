@@ -1277,3 +1277,19 @@ function apply!(
     end
     return nothing
 end
+
+
+function apply(
+    dm::DataMap,
+    fn::Function,
+    args...; 
+    ids::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
+    kwargs...
+)
+    dm_new = DataMap()
+    ids = isempty(ids) ? collect(keys(dm)) : ids
+    for (id, dat) in dm
+        dm_new[id] = fn(dat, args...; kwargs...)
+    end
+    return dm_new
+end

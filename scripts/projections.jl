@@ -12,9 +12,11 @@ path_config = "./configs/projection-plots.yml";
 meta_data = mw.defineDataMap(path_config; preview=true)
 data_all = mw.defineDataMap(path_config; dtype)
 data_all =  mw.defineDataMap(path_config; dtype, constraint=Dict("level_shared" => "model"))
-
 mw.summarizeMembers!(data_all)
-mwd.apply!(data_all, mwt.filterTimeseries, 2015, 2100)
+
+data_ts = mwd.apply(data_all, mwt.filterTimeseries, 2015, 2100)
+# mwd.apply!(data_all, mwt.filterTimeseries, 2015, 2100)
+
 
 # Brunner paper Fig. 2 with unweighted data
 # required data: (Fig. 2a/2b for CMIP6/CMIP5)
@@ -25,9 +27,9 @@ mwd.apply!(data_all, mwt.filterTimeseries, 2015, 2100)
 # compute uncertainty ranges (weighted and unweighted)
 # compute mean for historical (also weighted and unweighted)
 function getDataProjectionPlot(dat::YAXArray)
-    gms = mw.globalMeans(dat)
-    unweighted_avg = mw.weightedAvg(gms)
-    uncertainties = mw.getUncertaintyRanges(gms)
+    gms = mwd.globalMeans(dat)
+    unweighted_avg = mww.weightedAvg(gms)
+    uncertainties = mwt.getUncertaintyRanges(gms)
     return (avg=unweighted_avg, uncertainties=uncertainties)
 end
 
