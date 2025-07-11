@@ -43,6 +43,6 @@ function Base.show(io::IO, x::ClimWIP)
     end
 end
 
-include("weights.jl")
+include("weights-utils.jl")
 
 end
