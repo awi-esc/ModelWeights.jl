@@ -20,11 +20,14 @@ end
 """
     throwErrorIfDimMissing(data::YAXArray, dims::Vector{Symbol})
 
-Throw ArgumentError if `data` does not have ALL dimensions in `dims`.
+Throw ArgumentError if `data` does not have ALL dimensions in `dims` when `include=:all` 
+(default), or if `data` does not have ANY dimension in `dims`.
 """
-function throwErrorIfDimMissing(data::YAXArray, dims::Vector{Symbol})
-    if any(x -> !hasdim(data, x), dims)
-        throw(ArgumentError("Data must have dimensions $(dims). Found: $(dims(data))"))
+function throwErrorIfDimMissing(data::YAXArray, dims::Vector{Symbol}; include::Symbol=:all)
+    if include == :all && any(x -> !hasdim(data, x), dims)
+        throw(ArgumentError("Data must have all of dimensions $(dims). Found: $(dims(data))"))
+    elseif  all(x -> !hasdim(data, x), dims)
+        throw(ArgumentError("Data must have any of dimensions $(dims). Found: $(dims(data))"))
     end
     return nothing
 end
