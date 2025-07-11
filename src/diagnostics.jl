@@ -1,5 +1,5 @@
 """
-    globalMeans(data::AbtractArray)
+    globalMeans(data::YAXArray)
 
 Return a YAXArray with area-weighted global means for each model in `data`. 
 
@@ -9,14 +9,7 @@ Missing data is accounted for in the area-weights.
 - `data::YAXArray`: must have dimensions 'lon' and 'lat'.
 """
 function globalMeans(data::YAXArray)
-    if !hasdim(data, :lon) || !hasdim(data, :lat)
-        msg = "Global means can only be computed for data with :lon, :lat dimensions! Given: $(dims(data))"
-        throw(ArgumentError(msg))
-    end
-    meta = deepcopy(data.properties)
-    meta["statistic"] = hasdim(data, :time) ? "GM-ts" : "GM"
-    meta["id"] = buildMetaDataID(meta)
-
+    throwErrorIfDimMissing(data, [:lon, :lat]; include = :any)
     longitudes = Array(dims(data, :lon))
     latitudes = Array(dims(data, :lat))
     area_weights = approxAreaWeights(coalesce.(latitudes, NaN))
@@ -35,7 +28,7 @@ function globalMeans(data::YAXArray)
     gms = mapslices(weighted_normalized_vals, dims = ("lon", "lat")) do x
         sum(skipmissing(x))
     end
-    return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), meta)
+    return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), deepcopy(data.properties))
 end
 
 
