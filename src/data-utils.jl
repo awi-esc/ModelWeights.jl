@@ -873,19 +873,22 @@ function distancesData(model_data::DataMap, obs_data::DataMap, config::Dict{Stri
 end
 
 """
-    distancesData(model_data::DataMap, obs_data::DataMap, diagnostics_ids::Vector{String})
+    distancesData(model_data::DataMap, obs_data::DataMap, diagnostics::Vector{String})
 
 Compute RMSEs between models and observations for `diagnostics`.
 
 # Arguments:
-- `diagnostics_ids::Vector{String}`:
+- `diagnostics::Vector{String}`: keys for which values must be provided in `model_data` and 
+`obs_data`.
 """
 function distancesData(model_data::DataMap, obs_data::DataMap, diagnostics::Vector{String})
-    ensureDiagnosticsAvailable(model_data, diagnostics, "MODEL")
-    ensureDiagnosticsAvailable(obs_data, diagnostics, "OBSERVATIONAL")
-    # TODO: recheck the metadata here! standard_name should be converted to a vector?!
-    distances_all = map(diagnostics) do key 
-        distancesData(model_data[key], obs_data[key])
+    distances_all = map(diagnostics) do d
+        model = get(model_data, d, nothing)
+        obs = get(obs_data, d, nothing)
+        if isnothing(model) || isnothing(obs)
+            throw(ArgumentError("Data missing for diagnostic $d."))
+        end
+        distancesData(model, obs)
     end
     return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics))
 end
@@ -927,10 +930,13 @@ end
 
 
 function distancesModels(model_data::DataMap, diagnostics::Vector{String})
-    ensureDiagnosticsAvailable(model_data, diagnostics, "MODEL")
     distances_all = Vector{<:YAXArray}(undef, length(diagnostics))
-    distances_all = map(diagnostics) do key 
-        distancesModels(model_data[key])
+    distances_all = map(diagnostics) do d
+        model = get(model_data, d, nothing)
+        if isnothing(model)
+            throw(ArgumentError("Data missing for diagnostic $d."))
+        end
+        distancesModels(model)
     end
     return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics))
 end
@@ -1264,16 +1270,19 @@ function modelDim(data::YAXArray)
         hasdim(data, :member) ? :member : throw(ArgumentError(err_msg))
 end
 
+
 function apply!(
     dm::DataMap,
     fn::Function,
     args...; 
     ids::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
+    ids_new::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
     kwargs...
 )
     ids = isempty(ids) ? collect(keys(dm)) : ids
-    for (id, dat) in dm
-        dm[id] = fn(dat, args...; kwargs...)
+    ids_new = isempty(ids_new) ? collect(keys(dm)) : ids_new
+    for (id, id_new) in zip(ids, ids_new)
+        dm[id_new] = fn(dm[id], args...; kwargs...)
     end
     return nothing
 end
@@ -1284,12 +1293,14 @@ function apply(
     fn::Function,
     args...; 
     ids::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
+    ids_new::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
     kwargs...
 )
     dm_new = DataMap()
     ids = isempty(ids) ? collect(keys(dm)) : ids
-    for (id, dat) in dm
-        dm_new[id] = fn(dat, args...; kwargs...)
+    ids_new = isempty(ids_new) ? collect(keys(dm)) : ids_new
+    for (id, id_new) in zip(ids, ids_new)
+        dm_new[id_new] = fn(dm[id], args...; kwargs...)
     end
     return dm_new
 end

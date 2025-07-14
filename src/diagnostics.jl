@@ -1,3 +1,8 @@
+function activeDiagnostics(config::Dict{String, Number})
+    return filter(k -> config[k] > 0, collect(keys(config)))
+end
+
+
 """
     globalMeans(data::YAXArray)
 
@@ -50,11 +55,11 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray; stats_name::String="
         return nothing
     end
     anomalies_metadata = deepcopy(orig_data.properties)
-    anomalies_metadata["statistic"] = stats_name
-    anomalies_metadata["id"] = buildMetaDataID(anomalies_metadata)
+    # anomalies_metadata["statistic"] = stats_name
+    # anomalies_metadata["id"] = buildMetaDataID(anomalies_metadata)
 
-    anomalies_metadata["_ref_data_id"] = ref_data.properties["id"]
-    anomalies_metadata["_orig_data_id"] = orig_data.properties["id"]
+    # anomalies_metadata["_ref_data_id"] = ref_data.properties["id"]
+    # anomalies_metadata["_orig_data_id"] = orig_data.properties["id"]
 
     anomalies = @d orig_data .- ref_data
     return YAXArray(dims(orig_data), Array(anomalies), anomalies_metadata)
@@ -70,9 +75,9 @@ end
 
 
 function standardDev(data::YAXArray, dimension::Symbol)
-    meta_new = deepcopy(data.properties)
-    meta_new["statistic"] = "STD"
-    meta_new["id"] = buildMetaDataID(meta_new)
+    # meta_new = deepcopy(data.properties)
+    # meta_new["statistic"] = "STD"
+    # meta_new["id"] = buildMetaDataID(meta_new)
     standard_devs = dropdims(Statistics.std(data, dims = dimension), dims = dimension)
-    return YAXArray(otherdims(data, dimension), standard_devs, meta_new)
+    return YAXArray(otherdims(data, dimension), standard_devs, deepcopy(data.properties))
 end

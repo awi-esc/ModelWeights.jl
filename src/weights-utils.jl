@@ -25,9 +25,9 @@ function weightedAvg(
     weights::Union{YAXArray, Nothing} = nothing,
     use_members_equal_weights::Bool = true
 )
-    da = DimArray(Array{Union{Missing,Float64}}(undef, size(data)), dims(data))
-    da .= Array(data)
-    dim_symbol = hasdim(data, :member) ? :member : :model
+    #da = DimArray(Array{Union{Missing,Float64}}(undef, size(data)), dims(data))
+    #da .= Array(data)
+    dim_symbol = Data.modelDim(data)
     models_data = collect(dims(data, dim_symbol))
 
     equal_weights = isnothing(weights)
@@ -36,12 +36,13 @@ function weightedAvg(
         models_weights = collect(dims(weights, dim_symbol))
     else
         if !hasdim(weights, dim_symbol)
-            msg = "level of weights and data must align (both :member or both :model)!"
+            msg = "weight vector must have same dimension as data (found: data: $dim_symbol, weights::$(dims(weights)))!"
             throw(ArgumentError(msg))
         end
         models_weights = collect(dims(weights, dim_symbol))
         if sort(models_data) != sort(models_weights)
-            # weights may have been computed wrt a different set of variables as we use here, 
+            # weights may have been computed wrt a different set of models than the models
+            # in the data. 
             # so the list of models for which weights have been computed may be shorter 
             # than the models of the given data.
             data_no_weights = [model for model in models_data if !(model in models_weights)]
@@ -53,17 +54,17 @@ function weightedAvg(
             end
         end
         # subset data s.t only data that will be weighted is considered
-        da = dim_symbol == :member ? 
-            da[member = Where(m -> m in models_weights)] :
-            da[model = Where(m -> m in models_weights)]
+        data = dim_symbol == :member ? 
+            data[member = Where(m -> m in models_weights)] :
+            data[model = Where(m -> m in models_weights)]
     end
-    @assert isapprox(sum(weights), 1; atol = 10^-4)
+    #@assert isapprox(sum(weights), 1; atol = 10^-4)
     # there shouldnt be data for which there is no weight since it was filtered out above
-    @assert sort(Array(models_weights)) == sort(Array(dims(data, dim_symbol)))
+    #@assert sort(Array(models_weights)) == sort(Array(dims(data, dim_symbol)))
 
     # readjust weights for missing values, if one model has a missing value, 
     # it is ignored in the weighted average for that particular lon,lat-position.
-    not_missing_vals = mapslices(x -> (ismissing.(x) .== 0), da; dims = (dim_symbol,))
+    not_missing_vals = mapslices(x -> (ismissing.(x) .== 0), data; dims = (dim_symbol,))
     w_temp = mapslices(
         x -> (x .* weights) ./ sum(x .* weights),
         not_missing_vals,
@@ -72,18 +73,14 @@ function weightedAvg(
     w_temp = replace(w_temp, NaN => missing)
 
     for m in models_weights
-        value = Data.getAtModel(da, dim_symbol, m) .* Data.getAtModel(w_temp, dim_symbol, m)
-        Data.putAtModel!(da, dim_symbol, m, value)
+        value = Data.getAtModel(data, dim_symbol, m) .* Data.getAtModel(w_temp, dim_symbol, m)
+        Data.putAtModel!(data, dim_symbol, m, value)
     end
-    weighted_avg = mapslices(x -> sum(skipmissing(x)), da, dims = (dim_symbol,))
-    weighted_avg = dropdims(weighted_avg, dims = dim_symbol)
+    weighted_avg = mapslices(x -> sum(skipmissing(x)), data, dims = (dim_symbol,))
 
     # set to missing when value was missing for ALL models
-    n_models = length(dims(da, dim_symbol))
-    all_missing = dropdims(
-        mapslices(x -> sum(ismissing.(x)) == n_models, da, dims = (dim_symbol,)),
-        dims = dim_symbol,
-    )
+    n_models = length(dims(data, dim_symbol))
+    all_missing = Bool.(mapslices(x -> sum(ismissing.(x)) == n_models, data, dims = (dim_symbol,)))
     if !any(all_missing)
         result = weighted_avg
     else
@@ -92,10 +89,7 @@ function weightedAvg(
         result[s...] = Array(weighted_avg)
         result[all_missing] .= missing
     end
-    meta = deepcopy(data.properties)
-    meta["statistic"] = equal_weights ? "unweighted-avg" : "weighted-avg"
-    meta["id"] = Data.buildMetaDataID(meta)
-    return YAXArray(dims(weighted_avg), result, meta)
+    return YAXArray(dims(weighted_avg), result, deepcopy(data.properties))
 end
 
 

@@ -1,34 +1,17 @@
 # Functions for adding data to DataMap objects.
 
-function getAvailableIds(data::DataMap, ids::Vector{String})
-    indices_keys = map(id -> haskey(data, id), ids)
-    ids_absent = ids[.!(indices_keys)]
-    if !isempty(ids_absent)
-        if length(ids_absent) == length(ids)
-            throw(ArgumentError("No data found for ids: $(ids)"))
-        else
-            @warn "No data found for ids" ids_absent
-        end
-    end
-    return ids[indices_keys]
-end
-
-
-function activeDiagnostics(config::Dict{String, Number})
-    return filter(k -> config[k] > 0, collect(keys(config)))
-end
-
-
-function ensureDiagnosticsAvailable(dm::DataMap, diagnostics::Vector{String}, label::String)
-    ids = getAvailableIds(dm, diagnostics)
-    missing_ids = filter(x -> !(x in ids), diagnostics)
-    if isempty(missing_ids)
-        return nothing
-    else 
-        throw(ArgumentError("Missing $label data for $(missing_ids)!"))
-    end
-end
-
+# function getAvailableIds(data::DataMap, ids::Vector{String})
+#     indices_keys = map(id -> haskey(data, id), ids)
+#     ids_absent = ids[.!(indices_keys)]
+#     if !isempty(ids_absent)
+#         if length(ids_absent) == length(ids)
+#             throw(ArgumentError("No data found for ids: $(ids)"))
+#         else
+#             @warn "No data found for ids" ids_absent
+#         end
+#     end
+#     return ids[indices_keys]
+# end
 
 
 """
@@ -41,7 +24,7 @@ Compute a diagnostic by running `fn` with positional arguments `args` and keywor
 function addDiagnostic!(
     datamap::DataMap, fn::Function, id::String, key_suffix::String, args...; kwargs...
 )
-    getAvailableIds(datamap, [id])
+    #getAvailableIds(datamap, [id])
     data = fn(datamap[id], args...; kwargs...)
     new_key = isempty(key_suffix) ? data.properties["id"] : join([data.properties["id"], key_suffix], "#")
     if new_key in keys(datamap)
@@ -56,7 +39,7 @@ end
 function addDiagnostic!(
     datamap::DataMap, fn::Function, ids::Vector{String}, key_suffix::String, args...; kwargs...
 )
-    ids = getAvailableIds(datamap, ids)
+    #ids = getAvailableIds(datamap, ids)
     new_keys = similar(ids)
     for (i, id) in enumerate(ids)
         new_keys[i] = addDiagnostic!(datamap, fn, id, key_suffix, args...; kwargs...)
