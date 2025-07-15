@@ -179,6 +179,35 @@ function absent(x::Union{Vector, String, Nothing})
     return isnothing(x) || isempty(x)
 end
 
+"""
+    setDim(
+        data::YAXArray, 
+        dim::Union{String, Symbol},
+        dim_name::Union{Nothing, String, Symbol},
+        dim_vals::Union{Nothing, Vector{String}}
+    )
+
+# Arguments:
+- `data::YAXArray`:
+- `dim::Union{String, Symbol}`: Name of the dimension to be changed.
+- `dim_name::Union{Nothing, String, Symbol}`: New dimension name.
+- `dim_vals::Union{Nothing, Vector{String}}`:  New dimension values.
+"""
+function setDim(
+    data::YAXArray, 
+    dim::Union{String, Symbol},
+    dim_name::Union{Nothing, String, Symbol},
+    dim_vals::Union{Nothing, Vector{String}}
+)
+    if !isnothing(dim_vals)
+        data = DimensionalData.set(data, Symbol(dim) => dim_vals)
+    end
+    if !isnothing(dim_name)
+        data = DimensionalData.set(data, Symbol(dim) => Symbol(dim_name))
+    end
+    return data
+end
+
 
 # function renameDictKeys!(data::Dict, keys::Vector)
 #     for (old_k, new_k) in keys 

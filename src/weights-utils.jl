@@ -1,9 +1,8 @@
-# TODO: check use_members_equal_weights not only taken into account for equal weights?! Also for weights on level of models?
 """
     weightedAvg(
         data::YAXArray; 
-        weights::Union{DimArray, Nothing}=nothing, 
-        use_members_equal_weights::Bool=true
+        weights::Union{YAXArray, Nothing} = nothing, 
+        use_members_equal_weights::Bool = true
     )
 
 Compute the average values for each (lon,lat) grid point in `data`, weighted
@@ -14,82 +13,51 @@ If no weight vector is provided, unweighted average is computed.
 
 # Arguments:
 - `data::YAXArray`: must have dimension 'model' or 'member'
-- `weights::Union{YAXArray, Nothing}=nothing`: weights for models or individual members
+- `weights::Union{YAXArray, Nothing} = nothing`: weights for models or individual members
 - `use_members_equal_weights::Bool`:  if `weights` is nothing, all models receive 
-equal weight. If `use_members_equal_weights` is true, the number of members 
-per model is taken into account, s.t. each model receives equal weight, which
-is distributed among the respective members.
+equal weight. Then, if `use_members_equal_weights` is true, the number of members 
+per model is taken into account, e.g. ["m1#run1", "m1#run2", "m1#run3", "m2#run1"] yields 
+[1/4, 1/4, 1/4, 1/4] if `use_members_equal_weights = false` and if 
+`use_members_equal_weights = true`, [1/2 * 1/3, 1/2 * 1/3, 1/2 * 3, 1/2] = [1/6, 1/6, 1/6, 1/2].
 """
 function weightedAvg(
     data::YAXArray;
     weights::Union{YAXArray, Nothing} = nothing,
     use_members_equal_weights::Bool = true
 )
-    #da = DimArray(Array{Union{Missing,Float64}}(undef, size(data)), dims(data))
-    #da .= Array(data)
     dim_symbol = Data.modelDim(data)
     models_data = collect(dims(data, dim_symbol))
 
     equal_weights = isnothing(weights)
     if equal_weights
         weights = equalWeights(data; use_members = use_members_equal_weights)
-        models_weights = collect(dims(weights, dim_symbol))
-    else
-        if !hasdim(weights, dim_symbol)
-            msg = "weight vector must have same dimension as data (found: data: $dim_symbol, weights::$(dims(weights)))!"
+    elseif !hasdim(weights, dim_symbol)
+        msg = "weight vector must have same dimension as data (found: data: $dim_symbol, weights::$(dims(weights)))!"
+        throw(ArgumentError(msg))
+    end
+
+    models_weights = collect(dims(weights, dim_symbol))
+    if !equal_weights && sort(models_data) != sort(models_weights)
+        # weights may have been computed wrt a different set of models than the models
+        # in the data. 
+        # so the list of models for which weights have been computed may be shorter 
+        # than the models of the given data.
+        data_no_weights = [model for model in models_data if !(model in models_weights)]
+        msg = "No weights were computed for follwoing models, thus not considered in the weighted average:"
+        @warn msg data_no_weights
+        if any(x -> !(x in models_data), models_weights)
+            msg = "Data of models missing for which weights have been computed."
             throw(ArgumentError(msg))
         end
-        models_weights = collect(dims(weights, dim_symbol))
-        if sort(models_data) != sort(models_weights)
-            # weights may have been computed wrt a different set of models than the models
-            # in the data. 
-            # so the list of models for which weights have been computed may be shorter 
-            # than the models of the given data.
-            data_no_weights = [model for model in models_data if !(model in models_weights)]
-            msg = "No weights were computed for follwoing models, thus not considered in the weighted average:"
-            @warn msg data_no_weights
-            if any(x -> !(x in models_data), models_weights)
-                msg = "Data of models missing for which weights have been computed."
-                throw(ArgumentError(msg))
-            end
-        end
-        # subset data s.t only data that will be weighted is considered
-        data = dim_symbol == :member ? 
-            data[member = Where(m -> m in models_weights)] :
-            data[model = Where(m -> m in models_weights)]
     end
-    #@assert isapprox(sum(weights), 1; atol = 10^-4)
-    # there shouldnt be data for which there is no weight since it was filtered out above
-    #@assert sort(Array(models_weights)) == sort(Array(dims(data, dim_symbol)))
+    # subset data s.t only data that will be weighted is considered
+    indices = findall(m -> m in models_weights, models_data)
+    data = deepcopy(Data.getByIdxModel(data, dim_symbol, indices))
+    Data.summarizeMeta!(data.properties, indices; simplify = true)
 
-    # readjust weights for missing values, if one model has a missing value, 
-    # it is ignored in the weighted average for that particular lon,lat-position.
-    not_missing_vals = mapslices(x -> (ismissing.(x) .== 0), data; dims = (dim_symbol,))
-    w_temp = mapslices(
-        x -> (x .* weights) ./ sum(x .* weights),
-        not_missing_vals,
-        dims = (dim_symbol,),
-    )
-    w_temp = replace(w_temp, NaN => missing)
-
-    for m in models_weights
-        value = Data.getAtModel(data, dim_symbol, m) .* Data.getAtModel(w_temp, dim_symbol, m)
-        Data.putAtModel!(data, dim_symbol, m, value)
-    end
-    weighted_avg = mapslices(x -> sum(skipmissing(x)), data, dims = (dim_symbol,))
-
-    # set to missing when value was missing for ALL models
-    n_models = length(dims(data, dim_symbol))
-    all_missing = Bool.(mapslices(x -> sum(ismissing.(x)) == n_models, data, dims = (dim_symbol,)))
-    if !any(all_missing)
-        result = weighted_avg
-    else
-        result = Array{Union{Missing,Float64}}(undef, size(weighted_avg))
-        s = repeat([:], length(size(weighted_avg)))
-        result[s...] = Array(weighted_avg)
-        result[all_missing] .= missing
-    end
-    return YAXArray(dims(weighted_avg), result, deepcopy(data.properties))
+    weighted_data = @d data .* weights
+    weighted_avg = sum(weighted_data, dims = dim_symbol)
+    return Data.getAtModel(weighted_avg, dim_symbol, "combined")
 end
 
 

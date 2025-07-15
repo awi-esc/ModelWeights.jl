@@ -4,7 +4,6 @@ import StatsBase: countmap
 
 using DimensionalData
 using Distributions
-using Interpolations
 using JLD2
 #using LinearAlgebra
 using NCDatasets

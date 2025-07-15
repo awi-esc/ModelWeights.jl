@@ -17,7 +17,7 @@ export climwipWeights
 export joinDataMaps
 export writeDataToDisk, readDataFromDisk
 
-export getUncertaintyRanges,
+export uncertaintyRanges,
     globalMeans,
     addAnomalies!,
     approxAreaWeights,

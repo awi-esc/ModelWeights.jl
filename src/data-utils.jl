@@ -146,7 +146,7 @@ function getCMIPModelsKey(meta::Dict)
     elseif "model_id" in attributes
         return "model_id"
     else
-        msg = "Metadata must contain one of 'source_id' (pointing to names of CMIP6 models) or 'model_id' (CMIP5)."
+        msg = "For CMIP data metadata must contain one of 'source_id' (pointing to names of CMIP6 models) or 'model_id' (CMIP5). This might happen if you try to load observational and model data from the same directory."
         throw(ArgumentError(msg))
     end
 end
@@ -383,19 +383,18 @@ the different models.
 function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
     n_dims = length(dim_names)
     for (i, dim) in enumerate(dim_names)
-        unique_members = dims(data, Symbol(dim))
+        unique_members = Array(dims(data, Symbol(dim)))
         models = map(x -> String.(split(x, MODEL_MEMBER_DELIM)[1]), unique_members)
 
-        data = DimensionalData.set(data, Symbol(dim) => models)
-        new_dim_name = n_dims > 1 ? "model" * string(i) : "model"
-        data = DimensionalData.set(data, Symbol(dim) => Symbol(new_dim_name))
+        new_dim_name = n_dims > 1 ? "model" * string(i) : "model" # Test this (why?)
+        data = setDim(data, dim, new_dim_name, models)
     end
     return data
 end
 
 
 """
-    summarizeMeta(meta::Dict, models::Vector{String})
+    summarizeMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
 
 If simplify is true, use single value when all remaining elements in a vector in `meta` are 
 identical, otherwise just keep vector.
@@ -422,7 +421,7 @@ end
 
 
 """
-    summarizeMeta(meta::Dict, models::Vector{String})
+    summarizeMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
 
 If simplify is true, use single value when all remaining elements in a vector in `meta` are 
 identical, otherwise just keep vector.
@@ -775,6 +774,8 @@ function isRetained(fn_meta::FilenameMeta, constraint::Dict)
                         value == model && (absent(variant) || variant_val == variant) && (absent(grid) || grid_val == grid)
                     end
                     keep = any(values_ok)
+                elseif key_meta == :fn
+                    keep = any(map(x -> occursin(x, value), constraint_vals))
                 else
                     keep = value in constraint_vals
                 end
@@ -786,7 +787,6 @@ function isRetained(fn_meta::FilenameMeta, constraint::Dict)
         return keep
     end
     meta = structToDict(fn_meta)
-    @debug "For the basic filterinng, only constraint keys: variables, models, variants, experiments, mips, timeranges, grids, table_ids are taken into account."
     return isOk(meta, :variable, get(constraint, "variables", Vector{String}())) &&
         isOk(meta, :model, get(constraint, "models", Vector{String}())) &&
         isOk(meta, :variant, get(constraint, "variants", Vector{String}())) &&
@@ -794,7 +794,8 @@ function isRetained(fn_meta::FilenameMeta, constraint::Dict)
         isOk(meta, :mip, get(constraint, "mips", Vector{String}())) &&
         isOk(meta, :timerange, get(constraint, "timeranges", Vector{String}())) &&
         isOk(meta, :grid, get(constraint, "grids", Vector{String}())) &&
-        isOk(meta, :tableid, get(constraint, "table_ids", Vector{String}()))
+        isOk(meta, :tableid, get(constraint, "table_ids", Vector{String}())) &&
+        isOk(meta, :fn, get(constraint, "filename", Vector{String}()))
 end
 
 
@@ -930,7 +931,7 @@ end
 
 
 function distancesModels(model_data::DataMap, diagnostics::Vector{String})
-    distances_all = Vector{<:YAXArray}(undef, length(diagnostics))
+    distances_all = Vector{YAXArray}(undef, length(diagnostics))
     distances_all = map(diagnostics) do d
         model = get(model_data, d, nothing)
         if isnothing(model)
@@ -989,7 +990,7 @@ function generalizedDistances(distances_all::YAXArray, weights::YAXArray)
     normalized_distances = @d distances_all ./ norm
 
     distances = model2data ? 
-        summarizeMembersVector(normalized_distances, false) :
+        summarizeMembersVector(normalized_distances) :
         summarizeMembersMatrix(normalized_distances, false)
     
     weighted_dists = @d distances .* weights
@@ -1280,14 +1281,37 @@ function apply!(
     kwargs...
 )
     ids = isempty(ids) ? collect(keys(dm)) : ids
-    ids_new = isempty(ids_new) ? collect(keys(dm)) : ids_new
+    ids_new = isempty(ids_new) ? ids : ids_new
     for (id, id_new) in zip(ids, ids_new)
         dm[id_new] = fn(dm[id], args...; kwargs...)
     end
     return nothing
 end
 
+"""
 
+    apply(
+        dm::DataMap,
+        fn::Function,
+        args...; 
+        ids::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
+        ids_new::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
+        kwargs...
+    )
+
+Apply `fn` with positional arguments `args` and keyword arguments 
+`kwargs` and return result as a new DataMap where keys are `ids_new` if provided, otherwise
+same keys as in `dm` are used.
+
+
+# Arguments:
+- `dm::DataMap`: data.
+- `fn::Function`: function to be applied.
+- `args...`: positional arguments for `fn`.
+- `ids::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}()`: keys for data on which `fn` is applied; if empty all keys of `dm` are used.
+- `ids_new::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}()`: keys used in new datamap; if empty `ids` are used instead.
+- `kwargs...`: keyword arguments for `fn`.
+"""
 function apply(
     dm::DataMap,
     fn::Function,
@@ -1298,7 +1322,7 @@ function apply(
 )
     dm_new = DataMap()
     ids = isempty(ids) ? collect(keys(dm)) : ids
-    ids_new = isempty(ids_new) ? collect(keys(dm)) : ids_new
+    ids_new = isempty(ids_new) ? ids : ids_new
     for (id, id_new) in zip(ids, ids_new)
         dm_new[id_new] = fn(dm[id], args...; kwargs...)
     end

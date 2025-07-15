@@ -231,7 +231,7 @@ function plotTimeseries!(
             vec(coalesce.(uncertainties[confidence=At("lower")], NaN)),
             vec(coalesce.(uncertainties[confidence=At("upper")], NaN)),
             color = (color_line, alpha),
-            #label = label_unc
+            label = label_unc
         )
     end
     return nothing

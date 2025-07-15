@@ -175,7 +175,7 @@ function summarizeMembers(data::YAXArray; fn::Function = Statistics.mean)
 end
 
 """
-    summarizeMembers!(data::DataMap)
+    summarizeMembers!(data::DataMap; fn::Function=Statistics.mean)
 
 Set values for every dataset in `data` to the average across all members of 
 each model.
@@ -183,12 +183,30 @@ each model.
 function summarizeMembers!(data::DataMap; fn::Function=Statistics.mean)
     for (k, ds) in data
         if hasdim(ds, :member)
-            @info "average ensemble members for $k"
+            @info "summarize ensemble members for $k"
             data[k] = summarizeMembers(ds; fn)
         end
     end
     return nothing
 end
+
+"""
+    summarizeMembers(data::DataMap; fn::Function=Statistics.mean)
+
+Return new DataMap containing every dataset in `data` summarized by applying `fn` 
+(default: mean) to all members of each model.
+"""
+function summarizeMembers(data::DataMap; fn::Function=Statistics.mean)
+    df = DataMap()
+    for (k, ds) in data
+        if hasdim(ds, :member)
+            @info "summarize ensemble members for $k"
+            df[k] = summarizeMembers(ds; fn)
+        end
+    end
+    return df
+end
+
 
 """ 
     summarizeMembersVector(data::YAXArray; fn::Function=Statistics.mean)
@@ -216,7 +234,7 @@ function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
     for (i, m) in enumerate(models_uniq)
         dat = data[model = model_indices[m]]
         summarized = fn(dat; dims = (:model,))[model = At("combined")]
-        meta = summarizeMeta(data.properties, model_indices[m])
+        meta = summarizeMeta(data.properties, model_indices[m]; simplify = true)
         summarized_data_all[i] = YAXArray(dims(summarized), summarized.data, meta)
     end
     summarized_data = combineModelsFromMultipleFiles(summarized_data_all; names = models_uniq)
