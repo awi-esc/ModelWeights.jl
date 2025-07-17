@@ -9,7 +9,7 @@ datasets: [
     statistics: ["CLIM"], # optional (but if not given, subdirs must be given!)
     subset: {             # optional
       base_subdirs: ["20241114"],
-      subset_shared: "member"
+      level_shared: "member"
     }
   },
   {
