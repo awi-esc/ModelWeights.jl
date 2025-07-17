@@ -4,7 +4,7 @@
 Combine arrays in `data` into a single YAXArray with meta combined from all datasets into 
 lists, with missing if key wasnt in a dataset.
 """
-function mergeMetaDataFromMultipleFiles(data::Vector{<:YAXArray})
+function mergeMetaDataFromMultipleFiles(data::AbstractVector{<:AbstractArray})
     n_files = length(data)
     meta_keys = unique(vcat(map(x -> collect(keys(x.properties)), data)...))
     meta_dict = Dict{String, Any}()
@@ -20,8 +20,8 @@ end
 
 """
     combineModelsFromMultipleFiles(
-        data::Vector{<:YAXArray}; 
-        names::Vector{String} = Vector{String}(),
+        data::Vector{AbstractArray}; 
+        model_names::Vector{String} = Vector{String}(),
         meta::Union{Dict{String, T}, Nothing} = nothing,
         dtype::String = "undef",
         new_dim::Symbol = :model,
@@ -45,8 +45,8 @@ If `sorted` is true, model dimension of returned data is sorted alphabetically a
 vector entries in the metadata dictionary of the returned array are also sorted accordingly.
 """
 function combineModelsFromMultipleFiles(
-    data::Vector{<:YAXArray}; 
-    names::Vector{String} = Vector{String}(),
+    data::AbstractVector{<:AbstractArray}; 
+    model_names::Vector{String} = Vector{String}(),
     meta::Union{Dict{String, T}, Nothing} = nothing,
     new_dim::Symbol = :model,
     sorted::Bool = true
@@ -62,24 +62,27 @@ function combineModelsFromMultipleFiles(
             throw(ArgumentError(msg))
         else
             # if difference only in time, use maximal possible timeseries and add NaNs
-            alignTimeseries!(data)
+            #alignTimeseries!(data)
+            overlapTimeseries!(data)
         end
     end
-    use_default_names = isempty(names)
+    use_default_names = isempty(model_names)
     if use_default_names
-        names = map(x -> string(new_dim) * string(x), 1:length(data))
+        model_names = map(x -> string(new_dim) * string(x), 1:length(data))
     end
     if sorted && !use_default_names
-        sort_indices = sortperm(names)
-        names = names[sort_indices]
+        sort_indices = sortperm(model_names)
+        model_names = model_names[sort_indices]
         data = data[sort_indices]
     end
     meta_dict = mergeMetaDataFromMultipleFiles(data)    
-    meta_dict["info"] = isnothing(meta) ? Dict() : meta
-    dimData = concatenatecubes(data, Dim{new_dim}(names))
+    if !isnothing(meta)
+        meta_dict["_meta"] = meta
+    end
+    dimData = concatenatecubes(data, Dim{new_dim}(model_names))
     dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
-    if length(names) != length(unique(names))
-        duplicates = unique([m for m in names if sum(names .== m) > 1])
+    if length(model_names) != length(unique(model_names))
+        duplicates = unique([m for m in model_names if sum(model_names .== m) > 1])
         @warn "Some datasets appear more than once" duplicates
     end
     return dimData
@@ -210,6 +213,11 @@ function modelsFromMemberIDs(members::AbstractVector{<:String}; uniq::Bool=false
     return uniq ? unique(models) : models
 end
 
+function modelsFromMemberIDs(data::YAXArray; uniq::Bool=false)
+    throwErrorIfDimMissing(data, :member)
+    return modelsFromMemberIDs(string.(dims(data, :member)); uniq)
+end
+
 
 """
     approxAreaWeights(latitudes::Vector{<:Number})
@@ -259,8 +267,11 @@ Used to provide specific error messages of values that were not specified correc
 function checkConstraint(constraint::Union{Dict, Nothing})
     if !isnothing(constraint)
         for (k, v) in constraint
-            if k!= "level_shared" && !isa(v, Vector{String})
+            if !(k in ["level_shared", "timeseries"]) && !isa(v, Vector{String})
                 throw(ArgumentError("Constraint must map to a vector of Strings for key $k, found: $(typeof(v))"))
+            end
+            if k == "timeseries" && !isa(v, Dict)
+                throw(ArgumentError("Constraint timeseries must map to a Dictionary!"))
             end
         end
     end
@@ -582,12 +593,36 @@ function alignTimeseries!(data::Vector{<:YAXArray})
 
     timerange = DateTime(year_min):Year(1):DateTime(year_max)
     for (i, ds) in enumerate(data)
-        s = map(length, otherdims(ds, :time))
+        none_time_dims = otherdims(ds, :time)
+        s = map(length, none_time_dims)
         # if ds allows missing values, undef is initialized with missing
         dat = Array{eltype(ds)}(undef, s..., nb_years)
-        ds_extended = YAXArray((otherdims(ds, :time)..., Dim{:time}(timerange)), dat, ds.properties)
-        ds_extended[time = Where(x->Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds # ds[time=:]
-        data[i] = ds_extended
+        ds_extended = YAXArray((none_time_dims..., Dim{:time}(timerange)), dat, ds.properties)
+        ds_extended[time = Where(x -> Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds
+        data[i] = ds_extended    
+    end
+end
+
+
+function overlapTimeseries!(data::Vector{AbstractArray})
+    if !all(map(x -> hasdim(x, :time), data))
+        throw(ArgumentError("All datasets must have time dimension to align timeseries!"))
+    end
+    start_years = map(x -> minimum(map(Dates.year, dims(x, :time))), data)
+    end_years =  map(x -> maximum(map(Dates.year, dims(x, :time))), data)
+    start_y = maximum(start_years)
+    end_y = minimum(end_years)
+    if start_y > end_y
+        ts = unique(zip(start_years, end_years))
+        throw(ArgumentError("The different timeseries to be merged do not overlap! Found timeseries $ts, latest start: $start_y  earlist end: $end_y"))
+    end
+    timerange = DateTime(start_y):Year(1):DateTime(end_y)
+    timerange_years = map(Dates.year, timerange)
+    for (i, ds) in enumerate(data)
+        ds_years = map(x -> Dates.year(x), dims(ds, :time))
+        indices = findall(x -> x in timerange_years, ds_years)
+        ds_slice = ds[time = indices]
+        data[i] = YAXArray((otherdims(ds, :time)..., Dim{:time}(timerange)), ds_slice.data, ds.properties)   
     end
 end
 
@@ -1276,10 +1311,11 @@ function apply!(
     dm::DataMap,
     fn::Function,
     args...; 
-    ids::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
-    ids_new::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
+    ids::AbstractVector{T} = Vector{String}(),
+    ids_new::AbstractVector{T} = Vector{String}(),
     kwargs...
-)
+) where T <: Union{String, Symbol}
+
     ids = isempty(ids) ? collect(keys(dm)) : ids
     ids_new = isempty(ids_new) ? ids : ids_new
     for (id, id_new) in zip(ids, ids_new)
@@ -1294,8 +1330,8 @@ end
         dm::DataMap,
         fn::Function,
         args...; 
-        ids::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
-        ids_new::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
+        ids::AbstractVector{T} = Vector{String}(),
+        ids_new::AbstractVector{T} = Vector{String}(),
         kwargs...
     )
 
@@ -1308,18 +1344,19 @@ same keys as in `dm` are used.
 - `dm::DataMap`: data.
 - `fn::Function`: function to be applied.
 - `args...`: positional arguments for `fn`.
-- `ids::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}()`: keys for data on which `fn` is applied; if empty all keys of `dm` are used.
-- `ids_new::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}()`: keys used in new datamap; if empty `ids` are used instead.
+- `ids::AbstractVector{T}=Vector{String}()`: keys for data on which `fn` is applied; if empty all keys of `dm` are used.
+- `ids_new::AbstractVector{T}=Vector{String}()`: keys used in new datamap; if empty `ids` are used instead.
 - `kwargs...`: keyword arguments for `fn`.
 """
 function apply(
     dm::DataMap,
     fn::Function,
     args...; 
-    ids::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
-    ids_new::Vector{Union{String, Symbol}}=Vector{Union{String, Symbol}}(),
+    ids::AbstractVector{T} = Vector{String}(),
+    ids_new::AbstractVector{T} = Vector{String}(),
     kwargs...
-)
+) where T <: Union{String, Symbol}
+
     dm_new = DataMap()
     ids = isempty(ids) ? collect(keys(dm)) : ids
     ids_new = isempty(ids_new) ? ids : ids_new
@@ -1327,4 +1364,22 @@ function apply(
         dm_new[id_new] = fn(dm[id], args...; kwargs...)
     end
     return dm_new
+end
+
+
+"""
+    indicesTimeseries(times::Vector, constraint_ts::Dict)
+
+Get indices of `times` that are exactly aligned with `start_y` and `end_y` given in `constraint_ts`.
+If no values are given, return indices for entire vector `times`.
+
+"""
+function indicesTimeseries(times::Vector{DateTime}, constraint_ts::Dict)
+    start_y = get(constraint_ts, "start_y", -Inf)
+    end_y = get(constraint_ts, "end_y", Inf)
+    indices_time = findall(t -> Dates.year(t) >= start_y && Dates.year(t) <= end_y, times)
+    times = times[indices_time]
+    # only use data that's exactly from start to end!
+    return (start_y != -Inf && start_y != minimum(map(Dates.year, times))) ||
+        (end_y != Inf && end_y != maximum(map(Dates.year, times))) ? [] : indices_time
 end

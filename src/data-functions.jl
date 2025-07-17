@@ -237,7 +237,9 @@ function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
         meta = summarizeMeta(data.properties, model_indices[m]; simplify = true)
         summarized_data_all[i] = YAXArray(dims(summarized), summarized.data, meta)
     end
-    summarized_data = combineModelsFromMultipleFiles(summarized_data_all; names = models_uniq)
+    summarized_data = combineModelsFromMultipleFiles(
+        summarized_data_all; model_names = models_uniq
+    )
     summarized_data = replace(summarized_data, NaN => missing)
     return summarized_data
 end
@@ -299,7 +301,8 @@ end
         sorted::Bool = true, 
         dtype::String = "undef",
         names::Vector{String} = Vector{String}(),
-        meta_info::Union{Dict{String, T}, Nothing} = nothing
+        meta_info::Union{Dict{String, T}, Nothing} = nothing,
+        constraint_ts::Union{Dict, Nothing} = nothing
     ) where T <: Any
 
 Return data loaded from `paths` as single YAXArray. 
@@ -314,12 +317,14 @@ function loadPreprocData(
     filename_format::Union{Symbol, String};
     sorted::Bool = true, 
     dtype::String = "undef",
-    names::Vector{String} = Vector{String}(),
-    meta_info::Union{Dict{String, T}, Nothing} = nothing
+    model_names::Vector{String} = Vector{String}(),
+    meta_info::Union{Dict{String, T}, Nothing} = nothing,
+    constraint_ts::Union{Dict, Nothing} = nothing
 ) where T <: Any
     is_cmip = lowercase(dtype) == "cmip"
-    data = Vector{YAXArray}(undef, length(paths))
-    names = isempty(names) && is_cmip ? Vector{String}(undef, length(paths)) : names
+    data = Vector{AbstractArray}(undef, length(paths))
+    # && is_cmip 
+    model_names = isempty(model_names) ? Vector{String}(undef, length(paths)) : model_names
     new_dim = is_cmip ? :member : :model
     filenames = first.(splitext.(basename.(paths)))
     filenames_meta = parseFilename.(filenames, filename_format)
@@ -328,17 +333,17 @@ function loadPreprocData(
         @debug "processing file.." * path
         ds = NCDataset(path)
         clim_var = !isnothing(meta_info) ? get(meta_info, "variable", meta.variable) : meta.variable
-        dsVar = nothing
+        ds_var = nothing
         try 
-            dsVar = ds[clim_var]
+            ds_var = ds[clim_var]
         catch e
             @error "Variable '$clim_var' according to filename format '$(string(filename_format))' not found in $path !"
             throw(e)
         end
         # if clim_var == "amoc"
-        #     dsVar = ds["msftmz"]
+        #     ds_var = ds["msftmz"]
         # end
-        props = Dict{String, Any}(dsVar.attrib) # metadata just for this file!
+        props = Dict{String, Any}(ds_var.attrib) # metadata just for this file!
         if clim_var == "msftmz"
             sector = get(ds, "sector", nothing)
             if !isnothing(sector)
@@ -357,30 +362,51 @@ function loadPreprocData(
                 member_id_temp = memberIDFromFilenameMeta(meta, mip)
                 model_id_temp = String(split(member_id_temp, MODEL_MEMBER_DELIM)[1])
                 model_id = fixModelNameMetadata(model_id_temp)
-                names[i] = replace(member_id_temp, model_id_temp => model_id)
+                model_names[i] = replace(member_id_temp, model_id_temp => model_id)
                 props["mip_era"] = mip
             end
         end
-        dimension_names = dimnames(dsVar)
+        dimension_names = dimnames(ds_var)
         dimensions = Vector(undef, length(dimension_names))
         for (idx_dim, d) in enumerate(dimension_names)
-            if d in ["bnds", "string21"]
+            if d in ["bnds", "string21", "time"]
                 continue
             end
-            if d == "time"
-                # NOTE: just YEAR and MONTH are saved in the time dimension
-                times = map(x -> DateTime(Dates.year(x), Dates.month(x)), dsVar[d][:])
-                dimensions[idx_dim] = Dim{Symbol(d)}(collect(times))
+            dimensions[idx_dim] = Dim{Symbol(d)}(collect(ds_var[d][:]))
+        end
+        
+        exclude_file = false
+        if "time" in dimension_names
+            # NOTE: just YEAR and MONTH are saved in the time dimension
+            times = map(x -> DateTime(Dates.year(x), Dates.month(x)), ds_var["time"][:])
+            if absent(constraint_ts) 
+                @warn "There were no start and end year for timeseries provided!"
+                constraint_ts = Dict()
+            end
+            indices_time = indicesTimeseries(times, constraint_ts)
+            if isempty(indices_time)
+                exclude_file = true
             else
-                dimensions[idx_dim] = Dim{Symbol(d)}(collect(dsVar[d][:]))
+                idx_time = findfirst(dimension_names .== "time")
+                indices = Vector(undef, length(dimension_names))
+                for i in 1:length(dimension_names)
+                    indices[i] = i == idx_time ? indices_time : Colon()
+                end
+                ds_var = ds_var[indices...]
+                dimensions[idx_time] = Dim{:time}(collect(times[indices_time]))
             end
         end
-        data[i] = YAXArray(Tuple(dimensions), Array(dsVar), props)
+        #data[i] = YAXArray(Tuple(dimensions), Array(ds_var), props)
+        props["handles"] = ds
+        data[i] = exclude_file ? [] : YAXArray(Tuple(dimensions), ds_var, props)
         # replace missing values by NaN?
-        # data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(dsVar), NaN), props)
-        close(ds)
+        # data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(ds_var), NaN), props)
+        #close(ds)
     end
-    return isempty(data) ? nothing : combineModelsFromMultipleFiles(data; names, new_dim, sorted, meta=meta_info)
+    indices = findall(x -> !isempty(x), data)
+    return isempty(indices) ? nothing : combineModelsFromMultipleFiles(
+        data[indices]; model_names = model_names[indices], new_dim, sorted, meta=meta_info
+    )
 end
 
 
@@ -425,9 +451,11 @@ function loadDataMapCore(
         else
             mask = maskFileConstraints(paths, filename_format, constraint)
         end
-        preview ? 
-            paths[mask] :
-            loadPreprocData(paths[mask], filename_format; sorted, dtype, meta_info = meta)
+        constraint_ts = isnothing(constraint) ? nothing : get(constraint, "timeseries", nothing)
+        preview ? paths[mask] :
+            loadPreprocData(
+                paths[mask], filename_format; sorted, dtype, constraint_ts, meta_info = meta 
+            )
     end
     if preview
         loaded_data = data

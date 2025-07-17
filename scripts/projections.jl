@@ -11,12 +11,31 @@ dtype = "cmip"
 
 path_config = "./configs/projection-plots.yml";
 meta_data = mw.defineDataMap(path_config; preview=true)
-data_all = mw.defineDataMap(path_config; dtype)
-data_all =  mw.defineDataMap(path_config; dtype, constraint=Dict("level_shared" => "model"))
+data_all =  mw.defineDataMap(
+    path_config; dtype, constraint=Dict("level_shared" => "model")
+)
+# or directly define start and end date:
+data_all = mw.defineDataMap(
+    path_config; 
+    dtype, 
+    constraint = Dict(
+        "level_shared" => "model", 
+        "timeseries" => Dict("start_y" => 2015, "end_y" => 2100)
+    )
+)
 
-data = mw.summarizeMembers(data_all)
-mw.summarizeMembers!(data)
-mwd.apply!(data, mwt.filterTimeseries, 2015, 2100)
+models = mwd.modelsFromMemberIDs(data_all["tas_CLIM-ann_ssp126"]; uniq = true)
+#mwd.apply!(data_all, mwt.filterTimeseries, 2015, 2100; ids = ["tas_CLIM-ann_ssp126", "tas_CLIM-ann_ssp585"])
+#mwd.apply!(data, mwt.filterTimeseries, -Inf, 2015; ids = ["tas_CLIM-ann_historical"])
+
+data_historical = mw.defineDataMap(
+    "/albedo/home/brgrus001/ModelWeights/configs/historical-annual.yml"; 
+    dtype,
+    constraint=Dict("level_shared" => "model", "models" => models, 
+        "timeseries" => Dict("start_y" => 1850, "end_y" => 2014)
+    )
+)
+models_historical =  mwd.modelsFromMemberIDs(data_historical["tas_CLIM-ann_historical"]; uniq = true)
 
 
 quantiles =  [0.167, 0.833]
@@ -27,12 +46,12 @@ function getDataProjectionPlot(dat::YAXArray, quantiles::Vector{<:Number})
     return (avg=unweighted_avg, uncertainties=uncertainties)
 end
 
-historical = getDataProjectionPlot(data_ts["tas_CLIM-ann_historical"], quantiles);
-ssp126 = getDataProjectionPlot(data_ts["tas_CLIM-ann_ssp126"], quantiles);
-ssp585 = getDataProjectionPlot(data_ts["tas_CLIM-ann_ssp585"], quantiles);
+historical = getDataProjectionPlot(data_historical["tas_CLIM-ann_historical"], quantiles);
+ssp126 = getDataProjectionPlot(data["tas_CLIM-ann_ssp126"], quantiles);
+ssp585 = getDataProjectionPlot(data["tas_CLIM-ann_ssp585"], quantiles);
 
-min_val = minimum(map(x -> minimum(x), [ssp126.avg, ssp585.avg]))
-max_val = minimum(map(x -> maximum(x), [ssp126.avg, ssp585.avg]))
+min_val = minimum(map(x -> minimum(x), [ssp126.avg, ssp585.avg, historical.avg]))
+max_val = minimum(map(x -> maximum(x), [ssp126.avg, ssp585.avg, historical.avg]))
 
 
 f = Figure(); 
@@ -42,19 +61,21 @@ ylims!(ax, min_val - 0.5, max_val + 5)
 label_unc_unw(quantiles) = "Non-weighted quantiles: " * join(quantiles, "-")
 label_unc_w(quantiles) = "Weighted quantiles: " * join(quantiles, "-")
 
-mw.Plots.plotTimeseries!(ax, historical.avg; 
+mw.Plots.plotTimeseries!(
+    ax, 
+    historical.avg; 
     uncertainties = coalesce.(historical.uncertainties, missing => NaN), 
-    label="Non-weighted mean", 
-    label_unc = label_unc_unw(historical.uncertainties), 
-    color=:grey
+    label = "Non-weighted mean", 
+    label_unc = label_unc_unw(quantiles), 
+    color_line = :grey
 )
 mw.Plots.plotTimeseries!(
     ax, 
     ssp126.avg; 
-    color_line=:blue, 
     uncertainties = coalesce.(ssp126.uncertainties, missing => NaN),
-    label="Non-weighted mean", 
-    label_unc = label_unc_unw(quantiles)
+    label = "Non-weighted mean", 
+    label_unc = label_unc_unw(quantiles),
+    color_line = :blue
 )
 mw.Plots.plotTimeseries!(
     ax, 

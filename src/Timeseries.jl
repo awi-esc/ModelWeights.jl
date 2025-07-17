@@ -72,6 +72,20 @@ function warnIfOutOfTimerange(df::YAXArray, start_year::Int, end_year::Int)
 end
 
 
+"""
+    function filterTimeseries(
+        data::YAXArray,
+        start_year::Number,
+        end_year::Number;
+        only_models_non_missing_vals::Bool = true
+    )
+
+# Arguments:
+- `data::YAXArray`:
+- `start_year::Number`: set to -Inf to not filter for start time.
+- `end_year::Number`: set to Inf to not filter for end time.
+- `only_models_non_missing_vals::Bool = true`:
+"""
 function filterTimeseries(
     data::YAXArray,
     start_year::Number,
@@ -79,7 +93,6 @@ function filterTimeseries(
     only_models_non_missing_vals::Bool = true
 )
     Data.throwErrorIfDimMissing(data, :time)
-    @info "filter timeseries data from $start_year to $end_year..."
     try
         df = data[time = Where(
             x -> Dates.year(x) >= start_year && Dates.year(x) <= end_year,

@@ -175,7 +175,7 @@ function kelvinToCelsius!(datamap::DataMap)
 end
 
 
-function absent(x::Union{Vector, String, Nothing}) 
+function absent(x::Union{Vector, String, Dict, Nothing}) 
     return isnothing(x) || isempty(x)
 end
 
@@ -209,9 +209,6 @@ function setDim(
 end
 
 
-# function renameDictKeys!(data::Dict, keys::Vector)
-#     for (old_k, new_k) in keys 
-#         data[new_k] = data[old_k]
-#         delete!(data, old_k)
-#     end
-# end
+function dimNames(data::YAXArray)
+    return map(d -> typeof(d).parameters[1], dims(data))
+end
