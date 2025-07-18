@@ -20,6 +20,15 @@ yax1 = YAXArray((Dim{:row}(["r1", "r2"]),Dim{:column}(["c1", "c2", "c3"]), Dim{:
 yax2 = YAXArray((Dim{:row}(["r1", "r2"]),Dim{:column}(["c1", "c2", "c3"]), Dim{:stack}(["s1"])), d2) 
 
 
+function setupDataPaths()
+    paths_lgm_tas = ["data/lgm-cmip5-tas-climatologies", "data/lgm-cmip6-tas-climatologies"]
+    paths_lgm_tos = ["data/lgm-cmip5-tos-climatologies", "data/lgm-cmip6-tos-climatologies"]
+    paths_lgm_tas = joinpath.(pwd(), paths_lgm_tas)
+    paths_lgm_tos = joinpath.(pwd(), paths_lgm_tos)
+    return Dict("lgm-tas" => paths_lgm_tas, "lgm-tos" => paths_lgm_tos)
+end
+
+
 @testset "Test joinDataMaps" begin
     dm1 = mwd.DataMap(Dict("id1" => yax1))
     dm2 = mwd.DataMap(Dict("id2" => yax2))
@@ -107,14 +116,11 @@ end
 
 
 @testset "Test defineDataMap" begin
-    paths_lgm_tas = ["data/lgm-cmip5-tas-climatologies", "data/lgm-cmip6-tas-climatologies"]
-    paths_lgm_tos = ["data/lgm-cmip5-tos-climatologies", "data/lgm-cmip6-tos-climatologies"]
-    paths_lgm_tas = joinpath.(pwd(), paths_lgm_tas)
-    paths_lgm_tos = joinpath.(pwd(), paths_lgm_tos)
     filename_format = :esmvaltool
     dtype = "cmip"
+    data_paths = setupDataPaths()
 
-    paths_lgm = [paths_lgm_tas, paths_lgm_tos]
+    paths_lgm = [data_paths["lgm-tas"], data_paths["lgm-tos"]]
     ids = ["lgm-tas-data", "tos_lgm"]
     data = mw.defineDataMap(paths_lgm, ids; dtype, filename_format)
     @test size(data["lgm-tas-data"]) == (72, 36, 17)

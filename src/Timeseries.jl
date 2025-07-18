@@ -1,9 +1,8 @@
 module Timeseries
 
-using DataFrames
 using Dates
 using DimensionalData
-using GLM
+using LinearRegression
 using YAXArrays
 
 using ..Data
@@ -11,52 +10,46 @@ using ..Data
 """
     linearTrend(data::YAXArray; full_predictions::Bool=true)
 
-Compute linear trend as ordinary least squares for timeseries data.
-
-In the metadata of the returned array '-TREND' (if `full_predictions`=false) or 
-'-TREND-pred' (if `full_predictions`=true) is added to the original metadata 
-entry of `data` for 'statistic' and the new metadata entry for 'id' is adapted accordingly.
+Compute linear trend as ordinary least squares for timeseries `data` and return slope 
+(default) or predicted y for every element in `x` (if `full_predictions`=true)
 
 # Arguments:
 - `data::YAXArray`: must have dimension :time.
-- `full_predictions::Bool`: if false, return only slope, otherwise return predicted value.
+- `full_predictions::Bool`:
 """
 function linearTrend(data::YAXArray; full_predictions::Bool = false)
-    if !hasdim(data, :time)
-        msg = "Linear trend can only be computed for timeseries data (with dimension :time)!"
-        throw(ArgumentError(msg))
-    end
-    x = Dates.year.(Array(data.time))
-    meta = deepcopy(data.properties)
-    meta["statistic"] = full_predictions ? "TREND-pred" : "TREND"
-    meta["id"] = Data.buildMetaDataID(meta)
-    function fn(y)
-        y = Array(y)
-        indices = findall(.!(ismissing.(y)))
-        # TODO: this is slow and should be changed!
-        ols = lm(@formula(Y ~ X), DataFrame(X = x[indices], Y = Float64.(y[indices])))
-        if full_predictions
-            y_hat = Array{Union{Missing,Float64}}(undef, size(y))
-            y_hat[indices] = predict(ols)
-        else
-            y_hat = coef(ols)[2]
-        end
-        return y_hat
-    end
-    trends = mapslices(fn, data; dims = (:time,))
-    return YAXArray(dims(trends), Array(trends), meta)
+    Data.throwErrorIfDimMissing(data, :time)
+    timesteps = Dates.year.(Array(data.time))
+    trends = mapslices(y -> computeLinearTrend(timesteps, Array(y); full_predictions), data; dims = (:time,))
+    return full_predictions ? trends : dropdims(trends, dims=:OutAxis1)
+end
+
+
+"""
+    computeLinearTrend(x::Vector, y::Vector; full_predictions::Bool = false)
+
+Regress y on x and return slope (default) or predicted y for every element in `x` (if `full_predictions`=true)
+
+# Arguments:
+- `x::Vector`:
+- `y:Vector`:
+- `full_predictions::Bool`: if false, return slope, otherwise return all values predicted for `x`.
+"""
+function computeLinearTrend(x::Vector, y::Vector; full_predictions::Bool = false)
+    indices = findall(.!(ismissing.(y)))
+    lr = linregress(x[indices], y[indices])
+    slope = LinearRegression.slope(lr)
+    return full_predictions ? LinearRegression.bias(lr) .+ (slope .* x) : slope
 end
 
 
 function detrend(data::YAXArray)
-    meta_new = deepcopy(data.properties)
-    meta_new["statistic"] = join([meta_new["statistic"], "detrended-ts"], "-")
-    meta_new["id"] = Data.buildMetaDataID(meta_new)
-    trend = linearTrend(data; full_predictions = true)
-    diffs = @d data .- trend
-    return YAXArray(dims(data), diffs, meta_new)
+    return @d data .- linearTrend(data; full_predictions = true)
 end
 
+function detrend(data::YAXArray, trend::YAXArray)
+    return @d data .- trend
+end
 
 function warnIfOutOfTimerange(df::YAXArray, start_year::Int, end_year::Int)
     timesteps = dims(df, :time)

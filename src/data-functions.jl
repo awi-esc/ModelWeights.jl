@@ -380,7 +380,7 @@ function loadPreprocData(
             # NOTE: just YEAR and MONTH are saved in the time dimension
             times = map(x -> DateTime(Dates.year(x), Dates.month(x)), ds_var["time"][:])
             if absent(constraint_ts) 
-                @warn "There were no start and end year for timeseries provided!"
+                @debug "There were no start and end year for timeseries provided!"
                 constraint_ts = Dict()
             end
             indices_time = indicesTimeseries(times, constraint_ts)
@@ -413,8 +413,8 @@ end
 """
     loadDataMapCore(
         all_paths::Vector{Vector{String}},
-        ids::Vector{String};
-        constraint::Union{Dict, Nothing} = nothing,
+        ids::Vector{String},
+        constraints::Vector{Dict};
         dtype::String = "undef",
         filename_format::Union{Symbol, String} = :cmip,
         sorted::Bool = true,
@@ -428,15 +428,15 @@ subvector refers the the paths of the data of a single dataset.
 """
 function loadDataMapCore(
     all_paths::Vector{Vector{String}},
-    ids::Vector{String};
-    constraint::Union{Dict, Nothing} = nothing,
+    ids::Vector{String},
+    constraints::Vector{<:Dict{String, <:Any}};
     dtype::String = "undef",
     filename_format::Union{Symbol, String} = :cmip,
     sorted::Bool = true,
     preview::Bool = false,
-    meta_data::Union{Vector{Dict{String, T}}, Nothing} = nothing
-) where T <: Any
-    checkConstraint(constraint)
+    meta_data::Union{Vector{<:Dict{String, <:Any}}, Nothing} = nothing
+)
+    checkConstraint.(constraints)
     if !absent(meta_data) && (length(all_paths) != length(meta_data))
         throw(ArgumentError("size of paths vector and meta data must be equal. Found: paths: $(length(all_paths)), meta_data: $(length(meta_data))"))
     end
@@ -444,7 +444,7 @@ function loadDataMapCore(
         throw(ArgumentError("size of paths vector and ids must be equal. Found: paths: $(length(all_paths)), ids: $(length(ids))"))
     end
     all_meta = absent(meta_data) ? fill(nothing, length(all_paths)) : meta_data
-    data = map(all_paths, all_meta)  do paths, meta
+    data = map(all_paths, all_meta, constraints)  do paths, meta, constraint
         # if provided, do the filtering
         if isnothing(constraint)
             mask = fill(true, length(paths))
@@ -470,6 +470,24 @@ function loadDataMapCore(
     end
     return loaded_data
 end
+
+function loadDataMapCore(
+    all_paths::Vector{Vector{String}},
+    ids::Vector{String},
+    constraint::Union{<:Dict{String, <:Any}, Nothing};
+    dtype::String = "undef",
+    filename_format::Union{Symbol, String} = :cmip,
+    sorted::Bool = true,
+    preview::Bool = false,
+    meta_data::Union{Vector{<:Dict{String, <:Any}}, Nothing} = nothing
+)
+    constraint = isnothing(constraint) ? Dict{String, Any}() : constraint
+    constraints = repeat([constraint], length(all_paths))
+    return loadDataMapCore(
+        all_paths, ids, constraints; dtype, filename_format, sorted, preview, meta_data
+    )
+end
+
 
 
 """
@@ -513,8 +531,8 @@ function loadDataFromESMValToolRecipes(
     end
     return loadDataMapCore(
         paths,
-        map(x -> x.id, meta_data);
-        constraint,
+        map(x -> x.id, meta_data),
+        constraint;
         dtype,
         filename_format,
         sorted,
@@ -554,25 +572,27 @@ function loadDataFromYAML(
 
     all_meta = Vector{}(undef, length(datasets))
     all_paths = Vector{}(undef, length(datasets))
+    all_constraints = Vector{Dict{String, Any}}(undef, length(datasets))
     for (i, ds) in enumerate(datasets)
         dir_per_var = get(ds, "dir_per_var", true)
         path_data = joinpath(base_path, get(() -> fn_err("base_dir"), ds, "base_dir"))
         checkDataStructure(path_data, dir_per_var)
         # merge; constraint has precedence constraints defined for individual datasets in the config file
-        ds_constraint = get(ds, "subset", nothing)
-        if !isnothing(ds_constraint) && !isnothing(constraint)
+        ds_constraint = get(ds, "subset", Dict())
+        if !isempty(ds_constraint) && !isnothing(constraint)
             warn_msg = "identical subset keys: arg constraint has precedence over constraint in yaml file!"
             ds_constraint = joinDicts(ds_constraint, constraint; warn_msg) 
         end
         meta_data = metaDataFromYAML(ds)
         paths = resolvePathsFromMetaData.(meta_data, path_data, dir_per_var; constraint=ds_constraint)
-        if !isnothing(ds_constraint) && !isnothing(get(ds_constraint, "level_shared", nothing))        
+        if !isnothing(get(ds_constraint, "level_shared", nothing))        
             msg = "'level_shared' in constraint argument must be one of: $(keys(LEVEL_LOOKUP)), found: $(ds_constraint["level_shared"])."
             level = get(() -> throw(ArgumentError(msg)), LEVEL_LOOKUP, ds_constraint["level_shared"])
             paths = filterPathsSharedModels(paths, level, filename_format)
         end
         all_paths[i] = paths 
-        all_meta[i] = meta_data 
+        all_meta[i] = meta_data
+        all_constraints[i] = ds_constraint
     end
     paths = vcat(all_paths...)
     meta_data = vcat(all_meta...)
@@ -583,8 +603,8 @@ function loadDataFromYAML(
     end
     return loadDataMapCore(
         paths, 
-        map(x -> x.id, meta_data); 
-        constraint, 
+        map(x -> x.id, meta_data),
+        all_constraints; 
         dtype, 
         filename_format, 
         sorted, 
@@ -670,8 +690,8 @@ function defineDataMap(
     paths_to_files = vcat(collectNCFilePaths.(paths_dirs)..., paths_ncfiles)
     return loadDataMapCore(
         [paths_to_files], 
-        [id]; 
-        constraint,
+        [id],
+        constraint;
         dtype, 
         filename_format,
         sorted,
@@ -713,8 +733,8 @@ function defineDataMap(
     end
     return loadDataMapCore(
         paths_to_files, 
-        data_ids; 
-        constraint, 
+        data_ids,
+        constraint; 
         dtype, 
         filename_format, 
         sorted, 
@@ -762,8 +782,8 @@ function defineDataMap(
     end
     return loadDataMapCore(
         paths_to_files, 
-        data_ids; 
-        constraint, 
+        data_ids,
+        constraint; 
         dtype, 
         filename_format, 
         sorted, 

@@ -730,13 +730,12 @@ function resolvePathsFromMetaData(
     else
         base_paths = [base_path]
     end
-    paths_data_dirs = map(base_paths) do p 
-        path_data = joinpath(p, "preproc", meta.alias, meta.subdir)
-        isdir(path_data) ? path_data : ""
+    paths_data_dirs_all = map(base_paths) do p 
+        joinpath(p, "preproc", meta.alias, meta.subdir)
     end
-    filter!(x -> !isempty(x), paths_data_dirs)
+    paths_data_dirs = filter(isdir, paths_data_dirs_all)
     if isempty(paths_data_dirs)
-        throw(ArgumentError("No directories found at $(base_paths)"))
+        throw(ArgumentError("$paths_data_dirs_all arent't existing directories!"))
     end
     paths_to_files = map(p -> collectNCFilePaths(p), paths_data_dirs)
     return vcat(paths_to_files...)
@@ -836,7 +835,7 @@ end
 
 function collectNCFilePaths(path_data_dir::String)
     if !isdir(path_data_dir)
-        throw(ArgumentError("$path_dats_dir is not a directory!"))
+        throw(ArgumentError("$path_data_dir is not a directory!"))
     end
     paths_to_files = filter(x -> isfile(x) && endswith(x, ".nc"), readdir(path_data_dir; join=true))
     if isempty(paths_to_files)
@@ -1379,7 +1378,10 @@ function indicesTimeseries(times::Vector{DateTime}, constraint_ts::Dict)
     end_y = get(constraint_ts, "end_y", Inf)
     indices_time = findall(t -> Dates.year(t) >= start_y && Dates.year(t) <= end_y, times)
     times = times[indices_time]
+    
     # only use data that's exactly from start to end!
-    return (start_y != -Inf && start_y != minimum(map(Dates.year, times))) ||
-        (end_y != Inf && end_y != maximum(map(Dates.year, times))) ? [] : indices_time
+    start_wrong = start_y != -Inf && (!isempty(times) && start_y != minimum(map(Dates.year, times)))
+    end_wrong   = end_y != Inf && (!isempty(times) && end_y != maximum(map(Dates.year, times)))
+
+    return (isempty(times) || start_wrong || end_wrong) ? [] : indices_time
 end

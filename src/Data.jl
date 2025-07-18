@@ -10,11 +10,10 @@ export defineDataMap, loadPreprocData
 
 
 using CSV
-using DataFrames
 using Dates
+using DataFrames
 using DimensionalData
 using Interpolations
-using GLM
 using NCDatasets
 using JLD2
 using Serialization
