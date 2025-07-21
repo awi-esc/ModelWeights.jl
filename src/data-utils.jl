@@ -664,7 +664,7 @@ function metaDataFromYAML(ds::Dict)
         for var in variables
             for alias in aliases
                 for subdir in subdirs
-                    push!(meta_ds, MetaData(var, experimen, alias; subdir=subdir))
+                    push!(meta_ds, MetaData(var, experiment, alias; subdir=subdir))
                 end
             end
         end

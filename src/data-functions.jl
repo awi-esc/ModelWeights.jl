@@ -107,49 +107,36 @@ end
 
 
 """
-    alignPhysics(
-        datamap::DataMap, members::Vector{String}; level_shared::Union{Level, Nothing}=nothing
-    )
+    alignPhysics(data::YAXArray, members::Vector{String})
 
-Return new DataMap with only the models retained that share the same physics as 
+Return new YAXArray with the models retained from `data` that share the same physics as 
 the respective model's members in `members`.
-
-If `level_shared` is set, resulting DataMap is subset accordingly.
+All other models that are in `data` but for which no member is specified in `members` are 
+also retained.
 """
-function alignPhysics(
-    datamap::DataMap, 
-    members::Vector{String}, 
-    fn_format::Union{Symbol, String}; 
-    level_shared::Union{Level, Nothing} = nothing
-)
-    data = deepcopy(datamap)
-    models = unique(modelsFromMemberIDs(members))
-    for model in models
-        # retrieve allowed physics as given in members 
-        member_ids = filter(m -> startswith(m, model * MODEL_MEMBER_DELIM), members)
-        physics = physicsFromMember.(member_ids)
-        for (_, ds) in data
-            # filter data s.t. of current model only members with retrieved physics are kept
-            model_indices = findall(
-                x -> startswith(x, model * MODEL_MEMBER_DELIM),
-                Array(dims(ds, :member)),
-            )
-            indices_out =
-                filter(x -> !(ds.properties["physics"][x] in physics), model_indices)
-            if !isempty(indices_out)
-                indices_keep = filter(x -> !(x in indices_out), 1:length(dims(ds, :member)))
-                members_kept = ds.properties["member_names"][indices_keep]
-                data[ds.properties["id"]] = subsetModelData(ds, members_kept)
-            end
+function alignPhysics(data::YAXArray, members::Vector{String})
+    members_data =  Array(dims(data, :member))
+    members_kept = Vector{String}()
+    for model in modelsFromMemberIDs(members_data; uniq = true)
+        allowed_members = filter(m -> startswith(m, model * MODEL_MEMBER_DELIM), members)
+        allowed_physics = physicsFromMember.(allowed_members)
+        
+        members_data_model = filter(x -> startswith(x, model * MODEL_MEMBER_DELIM), members_data)
+        physics = physicsFromMember.(members_data_model)
+        indices_keep = map(x -> x in allowed_physics, physics)
+        if sum(indices_keep) != 0
+            push!(members_kept, members_data_model[indices_keep]...)
         end
     end
-    if !isnothing(level_shared)
-        shared_models = sharedModels(data, level_shared, fn_format)
-        for (id, model_data) in data
-            data[id] = subsetModelData(model_data, shared_models)
-        end
-    end
-    return data
+    return subsetModelData(data, members_kept)
+
+    # if !isnothing(level_shared)
+    #     shared_models = sharedModels(data, level_shared, fn_format)
+    #     for (id, model_data) in data
+    #         data[id] = subsetModelData(model_data, shared_models)
+    #     end
+    # end
+    #return data
 end
 
 
@@ -323,8 +310,9 @@ function loadPreprocData(
 ) where T <: Any
     is_cmip = lowercase(dtype) == "cmip"
     data = Vector{AbstractArray}(undef, length(paths))
-    # && is_cmip 
-    model_names = isempty(model_names) ? Vector{String}(undef, length(paths)) : model_names
+    if isempty(model_names) && is_cmip
+        model_names = Vector{String}(undef, length(paths))
+    end
     new_dim = is_cmip ? :member : :model
     filenames = first.(splitext.(basename.(paths)))
     filenames_meta = parseFilename.(filenames, filename_format)
@@ -404,9 +392,12 @@ function loadPreprocData(
         #close(ds)
     end
     indices = findall(x -> !isempty(x), data)
-    return isempty(indices) ? nothing : combineModelsFromMultipleFiles(
-        data[indices]; model_names = model_names[indices], new_dim, sorted, meta=meta_info
-    )
+    if !isempty(model_names)
+        model_names = model_names[indices]
+    end
+    return isempty(indices) ? 
+        nothing : 
+        combineModelsFromMultipleFiles(data[indices]; model_names, new_dim, sorted, meta=meta_info)
 end
 
 
@@ -713,7 +704,7 @@ end
     ) where T <: Any
 
 Return DataMap with entries `data_ids` with the data (model and/or obs depending on `dtype`) 
-from all .nc files in all directories in `paths_dirs`, possibly constraint by `constraint`.
+from all .nc files in all directories in `paths_data_dirs`, possibly constraint by `constraint`.
 """
 function defineDataMap(
     paths_data_dirs::Vector{String}, 

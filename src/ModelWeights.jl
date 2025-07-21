@@ -19,10 +19,9 @@ export writeDataToDisk, readDataFromDisk
 
 export uncertaintyRanges,
     globalMeans,
-    addAnomalies!,
     approxAreaWeights,
-    anomaliesGM!,
-    addAnomaliesGM!
+    anomalies,
+    anomaliesGM
 export addLinearTrend!, linearTrend
 export getLandMask, getOceanMask
 

@@ -38,13 +38,11 @@ end
 
 
 """
-    anomalies(orig_data::YAXArray, ref_data::YAXArray; stats_name::String="ANOM")
+    anomalies(orig_data::YAXArray, ref_data::YAXArray)
 
 Compute difference of `orig_data` and `ref_data`.  
-
-The id of the original data and of the reference data is added to the metadata.
 """
-function anomalies(orig_data::YAXArray, ref_data::YAXArray; stats_name::String="ANOM")
+function anomalies(orig_data::YAXArray, ref_data::YAXArray)
     dimension = modelDim(orig_data)
     if !hasdim(ref_data, dimension) || (Array(dims(orig_data, dimension))) != Array(dims(ref_data, dimension))
         err_msg = "To compute anomalies, original and reference data must contain exactly the same models!"
@@ -55,22 +53,14 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray; stats_name::String="
         return nothing
     end
     anomalies_metadata = deepcopy(orig_data.properties)
-    # anomalies_metadata["statistic"] = stats_name
-    # anomalies_metadata["id"] = buildMetaDataID(anomalies_metadata)
-
-    # anomalies_metadata["_ref_data_id"] = ref_data.properties["id"]
-    # anomalies_metadata["_orig_data_id"] = orig_data.properties["id"]
-
     anomalies = @d orig_data .- ref_data
     return YAXArray(dims(orig_data), Array(anomalies), anomalies_metadata)
 end
 
 
-function anomaliesGM(
-    orig_data::YAXArray; ref_data::Union{YAXArray, Nothing}=nothing, stats_name::String="ANOM-GM"
-)
+function anomaliesGM(orig_data::YAXArray; ref_data::Union{YAXArray, Nothing} = nothing)
     gms = isnothing(ref_data) ? globalMeans(orig_data) : globalMeans(ref_data)
-    return anomalies(orig_data, gms; stats_name)
+    return anomalies(orig_data, gms)
 end
 
 
