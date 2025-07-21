@@ -1,4 +1,6 @@
 import ModelWeights as mw
+import ModelWeights.Data as mwd
+import ModelWeights.Plots as mwp
 
 using DimensionalData
 using Statistics
@@ -12,23 +14,34 @@ using Missings
 
 # Get data from piControl + historical + lgm experiments
 path_config = "./configs/ecs-lgm-cooling.yml";
-data = mw.loadData(path_config; subset = Dict("level_shared" => mw.MODEL))
+data = mw.defineDataMap(
+    path_config; 
+    constraint = Dict("level_shared" => "model"),
+    dtype = "cmip",
+    filename_format = :esmvaltool
+)
 
 
 # for the shared models, make sure that physics of piControl models are the same
 # as physics of lgm models
-data = mw.alignPhysics(data, 
-    data["tos_CLIM_lgm"].properties["member_names"];    
-    # data["tas_CLIM_lgm"].properties["member_names"]; 
-    level_shared = mw.MODEL
+mwd.apply!(
+    data, mwd.alignPhysics, Array(data["tas_CLIM_lgm"].member); 
+    ids = ["tas_CLIM_piControl"],
+    ids_new = ["tas_CLIM_piControl-lgm-members"]
 )
-mw.summarizeMembers!(data)
-mw.addAnomalies!(data, "tas_CLIM_lgm", "tas_CLIM_piControl")
-#mw.addAnomalies!(data, "tos_CLIM_lgm", "tos_CLIM_piControl")
+mwd.summarizeMembers!(data)
+mwd.apply!(
+    data, mwd.anomalies, data["tas_CLIM_piControl"]; 
+    ids = ["tas_CLIM_lgm"],
+    ids_new = ["tas_ANOM_lgm-piControl"]
+)
+
+
+
+
 
 # NaN important for plotting! Type mustn't be Missing
-global_means_tas = coalesce.(mw.globalMeans(data["tas_ANOM_lgm"]), NaN);
-#global_means_tos = coalesce.(mw.globalMeans(data["tos_ANOM_lgm"]), NaN);
+global_means_tas = coalesce.(mwd.globalMeans(data["tas_ANOM_lgm-piControl"]), NaN);
 
 
 # Assimilated data from Tierney et al. (2020)
@@ -42,8 +55,8 @@ errdeltaSAT = YAXArray(
     (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
     Array(tierney_data["errdeltaSAT"])
 )
-gm_delta = mw.globalMeans(deltaSAT)[1]
-area_weights_mat = mw.makeAreaWeightMatrix(Array(dims(deltaSAT, :lon)), Array(dims(deltaSAT, :lat)))
+gm_delta = mwd.globalMeans(deltaSAT)[1]
+area_weights_mat = mwd.makeAreaWeightMatrix(Array(dims(deltaSAT, :lon)), Array(dims(deltaSAT, :lat)))
 std_gm_delta = sum(area_weights_mat .* errdeltaSAT)
 
 
@@ -116,18 +129,18 @@ reconstruction = (type="Data assimilated", lower=-6.5, upper=-5.7, summary_stat=
     summary_val=-6.1, ci="95%(68%??)", target="plots/ecs-lgm-cooling/lgm_cooling_global_mean_proxy_only.png");
 
 begin
-    f, ax = mw.makeScatterPlot(collect(1:length(global_means_tas)), global_means_tas;
+    f, ax = mwp.makeScatterPlot(collect(1:length(global_means_tas)), global_means_tas;
         captions=(x="Models",y="Anomaly area-weighted global mean",title="LGM-cooling (lgm-piControl)"),
         xtick_labels = Array(dims(global_means_tas, :model)),
         xticklabelrotation = pi/4,
-        legend = (label="tas", position=:ct, color=:red),
+        legend = (label="tas", position=:rc, color=:red),
         greyed_area = (
             y1=reconstruction.lower, y2=reconstruction.upper, 
             summary_val=reconstruction.summary_val, summary_stat=reconstruction.summary_stat, 
             label="$(reconstruction.ci) CI $(reconstruction.type) from Tierney et al. (2020)"
         )
     )
-    save(reconstruction.target, f)
+    #save(reconstruction.target, f)
     f
 end
 
