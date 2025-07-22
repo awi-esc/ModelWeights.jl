@@ -34,7 +34,7 @@ historical_data =  mw.loadData(
     path_config, subset=Dict("level_shared" => mw.MEMBER)
 );
 # take only the exact same models for all variables 
-df_historical = mw.subsetModelData(historical_data)
+df_historical = mw.subsetModelData(historical_data, "member")
 mw.addAnomalies!(df_historical, "tas_CLIM_historical3", "tas_CLIM_historical0");
 mw.addAnomalies!(df_historical, "tos_CLIM_historical3", "tos_CLIM_historical0");
 

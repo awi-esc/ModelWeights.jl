@@ -20,3 +20,16 @@ end
 
 @testset "Test individuatePath" begin
 end
+
+
+@testset "Test renameDict" begin
+    d = Dict{String, Vector{Int}}("b" => [7, 10], "c" => [17, 2])
+    mwd.renameDict!(d, ["b"], ["bg"])
+    @test haskey(d, "bg")
+    @test !haskey(d, "b")
+
+    d = Dict{Symbol, String}(:b => "oct", :c => "feb")
+    mwd.renameDict!(d, [:c], [:cb])
+    @test haskey(d, :cb)
+    @test !haskey(d, :c)
+end

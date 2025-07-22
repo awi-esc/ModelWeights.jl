@@ -65,9 +65,6 @@ end
 
 
 function standardDev(data::YAXArray, dimension::Symbol)
-    # meta_new = deepcopy(data.properties)
-    # meta_new["statistic"] = "STD"
-    # meta_new["id"] = buildMetaDataID(meta_new)
     standard_devs = dropdims(Statistics.std(data, dims = dimension), dims = dimension)
     return YAXArray(otherdims(data, dimension), standard_devs, deepcopy(data.properties))
 end

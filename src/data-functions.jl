@@ -6,7 +6,7 @@ Return subset of `data` containing only data from models in `shared_models`.
 Takes care of metadata.
 
 # Arguments:
-- `data`: must have dimension 'member' or 'model'
+- `data`: must have a dimension that contains 'member' or 'model'
 - `shared_models`: models, which can either be on level of models or members of models 
 ('modelname#memberID[_grid]').
 """
@@ -16,25 +16,37 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
         return data
     end
     data = deepcopy(data)
-    dim_symbol = hasdim(data, :member) ? :member : :model
-    dim_names = Array(dims(data, dim_symbol))
-    if dim_symbol == :member
+    dim_names = string.(dimNames(data))
+    level = "model"
+    model_dims = filter(d -> occursin("model", d), dim_names)
+    if isempty(model_dims)
+        level = "member"
+        model_dims = filter(d -> occursin("member", d), dim_names)
+    end
+    if isempty(model_dims)
+        throw(ArgumentError("Data must contain a dimension with 'member' or 'model' in its name! found: $dim_names"))
+    end
+    dim_symbol = Symbol(model_dims[1])
+    dimensions = Array(dims(data, dim_symbol))
+    if level == "member"
         models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
         # if shared_models is on the level of models, the following should be empty
         # otherwise, nothing is filtered out, and members is the same as shared_models 
         members = filter(x -> !(x in models), shared_models)
         if !isempty(members) # shared models on level of members
-            indices = findall(m -> m in members, dim_names)
+            indices = findall(m -> m in members, dimensions)
         else
-            # important not to use dim_names here, since e.g. model=AWI would be found in dim_names where model is actually AWI-X for instance
-            models_data = modelsFromMemberIDs(dim_names) # NOTE: should yield same: models_data = data.properties["model_names"]
+            # important not to use dimensions here, since e.g. model=AWI would be found in dim_names where model is actually AWI-X for instance
+            models_data = modelsFromMemberIDs(dimensions)
             indices = findall(m -> m in models, models_data)
         end
-        data = data[member=indices]
     else
-        indices = findall(m -> m in shared_models, dim_names)
-        data = data[model=indices]
+        indices = findall(m -> m in shared_models, dimensions)
     end
+    index_vec = map(dim_names) do name 
+        name in model_dims ? indices : Colon()
+    end
+    data = data[index_vec...]
     # also subset Metadata vectors!
     attributes = filter(k -> data.properties[k] isa Vector, keys(data.properties))
     for key in attributes
@@ -44,7 +56,7 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
 end
 
 """
-    subsetModelData(datamap::DataMap; level::Level=MEMBER_LEVEL)
+    subsetModelData(datamap::DataMap, level::Level=MEMBER_LEVEL)
 
 For those datasets in `datamap` that specify data on the level `level` (i.e. have dimension 
 :member or :model), return a new DataMap with subset of data s.t. the new datasets all have 
@@ -52,7 +64,7 @@ the same models (MODEL_LEVEL) or members (MEMBER_LEVEL).
 
 If no models are shared across datasets, return the input `datamap`.
 """
-function subsetModelData(datamap::DataMap; level::Level = MEMBER_LEVEL)
+function subsetModelData(datamap::DataMap, level::Level = MEMBER_LEVEL)
     shared_models = sharedModels(datamap, level)
     if isempty(shared_models)
         @warn "no shared models in datamap"
@@ -64,6 +76,11 @@ function subsetModelData(datamap::DataMap; level::Level = MEMBER_LEVEL)
     end
     return subset
 end
+
+function subsetModelData(datamap::DataMap, level::Union{String, Symbol})
+    subsetModelData(datamap, getLevel(level))
+end
+
 
 
 function sharedModels(data::DataMap, level::Level)
@@ -202,11 +219,14 @@ For each model compute a summary statistic (default: mean) across all its member
 The returned YAXArray has dimension :model (instead of :member).
 
 # Arguments:
-- `data::YAXArray`: YAXArray; must have dimension 'member'
+- `data::YAXArray`: YAXArray; must have dimension 'member' and at least one other arbitrary dimension 
 - `fn::Function`: Function to be applied on data
 """
 function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
     throwErrorIfDimMissing(data, :member)
+    if length(dimNames(data)) < 2
+        throw(ArgumentError("Vector to summarize members must have at least one other dimension than :member!"))
+    end
     data = setLookupsFromMemberToModel(data, ["member"])
     models = Array(dims(data, :model))
     models_uniq = unique(models)
@@ -249,11 +269,11 @@ function summarizeMembersMatrix(data::YAXArray, updateMeta::Bool; fn::Function=S
     models = String.(collect(unique(dims(data, :model1))))
 
     grouped = groupby(data, :model2 => identity)
-    averages = map(entry -> mapslices(fn, entry, dims = (:model2,)), grouped)
+    averages = map(entry -> mapslices(fn, entry, dims = (:model2,)), grouped) #slow
     combined = cat(averages..., dims = (Dim{:model2}(models)))
 
     grouped = groupby(combined, :model1 => identity)
-    averages = map(entry -> mapslices(fn, entry, dims = (:model1,)), grouped)
+    averages = map(entry -> mapslices(fn, entry, dims = (:model1,)), grouped) #slow
     combined = cat(averages..., dims = (Dim{:model1}(models)))
 
     for m in models
@@ -420,7 +440,7 @@ subvector refers the the paths of the data of a single dataset.
 function loadDataMapCore(
     all_paths::Vector{Vector{String}},
     ids::Vector{String},
-    constraints::Vector{<:Dict{String, <:Any}};
+    constraints::Vector{<:Dict{<:Any, <:Any}};
     dtype::String = "undef",
     filename_format::Union{Symbol, String} = :cmip,
     sorted::Bool = true,
@@ -563,14 +583,14 @@ function loadDataFromYAML(
 
     all_meta = Vector{}(undef, length(datasets))
     all_paths = Vector{}(undef, length(datasets))
-    all_constraints = Vector{Dict{String, Any}}(undef, length(datasets))
+    all_constraints = Vector{}(undef, length(datasets))
     for (i, ds) in enumerate(datasets)
         dir_per_var = get(ds, "dir_per_var", true)
         path_data = joinpath(base_path, get(() -> fn_err("base_dir"), ds, "base_dir"))
         checkDataStructure(path_data, dir_per_var)
         # merge; constraint has precedence constraints defined for individual datasets in the config file
         ds_constraint = get(ds, "subset", Dict())
-        if !isempty(ds_constraint) && !isnothing(constraint)
+        if !isnothing(constraint)
             warn_msg = "identical subset keys: arg constraint has precedence over constraint in yaml file!"
             ds_constraint = joinDicts(ds_constraint, constraint; warn_msg) 
         end
@@ -583,10 +603,13 @@ function loadDataFromYAML(
         end
         all_paths[i] = paths 
         all_meta[i] = meta_data
-        all_constraints[i] = ds_constraint
+        # paths and meta_data are vectors! In one loop, several datasets can be loaded (for different variables)
+        all_constraints[i] = repeat([ds_constraint], length(paths))
     end
     paths = vcat(all_paths...)
     meta_data = vcat(all_meta...)
+    constraints = vcat(all_constraints...)
+
     # if argument provided, apply subset shared across all datasets
     level_all_data = isnothing(constraint) ? nothing : get(constraint, "level_shared", nothing)
     if !isnothing(level_all_data)
@@ -595,7 +618,7 @@ function loadDataFromYAML(
     return loadDataMapCore(
         paths, 
         map(x -> x.id, meta_data),
-        all_constraints; 
+        constraints; 
         dtype, 
         filename_format, 
         sorted, 

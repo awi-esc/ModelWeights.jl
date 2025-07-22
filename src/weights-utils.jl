@@ -319,10 +319,62 @@ function climwipWeights(
         Di = Di,
         Sij = Sij,
         w = weights_arr,
-        w_members = w_members,
+        #w_members = w_members,
         config = config
     )
 end
+
+
+function climwipWeights(
+    model_data::DataMap,
+    obs_data::DataMap,
+    config::ConfigWeights;
+    suffix_name::String = "climwip"
+)
+
+    diagnostics_indep = Data.activeDiagnostics(config.independence)
+    diagnostics_perform = Data.activeDiagnostics(config.performance)
+    weights_perform = Data.normalizeToYAX(config.performance)
+    weights_indep = Data.normalizeToYAX(config.independence)
+    
+    dists_perform_all = Data.distancesData(model_data, obs_data, diagnostics_perform);
+    dists_indep_all = Data.distancesModels(model_data, diagnostics_indep)
+
+    Di = Data.generalizedDistances(dists_perform_all, diagnostics_perform, weights_perform)
+    Sij = Data.generalizedDistances(dists_indep_all, diagnostics_indep, weights_indep) # slow
+
+    wP = performanceWeights(Di, config.sigma_performance)
+    wI = independenceWeights(Sij, config.sigma_independence)
+
+    w = wP ./ wI
+    w = w ./ sum(w)
+
+    # only if for all diagnostics exactly the same simulations, it makes sense to define 
+    # weights on level of models, too
+    # members_all = map(x -> Array(dims(x, :member)), dists_perform_all)
+    # if hasdim(dists_perform_all, :member)
+    #     members = Array(dims(dists_perform_all, :member))
+    #     w_members = distributeWeightsAcrossMembers(w, members)
+    # else
+    #     w_members = w
+    # end
+    # w_members = w
+    names = String.(map(x -> join([x, suffix_name], "-"), ["wP", "wI", "combined"]))
+    weights_arr = cat([wP, wI, w]..., dims=Dim{:weight}(names))
+    return ClimWIP(
+        performance_distances = dists_perform_all,
+        independence_distances = dists_indep_all,
+        performance_diagnostics = diagnostics_perform,
+        independence_diagnostics = diagnostics_indep,
+        Di = Di,
+        Sij = Sij,
+        w = weights_arr,
+        # w_members = w_members,
+        config = config
+    )
+end
+
+
 
 
 """
@@ -347,11 +399,6 @@ function performanceWeights(dists_perform_all::YAXArray, config::ConfigWeights)
     weights_perform = Data.normalizeToYAX(config.performance)
     Di = Data.generalizedDistances(dists_perform_all, weights_perform)
     return performanceWeights(Di, config.sigma_performance)
-end
-
-function performanceWeights(data::ClimateData, config::ConfigWeights)
-    dists = Data.distancesData(data.models, data.obs, config.performance)
-    return performanceWeights(dists, config)
 end
 
 
@@ -384,75 +431,4 @@ function independenceWeights(dists_indep_all::YAXArray, config::ConfigWeights)
     return independenceWeights(Sij, config.sigma_independence)
 end
 
-function independenceWeights(data::ClimateData, config::ConfigWeights)
-    dists = Data.distancesModels(data.models, config.independence)
-    return independenceWeights(dists, config)
-end
-
-
-function climwipWeights(
-    data::ClimateData, config_weights::ConfigWeights; suffix::String="climwip"
-)
-    dists_perform = Data.distancesData(data.models, data.obs, config_weights.performance)
-    dists_indep = Data.distancesModels(data.models, config_weights.independence)
-    return climwipWeights(dists_indep, dists_perform, config_weights; suffix_name=suffix)
-end
-
-
-function addClimwipWeights!(
-    data::ClimateData, config_weights::ConfigWeights; suffix::String="climwip"
-)
-    weights = climwipWeights(data, config_weights; suffix)
-    addWeights!(data, weights.w)
-    return nothing
-end
-
-function addClimwipWeights!(data::ClimateData, weights::ClimWIP)
-    addWeights!(data, weights.w)
-    return nothing
-end
-
-
-"""
-    addLikelihoodWeights!(
-        data::ClimateData, 
-        values::Vector{<:Number}, 
-        models::Vector{String}, 
-        distr::Distribution,
-        id::String
-    )
-
-Compute the likelihood weights for `values` with respect to the distribution `distr` and 
-add computed weights to weights Array of `data` with name `id`. 
-If `id` is already present, nothing is added.
-
-"""
-function addLikelihoodWeights!(
-    data::ClimateData, 
-    values::Vector{<:Number}, 
-    models::Vector{String}, 
-    distr::Distribution,
-    id::String
-)
-    addWeights!(data, likelihoodWeights(values, models, distr, id))
-    return nothing
-end
-
-
-function addWeights!(data::ClimateData, weights::YAXArray)
-    if isnothing(data.weights)
-        data.weights = weights
-    else
-        names_weights = Array(data.weights.weight)
-        names_new_weights = Array(weights.weight)
-        isPresentID = map(x -> x in names_weights, names_new_weights)
-        if any(isPresentID)
-            @warn "$(names_new_weights[isPresentID]) already present in weights! Nothing added."
-            return nothing
-        end
-        lookups = vcat(names_weights, Array(weights.weight))
-        data.weights = cat(data.weights, weights; dims=Dim{:weight}(lookups))
-    end
-    return nothing
-end
 

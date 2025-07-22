@@ -181,7 +181,6 @@ end
 
 include("data-utils.jl")
 include("data-functions.jl")
-include("datamap.jl")
 include("helper-functions.jl")
 include("diagnostics.jl")
 

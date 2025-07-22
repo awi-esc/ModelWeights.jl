@@ -1,4 +1,40 @@
 """
+    getAtModel(data::YAXArray, dimension::Symbol, model::String)
+
+Return `data` where `dimension` (member or model) has value `model`.
+"""
+function getAtModel(data::YAXArray, dimension::Symbol, model::String)
+    throwErrorIfDimMissing(data, dimension)
+    return dimension == :model ? data[model=At(model)] : data[member=At(model)]
+end
+
+
+"""
+    getByIdxModel(data::YAXArray, dimension::Symbol, indices::Vector)
+
+Return `data` where `dimension` (member or model) has value `model`.
+"""
+function getByIdxModel(data::YAXArray, dimension::Symbol, indices::Vector)
+    throwErrorIfDimMissing(data, dimension)
+    return dimension == :model ? data[model=indices] : data[member=indices]
+end
+
+
+""" 
+    putAtModel!(data::YAXArray, dimension::Symbol, model::String, input)
+"""
+function putAtModel!(data::YAXArray, dimension::Symbol, model::String, input)
+    throwErrorIfDimMissing(data, dimension)
+    if dimension == :model
+        data[model = At(model)] = input
+    else
+        data[member = At(model)] = input
+    end
+    return nothing
+end
+
+
+"""
     mergeMetaDataFromMultipleFiles(data::Vector{<:YAXArray})
 
 Combine arrays in `data` into a single YAXArray with meta combined from all datasets into 
@@ -279,34 +315,6 @@ function checkConstraint(constraint::Union{Dict, Nothing})
 end
 
 
-function buildMetaDataID(meta::Dict)
-    fn_err(k::String) = throw(ArgumentError("$k not defined in metadata!"))
-    subdir = get(meta, "subdir", nothing)
-    if isnothing(subdir)
-        subdir = join(
-            [get(() -> fn_err("subdir, variable"), meta, "variable"),
-             get(() -> fn_err("subdir, statistic"), meta, "statistic")], 
-             "_"
-        )
-    end
-    return join([subdir, get(() -> fn_err("alias"), meta, "alias")], "_")
-end
-
-
-function buildMetaDataID(meta::MetaData)
-    subdir = meta.subdir
-    if isempty(subdir)
-        subdir = (!isempty(meta.statistic) && !isempty(meta.variable)) ? 
-            join([meta.variable, meta.statistic], "_") :
-            throw(ArgumentError("Neither subdir nor statistic and variable are in metadata!"))
-    end
-    if isempty(meta.alias)
-        throw(ArgumentError("alias (name of diagnostic in ESMValTool) cannot be empty in MetaData!"))
-    end
-    return join([subdir, meta.alias], "_")
-end
-
-
 """
     joinDicts(v::Dict...; warn_msg::String="")
 """
@@ -396,7 +404,6 @@ function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
     for (i, dim) in enumerate(dim_names)
         unique_members = Array(dims(data, Symbol(dim)))
         models = map(x -> String.(split(x, MODEL_MEMBER_DELIM)[1]), unique_members)
-
         new_dim_name = n_dims > 1 ? "model" * string(i) : "model" # Test this (why?)
         data = setDim(data, dim, new_dim_name, models)
     end
@@ -895,14 +902,6 @@ function avgObsDatasets(observations::YAXArray)
 end
 
 
-function distancesData(data::ClimateData, config::Dict{String, Number})
-    return distancesData(data.models, data.obs, config)
-end
-
-function distancesData(data::ClimateData, diagnostics::Vector{String})
-    return distancesData(data.models, data.obs, diagnostics)
-end
-
 function distancesData(model_data::DataMap, obs_data::DataMap, config::Dict{String, Number})
     return distancesData(model_data, obs_data,  activeDiagnostics(config))
 end
@@ -925,7 +924,7 @@ function distancesData(model_data::DataMap, obs_data::DataMap, diagnostics::Vect
         end
         distancesData(model, obs)
     end
-    return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics))
+    return distances_all
 end
 
 
@@ -963,7 +962,12 @@ function distancesModels(model_data::DataMap, config::Dict{String, Number})
     return distancesModels(model_data, activeDiagnostics(config))
 end
 
+"""
+    distancesModels(model_data::DataMap, diagnostics::Vector{String})
 
+Compute the model-model distances for `model_data` at every diagnostic in `diagnostics` and 
+return a vector of YAXArrays.
+"""
 function distancesModels(model_data::DataMap, diagnostics::Vector{String})
     distances_all = Vector{YAXArray}(undef, length(diagnostics))
     distances_all = map(diagnostics) do d
@@ -973,9 +977,8 @@ function distancesModels(model_data::DataMap, diagnostics::Vector{String})
         end
         distancesModels(model)
     end
-    return cat(distances_all..., dims = Dim{:diagnostic}(diagnostics))
+    return distances_all
 end
-
 
 """
     distancesModels(modelData::YAXArray)
@@ -1013,9 +1016,9 @@ end
 
 
 """
-    generalizedDistances(distances_all::YAXArray, weights::DimArray)
+    generalizedDistances(distances_all::YAXArray, weights::YAXArray)
 
-For every variable in `distances_all`, compute the weighted sum of all diagnostics.
+For every diagnostic in `distances_all`, compute the weighted sum of all diagnostics.
 """
 function generalizedDistances(distances_all::YAXArray, weights::YAXArray)
     model2data = hasdim(distances_all, :member)
@@ -1030,6 +1033,47 @@ function generalizedDistances(distances_all::YAXArray, weights::YAXArray)
     weighted_dists = @d distances .* weights
     return dropdims(sum(weighted_dists, dims = :diagnostic), dims=:diagnostic)
 end
+
+
+"""
+    generalizedDistances(distances_all::Vector{YAXArray}, weights::YAXArray)
+
+# Arguments:
+- `distances_all::Vector{YAXArray}`: each entry refers to the distances of one diagnostic.
+- `weights::YAXArray`
+"""
+function generalizedDistances(
+    distances_all::Vector{<:YAXArray}, diagnostics::Vector{String}, weights::YAXArray
+)
+    if length(distances_all) != length(diagnostics)
+        throw(ArgumentError("distances must be computed for every diagnostic, found $(length(distances_all)) distances, but $(length(diagnostics)) diagnostics."))
+    end
+    normalizations = median.(distances_all)
+    normalized_distances = map(distances_all, normalizations, diagnostics) do dists, norm, diagnostic
+        d = @d dists ./ norm
+        YAXArray(
+            (dims(d)..., Dim{:diagnostic}([diagnostic])), 
+            reshape(d.data, (size(dims(d))..., 1)), 
+            d.properties
+        )
+    end
+    # distances_all either has (in every entry) :member or :member1 and :member2
+    distances = all(hasdim.(distances_all, :member1)) ?
+        summarizeMembersMatrix.(normalized_distances, false) :
+        summarizeMembersVector.(normalized_distances)
+    
+    # for matrix, dimensions are symmetric, just take first, st. it also works for vector
+    dimension = filter(x -> x != :diagnostic, dimNames(distances[1]))[1]
+    models = map(x -> dims(x, dimension) , distances)
+    shared_models = intersect(models...)
+    
+    distances = map(dists -> subsetModelData(dists, shared_models), distances)
+    distances = cat(distances..., dims = Dim{:diagnostic}(diagnostics))
+    weighted_dists = @d distances .* weights
+    return dropdims(sum(weighted_dists, dims = :diagnostic), dims=:diagnostic)
+end
+
+
 
 
 function fixModelNamesMetadata(names::Vector{String})

@@ -34,42 +34,6 @@ end
 
 
 """
-    getAtModel(data::YAXArray, dimension::Symbol, model::String)
-
-Return `data` where `dimension` (member or model) has value `model`.
-"""
-function getAtModel(data::YAXArray, dimension::Symbol, model::String)
-    throwErrorIfDimMissing(data, dimension)
-    return dimension == :model ? data[model=At(model)] : data[member=At(model)]
-end
-
-
-"""
-    getByIdxModel(data::YAXArray, dimension::Symbol, indices::Vector)
-
-Return `data` where `dimension` (member or model) has value `model`.
-"""
-function getByIdxModel(data::YAXArray, dimension::Symbol, indices::Vector)
-    throwErrorIfDimMissing(data, dimension)
-    return dimension == :model ? data[model=indices] : data[member=indices]
-end
-
-
-""" 
-    putAtModel!(data::YAXArray, dimension::Symbol, model::String, input)
-"""
-function putAtModel!(data::YAXArray, dimension::Symbol, model::String, input)
-    throwErrorIfDimMissing(data, dimension)
-    if dimension == :model
-        data[model = At(model)] = input
-    else
-        data[member = At(model)] = input
-    end
-    return nothing
-end
-
-
-"""
     combineAll(v::Vararg{Vector{String}}; sep::String="_")
 
 Generate vector with all possible combinations of strings, each of which is a concatenation 
@@ -208,7 +172,29 @@ function setDim(
     return data
 end
 
+"""
+    dimNames(data::YAXArray)
 
+Return the names of the dimensions of `data` as vector of symbols.
+"""
 function dimNames(data::YAXArray)
     return map(d -> typeof(d).parameters[1], dims(data))
+end
+
+
+function renameDict!(
+    data::Dict{T, V}, ids::AbstractVector{T}, ids_new::AbstractVector{T}
+) where {T <: Union{String, Symbol}, V}
+    if any(id -> !(id in keys(data)), ids)
+        @warn "Dictionary does not contain all keys $ids, no key renamed."
+        return nothing
+    end
+    if length(ids) != length(ids_new)
+        throw(ArgumentError("The nb of old and new ids must be the same!"))
+    end
+    map(ids, ids_new) do id, id_new
+        data[id_new] = data[id]
+        delete!(data, id)
+    end
+    return nothing
 end
