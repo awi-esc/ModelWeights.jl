@@ -44,17 +44,26 @@ Compute difference of `orig_data` and `ref_data`.
 """
 function anomalies(orig_data::YAXArray, ref_data::YAXArray)
     dimension = modelDim(orig_data)
-    if !hasdim(ref_data, dimension) || (Array(dims(orig_data, dimension))) != Array(dims(ref_data, dimension))
-        err_msg = "To compute anomalies, original and reference data must contain exactly the same models!"
+    if !hasdim(ref_data, dimension)
+        err_msg = "To compute anomalies, ref data must have same model dimension as data (found data: $dimension, found ref_data: $(dims(ref_data)))"
         throw(ArgumentError(err_msg))
+    end
+    dims_orig = Array(dims(orig_data, dimension))
+    dims_ref = Array(dims(ref_data, dimension))
+    if length(dims_orig) > length(dims_ref) 
+        throw(ArgumentError("To compute anomalies, reference data must contain all models of original data!"))
     end
     if orig_data.properties["units"] != orig_data.properties["units"]
         @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
         return nothing
     end
-    anomalies_metadata = deepcopy(orig_data.properties)
+    if length(dims_orig) < length(dims_ref)
+        indices = findall(x -> x in dims_orig, dims_ref)
+        # TODO make this dynamic here, allow other than :member, :model
+        ref_data = dimension == :model ? ref_data[model = indices] : ref_data[member = indices]
+    end
     anomalies = @d orig_data .- ref_data
-    return YAXArray(dims(orig_data), Array(anomalies), anomalies_metadata)
+    return YAXArray(dims(orig_data), anomalies.data, deepcopy(orig_data.properties))
 end
 
 
