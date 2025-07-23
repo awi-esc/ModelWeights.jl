@@ -204,6 +204,7 @@ function plotTimeseries!(
     vals::AbstractArray;
     uncertainties::Union{AbstractArray, Nothing} = nothing,
     color_line::Symbol = :darkred,
+    color_unc::Symbol = :darkred,
     label::String = "",
     label_unc::String = "",
     linestyle::Symbol = :solid,
@@ -230,7 +231,7 @@ function plotTimeseries!(
             timesteps,
             vec(coalesce.(uncertainties[confidence=At("lower")], NaN)),
             vec(coalesce.(uncertainties[confidence=At("upper")], NaN)),
-            color = (color_line, alpha),
+            color = (color_unc, alpha),
             label = label_unc
         )
     end
