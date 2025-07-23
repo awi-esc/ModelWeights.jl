@@ -25,6 +25,7 @@ function weightedAvg(
     weights::Union{YAXArray, Nothing} = nothing,
     use_members_equal_weights::Bool = true
 )
+    data = deepcopy(data)
     dim_symbol = Data.modelDim(data)
     models_data = collect(dims(data, dim_symbol))
 
@@ -43,18 +44,25 @@ function weightedAvg(
         # so the list of models for which weights have been computed may be shorter 
         # than the models of the given data.
         data_no_weights = [model for model in models_data if !(model in models_weights)]
-        msg = "No weights were computed for follwoing models, thus not considered in the weighted average:"
-        @warn msg data_no_weights
-        if any(x -> !(x in models_data), models_weights)
-            msg = "Data of models missing for which weights have been computed."
-            throw(ArgumentError(msg))
+        if !isempty(data_no_weights)
+            msg = "No weights were computed for follwoing models, thus not considered in the weighted average:"
+            @warn msg data_no_weights
+            # Only include data for which there are weights
+            indices = findall(x -> !(x in data_no_weights), models_data)
+            data = Data.getByIdxModel(data, dim_symbol, indices)
+            Data.subsetMeta!(data.properties, indices; simplify = false)
+        end
+        # weights for which we don't have data
+        weights_no_data = filter(x -> !(x in models_data), models_weights)
+        if !isempty(weights_no_data)
+            @warn "Weights were renormalized since data of models missing for which weights have been computed: $weights_no_data"
+            # renormalize weights
+            indices = findall(m -> m in dims(data, dim_symbol), models_weights)
+            weights = deepcopy(Data.getByIdxModel(weights, dim_symbol, indices))
+            Data.subsetMeta!(weights.properties, indices; simplify = false)
+            weights = weights ./ sum(weights)
         end
     end
-    # subset data s.t only data that will be weighted is considered
-    indices = findall(m -> m in models_weights, models_data)
-    data = deepcopy(Data.getByIdxModel(data, dim_symbol, indices))
-    Data.summarizeMeta!(data.properties, indices; simplify = true)
-
     weighted_data = @d data .* weights
     weighted_avg = sum(weighted_data, dims = dim_symbol)
     return Data.getAtModel(weighted_avg, dim_symbol, "combined")

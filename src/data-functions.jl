@@ -43,15 +43,13 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
     else
         indices = findall(m -> m in shared_models, dimensions)
     end
+    # TODO: make function out of this!
     index_vec = map(dim_names) do name 
         name in model_dims ? indices : Colon()
     end
     data = data[index_vec...]
     # also subset Metadata vectors!
-    attributes = filter(k -> data.properties[k] isa Vector, keys(data.properties))
-    for key in attributes
-        data.properties[key] = data.properties[key][indices]
-    end
+    subsetMeta!(data.properties, indices)
     return data
 end
 
@@ -241,7 +239,7 @@ function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
     for (i, m) in enumerate(models_uniq)
         dat = data[model = model_indices[m]]
         summarized = fn(dat; dims = (:model,))[model = At("combined")]
-        meta = summarizeMeta(data.properties, model_indices[m]; simplify = true)
+        meta = subsetMeta(data.properties, model_indices[m]; simplify = true)
         summarized_data_all[i] = YAXArray(dims(summarized), summarized.data, meta)
     end
     summarized_data = combineModelsFromMultipleFiles(
