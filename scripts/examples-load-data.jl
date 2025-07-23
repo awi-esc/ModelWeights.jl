@@ -70,7 +70,7 @@ models_historical = mwd.modelsFromMemberIDs(
 
 # function to join two DataMaps into one
 data = mwd.joinDataMaps(lgm_data, historical_data_lgm)
-data_members = mwd.subsetModelData(data; level = mwd.MEMBER_LEVEL)
+data_members = mwd.subsetModelData(data, "member")
 
 # 2.2 Or directly load historical data of the same model MEMBERS as for lgm 
 # (may be less than in 2.1, since the exact simulations now have to match with

@@ -412,7 +412,7 @@ end
 
 
 """
-    summarizeMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
+    subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
 
 If simplify is true, use single value when all remaining elements in a vector in `meta` are 
 identical, otherwise just keep vector.
@@ -421,7 +421,7 @@ identical, otherwise just keep vector.
 - `meta`:
 - `indices`: indices to remain in vectors mapped to in `meta`. 
 """
-function summarizeMeta!(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)    
+function subsetMeta!(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)    
     for (k, v) in meta
         if isa(v, Vector)
             vals = v[indices]
@@ -439,7 +439,7 @@ end
 
 
 """
-    summarizeMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
+    subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
 
 If simplify is true, use single value when all remaining elements in a vector in `meta` are 
 identical, otherwise just keep vector.
@@ -448,7 +448,7 @@ identical, otherwise just keep vector.
 - `meta`:
 - `indices`: indices to remain in vectors mapped to in `meta`. 
 """
-function summarizeMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)    
+function subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)    
     meta_new = Dict()    
     for (k, v) in meta
         if isa(v, Vector)

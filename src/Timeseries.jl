@@ -107,7 +107,7 @@ function filterTimeseries(
                 df[member = Where(x -> !(x in models_missing))]
             # update metadata too
             indices_keep = filter(x -> !(x in indices_missing), 1:n_models)
-            Data.summarizeMeta!(df.properties, indices_keep)
+            Data.subsetMeta!(df.properties, indices_keep)
         end
     end
     df.properties["timerange"] = join(string.([start_year, end_year]), "-")
