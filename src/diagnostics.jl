@@ -59,8 +59,7 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray)
     end
     if length(dims_orig) < length(dims_ref)
         indices = findall(x -> x in dims_orig, dims_ref)
-        # TODO make this dynamic here, allow other than :member, :model
-        ref_data = dimension == :model ? ref_data[model = indices] : ref_data[member = indices]
+        ref_data = indexModel(ref_data, (dimension,), indices)
     end
     anomalies = @d orig_data .- ref_data
     return YAXArray(dims(orig_data), anomalies.data, deepcopy(orig_data.properties))

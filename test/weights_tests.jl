@@ -85,9 +85,6 @@ end
 @testset "Test saveWeightsAsJuliaObj" begin 
 end
 
-@testset "Test loadWeightsAsDimArray" begin
-end
-
 @testset "Test loadWeightsFromJLD2" begin
 end
 

@@ -20,6 +20,24 @@ function getByIdxModel(data::YAXArray, dimension::Symbol, indices::Vector)
 end
 
 
+"""
+    indexModel(data::YAXArray, model_dims::Tuple{Symbol}, indices::Vector{Int})
+
+Return `data` at model dimensions `model_dims` at `indices`.
+"""
+function indexModel(data::YAXArray, model_dims::Tuple{Symbol}, indices::Vector{Int})
+    data = deepcopy(data)
+    dim_names = dimNames(data)
+    index_vec = map(dim_names) do name 
+        name in model_dims ? indices : Colon()
+    end
+    data = data[index_vec...]
+    subsetMeta!(data.properties, indices)
+    return data
+end
+
+
+
 """ 
     putAtModel!(data::YAXArray, dimension::Symbol, model::String, input)
 """
@@ -1349,6 +1367,24 @@ function modelDim(data::YAXArray)
         hasdim(data, :member) ? :member : throw(ArgumentError(err_msg))
 end
 
+"""
+    modelDims(data::YAXArray)
+
+Return vector of dimensions of `data` that contain either 'model' or 'member'.
+"""
+function modelDims(data::YAXArray)
+    dim_names = string.(dimNames(data))
+    model_dims = filter(d -> occursin("model", d), dim_names)
+    if isempty(model_dims)
+        model_dims = filter(d -> occursin("member", d), dim_names)
+    end
+    if isempty(model_dims)
+        throw(ArgumentError("Data must contain a dimension with 'member' or 'model' in its name! found: $dim_names"))
+    end
+    return Symbol.(model_dims)
+end
+
+
 
 function apply!(
     dm::DataMap,
@@ -1429,3 +1465,4 @@ function indicesTimeseries(times::Vector{DateTime}, constraint_ts::Dict)
 
     return (isempty(times) || start_wrong || end_wrong) ? [] : indices_time
 end
+

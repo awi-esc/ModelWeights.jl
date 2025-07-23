@@ -16,18 +16,9 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
         return data
     end
     data = deepcopy(data)
-    dim_names = string.(dimNames(data))
     level = "model"
-    model_dims = filter(d -> occursin("model", d), dim_names)
-    if isempty(model_dims)
-        level = "member"
-        model_dims = filter(d -> occursin("member", d), dim_names)
-    end
-    if isempty(model_dims)
-        throw(ArgumentError("Data must contain a dimension with 'member' or 'model' in its name! found: $dim_names"))
-    end
-    dim_symbol = Symbol(model_dims[1])
-    dimensions = Array(dims(data, dim_symbol))
+    model_dims = modelDims(data)
+    dimensions = Array(dims(data, model_dims[1]))
     if level == "member"
         models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
         # if shared_models is on the level of models, the following should be empty
@@ -43,13 +34,7 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
     else
         indices = findall(m -> m in shared_models, dimensions)
     end
-    # TODO: make function out of this!
-    index_vec = map(dim_names) do name 
-        name in model_dims ? indices : Colon()
-    end
-    data = data[index_vec...]
-    # also subset Metadata vectors!
-    subsetMeta!(data.properties, indices)
+    data = indexModel(data, model_dims, indices)
     return data
 end
 
