@@ -1,7 +1,7 @@
 module Data
 
 export Level, MODEL_MEMBER_DELIM
-export DataMap, ClimateData, ESMEnsemble
+export DataMap, ESMEnsemble
 
 export subsetModelData, sharedModels, filterPathsSharedModels!
 export summarizeMembers, summarizeMembers!
@@ -123,12 +123,6 @@ function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String})
 end
 
 
-struct ClimateData
-    models::DataMap
-    obs::DataMap
-end
-
-
 const ESMVT_FORMAT_CMIP5 = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
 const ESMVT_FORMAT_CMIP6 = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
 const CMIP_FORMAT = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
@@ -165,11 +159,6 @@ function Base.show(io::IO, x::Dict{String, YAXArray})
     for (k, v) in x
         println(io, "$k: $(size(v))")
     end
-end
-
-function Base.show(io::IO, x::ClimateData)
-    println(io, "$(typeof(x))")
-    println(io, "models: $(x.models)observations: $(x.obs)")
 end
 
 function Base.show(io::IO, x::Union{MetaData, FilenameMeta})

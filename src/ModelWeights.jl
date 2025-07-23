@@ -22,7 +22,7 @@ export uncertaintyRanges,
     approxAreaWeights,
     anomalies,
     anomaliesGM
-export addLinearTrend!, linearTrend
+export linearTrend
 export getLandMask, getOceanMask
 
 

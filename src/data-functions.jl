@@ -545,12 +545,14 @@ end
         dtype::String = "undef"
     )
 
-Load a `ClimateData`-instance that contains the data specified in `content`, potentially 
+Return a DataMap-instance that contains the data specified in `content`, potentially 
 constraint by values in `constraint`.
 
 # Arguments:
 - `preview::Bool`: if true (default: false), return metadata and corresponding paths without 
 actually loading any data.
+- `sorted::Bool`: if true (default), model dimension is sorted alphabetically.
+- `dtype::String`: if set to "cmip", model dimension of returned data have model names as values.
 """
 function loadDataFromYAML(
     yaml_content::Dict;
