@@ -211,12 +211,13 @@ function plotTimeseries!(
     linewidth = 2,
     alpha = 0.2,
 )
+    plots = []
     timesteps = Array(dims(vals, :time))
     if typeof(timesteps[1]) == DateTime
         timesteps = map(x -> Dates.year(x), timesteps)
     end
 
-    lines!(
+    lineplot = lines!(
         ax,
         timesteps,
         vec(coalesce.(vals, NaN)),
@@ -225,8 +226,9 @@ function plotTimeseries!(
         linestyle = linestyle,
         linewidth = linewidth,
     )
+    push!(plots, lineplot)
     if !isnothing(uncertainties)
-        band!(
+        bandplot = band!(
             ax,
             timesteps,
             vec(coalesce.(uncertainties[confidence=At("lower")], NaN)),
@@ -234,8 +236,9 @@ function plotTimeseries!(
             color = (color_unc, alpha),
             label = label_unc
         )
+        push!(plots, bandplot)
     end
-    return nothing
+    return plots
 end
 
 

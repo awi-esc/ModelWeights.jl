@@ -16,10 +16,9 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
         return data
     end
     data = deepcopy(data)
-    level = "model"
     model_dims = modelDims(data)
     dimensions = Array(dims(data, model_dims[1]))
-    if level == "member"
+    if occursin("member", string(model_dims[1]))
         models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
         # if shared_models is on the level of models, the following should be empty
         # otherwise, nothing is filtered out, and members is the same as shared_models 
@@ -249,27 +248,33 @@ Set to false if vectors refer to different variables for instance.
 function summarizeMembersMatrix(data::YAXArray, updateMeta::Bool; fn::Function=Statistics.mean)
     throwErrorIfDimMissing(data, [:member1, :member2])
     data = setLookupsFromMemberToModel(data, ["member1", "member2"])
-    models = String.(collect(unique(dims(data, :model1))))
-
-    grouped = groupby(data, :model2 => identity)
-    averages = map(entry -> mapslices(fn, entry, dims = (:model2,)), grouped) #slow
-    combined = cat(averages..., dims = (Dim{:model2}(models)))
-
-    grouped = groupby(combined, :model1 => identity)
-    averages = map(entry -> mapslices(fn, entry, dims = (:model1,)), grouped) #slow
-    combined = cat(averages..., dims = (Dim{:model1}(models)))
-
-    for m in models
-        combined[model1=At(m), model2=At(m)] .= 0
+    models_all = collect(dims(data, :model1))
+    models = unique(models_all)
+    other_dims = otherdims(data, (:model1, :model2))
+    mat = YAXArray(
+        (Dim{:model1}(models), Dim{:model2}(models), other_dims...), 
+        zeros(length(models), length(models), length.(other_dims)...),
+        deepcopy(data.properties)
+    )
+    for (i, m1) in enumerate(models[1: end-1])
+        for m2 in models[i+1 : end]
+            indices1 = findall(x -> x == m1, models_all)
+            indices2 = findall(x -> x == m2, models_all)
+            slice = data[model1 = indices1, model2 = indices2]
+            summarized = fn(slice, dims = (:model1, :model2))[model1=At("combined"), model2=At("combined")]
+            
+            mat[model1 = At(m1), model2 = At(m2)] = summarized
+            mat[model1 = At(m2), model2 = At(m1)] = summarized # build up symmetric matrix
+        end
     end
-
-    meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
-    combined = rebuild(combined; metadata = meta)
-
-    l = Lookups.Categorical(sort(models); order = Lookups.ForwardOrdered())
-    combined = combined[model1=At(sort(models)), model2=At(sort(models))]
-    combined = DimensionalData.Lookups.set(combined, model1 = l, model2 = l)
-    return combined
+    return mat
+    # TODO: check metadata update!
+    # meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
+    # combined = rebuild(combined; metadata = meta)
+    # l = Lookups.Categorical(sort(models); order = Lookups.ForwardOrdered())
+    # combined = combined[model1=At(sort(models)), model2=At(sort(models))]
+    # combined = DimensionalData.Lookups.set(combined, model1 = l, model2 = l)
+    # return combined
 end
 
 

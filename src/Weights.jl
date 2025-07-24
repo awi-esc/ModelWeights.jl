@@ -32,7 +32,6 @@ end
     Di::YAXArray # generalized distances each model wrt performance
     Sij::YAXArray # generalized distances between pairs of models
     w::YAXArray # contains all three types of normalized weights (wI, wP, combined)
-    #w_members::Union{YAXArray, Nothing} # weights distributed evenly across resp. model members
     config::ConfigWeights # metadata
 end
 

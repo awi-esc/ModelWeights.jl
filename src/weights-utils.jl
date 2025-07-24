@@ -26,42 +26,19 @@ function weightedAvg(
     use_members_equal_weights::Bool = true
 )
     data = deepcopy(data)
+    weights = deepcopy(weights)
     dim_symbol = Data.modelDim(data)
-    models_data = collect(dims(data, dim_symbol))
-
-    equal_weights = isnothing(weights)
-    if equal_weights
+    equal_weighting = isnothing(weights)
+    if equal_weighting
         weights = equalWeights(data; use_members = use_members_equal_weights)
     elseif !hasdim(weights, dim_symbol)
         msg = "weight vector must have same dimension as data (found: data: $dim_symbol, weights::$(dims(weights)))!"
         throw(ArgumentError(msg))
     end
-
-    models_weights = collect(dims(weights, dim_symbol))
-    if !equal_weights && sort(models_data) != sort(models_weights)
-        # weights may have been computed wrt a different set of models than the models
-        # in the data. 
-        # so the list of models for which weights have been computed may be shorter 
-        # than the models of the given data.
-        data_no_weights = [model for model in models_data if !(model in models_weights)]
-        if !isempty(data_no_weights)
-            msg = "No weights were computed for follwoing models, thus not considered in the weighted average:"
-            @warn msg data_no_weights
-            # Only include data for which there are weights
-            indices = findall(x -> !(x in data_no_weights), models_data)
-            data = Data.getByIdxModel(data, dim_symbol, indices)
-            Data.subsetMeta!(data.properties, indices; simplify = false)
-        end
-        # weights for which we don't have data
-        weights_no_data = filter(x -> !(x in models_data), models_weights)
-        if !isempty(weights_no_data)
-            @warn "Weights were renormalized since data of models missing for which weights have been computed: $weights_no_data"
-            # renormalize weights
-            indices = findall(m -> m in dims(data, dim_symbol), models_weights)
-            weights = deepcopy(Data.getByIdxModel(weights, dim_symbol, indices))
-            Data.subsetMeta!(weights.properties, indices; simplify = false)
-            weights = weights ./ sum(weights)
-        end
+    
+    models_align = sort(collect(dims(data, dim_symbol))) == sort(collect(dims(weights, dim_symbol)))
+    if !equal_weighting && !models_align
+        weights, data = alignWeightsAndData(data, weights)
     end
     weighted_data = @d data .* weights
     weighted_avg = sum(weighted_data, dims = dim_symbol)
@@ -324,11 +301,11 @@ function climwipWeights(
     weights_perform = Data.normalizeToYAX(config.performance)
     weights_indep = Data.normalizeToYAX(config.independence)
     
-    dists_perform_all = Data.distancesData(model_data, obs_data, diagnostics_perform);
+    dists_perform_all = Data.distancesData(model_data, obs_data, diagnostics_perform)
     dists_indep_all = Data.distancesModels(model_data, diagnostics_indep)
 
     Di = Data.generalizedDistances(dists_perform_all, diagnostics_perform, weights_perform)
-    Sij = Data.generalizedDistances(dists_indep_all, diagnostics_indep, weights_indep) # slow
+    Sij = Data.generalizedDistances(dists_indep_all, diagnostics_indep, weights_indep)
 
     wP = performanceWeights(Di, config.sigma_performance)
     wI = independenceWeights(Sij, config.sigma_independence)
@@ -336,16 +313,6 @@ function climwipWeights(
     w = wP ./ wI
     w = w ./ sum(w)
 
-    # only if for all diagnostics exactly the same simulations, it makes sense to define 
-    # weights on level of models, too
-    # members_all = map(x -> Array(dims(x, :member)), dists_perform_all)
-    # if hasdim(dists_perform_all, :member)
-    #     members = Array(dims(dists_perform_all, :member))
-    #     w_members = distributeWeightsAcrossMembers(w, members)
-    # else
-    #     w_members = w
-    # end
-    # w_members = w
     names = String.(map(x -> join([x, suffix_name], "-"), ["wP", "wI", "combined"]))
     weights_arr = cat([wP, wI, w]..., dims=Dim{:weight}(names))
     return ClimWIP(
@@ -356,7 +323,6 @@ function climwipWeights(
         Di = Di,
         Sij = Sij,
         w = weights_arr,
-        # w_members = w_members,
         config = config
     )
 end
@@ -417,5 +383,3 @@ function independenceWeights(dists_indep_all::YAXArray, config::ConfigWeights)
     Sij = Data.generalizedDistances(dists_indep_all, weights)
     return independenceWeights(Sij, config.sigma_independence)
 end
-
-

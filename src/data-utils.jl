@@ -25,7 +25,9 @@ end
 
 Return `data` at model dimensions `model_dims` at `indices`.
 """
-function indexModel(data::YAXArray, model_dims::Tuple{Symbol}, indices::Vector{Int})
+function indexModel(
+    data::YAXArray, model_dims::NTuple{N, Symbol}, indices::Vector{Int}
+) where {N}
     data = deepcopy(data)
     dim_names = dimNames(data)
     index_vec = map(dim_names) do name 
@@ -279,26 +281,39 @@ end
 Create a YAXArray with the cosine of `latitudes` which approximates the cell 
 area on the respective latitude.
 """
-function approxAreaWeights(latitudes::Vector{<:Number})
-    # cosine of the latitudes as proxy for grid cell area
+function approxAreaWeights(latitudes::AbstractVector{<:Number})
     area_weights = cos.(deg2rad.(latitudes))
     return YAXArray((Dim{:lat}(latitudes),), area_weights)
 end
 
+"""
+    makeAreaWeightMatrix
 
+# Arguments:
+- mask: first two dimensions must refer to lon, lat
+"""
 function makeAreaWeightMatrix(
-    longitudes::Vector{<:Number},
-    latitudes::Vector{<:Number};
-    mask::Union{AbstractArray,Nothing} = nothing,
+    longitudes::AbstractVector{<:Number},
+    latitudes::AbstractVector{<:Number};
+    mask::Union{AbstractArray, Nothing} = nothing
 )
     area_weights = approxAreaWeights(latitudes)
-    area_weighted_mat = repeat(area_weights', length(longitudes), 1)
+    area_weighted_mat = ones(length(longitudes)) * area_weights.data' # matrix multipication
     if !isnothing(mask)
-        area_weighted_mat = ifelse.(mask .== 1, 0, area_weighted_mat)
+        s_mask = size(mask)
+        if length(s_mask) > 2
+            if length(s_mask) > 3 
+                throw(ArgumentError("area weight matrix only implemented for lonxlat and lonxlatxmodel input"))
+            end
+            n_models = s_mask[3]
+            area_weighted_mat = cat(fill(area_weighted_mat, n_models)...; dims=3)
+        end
+        area_weighted_mat[mask] .= 0
     end
-    area_weighted_mat = area_weighted_mat ./ sum(area_weighted_mat)
-    return YAXArray((Dim{:lon}(longitudes), Dim{:lat}(latitudes)), area_weighted_mat)
+    area_weighted_mat = area_weighted_mat ./ sum(area_weighted_mat, dims=(1,2))
+    return YAXArray(dims(mask), area_weighted_mat)
 end
+
 
 function checkDataStructure(path_data::String, dir_per_var::Bool)
     if !dir_per_var
@@ -934,7 +949,7 @@ Compute RMSEs between models and observations for `diagnostics`.
 `obs_data`.
 """
 function distancesData(model_data::DataMap, obs_data::DataMap, diagnostics::Vector{String})
-    distances_all = map(diagnostics) do d
+    return map(diagnostics) do d
         model = get(model_data, d, nothing)
         obs = get(obs_data, d, nothing)
         if isnothing(model) || isnothing(obs)
@@ -942,7 +957,6 @@ function distancesData(model_data::DataMap, obs_data::DataMap, diagnostics::Vect
         end
         distancesData(model, obs)
     end
-    return distances_all
 end
 
 
@@ -955,24 +969,9 @@ If several observational datasets are present, the average across all is taken.
 """
 function distancesData(models::YAXArray, observations::YAXArray)
     obs = hasdim(observations, :model) ? avgObsDatasets(observations) : observations
-    # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
-    # I think this is not necessary actually (the deepcopy) åWrite test to be sure!!
-    # models = deepcopy(models)
-    n = length(dims(models, :member))
-    member_names = Vector{String}(undef, n)
-    distances = Vector{Any}(undef, n)
-    for (i, model_i) in enumerate(eachslice(models; dims = :member))
-        name = dims(models, :member)[i]
-        maskNbMissing = (ismissing.(obs) + ismissing.(model_i)) .> 0 # observations or model is missing (or both)
-        maskedObs = ifelse.(maskNbMissing .> 0, 0, obs)
-
-        maskedModel = ifelse.(maskNbMissing .> 0, 0, model_i)
-        mse = areaWeightedRMSE(maskedModel, maskedObs, maskNbMissing)
-
-        member_names[i] = name
-        distances[i] = mse
-    end
-    return YAXArray((Dim{:member}(member_names),), distances, models.properties)
+    # copy of data needed?
+    maskMissing = (ismissing.(obs) .+ ismissing.(models)) .> 0 # observations or model is missing (or both)
+    return areaWeightedRMSE(models, obs,  maskMissing)
 end
 
 
@@ -987,49 +986,42 @@ Compute the model-model distances for `model_data` at every diagnostic in `diagn
 return a vector of YAXArrays.
 """
 function distancesModels(model_data::DataMap, diagnostics::Vector{String})
-    distances_all = Vector{YAXArray}(undef, length(diagnostics))
-    distances_all = map(diagnostics) do d
+    return map(diagnostics) do d
         model = get(model_data, d, nothing)
         if isnothing(model)
             throw(ArgumentError("Data missing for diagnostic $d."))
         end
         distancesModels(model)
     end
-    return distances_all
 end
 
 """
-    distancesModels(modelData::YAXArray)
+    distancesModels(data::YAXArray)
 
 Compute the area weighted RMSE between model predictions for each pair of models.
 
 # Arguments:
-- `modelData::YAXArray`: must have dimensions 'lon', 'lat', 'model' or 'member'.
+- `data::YAXArray`: first two dimensions must be 'lon', 'lat', third 'model' or 'member'.
 """
-function distancesModels(model_data::YAXArray)
-    # Make sure to use a copy of the data, otherwise, it will be modified by applying the mask!!
-    data = deepcopy(model_data)
+function distancesModels(data::YAXArray)
+    # data = deepcopy(data) copy of data needed?
     # only take values where none (!) of the models has infinite values!! (Not just the two that are compared to one another)
-    nbModels = length(dims(data, :member))
-    maskMissing = dropdims(any(ismissing, data, dims = :member), dims = :member)
+    dim_symbol = modelDim(data)
+    nb_models = length(dims(data, dim_symbol))
+    mask_missing = dropdims(any(ismissing, data, dims = dim_symbol), dims = dim_symbol)
 
-    matrixS = zeros(nbModels, nbModels)
-    for (i, model_i) in enumerate(eachslice(data[:, :, 1:(end-1)]; dims = :member))
-        model_i_mat = Array(model_i)
-        model_i_mat[maskMissing .== 1] .= 0
-        for (j, model_j) in enumerate(eachslice(data[:, :, (i+1):end]; dims = :member))
-            model_j_mat = Array(model_j)
+    matrixS = zeros(nb_models, nb_models)
+    for (i, model_i) in enumerate(eachslice(data[:, :, 1:(end-1)]; dims = dim_symbol))
+        for (j, model_j) in enumerate(eachslice(data[:, :, (i+1):end]; dims = dim_symbol))
             idx = j + i
-            model_j_mat[maskMissing .== 1] .= 0
-            s_ij = areaWeightedRMSE(model_i, model_j, maskMissing)
-            matrixS[i, idx] = s_ij
+            matrixS[i, idx] = areaWeightedRMSE(model_i, model_j, mask_missing)
         end
     end
     symDistMatrix = matrixS .+ matrixS'
-    dim = Array(dims(model_data, :member))
-    return YAXArray(
-        (Dim{:member1}(dim), Dim{:member2}(dim)), symDistMatrix, deepcopy(model_data.properties),
-    )
+    dim = Array(dims(data, dim_symbol))
+    new_dim1 = dim_symbol == :member ? :member1 : model1
+    new_dim2 = dim_symbol == :member ? :member2 : model2
+    return YAXArray((Dim{new_dim1}(dim), Dim{new_dim2}(dim)), symDistMatrix)
 end
 
 
@@ -1192,20 +1184,24 @@ Compute the area weighted (approximated by cosine of latitudes in radians) root 
 error between `m1` and `m2`. 
 
 # Arguments:
-- `m1`: must have dimensions 'lon', 'lat'.
-- `m2`: must have dimensions 'lon', 'lat'.
-- `mask`: has values 0,1. Locations where mask is 1 get a weight of 0.
+- `m1`: must have dimensions 'lon', 'lat' as first dimensions.
+- `m2`: must have dimensions 'lon', 'lat' as first dimensions.
+- `mask`: indicates missing values (1 refers to missing, 0 to non-missing).
 """
 function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractArray)
     if dims(m1, :lon) != dims(m2, :lon) || dims(m1, :lat) != dims(m2, :lat)
         msg = "To compute area weigehted RMSE, $m1 and $m2 must be defined on the same lon,lat-grid!"
         throw(ArgumentError(msg))
     end
-    squared_diff = (m1 .- m2) .^ 2
-    areaweights_mat =
-        makeAreaWeightMatrix(Array(dims(m1, :lon)), Array(dims(m1, :lat)); mask)
-    weighted_vals = areaweights_mat .* squared_diff
-    return sqrt(sum(skipmissing(weighted_vals)))
+     # set data set to 0 whenever any of both is missing, 
+    # i.e. the returned object has one entry for every model now, if m1, m2 have a 3rd model dimension
+    masked_m1 = ifelse.(mask .== true, 0, m1)
+    masked_m2 = ifelse.(mask .== true, 0, m2)
+
+    squared_diff = @d (masked_m1 .- masked_m2) .^ 2
+    areaweights_mat = makeAreaWeightMatrix(parent(dims(m1, :lon)), parent(dims(m1, :lat)); mask)
+    weighted_vals = @d areaweights_mat .* squared_diff
+    return sqrt.(sum(coalesce.(weighted_vals, 0), dims=(1,2))[lon=1, lat=1])
 end
 
 
@@ -1276,19 +1272,21 @@ function uncertaintyRanges(
             meta
         )
     for t in timesteps
-        arr = Array(data[time=At(t)])
+        arr = Array(data[time = At(t)])
         if sum(ismissing.(arr)) >= length(arr) - 1 # at least two values must be given
             lower, upper = missing, missing
         else
-            values = collect(skipmissing(arr))
             if isnothing(w)
-                lower, upper = interpolatedWeightedQuantiles(quantiles, values)
+                lower, upper = interpolatedWeightedQuantiles(
+                    quantiles, collect(skipmissing(arr))
+                )
                 uncertainty_ranges[time=At(t), confidence=At("lower")] = lower
                 uncertainty_ranges[time=At(t), confidence=At("upper")] = upper
             else
                 for weight_id in collect(w.weight)
+                    weights, df = alignWeightsAndData(data[time = At(t)], w[weight = At(weight_id)])
                     lower, upper = interpolatedWeightedQuantiles(
-                        quantiles, values; weights = w[weight = At(weight_id)]
+                        quantiles, collect(skipmissing(df)); weights
                     )
                     uncertainty_ranges[time=At(t), confidence=At("lower"), weight=At(weight_id)] = lower
                     uncertainty_ranges[time=At(t), confidence=At("upper"), weight=At(weight_id)] = upper
@@ -1314,18 +1312,18 @@ function interpolatedWeightedQuantiles(
         weights = Array{eltype(vals)}(undef, length(vals))
         weights[ismissing.(vals) .== false] .= 1
     end
-    indicesSorted = Array(sortperm(vals)) # gives indices of smallest to largest data point
-    weightsSorted = weights[indicesSorted]
-    weightedQuantiles = cumsum(weightsSorted) - 0.5 * weightsSorted
-    weightedQuantiles = reshape(weightedQuantiles, length(weightedQuantiles), 1)
+    indices_sorted = Array(sortperm(vals)) # gives indices of smallest to largest data point
+    weights_sorted = weights[indices_sorted]
+    weighted_quantiles = cumsum(weights_sorted) - 0.5 * weights_sorted
+    weighted_quantiles = reshape(weighted_quantiles, length(weighted_quantiles), 1)
     # TODO: recheck missing values!
-    weightedQuantiles =
-        (weightedQuantiles .- minimum(skipmissing(weightedQuantiles))) ./
-        maximum(skipmissing(weightedQuantiles))
+    weighted_quantiles =
+        (weighted_quantiles .- minimum(skipmissing(weighted_quantiles))) ./
+        maximum(skipmissing(weighted_quantiles))
 
     interp_linear = Interpolations.linear_interpolation(
-        vec(weightedQuantiles),
-        vals[indicesSorted],
+        vec(weighted_quantiles),
+        vals[indices_sorted],
         extrapolation_bc = Interpolations.Line(),
     )
     return interp_linear(quantiles)
@@ -1466,3 +1464,27 @@ function indicesTimeseries(times::Vector{DateTime}, constraint_ts::Dict)
     return (isempty(times) || start_wrong || end_wrong) ? [] : indices_time
 end
 
+
+function alignWeightsAndData(data::YAXArray, weights::YAXArray)
+    dim_symbol = Data.modelDim(data)
+    models_data = collect(dims(data, dim_symbol))
+    models_weights = collect(dims(weights, dim_symbol))
+    data_no_weights = [model for model in models_data if !(model in models_weights)]
+    if !isempty(data_no_weights)
+        msg = "No weights were computed for follwoing models, thus not considered in the weighted average:"
+        @warn msg data_no_weights
+        # Only include data for which there are weights
+        indices = findall(x -> !(x in data_no_weights), models_data)
+        data = Data.indexModel(data, (dim_symbol,), indices)
+    end
+    # weights for which we don't have data
+    weights_no_data = filter(x -> !(x in models_data), models_weights)
+    if !isempty(weights_no_data)
+        @warn "Weights were renormalized since data of models missing for which weights have been computed: $weights_no_data"
+        # renormalize weights
+        indices = findall(m -> m in dims(data, dim_symbol), models_weights)
+        weights = Data.indexModel(weights, (dim_symbol,), indices)
+        weights = weights ./ sum(weights)
+    end
+    return (weights, data)
+end
