@@ -224,12 +224,6 @@ save("plots/lgm/diff_unweighted-minus-weighted-based-on-historical.png", f9)
 
 
 
-
-# mask = DimArray(zeros(72,36), (Dim{:lon}, Dim{:lat}))
-# m1 = mw.areaWeightedRMSE(weighted_avg_hist, obs_avg, mask)
-# m2 = mw.areaWeightedRMSE(weighted_avg_lgm, obs_avg, mask)
-
-
 # The following is not up to date:
 ##############################################################################
 
