@@ -153,15 +153,15 @@ end
     p::DataFrame   # parameters
 end
 
-
-function Base.show(io::IO, x::Dict{String, YAXArray})
-    println(io, "$(typeof(x))")
+# ::MIME"text/plain" : for REPL output
+function Base.show(io::IO, ::MIME"text/plain", x::Dict{String, YAXArray})
+    println(io, "::DataMap")
     for (k, v) in x
         println(io, "$k: $(size(v))")
     end
 end
 
-function Base.show(io::IO, x::Union{MetaData, FilenameMeta})
+function Base.show(io::IO, ::MIME"text/plain", x::Union{MetaData, FilenameMeta})
     fields = map(f -> (f, getfield(x, f)), fieldnames(typeof(x)))
     fields = filter(x -> !isnothing(x[2]), fields)
     map(f -> println(io, f), fields)
