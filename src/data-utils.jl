@@ -311,7 +311,8 @@ function makeAreaWeightMatrix(
         area_weighted_mat[mask] .= 0
     end
     area_weighted_mat = area_weighted_mat ./ sum(area_weighted_mat, dims=(1,2))
-    return YAXArray(dims(mask), area_weighted_mat)
+    dimensions = isnothing(mask) ? (Dim{:lon}(longitudes), Dim{:lat}(latitudes)) : dims(mask)
+    return YAXArray(dimensions, area_weighted_mat)
 end
 
 
