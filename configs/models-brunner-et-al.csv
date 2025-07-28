@@ -1,0 +1,35 @@
+Nr,Institution,Model,#Variants,Variants,DOI historical,DOI SSP1-2.6,DOI SSP5-8.5
+1,CSIRO-ARCCSS,ACCESS-CM2,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.4271,https://doi.org/10.22033/ESGF/CMIP6.4319,https://doi.org/10.22033/ESGF/CMIP6.4332
+2,CSIRO,ACCESS-ESM1-5,3,r1i1p1f1; r2i1p1f1; r3i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.4272,https://doi.org/10.22033/ESGF/CMIP6.2291,https://doi.org/10.22033/ESGF/CMIP6.2291
+3,AWI,AWI-CM-1-1-MR,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.2686,https://doi.org/10.22033/ESGF/CMIP6.2796,https://doi.org/10.22033/ESGF/CMIP6.2817
+4,BCC,BCC-CSM2-MR,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.2948,https://doi.org/10.22033/ESGF/CMIP6.3028,https://doi.org/10.22033/ESGF/CMIP6.3050
+5,CAMS,CAMS-CSM1-0,2,r1i1p1f1; r2i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.9754,https://doi.org/10.22033/ESGF/CMIP6.11046,https://doi.org/10.22033/ESGF/CMIP6.11052
+6,NCAR,CESM2,2,r1i1p1f1; r2i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.7627,https://doi.org/10.22033/ESGF/CMIP6.7746,https://doi.org/10.22033/ESGF/CMIP6.7768
+7,NCAR,CESM2-WACCM,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.10071,https://doi.org/10.22033/ESGF/CMIP6.10100,https://doi.org/10.22033/ESGF/CMIP6.10115
+8,CNRM-CERFACS,CNRM-CM6-1,6,r1i1p1f2; r2i1p1f2; r3i1p1f2; r4i1p1f2; r5i1p1f2; r6i1p1f2,https://doi.org/10.22033/ESGF/CMIP6.4066,https://doi.org/10.22033/ESGF/CMIP6.4184,https://doi.org/10.22033/ESGF/CMIP6.4224
+9,CNRM-CERFACS,CNRM-CM6-1-HR,1,r1i1p1f2,https://doi.org/10.22033/ESGF/CMIP6.4067,https://doi.org/10.22033/ESGF/CMIP6.4185,https://doi.org/10.22033/ESGF/CMIP6.4225
+10,CNRM-CERFACS,CNRM-ESM2-1,5,r1i1p1f2; r2i1p1f2; r3i1p1f2; r4i1p1f2; r5i1p1f2,https://doi.org/10.22033/ESGF/CMIP6.4068,https://doi.org/10.22033/ESGF/CMIP6.4186,https://doi.org/10.22033/ESGF/CMIP6.4226
+11,CCCma,CanESM5,50,r1i1p1f1; r1i1p2f1; r2i1p1f1; r2i1p2f1; r3i1p1f1; r3i1p2f1; r4i1p1f1; r4i1p2f1; r5i1p1f1; r5i1p2f1; r6i1p1f1; r6i1p2f1; r7i1p1f1; r7i1p2f1; r8i1p1f1; r8i1p2f1; r9i1p1f1; r9i1p2f1; r10i1p1f1; r10i1p2f1; r11i1p1f1; r11i1p2f1; r12i1p1f1; r12i1p2f1; r13i1p1f1; r13i1p2f1; r14i1p1f1; r14i1p2f1; r15i1p1f1; r15i1p2f1; r16i1p1f1; r16i1p2f1; r17i1p1f1; r17i1p2f1; r18i1p1f1; r18i1p2f1; r19i1p1f1; r19i1p2f1; r20i1p1f1; r20i1p2f1; r21i1p1f1; r21i1p2f1; r22i1p1f1; r22i1p2f1; r23i1p1f1; r23i1p2f1; r24i1p1f1; r24i1p2f1; r25i1p1f1; r25i1p2f1,https://doi.org/10.22033/ESGF/CMIP6.3610,https://doi.org/10.22033/ESGF/CMIP6.3683,https://doi.org/10.22033/ESGF/CMIP6.3696
+12,CCCma,CanESM5-CanOE,3,r1i1p2f1; r2i1p2f1; r3i1p2f1,https://doi.org/10.22033/ESGF/CMIP6.10260,https://doi.org/10.22033/ESGF/CMIP6.10269,https://doi.org/10.22033/ESGF/CMIP6.10276
+13,EC-Earth-Consortium,EC-Earth3,7,r1i1p1f1; r4i1p1f1; r6i1p1f1; r9i1p1f1; r11i1p1f1; r13i1p1f1; r15i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.4700,https://doi.org/10.22033/ESGF/CMIP6.4874,https://doi.org/10.22033/ESGF/CMIP6.4912
+14,EC-Earth-Consortium,EC-Earth3-Veg,3,r1i1p1f1; r2i1p1f1; r4i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.4706,https://doi.org/10.22033/ESGF/CMIP6.4876,https://doi.org/10.22033/ESGF/CMIP6.4914
+15,CAS,FGOALS-f3-L,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.3355,https://doi.org/10.22033/ESGF/CMIP6.3464,https://doi.org/10.22033/ESGF/CMIP6.3502
+16,CAS,FGOALS-g3,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.3356,https://doi.org/10.22033/ESGF/CMIP6.3465,https://doi.org/10.22033/ESGF/CMIP6.3503
+17,FIO-QLNM,FIO-ESM-2-0,3,r1i1p1f1; r2i1p1f1; r3i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.9199,https://doi.org/10.22033/ESGF/CMIP6.9208,https://doi.org/10.22033/ESGF/CMIP6.9214
+18,NOAA-GFDL,GFDL-ESM4,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.8597,https://doi.org/10.22033/ESGF/CMIP6.8684,https://doi.org/10.22033/ESGF/CMIP6.8706
+19,NASA-GISS,GISS-E2-1-G,1,r1i1p3f1,https://doi.org/10.22033/ESGF/CMIP6.7127,https://doi.org/10.22033/ESGF/CMIP6.7410,https://doi.org/10.22033/ESGF/CMIP6.7460
+20,MOHC,HadGEM3-GC31-LL,1,r1i1p1f3,https://doi.org/10.22033/ESGF/CMIP6.6109,https://doi.org/10.22033/ESGF/CMIP6.10849,https://doi.org/10.22033/ESGF/CMIP6.10901
+21,INM,INM-CM4-8,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.5069,https://doi.org/10.22033/ESGF/CMIP6.12325,https://doi.org/10.22033/ESGF/CMIP6.12337
+22,INM,INM-CM5-0,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.5070,https://doi.org/10.22033/ESGF/CMIP6.12326,https://doi.org/10.22033/ESGF/CMIP6.12338
+23,IPSL,IPSL-CM6A-LR,6,r1i1p1f1; r2i1p1f1; r3i1p1f1; r4i1p1f1; r6i1p1f1; r14i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.5195,https://doi.org/10.22033/ESGF/CMIP6.5262,https://doi.org/10.22033/ESGF/CMIP6.5271
+24,NIMS-KMA,KACE-1-0-G,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.8378,https://doi.org/10.22033/ESGF/CMIP6.8432,https://doi.org/10.22033/ESGF/CMIP6.8456
+25,UA,MCM-UA-1-0,1,r1i1p1f2,https://doi.org/10.22033/ESGF/CMIP6.8888,N/A,N/A
+26,MIROC,MIROC6,3,r1i1p1f1; r2i1p1f1; r3i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.5603,https://doi.org/10.22033/ESGF/CMIP6.5743,https://doi.org/10.22033/ESGF/CMIP6.5771
+27,MIROC,MIROC-ES2L,1,r1i1p1f2,https://doi.org/10.22033/ESGF/CMIP6.5602,https://doi.org/10.22033/ESGF/CMIP6.5742,https://doi.org/10.22033/ESGF/CMIP6.5770
+28,DKRZ,MPI-ESM1-2-HR,2,r1i1p1f1; r2i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.6594,https://doi.org/10.22033/ESGF/CMIP6.4397,https://doi.org/10.22033/ESGF/CMIP6.4403
+29,MPI-M,MPI-ESM1-2-LR,10,r1i1p1f1; r2i1p1f1; r3i1p1f1; r4i1p1f1; r5i1p1f1; r6i1p1f1; r7i1p1f1; r8i1p1f1; r9i1p1f1; r10i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.6595,https://doi.org/10.22033/ESGF/CMIP6.6690,https://doi.org/10.22033/ESGF/CMIP6.6705
+30,MRI,MRI-ESM2-0,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.6842,https://doi.org/10.22033/ESGF/CMIP6.6909,https://doi.org/10.22033/ESGF/CMIP6.6929
+31,NUIST,NESM3,2,r1i1p1f1; r2i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.8769,https://doi.org/10.22033/ESGF/CMIP6.8780,https://doi.org/10.22033/ESGF/CMIP6.8790
+32,NCC,NorESM2-MM,1,r1i1p1f1,https://doi.org/10.22033/ESGF/CMIP6.8040,https://doi.org/10.22033/ESGF/CMIP6.8250,https://doi.org/10.22033/ESGF/CMIP6.8321
+33,MOHC,UKESM1-0-LL,5,r1i1p1f2; r2i1p1f2; r3i1p1f2; r4i1p1f2; r8i1p1f2,https://doi.org/10.22033/ESGF/CMIP6.6113,https://doi.org/10.22033/ESGF/CMIP6.6333,https://doi.org/10.22033/ESGF/CMIP6.6405
+,,,129,,,,
