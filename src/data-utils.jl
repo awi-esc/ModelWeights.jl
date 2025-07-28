@@ -295,7 +295,7 @@ end
 function makeAreaWeightMatrix(
     longitudes::AbstractVector{<:Number},
     latitudes::AbstractVector{<:Number};
-    mask::Union{AbstractArray, Nothing} = nothing
+    mask::Union{YAXArray, Nothing} = nothing
 )
     area_weights = approxAreaWeights(latitudes)
     area_weighted_mat = ones(length(longitudes)) * area_weights.data' # matrix multipication

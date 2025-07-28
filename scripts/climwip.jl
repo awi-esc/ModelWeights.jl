@@ -15,7 +15,7 @@ member_ids = mwd.loadModelsFromCSV(
     "../ModelWeightsPaper/work/data/models-brunner-et-al.csv", "Model"; col_variants = "Variants"
 )
 model_data =  mw.defineDataMap(
-    "../ModelWeightsPaper/work/configs/climwip/climwip.yml"; 
+    "./configs/climwip.yml"; 
     dtype = "cmip", 
     constraint = Dict(
         "level_shared" => "model",
