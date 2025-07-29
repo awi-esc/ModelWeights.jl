@@ -10,9 +10,9 @@ using Statistics
 using YAXArrays
 
 # get model data
-model_ids = mwd.loadModelsFromCSV("../ModelWeightsPaper/work/data/models-brunner-et-al.csv", "Model")
+model_ids = mwd.loadModelsFromCSV("./configs/models-brunner-et-al.csv", "Model")
 member_ids = mwd.loadModelsFromCSV(
-    "../ModelWeightsPaper/work/data/models-brunner-et-al.csv", "Model"; col_variants = "Variants"
+    "./configs/models-brunner-et-al.csv", "Model"; col_variants = "Variants"
 )
 model_data =  mw.defineDataMap(
     "./configs/climwip.yml"; 
