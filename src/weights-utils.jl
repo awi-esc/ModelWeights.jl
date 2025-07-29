@@ -295,7 +295,6 @@ function climwipWeights(
     config::ConfigWeights;
     suffix_name::String = "climwip"
 )
-
     diagnostics_indep = Data.activeDiagnostics(config.independence)
     diagnostics_perform = Data.activeDiagnostics(config.performance)
     weights_perform = Data.normalizeToYAX(config.performance)

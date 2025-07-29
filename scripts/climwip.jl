@@ -107,7 +107,7 @@ config = mww.ConfigWeights(
 
 
 climwip_weights = mww.climwipWeights(model_data, obs_data, config)
-fig_weights = mwp.plotWeights(weights.w; sort_by = "combined-climwip")
+fig_weights = mwp.plotWeights(climwip_weights.w; sort_by = "combined-climwip")
 
 
 projections = mwd.apply(

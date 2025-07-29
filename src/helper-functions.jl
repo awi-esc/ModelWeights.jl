@@ -18,7 +18,7 @@ function throwErrorIfDimMissing(data::YAXArray, dim::Symbol)
 end
 
 """
-    throwErrorIfDimMissing(data::YAXArray, dims::Vector{Symbol})
+    throwErrorIfDimMissing(data::YAXArray, dims::Vector{Symbol}; include::Symbol=:all)
 
 Throw ArgumentError if `data` does not have ALL dimensions in `dims` when `include=:all` 
 (default), or if `data` does not have ANY dimension in `dims`.
