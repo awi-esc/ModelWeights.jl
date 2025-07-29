@@ -135,7 +135,15 @@ function combineModelsFromMultipleFiles(
     if !isnothing(meta)
         meta_dict["_meta"] = meta
     end
+    # concatenatecubes doesnt work with 0-dimensional arrays...
+    has_0_dims = isempty(dims(data[1]))
+    if has_0_dims
+        data = map(x -> YAXArray((Dim{:temp}([1]),), vec(x)), data)
+    end
     dimData = concatenatecubes(data, Dim{new_dim}(model_names))
+    if has_0_dims
+        dimData = dimData[temp = 1]
+    end
     dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
     if length(model_names) != length(unique(model_names))
         duplicates = unique([m for m in model_names if sum(model_names .== m) > 1])
@@ -434,6 +442,7 @@ the different models.
 'member1' (would be changed to 'model', 'model1').
 """
 function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
+    # TODO: add checks for dim names!
     n_dims = length(dim_names)
     for (i, dim) in enumerate(dim_names)
         unique_members = Array(dims(data, Symbol(dim)))
@@ -1030,18 +1039,29 @@ end
     generalizedDistances(distances_all::YAXArray, weights::YAXArray)
 
 For every diagnostic in `distances_all`, compute the weighted sum of all diagnostics.
+
+# Arguments:
+- `distances_all::YAXArray`: must have dimension :diagnostic.
 """
 function generalizedDistances(distances_all::YAXArray, weights::YAXArray)
-    model2data = hasdim(distances_all, :member)
-    dimensions = model2data ? (:member,) : (:member1, :member2)
+    throwErrorIfDimMissing(distances_all, :diagnostic)
+    model_dims = modelDims(distances_all)
+    has_model_dim = :model in model_dims
+    if !has_model_dim
+        distances_all = :member1 in  model_dims ?
+            summarizeMembersMatrix(distances_all, false) :
+            summarizeMembersVector(distances_all)
+    end
+    
+    dimensions = modelDims(distances_all)
     norm = dropdims(median(distances_all, dims=dimensions), dims=dimensions)
     normalized_distances = @d distances_all ./ norm
 
-    distances = model2data ? 
-        summarizeMembersVector(normalized_distances) :
-        summarizeMembersMatrix(normalized_distances, false)
+    # normalized_distances = model_vs_data ? 
+    #     summarizeMembersVector(normalized_distances) :
+    #     summarizeMembersMatrix(normalized_distances, false)
     
-    weighted_dists = @d distances .* weights
+    weighted_dists = @d normalized_distances .* weights
     return dropdims(sum(weighted_dists, dims = :diagnostic), dims=:diagnostic)
 end
 
@@ -1050,7 +1070,9 @@ end
     generalizedDistances(distances_all::Vector{YAXArray}, weights::YAXArray)
 
 # Arguments:
-- `distances_all::Vector{YAXArray}`: each entry refers to the distances of one diagnostic.
+- `distances_all::Vector{YAXArray}`: each entry refers to the distances of one diagnostic, 
+each must have dimension 'model', 'member' or 'member1' and 'member2' (must be identical for 
+every entry!).
 - `weights::YAXArray`
 """
 function generalizedDistances(
@@ -1059,6 +1081,17 @@ function generalizedDistances(
     if length(distances_all) != length(diagnostics)
         throw(ArgumentError("distances must be computed for every diagnostic, found $(length(distances_all)) distances, but $(length(diagnostics)) diagnostics."))
     end
+    map(x -> throwErrorIfDimMissing(x, [:model, :member, :member1]; include=:any), distances_all)
+
+    # average model members
+    model_dims = modelDims.(distances_all)
+    has_model_dim = all(t -> :model in t, model_dims)
+    if !has_model_dim
+        distances_all = all(t -> :member1 in t, model_dims) ?
+            summarizeMembersMatrix.(distances_all, false) :
+            summarizeMembersVector.(distances_all)
+    end
+    # normalize
     normalizations = median.(distances_all)
     normalized_distances = map(distances_all, normalizations, diagnostics) do dists, norm, diagnostic
         d = @d dists ./ norm
@@ -1068,17 +1101,17 @@ function generalizedDistances(
             d.properties
         )
     end
-    # distances_all either has (in every entry) :member or :member1 and :member2
-    distances = all(hasdim.(distances_all, :member1)) ?
-        summarizeMembersMatrix.(normalized_distances, false) :
-        summarizeMembersVector.(normalized_distances)
+    # average; distances_all either has (in every entry) :member or :member1 and :member2
+    # normalized_distances = all(hasdim.(distances_all, :member1)) ?
+    #     summarizeMembersMatrix.(normalized_distances, false) :
+    #     summarizeMembersVector.(normalized_distances)
     
     # for matrix, dimensions are symmetric, just take first, st. it also works for vector
-    dimension = filter(x -> x != :diagnostic, dimNames(distances[1]))[1]
-    models = map(x -> dims(x, dimension) , distances)
+    dimension = filter(x -> x != :diagnostic, dimNames(normalized_distances[1]))[1]
+    models = map(x -> dims(x, dimension) , normalized_distances)
     shared_models = intersect(models...)
     
-    distances = map(dists -> subsetModelData(dists, shared_models), distances)
+    distances = map(dists -> subsetModelData(dists, shared_models), normalized_distances)
     distances = cat(distances..., dims = Dim{:diagnostic}(diagnostics))
     weighted_dists = @d distances .* weights
     return dropdims(sum(weighted_dists, dims = :diagnostic), dims=:diagnostic)

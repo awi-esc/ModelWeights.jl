@@ -206,9 +206,6 @@ The returned YAXArray has dimension :model (instead of :member).
 """
 function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
     throwErrorIfDimMissing(data, :member)
-    if length(dimNames(data)) < 2
-        throw(ArgumentError("Vector to summarize members must have at least one other dimension than :member!"))
-    end
     data = setLookupsFromMemberToModel(data, ["member"])
     models = Array(dims(data, :model))
     models_uniq = unique(models)
@@ -263,8 +260,9 @@ function summarizeMembersMatrix(data::YAXArray, updateMeta::Bool; fn::Function=S
             slice = data[model1 = indices1, model2 = indices2]
             summarized = fn(slice, dims = (:model1, :model2))[model1=At("combined"), model2=At("combined")]
             
-            mat[model1 = At(m1), model2 = At(m2)] = summarized
-            mat[model1 = At(m2), model2 = At(m1)] = summarized # build up symmetric matrix
+            mat[model1 = At(m1), model2 = At(m2)] = isempty(other_dims) ? Array(summarized)[1] : summarized
+            # build up symmetric matrix
+            mat[model1 = At(m2), model2 = At(m1)] = isempty(other_dims) ? Array(summarized)[1] : summarized 
         end
     end
     return mat
