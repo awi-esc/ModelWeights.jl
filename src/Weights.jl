@@ -23,6 +23,22 @@ using ..Data
     sigma_independence::Number = 0.5
 end
 
+@kwdef struct MMEWeights
+    w::YAXArray
+    name::String
+
+    function MMEWeights(w::YAXArray, name::String)
+        Data.throwErrorIfDimMissing(w, :model)
+        # the weight array must only have dimension :model
+        if length(dims(w)) != 1
+            throw(ArgumentError("MMEWEights array must only have dimension :model!"))
+        end
+        if isempty(name)
+            @warn "MMEWeights wasn't assigned a name!"
+        end
+        return new(w, name)
+    end
+end
 
 @kwdef struct ClimWIP
     performance_distances::Vector{<:YAXArray}
@@ -38,9 +54,8 @@ end
 
 function Base.show(io::IO, x::ClimWIP)
     println(io, "::$(typeof(x)):")
-    for m in dims(x.w, :model)
-        println(io, "$m: $(round(x.w[model = At(m)].data[1], digits=3))")
-    end
+    println("weights: $(Array(x.w.weight))")
+    println("#models: $(length(x.w.model))")
 end
 
 include("weights-utils.jl")

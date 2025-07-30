@@ -414,7 +414,7 @@ end
 Load data from `target_path`. If `target_path` ends with '.jld2', `variable` 
 must be specified, otherwise  data is assumed to be binary.
 """
-function readDataFromDisk(target_path::String; variable::String = "")
+function readDataFromDisk(target_path::String; variable::String = "data")
     if endswith(target_path, ".jld2")
         if isempty(variable)
             throw(ArgumentError("To load .jld2 data, specify argument variable!"))

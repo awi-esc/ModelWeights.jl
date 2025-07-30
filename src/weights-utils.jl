@@ -38,7 +38,7 @@ function weightedAvg(
     
     models_align = sort(collect(dims(data, dim_symbol))) == sort(collect(dims(weights, dim_symbol)))
     if !equal_weighting && !models_align
-        weights, data = alignWeightsAndData(data, weights)
+        weights, data = Data.alignWeightsAndData(data, weights)
     end
     weighted_data = @d data .* weights
     weighted_avg = sum(weighted_data, dims = dim_symbol)
@@ -207,7 +207,7 @@ function applyWeights(model_data::YAXArray, weights::YAXArray)
         weights = weights[model = Where(x -> x in shared_models)]
         weights = weights ./ sum(weights; dims=:model)
         if length(shared_models) < length(models_weights)
-            @warn "Weights renormalized since computed for subset of models in given data."
+            @warn "Weights renormalized since computed for more models than models in given data."
         end
     end
     results = map(x -> weightedAvg(model_data; weights=weights[weight=At(x)]), weights.weight)
@@ -219,11 +219,116 @@ end
 function likelihoodWeights(
     vec::Vector{<:Number}, models::Vector{String}, distr::Distribution, name::String
 )
-    likelihoods = Distributions.pdf(distr, vec)
+    return likelihoodWeights(Distributions.pdf(distr, vec), models, name)
+end
+
+function likelihoodWeights(
+    vec::Vector{<:Number}, models::Vector{String}, lh_fn::Function, name::String, args...; kwargs...
+)
+    likelihoods = map(x -> lh_fn(x, args...), vec)
+    return likelihoodWeights(likelihoods, models, name)
+end
+
+function likelihoodWeights(
+    likelihoods::Vector{<:Number}, models::Vector{String}, name::String
+)
     weights = likelihoods ./ sum(likelihoods)
     return YAXArray((Dim{:model}(models), Dim{:weight}([name])), reshape(weights, :, 1))
 end
 
+
+
+function climwipWeights(
+    wP::MMEWeights, wI::MMEWeights; out::Symbol = :only_combined, name_combined::String = ""
+)
+    w_combined = wP.w .* wI.w
+    w_combined = w_combined ./ sum(w_combined)    
+    if isempty(name_combined)
+        name_combined = join([wP.name, wI.name], "-")
+    end
+    if out == :only_combined
+        return YAXArray(
+            (Dim{:model}(lookup(w_combined, :model)), Dim{:weight}([name_combined])), 
+            reshape(w_combined.data, :, 1)
+        )
+    else
+        weights_arr = cat([wP.w, wI.w, w_combined]..., dims=Dim{:weight}([wP.name, wI.name, name_combined]))
+        return weights_arr
+    end
+end
+
+
+function climwipWeights(
+    weights_perform::AbstractVector{MMEWeights},
+    wI::MMEWeights;
+    out::Symbol = :only_combined,
+    name_combined::String = ""
+)
+    models = map(mme -> sort(lookup(mme.w, :model)), weights_perform) 
+    if length(unique(models)) != 1
+        throw(ArgumentError("Different performance weight vectors must be defined for the same models!"))
+    end
+
+    wP = similar(weights_perform[1].w)
+    wP .= 1
+    name = ""
+    for mme_weights in weights_perform
+        wP = @d wP .* mme_weights.w
+        name = join([name, mme_weights.name], "-")
+    end
+    wP = wP ./ sum(wP)
+    combined_wP = MMEWeights(w=wP, name=name[2:end])
+    return climwipWeights(combined_wP, wI; out, name_combined)
+end
+
+
+# functions for climwipWeights with historical performance:
+"""
+    climwipWeights(
+        model_data::DataMap,
+        obs_data::DataMap,
+        config::ConfigWeights;
+        suffix_name::String = "historical"
+    )
+
+Compute ClimwipWeights based on RMSE distances between observational data and model-model pairs.
+"""
+function climwipWeights(
+    model_data::DataMap,
+    obs_data::DataMap,
+    config::ConfigWeights;
+    suffix_name::String = "historical"
+)
+    diagnostics_indep = Data.activeDiagnostics(config.independence)
+    diagnostics_perform = Data.activeDiagnostics(config.performance)
+    weights_perform = Data.normalizeToYAX(config.performance)
+    weights_indep = Data.normalizeToYAX(config.independence)
+
+    dists_perform_all = Data.distancesData(model_data, obs_data, diagnostics_perform)
+    dists_indep_all = Data.distancesModels(model_data, diagnostics_indep)
+
+    Di = Data.generalizedDistances(dists_perform_all, diagnostics_perform, weights_perform)
+    Sij = Data.generalizedDistances(dists_indep_all, diagnostics_indep, weights_indep)
+
+    wP = performanceWeights(Di, config.sigma_performance)
+    wI = independenceWeights(Sij, config.sigma_independence)
+
+    w = wP .* wI
+    w = w ./ sum(w)
+
+    names = String.(map(x -> join([x, suffix_name], "-"), ["wIP", "wI", "wP"]))
+    weights_arr = cat([w, wI, wP]..., dims = Dim{:weight}(names))
+    return ClimWIP(
+        performance_distances = dists_perform_all,
+        independence_distances = dists_indep_all,
+        performance_diagnostics = diagnostics_perform,
+        independence_diagnostics = diagnostics_indep,
+        Di = Di,
+        Sij = Sij,
+        w = weights_arr,
+        config = config
+    )
+end
 
 """
     climwipWeights(
@@ -255,7 +360,7 @@ function climwipWeights(
     dists_indep_all::YAXArray,
     dists_perform_all::YAXArray,
     config::ConfigWeights;
-    suffix_name::String = "climwip"
+    suffix_name::String = "historical"
 )
     weights_perform = Data.normalizeToYAX(config.performance)
     weights_indep = Data.normalizeToYAX(config.independence)
@@ -266,67 +371,20 @@ function climwipWeights(
     wP = performanceWeights(Di, config.sigma_performance)
     wI = independenceWeights(Sij, config.sigma_independence)
 
-    w = wP ./ wI
+    w = wP .* wI
     w = w ./ sum(w)
 
-    if hasdim(dists_perform_all, :member)
-        members = Array(dims(dists_perform_all, :member))
-        w_members = distributeWeightsAcrossMembers(w, members)
-    else
-        w_members = w
-    end
-    names = String.(map(x -> join([x, suffix_name], "-"), ["wP", "wI", "combined"]))
-    weights_arr = cat([wP, wI, w]..., dims=Dim{:weight}(names))
+    names = String.(map(x -> join([x, suffix_name], "-"), ["wIP", "wI", "wP"]))
+    weights_arr = cat([w, wI, wP]..., dims = Dim{:weight}(names))
     return ClimWIP(
         performance_distances = dists_perform_all,
         independence_distances = dists_indep_all,
         Di = Di,
         Sij = Sij,
         w = weights_arr,
-        #w_members = w_members,
         config = config
     )
 end
-
-
-function climwipWeights(
-    model_data::DataMap,
-    obs_data::DataMap,
-    config::ConfigWeights;
-    suffix_name::String = "climwip"
-)
-    diagnostics_indep = Data.activeDiagnostics(config.independence)
-    diagnostics_perform = Data.activeDiagnostics(config.performance)
-    weights_perform = Data.normalizeToYAX(config.performance)
-    weights_indep = Data.normalizeToYAX(config.independence)
-    
-    dists_perform_all = Data.distancesData(model_data, obs_data, diagnostics_perform)
-    dists_indep_all = Data.distancesModels(model_data, diagnostics_indep)
-
-    Di = Data.generalizedDistances(dists_perform_all, diagnostics_perform, weights_perform)
-    Sij = Data.generalizedDistances(dists_indep_all, diagnostics_indep, weights_indep)
-
-    wP = performanceWeights(Di, config.sigma_performance)
-    wI = independenceWeights(Sij, config.sigma_independence)
-
-    w = wP ./ wI
-    w = w ./ sum(w)
-
-    names = String.(map(x -> join([x, suffix_name], "-"), ["wP", "wI", "combined"]))
-    weights_arr = cat([wP, wI, w]..., dims=Dim{:weight}(names))
-    return ClimWIP(
-        performance_distances = dists_perform_all,
-        independence_distances = dists_indep_all,
-        performance_diagnostics = diagnostics_perform,
-        independence_diagnostics = diagnostics_indep,
-        Di = Di,
-        Sij = Sij,
-        w = weights_arr,
-        config = config
-    )
-end
-
-
 
 
 """
