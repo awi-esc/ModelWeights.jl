@@ -1,31 +1,31 @@
-# can be omitted if inside datasets, base_dir refers to the entire path
-path_data: "/albedo/work/projects/p_forclima/preproc_data_esmvaltool"
+base_path_data: "/albedo/work/projects/p_forclima/preproc_data_esmvaltool"
 
-# -default value for timerange if not provided is "full"
-# -default value for alias is the value of the experiment (exp) if no timerange
-# is provided, otherwise it is looked up in timerange_to_alias above and set to
-# "unknown" if not present.
-# -default value for subdirs is just empty, i.e. all subdirectories would 
-# be loaded 
 datasets: [
   {
     base_dir: "LGM", 
     exp: "lgm", 
-    variables: ["tas"], 
+    variables: ["tas", "tos"],
+    aliases: ["lgm"],
     statistics: ["CLIM"], 
-    subdirs: ["20241114"]
+    subset: {
+      base_subdirs: ["20241114"]
+    }
   },
   {
     base_dir: "piControl", 
     exp: "piControl", 
-    variables: ["tas"], 
-    statistics: ["CLIM"], 
-    subdirs: ["20250120"]
+    variables: ["tas", "tos"],
+    aliases: ["piControl"],  
+    statistics: ["CLIM"],
+    subset: {
+      base_subdirs: ["lgm_models", "20250322"]
+    }
   },
     {
     base_dir: "historical", 
     exp: "historical", 
-    variables: ["tas"], 
-    statistics: ["CLIM"], 
+    variables: ["tas", "tos"],
+    aliases: ["historical"], 
+    statistics: ["CLIM"]
   }
 ]
