@@ -17,11 +17,12 @@ member_ids = mwd.loadModelsFromCSV(
 model_data =  mw.defineDataMap(
     "./configs/climwip.yml"; 
     dtype = "cmip", 
-    constraint = Dict(
-        "level_shared" => "model",
-        "models" => member_ids
-    )
+    constraint = Dict("models" => member_ids, "level_shared" => "model")
 )
+# models used in Brunner et al. that weren't found
+models_found = mwd.modelsFromMemberIDs(model_data["tas_CLIM_historical"]; uniq=true)
+filter(x -> !(x in models_found), model_ids)
+
 mwd.apply!(model_data, mwt.filterTimeseries, 2014, 2100; 
     ids = ["tas_CLIM-ann_ssp126", "tas_CLIM-ann_ssp585"]
 )
