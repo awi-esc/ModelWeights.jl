@@ -415,6 +415,9 @@ Load data from `target_path`. If `target_path` ends with '.jld2', `variable`
 must be specified, otherwise  data is assumed to be binary.
 """
 function readDataFromDisk(target_path::String; variable::String = "data")
+    if !isfile(target_path)
+        throw(ArgumentError("There does not exist a file at: $(target_path)"))
+    end
     if endswith(target_path, ".jld2")
         if isempty(variable)
             throw(ArgumentError("To load .jld2 data, specify argument variable!"))
@@ -791,7 +794,11 @@ function resolvePathsFromMetaData(
     return vcat(paths_to_files...)
 end
 
+"""
+    parseFilename(filename::String, format::String)
 
+Retrieve information from `filename` and returns it as an object of type FilenameMeta.
+"""
 function parseFilename(filename::String, format::String)
     parts_format = split(format, "_")
     parts_fn = split(basename(splitext(filename)[1]) , "_")
@@ -1522,3 +1529,33 @@ function alignWeightsAndData(data::YAXArray, weights::YAXArray)
     end
     return (weights, data)
 end
+
+# TODO
+# function warnIfModelConstraintNotFulfilled(
+#     constraints::Vector{<:Dict{<:Any, <:Any}}, 
+#     loaded_data::DataMap, 
+#     ids::Vector{String}
+# )
+#     model_constraints = map(x -> get(x, "models", Vector{String}()), constraints)
+#     if length(unique(model_constraints)) == 1 && !isempty(model_constraints[1]) 
+#         model_constraints = model_constraints[1:1]
+#     end
+#     pattern = Regex("^([^" * MODEL_MEMBER_DELIM * "]+)" * MODEL_MEMBER_DELIM * "([^_]+)_?(.*)")
+#     for (i, requested_models) in enumerate(model_constraints)
+#         ds = loaded_data[ids[i]]
+#         found_members_with_grid = lookup(ds, :member)
+#         found_members = Vector{String}(undef, length(found_members_with_grid))
+#         found_models = Vector{String}(undef, length(found_members_with_grid))
+#         for (i, member) in enumerate(found_members_with_grid)
+#             m = match(pattern, member)
+#             found_models[i] = m.captures[1]
+#             found_members[i] = m.captures[1] * MODEL_MEMBER_DELIM * m.captures[2]            
+#         end
+#         all_not_found = filter(x -> !(x in found_models) && !(x in found_members) && !(x in found_members_with_grid), requested_models)
+#         models_not_found = modelsFromMemberIDs(all_not_found; uniq=true)
+#         if !isempty(models_not_found)
+#             @warn "For the following requested models no data was found: " models_not_found
+#         end
+#     end
+#     return nothing
+# end

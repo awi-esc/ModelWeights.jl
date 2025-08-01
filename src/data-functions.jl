@@ -437,9 +437,12 @@ function loadDataMapCore(
     if !absent(meta_data) && (length(all_paths) != length(meta_data))
         throw(ArgumentError("size of paths vector and meta data must be equal. Found: paths: $(length(all_paths)), meta_data: $(length(meta_data))"))
     end
-    if length(all_paths) != length(ids)
-        throw(ArgumentError("size of paths vector and ids must be equal. Found: paths: $(length(all_paths)), ids: $(length(ids))"))
+    np, ni, nc = length.([all_paths, ids, constraints])
+    if np != ni != nc
+        msg = "size of paths vector, ids and constraints must all be equal. Found: "
+        throw(ArgumentError(msg * "paths: $(length(all_paths)), ids: $(length(ids)), constraints: $(length(constraints))"))
     end
+
     all_meta = absent(meta_data) ? fill(nothing, length(all_paths)) : meta_data
     data = map(all_paths, all_meta, constraints)  do paths, meta, constraint
         # if provided, do the filtering
@@ -448,7 +451,7 @@ function loadDataMapCore(
         else
             mask = maskFileConstraints(paths, filename_format, constraint)
         end
-        constraint_ts = isnothing(constraint) ? nothing : get(constraint, "timeseries", nothing)
+        constraint_ts = isnothing(constraint) ? nothing : get(constraint, "timeseries", nothing)        
         preview ? paths[mask] :
             loadPreprocData(
                 paths[mask], filename_format; sorted, dtype, constraint_ts, meta_info = meta 
@@ -464,6 +467,9 @@ function loadDataMapCore(
             data = YAXArray.(data)
         end
         loaded_data = isempty(data) ? nothing : defineDataMap(data, ids[found_data])
+        # if dtype == "cmip"
+        #     warnIfModelConstraintNotFulfilled(constraints, loaded_data, ids)
+        # end
     end
     return loaded_data
 end
