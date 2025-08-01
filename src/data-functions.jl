@@ -446,19 +446,24 @@ function loadDataMapCore(
     all_meta = absent(meta_data) ? fill(nothing, length(all_paths)) : meta_data
     data = map(all_paths, all_meta, constraints)  do paths, meta, constraint
         # if provided, do the filtering
-        if isnothing(constraint)
-            mask = fill(true, length(paths))
-        else
-            mask = maskFileConstraints(paths, filename_format, constraint)
-        end
+        mask = isnothing(constraint) ? 
+            fill(true, length(paths)) :
+            maskFileConstraints(paths, filename_format, constraint)
         constraint_ts = isnothing(constraint) ? nothing : get(constraint, "timeseries", nothing)        
         preview ? paths[mask] :
             loadPreprocData(
                 paths[mask], filename_format; sorted, dtype, constraint_ts, meta_info = meta 
             )
     end
+    # Last step: apply constraint agument level_shared to be applied on every dataset
+    levels = map(c -> get(c, "level_shared", nothing), constraints)
+    have_shared_level = length(unique(levels)) == 1 && !isnothing(levels[1])
+    shared_level = have_shared_level ? getLevel(constraints[1]["level_shared"]) : nothing
     if preview
-        loaded_data = data
+        if have_shared_level && dtype == "cmip"
+            data = filterPathsSharedModels(data, shared_level, filename_format)
+        end
+        return data
     else
         found_data = map(!isnothing, data)
         if any(x -> x==0, found_data)
@@ -466,12 +471,18 @@ function loadDataMapCore(
             filter!(!isnothing, data)
             data = YAXArray.(data)
         end
-        loaded_data = isempty(data) ? nothing : defineDataMap(data, ids[found_data])
-        # if dtype == "cmip"
-        #     warnIfModelConstraintNotFulfilled(constraints, loaded_data, ids)
-        # end
+        if isempty(data)
+            return nothing
+        end
+        if have_shared_level && dtype == "cmip"
+            models = shared_level == MODEL_LEVEL ?  
+                modelsFromMemberIDs.(data; uniq=true) :
+                Array.(lookup.(data, :member))
+            shared_models = reduce(intersect, models)
+            data = map(ds -> subsetModelData(ds, shared_models), data)
+        end
+        return defineDataMap(data, ids[found_data])
     end
-    return loaded_data
 end
 
 function loadDataMapCore(
@@ -582,11 +593,11 @@ function loadDataFromYAML(
         dir_per_var = get(ds, "dir_per_var", true)
         path_data = joinpath(base_path, get(() -> fn_err("base_dir"), ds, "base_dir"))
         checkDataStructure(path_data, dir_per_var)
-        # merge; constraint has precedence constraints defined for individual datasets in the config file
+        # merge; constraint has precedence over constraints defined for individual datasets in the config file
         ds_constraint = get(ds, "subset", Dict())
         if !isnothing(constraint)
-            warn_msg = "identical subset keys: arg constraint has precedence over constraint in yaml file!"
-            ds_constraint = joinDicts(ds_constraint, constraint; warn_msg) 
+            warn_duplicates = "identical subset keys: arg constraint has precedence over constraint in yaml file!"
+            ds_constraint = joinDicts(ds_constraint, constraint; warn_msg = warn_duplicates) 
         end
         meta_data = metaDataFromYAML(ds)
         paths = resolvePathsFromMetaData.(meta_data, path_data, dir_per_var; constraint=ds_constraint)
@@ -600,19 +611,11 @@ function loadDataFromYAML(
         # paths and meta_data are vectors! In one loop, several datasets can be loaded (for different variables)
         all_constraints[i] = repeat([ds_constraint], length(paths))
     end
-    paths = vcat(all_paths...)
     meta_data = vcat(all_meta...)
-    constraints = vcat(all_constraints...)
-
-    # if argument provided, apply subset shared across all datasets
-    level_all_data = isnothing(constraint) ? nothing : get(constraint, "level_shared", nothing)
-    if !isnothing(level_all_data)
-        paths = filterPathsSharedModels(paths, level_all_data, filename_format)
-    end
     return loadDataMapCore(
-        paths, 
+        vcat(all_paths...), 
         map(x -> x.id, meta_data),
-        constraints; 
+        vcat(all_constraints...); 
         dtype, 
         filename_format, 
         sorted, 
