@@ -783,7 +783,7 @@ function resolvePathsFromMetaData(
     else
         base_paths = [base_path]
     end
-    paths_data_dirs_all = map(base_paths) do p 
+    paths_data_dirs_all = map(base_paths) do p
         joinpath(p, "preproc", meta.alias, meta.subdir)
     end
     paths_data_dirs = filter(isdir, paths_data_dirs_all)
@@ -1243,41 +1243,6 @@ function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractAr
     areaweights_mat = makeAreaWeightMatrix(parent(dims(m1, :lon)), parent(dims(m1, :lat)); mask)
     weighted_vals = @d areaweights_mat .* squared_diff
     return sqrt.(sum(coalesce.(weighted_vals, 0), dims=(1,2))[lon=1, lat=1])
-end
-
-
-"""
-    normalize(data::Dict{String, <:Number})
-
-Normalize values for every entry in `data` such that they sum up to 1. If remove_zero is
-true (default), the returned dictionary does not contain entries for which values were 0.
-"""
-function normalize(data::Dict{String, <:Number}; remove_zero::Bool=true)
-    result = Dict{String, Float64}()
-    total = sum(values(data))
-    data = remove_zero ? filter(((k, v),) -> v != 0, data) : data
-    for k in keys(data)
-        result[k] = data[k] ./ total 
-    end
-    return result
-end
-
-
-"""
-    normalizeToYAX(data::Dict{String, <:Number})
-
-Normalize values for every entry in `data` such that they sum up to 1 and return a YAXArray 
-with dimension 'diagnostic' whose lookup names are the keys of `data`.
-"""
-function normalizeToYAX(data::Dict{String, <:Number})
-    normed = normalize(data)
-    normalized_yax = YAXArray(
-        (Dim{:diagnostic}(collect(keys(normed))),), Array{Float64}(undef, length(normed))
-    )
-    for key in keys(normed)
-        normalized_yax[diagnostic = At(key)] = normed[key]
-    end
-    return normalized_yax
 end
 
 

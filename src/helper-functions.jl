@@ -198,3 +198,40 @@ function renameDict!(
     end
     return nothing
 end
+
+
+"""
+    normalizeDict(data::Dict{String, <:Number})
+
+Normalize values for every entry in `data` such that they sum up to 1. If remove_zero is
+true (default), the returned dictionary does not contain entries for which values were 0.
+"""
+function normalizeDict(data::Dict{String, <:Number}; remove_zero::Bool=true)
+    result = Dict{String, Float64}()
+    total = sum(values(data))
+    data = remove_zero ? filter(((k, v),) -> v != 0, data) : data
+    for k in keys(data)
+        result[k] = data[k] ./ total 
+    end
+    return result
+end
+
+
+"""
+    dict2YAX(data::Dict{String, <:Number})
+
+Convert dictionary `data` into a YAXArray with new dimension `dim_name` 
+(default is :diagnostic) whose lookup names are the keys of `data`.
+"""
+function dict2YAX(data::Dict{String, <:Number}; dim_name::Symbol = :diagnostic)
+    yax = YAXArray(
+        (Dim{:diagnostic}(collect(keys(data))),), Array{Float64}(undef, length(data))
+    )
+    for k in keys(data)
+        yax[diagnostic = At(k)] = data[k]
+    end
+    if dim_name != :diagnostic
+        setDim(yax, :diagnostic, dim_name, nothing)
+    end
+    return yax
+end

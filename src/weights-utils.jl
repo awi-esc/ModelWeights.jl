@@ -301,8 +301,10 @@ function climwipWeights(
 )
     diagnostics_indep = Data.activeDiagnostics(config.independence)
     diagnostics_perform = Data.activeDiagnostics(config.performance)
-    weights_perform = Data.normalizeToYAX(config.performance)
-    weights_indep = Data.normalizeToYAX(config.independence)
+    
+    config = normalizeConfigWeight(config)
+    weights_perform = Data.dict2YAX(config.performance)
+    weights_indep = Data.dict2YAX(config.independence)
 
     dists_perform_all = Data.distancesData(model_data, obs_data, diagnostics_perform)
     dists_indep_all = Data.distancesModels(model_data, diagnostics_indep)
@@ -362,9 +364,10 @@ function climwipWeights(
     config::ConfigWeights;
     suffix_name::String = "historical"
 )
-    weights_perform = Data.normalizeToYAX(config.performance)
-    weights_indep = Data.normalizeToYAX(config.independence)
-    
+    config = normalizeConfigWeight(config)
+    weights_perform = Data.dict2YAX(config.performance)
+    weights_indep = Data.dict2YAX(config.independence)
+
     Di = Data.generalizedDistances(dists_perform_all, weights_perform)
     Sij = Data.generalizedDistances(dists_indep_all, weights_indep)
 
@@ -406,8 +409,8 @@ function performanceWeights(Di::YAXArray, sigmaD::Number)
 end
 
 function performanceWeights(dists_perform_all::YAXArray, config::ConfigWeights)
-    weights_perform = Data.normalizeToYAX(config.performance)
-    Di = Data.generalizedDistances(dists_perform_all, weights_perform)
+    weights = Data.dict2YAX(Data.normalizeDict(config.performance))
+    Di = Data.generalizedDistances(dists_perform_all, weights)
     return performanceWeights(Di, config.sigma_performance)
 end
 
@@ -436,7 +439,14 @@ function independenceWeights(Sij::YAXArray, sigmaS::Number)
 end
 
 function independenceWeights(dists_indep_all::YAXArray, config::ConfigWeights)
-    weights = Data.normalizeToYAX(config.independence)
+    weights = Data.dict2YAX(Data.normalizeDict(config.independence))
     Sij = Data.generalizedDistances(dists_indep_all, weights)
     return independenceWeights(Sij, config.sigma_independence)
+end
+
+
+function normalizeConfigWeight(config::ConfigWeights)
+    perform = Data.normalizeDict(config.performance)
+    indep = Data.normalizeDict(config.independence)
+    return ConfigWeights(perform, indep, config.sigma_performance, config.sigma_independence)
 end
