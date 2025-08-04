@@ -987,7 +987,7 @@ If several observational datasets are present, the average across all is taken.
 function distancesData(models::YAXArray, observations::YAXArray)
     obs = hasdim(observations, :model) ? avgObsDatasets(observations) : observations
     # copy of data needed?
-    maskMissing = (ismissing.(obs) .+ ismissing.(models)) .> 0 # observations or model is missing (or both)
+    maskMissing = @d (ismissing.(obs) .+ ismissing.(models)) .> 0 # observations or model is missing (or both)
     return areaWeightedRMSE(models, obs,  maskMissing)
 end
 
