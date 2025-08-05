@@ -38,7 +38,7 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
 end
 
 """
-    subsetModelData(datamap::DataMap, level::Level=MEMBER_LEVEL)
+    subsetModelData(dm::DataMap, level::Level=MEMBER_LEVEL; ids::Vector{String}=Vector{String}())
 
 For those datasets in `datamap` that specify data on the level `level` (i.e. have dimension 
 :member or :model), return a new DataMap with subset of data s.t. the new datasets all have 
@@ -46,23 +46,52 @@ the same models (MODEL_LEVEL) or members (MEMBER_LEVEL).
 
 If no models are shared across datasets, return the input `datamap`.
 """
-function subsetModelData(datamap::DataMap, level::Level = MEMBER_LEVEL)
-    shared_models = sharedModels(datamap, level)
+function subsetModelData(
+    dm::DataMap, level::Level = MEMBER_LEVEL; ids::Vector{String}=Vector{String}()
+)
+    shared_models = sharedModels(dm, level)
     if isempty(shared_models)
-        @warn "no shared models in datamap"
-        return datamap
+        @warn "no shared models in input datamap!"
+        return dm
     end
     subset = DataMap()
-    for (id, data) in datamap
-        subset[id] = subsetModelData(deepcopy(data), shared_models)
+    if isempty(ids)
+        ids = collect(keys(dm))
+    end
+    for id in ids
+        subset[id] = subsetModelData(deepcopy(dm[id]), shared_models)
     end
     return subset
 end
 
-function subsetModelData(datamap::DataMap, level::Union{String, Symbol})
-    subsetModelData(datamap, getLevel(level))
+function subsetModelData(
+    dm::DataMap, level::Union{String, Symbol}; ids::Vector{String}=Vector{String}()
+)
+    subsetModelData(dm, getLevel(level); ids)
 end
 
+function subsetModelData!(
+    dm::DataMap, level::Level = MEMBER_LEVEL; ids::Vector{String}=Vector{String}()
+)
+    shared_models = sharedModels(dm, level)
+    if isempty(shared_models)
+        @warn "no shared models in input datamap!"
+        return dm
+    end
+    if isempty(ids)
+        ids = collect(keys(dm))
+    end
+    for id in ids
+        dm[id] = subsetModelData(dm[id], shared_models)
+    end
+    return nothing
+end
+
+function subsetModelData!(
+    dm::DataMap, level::Union{String, Symbol}; ids::Vector{String}=Vector{String}()
+)
+    subsetModelData!(dm, getLevel(level); ids)
+end
 
 
 function sharedModels(data::DataMap, level::Level)

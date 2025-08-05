@@ -369,7 +369,7 @@ function joinDicts(v::Dict...; warn_msg::String="")
                     dm[x] != result[x] ? (x, result[x], dm[x]) : ()
                 end
             )
-            if !isempty(dups) && !isempty(warn_msg)
+            if !isempty(dups)
                 @warn warn_msg dups
             end
         end
