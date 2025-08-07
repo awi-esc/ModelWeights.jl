@@ -142,8 +142,8 @@ the respective model's members in `members`.
 All other models that are in `data` but for which no member is specified in `members` are 
 also retained.
 """
-function alignPhysics(data::YAXArray, members::Vector{String})
-    members_data =  Array(dims(data, :member))
+function alignPhysics(data::YAXArray, members::AbstractVector{String})
+    members_data = lookup(data, :member)
     members_kept = Vector{String}()
     for model in modelsFromMemberIDs(members_data; uniq = true)
         allowed_members = filter(m -> startswith(m, model * MODEL_MEMBER_DELIM), members)
