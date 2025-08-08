@@ -10,13 +10,13 @@ Equal weights line is added to the plot.
 - `title::String`:
 - `sort_by::String`: value of weight dimension according to which data is sorted
 """
-function plotWeights(weights::YAXArray; title::String="", sort_by::String="")
+function plotWeights(weights::YAXArray; title::String="", sort_by::String="", fs::Number=15)
     sort_by = isempty(sort_by) ? weights.weight[1] : sort_by
     indices = Array(sortperm(weights[weight = At(sort_by)], rev=true))
     
     n_models = length(weights.model)
     xs = 1:n_models
-    fig = Figure()
+    fig = Figure(size=(600,350))
     ax = Axis(
         fig[1, 1],
         xticks = (xs, Array(weights.model[indices])),
@@ -24,8 +24,13 @@ function plotWeights(weights::YAXArray; title::String="", sort_by::String="")
         xlabel = "Model",
         ylabel = "Weight",
         title = title,
+        titlesize = fs,
+        xticklabelsize = fs,
+        yticklabelsize = fs,
+        xlabelsize = fs,
+        ylabelsize = fs
     )
-    labels = Array(weights.weight)
+    labels = lookup(weights, :weight)
     for label in labels
         ys = Array(weights[weight = At(label)])
         sorted_ys = ys[indices]
@@ -37,8 +42,8 @@ function plotWeights(weights::YAXArray; title::String="", sort_by::String="")
     end
     # add equal weight for reference
     ys_equal = [1 / n_models for _ in range(1, n_models)]
-    lines!(ax, xs, ys_equal, color = :gray, label = "equal weighting")
-    axislegend(ax, position = :rt, merge = true)
+    lines!(ax, xs, ys_equal, color = :gray, label = "equal weighting", linestyle=:dash)
+    fig[1,2] = axislegend(ax, position = :cc, merge = true, framevisible = false)
     return fig
 end
 
