@@ -1,3 +1,5 @@
+# Public API
+
 ## Functions
 
 ```@autodocs

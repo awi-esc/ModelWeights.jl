@@ -11,6 +11,7 @@ A package to compute weights (based on independence- and performance) for ensemb
 - compute performance weights based on historical period or based on custom function
 - combine independence- and performance weights
 
+## Content
 
 ```@contents
 ```
