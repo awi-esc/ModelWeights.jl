@@ -9,11 +9,11 @@ makedocs(
     modules = [ModelWeights],
     pages = [
         "Home" => "index.md",
-        "requirements.md",
         "getting-started.md",
         "weights.md",
-        "Examples" => ["examples/climwip.md", "examples/lgm.md"],
-        "references.md"
+        "Manual" => ["Manual/loading-data.md", "Manual/filtering-data.md", "Manual/computing-weights.md"],
+        #"Examples" => ["examples/climwip.md", "examples/lgm.md"],
+        "Reference" => ["reference/API.md", "reference/references.md"] 
     ],
     format = Documenter.HTML(
         edit_link = "main"
