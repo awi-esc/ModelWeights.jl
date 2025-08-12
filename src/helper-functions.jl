@@ -151,6 +151,9 @@ end
         dim_vals::Union{Nothing, Vector{String}}
     )
 
+Rename dimension `dim` to `dim_name` and/or its values to `dim_vals`.
+If `dim_name` or `dim_vals` is nothing, name/vals don't change.
+
 # Arguments:
 - `data::YAXArray`:
 - `dim::Union{String, Symbol}`: Name of the dimension to be changed.
@@ -161,8 +164,8 @@ function setDim(
     data::YAXArray, 
     dim::Union{String, Symbol},
     dim_name::Union{Nothing, String, Symbol},
-    dim_vals::Union{Nothing, Vector{String}}
-)
+    dim_vals::Union{Nothing, Vector{T}}
+) where T <: Union{String, Number}
     if !isnothing(dim_vals)
         data = DimensionalData.set(data, Symbol(dim) => dim_vals)
     end
@@ -234,4 +237,83 @@ function dict2YAX(data::Dict{String, <:Number}; dim_name::Symbol = :diagnostic)
         setDim(yax, :diagnostic, dim_name, nothing)
     end
     return yax
+end
+
+
+""" 
+    lon360to180(lon::Number)
+    
+Convert longitudes measured from 0° to 360° into  -180° to 180° scale.
+"""
+function lon360to180(lon::Number)
+    return lon > 179 ? lon - 360 : lon
+end
+
+function lon360to180(data::YAXArray)
+    return setDim(data, :lon, nothing, lon360to180.(lookup(data, :lon)))
+end
+
+
+""" 
+    lon180to360(lon::Number)
+
+Convert longitudes measured from -180° to 180° into 0° to 360° scale. For western hemisphere 
+(negative longitudes) add 360.
+"""
+function lon180to360(lon::Number)
+    return ifelse(lon < 0, lon + 360, lon)
+end
+
+function lon180to360(data::YAXArray)
+    return setDim(data, :lon, nothing, lon180to360.(lookup(data, :lon)))
+end
+
+
+"""
+    sortLongitudesWest2East(data::AbstractArray)
+
+Arrange 'data' such that western latitudes come first, then eastern latitudes.
+"""
+function sortLongitudesEast2West(data::AbstractArray)
+    indices = longitudesEastWest(data)
+    return data[lon = vcat(indices.east, indices.west)]
+end
+
+"""
+    sortLongitudesWest2East(data::AbstractArray)
+
+Arrange 'data' such that western latitudes come first, then eastern latitudes.
+"""
+function sortLongitudesWest2East(data::AbstractArray)
+    indices = longitudesEastWest(data)
+    # east = longitudes[longitudes .< 180]
+    # west = longitudes[longitudes .>= 180]
+    # sorted_lon = vcat(west, east)
+
+    # # necessary to specify that lookup dimension values aren't sorted anymore!
+    # # otherwise Selector At won't work! does seem to work don't know TODO: CHECK THIS!!
+    # lookup_lon = Lookups.Sampled(
+    #     sorted_lon;
+    #     span = Lookups.Irregular(minimum(longitudes), maximum(longitudes)),
+    #     order = Lookups.ForwardOrdered(),
+    # )
+    # data = data[lon = At(sorted_lon)]
+    # data = DimensionalData.Lookups.set(data, lon = lookup_lon)
+    return data[lon = vcat(indices.west, indices.east)]
+end
+
+
+"""
+    sortLongitudesWest2East(data::AbstractArray)
+
+Arrange 'data' such that western latitudes come first, then eastern latitudes.
+
+Return NamedTuple with fields 'east' and 'west' pointing to vectors of indices for sorted longitudes.
+"""
+function longitudesEastWest(data::AbstractArray)
+    data = lon180to360(data)
+    longitudes = lookup(data, :lon)
+    indices_east = findall(x -> x < 180, longitudes)
+    indices_west = findall(x -> x >= 180, longitudes)
+    return (east = indices_east, west = indices_west)
 end

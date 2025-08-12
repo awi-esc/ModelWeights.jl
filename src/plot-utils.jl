@@ -49,47 +49,6 @@ function latitude2NorthSouth(lat::Number)
     return lat < 0 ? "$(abs(lat))°S" : "$(lat)°N"
 end
 
-""" 
-    lon360to180(lon::Number)
-    
-Convert longitudes measured from 0° to 360° into  -180° to 180° scale.
-"""
-function lon360to180(lon::Number)
-    return lon > 179 ? lon - 360 : lon
-end
-
-""" 
-    lon360to180(lon::Number)
-
-Convert longitudes measured from -180° to 180° into 0° to 360° scale.
-"""
-function lon180to360(lon::Number)
-    return ifelse(lon < 0, lon + 360, lon)
-end
-
-
-"""
-    sortLongitudesWest2East(data::AbstractArray)
-
-Arrange 'data' such that western latitudes come first, then eastern latitudes.
-"""
-function sortLongitudesWest2East(data::AbstractArray)
-    lon = dims(data, :lon)
-    east = lon[lon .< 180]
-    west = lon[lon .>= 180]
-    sorted_lon = [Array(west); Array(east)]
-
-    # necessary to specify that lookup dimension values aren't sorted anymore!
-    # otherwise Selector At won't work! does seem to work don't know TODO: CHECK THIS!!
-    lookup_lon = Lookups.Sampled(
-        sorted_lon;
-        span = Lookups.Irregular(minimum(lon), maximum(lon)),
-        order = Lookups.ForwardOrdered(),
-    )
-    data = data[lon=At(sorted_lon)]
-    data = DimensionalData.Lookups.set(data, lon = lookup_lon)
-    return data
-end
 
 """
     convertKgsToSv!(vec:YAXArray)
