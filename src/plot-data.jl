@@ -25,11 +25,11 @@ function plotValsOnMap!(
     nb_ticks::Union{Int,Nothing} = nothing,
     east_west_labels = false,
 )
-    means = sortLongitudesWest2East(means)
+    means = Data.sortLongitudesWest2East(means)
     dims_lat = Array(dims(means, :lat))
     dims_lon = Array(dims(means, :lon))
     if any(x -> x > 179, dims_lon)
-        dims_lon = lon360to180.(dims_lon)
+        dims_lon = Data.lon360to180.(dims_lon)
     end
 
     # scaling plot 
