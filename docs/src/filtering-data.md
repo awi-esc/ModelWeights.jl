@@ -1,71 +1,41 @@
 # Filtering data
 
-## General options
+TODO 
+
+### Optional parameters for filtering data
+For both functions, `loadDataFromESMValToolRecipes` and `loadDataFromYAML`, there is a set of optional parameters in order to constrain the loaded data:
+
+- `preview`: If set to false (default), the data will not be loaded and only the metadata with the information that we added that specifies which data will be loaded is returned.
+
+- `dir_per_var`: If set to true (default), only subdirectories of the base\_path that contain `_VARIABLE` in their name will be searched. 
 
 
-## Additional options for data preprocessed with ESMValTool
-
-### Data structure
-When the data was preprocessed with ESMValTool, the structure of the directories where the data is stored looks as follows.
-Uppercase names refer to variables, lowercase names mean that the names can be arbitrary unless stated differently in the comments to the right. 
-
-```bash
-├── BASE_DIR # arbitrary (ESMValTool recipe name + _ + YYYYMMDD_HHMMSS)
-│       └── preproc # this directory must be called 'preproc'
-│       │      └── ALIAS # arbitrary (name of the diagnostic used in the ESMValTool recipe, chosen by the user)
-│       │      │       └── VAR_STATISTIC # name of entry among `variables` in the ESMValTool recipe e.g. tos_CLIM (chosen by the user)
-│       │      │            └── model1.nc
-│       │      │            └── model2.nc
-│       │      │            └── ...
-│       │      │       └── VAR_STATISTIC
-│       │      │            └── ...
-│       │      └── ALIAS # arbitrary (name of the diagnostic used in the ESMValTool recipe, chosen by the user)
-│       │      │       └── VAR_STATISTIC # name of entry among `variables` in the ESMValTool recipe e.g. tos_CLIM (chosen by the user)
-│       │      │            └── model1.nc
-│       │      │            └── model2.nc
-│       │      │            └── ...
-│       │      │       └── VAR_STATISTIC
-│       │      │            └── ...
-│       └── possibly other output from ESMValTool
-....
+```@raw html
+<!-- `subset_shared`: Can be either `nothing` (default), `ModelWeights.MODEL` or `ModelWeights.MEMBER`. If set to `MODEL`, only data from the same models will be loaded. If, for instance, data from lgm and historical experiments shall be loaded, this configuration will ensure that for both, only the same models are loaded, i.e. those for which both experiments were done. While this considers models, not specific simulations, setting subset\_shared to `MEMBER` would only load models that share the exact same simulations (i.e. the same member\_id abbreviation, e.g. `r1i1p1f1`). -->
 ```
 
-In ESMValTool, `BASE_DIR` is the name of the recipe plus the date and time using the format YYYYMMDD_HHMMSS.
-`ALIAS` corresponds to the name (chosen by the user) of the diagnostics defined in the recipe.
-`VAR_STATISTIC` refers to the name of the entries among the `variables` section in the ESMValTool recipe.
-We set these names to the short name of the variable (e.g. 'tas') and the applied statistic (e.g. 'CLIM'), 
-concatenated by an underscore (e.g, tas_CLIM). Any name can be chosen here; but when using VAR_STAT,
-the data can be subset to certain statistics only (see below).
+- `subset` is an optional parameter of type `Constraint` or `Nothing`. A Constraint further constrains the data to be loaded and has the following fields:
+   
+    - `variables`: The short name of the climate variable, e.g. ["tas", "tos"].
+    
+    - `statistics`: The statistic/diagnostic that was used when preprocessing the data. The names are generally arbitrary, but need to be identical to those you used in the preprocessing; for instance, we refer to the climatological average as "CLIM", s.t. an example value for this argument is ["CLIM"].
+    
+    - `aliases`: Like for `statistics`, the names are arbitrary but must be identical to what you used when preprocessing the data; e.g. ["historical", "historical1"].
+    An alias should refer to a certain `timerange` of a certain experiment, e.g. we call the time period from 1951-1980 'historical1'. To load only this data, it thus does not matter whether you set `timerange=["1951-1980"]` or `alias=["historical1"]`.
+    
+    - `timeranges`: Timeranges to be loaded; especially for historical data, you may preprocess data for different timeranges,  e.g. ["full", "1980-2014"]. 
+
+    - `projects`:  e.g. ["CMIP5", "CMIP6"]. All filenames of the data to be loaded must contain at least one of the given strings. If not specified and `is_model_data=true`, it is set to ["CMIP"]. If not specified and `is_model_data=false`, it is set to ["ERA5"], the default observational dataset used.
+
+    - `models`: List of models or individual model members, e.g. ["AWI-CM-1-1-MR"]. All filenames must contain at least one of the given strings + "_". The underscore is important since some models have names that are substrings of other models, e.g. "CNRM-CM5" and "CNRM-CM5-C2". 
+   
+    - `base_subdirs`: If there is one directory for each climate variable (dir\_per\_var=true), you can use this argument to subset the considered subdirectories: if given, the data will be loaded only from subdirectories of the given base\_dir that contain any of the provided values in `base_subdirs` in their name. That is, it's not necessary to specify full directory names here, parts of it are sufficient.
 
 
-The structure is basically the same if there is not a seperate subdirectory for each climate 
-variable, except that the BASE_DIR refers to the directory that immediately contains the 
-preproc-subdirectory:
 
+Note that when using the option to load data preprocessed with ESMValTool from a seperate yaml file, 
+in which it's possible to specify filtering options for each datasets, these values will be overwritten,
+if the same key is provided in the function argument, too. 
+That is, the function argument takes precedence over what had been specified in the yaml file if a key is specified in both.
+Otherwise if a key is just given in the yaml file, it will still be applied in the filtering.
 
-
-If there is one subdirectory for each climate variable (this is, for instance, the case when one ESMValTool recipe is used for a single variable), the structure of the data is nearly the same. The only difference is that the upper most directory, BASE_DIR, has subdirectories which then point to the directory called 'preproc'. The name of each of the subdirectories is assumened to contain _VAR_, e.g. (BASE_DIR/recipe_tas_lgm or BASE_DIR/recipe_tos_lgm).
-If ESMValTool is used, the name of the subdirectories (`subdir1`, `subdir2`) is the name of the recipe concatenated with the timestamp in the format YYYYMMDD_HHMMSS by an underscore.
-
-```bash
-├── BASE_DIR
-│   └── subdir1  # name must contain "_VAR_" where VAR is the short_name of the variable, e.g. _tos_
-│   └── subdir2  # name must contain "_VAR_" where VAR is the short_name of the variable, e.g. _tos_
-│       └── preproc # this directory must be called 'preproc'
-│       │      └── ALIAS # the name of the diagnostic in the ESMValTool recipe
-│       │      │       └── VAR_STATISTIC  # can be any name, but this schema useful for subsetting easily wrt statistics
-│       │      │            └── model1.nc
-│       │      │            └── model2.nc
-│       │      │            └── ...
-│       │      │       └── VAR_STATISTIC
-│       │      │            └── ...
-│       │      └── ALIAS # the name of the diagnostic in the ESMValTool recipe
-│       │      │       └── VAR_STATISTIC  # can be any name, but this schema useful for subsetting easily wrt statistics
-│       │      │            └── model1.nc
-│       │      │            └── model2.nc
-│       │      │            └── ...
-│       │      │       └── VAR_STATISTIC
-│       │      │            └── ...
-│       └── possibly other output from ESMValTool
-....
-```
