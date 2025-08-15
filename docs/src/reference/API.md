@@ -1,5 +1,10 @@
 # Public API
 
+## Index
+
+```@index
+```
+
 ## Functions
 
 ```@autodocs
@@ -7,7 +12,3 @@ Modules = [ModelWeights.Data, ModelWeights.Plots, ModelWeights.Timeseries, Model
 Order   = [:function, :type]
 ```
 
-## Index
-
-```@index
-```

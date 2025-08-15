@@ -10,18 +10,18 @@ We name this type alias a `DataMap`.
 Data is loaded with the function `defineDataMap`. It defines several methods that we explain further below. 
 They usually provide (among others) the keyword arguments `dtype` and `filename_format`. 
 
-The latter is needed as the information that is needed to load the specified data is retrieve 
+`filename_format` is needed as the information that is needed to load the specified data is retrieve 
 from the filenames. 
 There are three predefined filename formats:
 
--  ``VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE`` (:cmip) is the default
-- ``MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE`` (:esmvaltool_cmip5)
--  ``MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID`` (:esmvaltool_cmip6)
+- `VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE` (:cmip), default value
+- `MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE` (:esmvaltool_cmip5)
+- `MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID` (:esmvaltool_cmip6)
 
 It is also possible to use the format ``:esmvaltool`` which will specify for every file 
 whether it corresponds to CMIP5 or CMIP6. 
 
-[Further, it is possible to specify your own filename format.]: #
+Further, it is possible to specify your own filename format. TODO
 
 The keyword argument `dtype` is just used to provide specific meta data when `dtype="cmip"`.
 This should be specified when working with CMIP data, since by default the data type is set to undefined.
@@ -42,6 +42,7 @@ for 3D data, (`lon`, `lat`, `depth`).
 To load data for different datasets, e.g. variable tos for lgm and historical experiment:
 
 ````julia
+using ModelWeights
 paths_datasets = ["path/to/lgm/tos", "path/to/historical/tos"]
 ids_datasets = ["lgm-tos", "historical-tos"]
 defineDataMap(paths_datasets, ids_datasets; dtype = "cmip")
