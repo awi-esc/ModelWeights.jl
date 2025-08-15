@@ -41,10 +41,8 @@ end
 end
 
 @kwdef struct ClimWIP
-    performance_distances::Vector{<:YAXArray}
-    independence_distances::Vector{<:YAXArray}
-    performance_diagnostics::Vector{String}
-    independence_diagnostics::Vector{String}
+    performance_distances::Dict # from diagnostics to performance distances for all members
+    independence_distances::Dict # from diagnostics to independence distances for all members
     Di::YAXArray # generalized distances each model wrt performance
     Sij::YAXArray # generalized distances between pairs of models
     w::YAXArray # contains all three types of normalized weights (wI, wP, combined)

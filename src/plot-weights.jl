@@ -48,17 +48,6 @@ function plotWeights(weights::YAXArray; title::String="", sort_by::String="", fs
 end
 
 
-
-function plotDistancesByVar(dists::AbstractArray, title::String; is_bar_plot::Bool = true)
-    dists_var = reduce(+, dists, dims = :diagnostic)
-    dists_var = DimensionalData.set(
-        dists_var,
-        :diagnostic => ["sum of diagnostics: $(Array(dims(dists, :diagnostic))...)"],
-    )
-    plotDistances(dists_var, title; is_bar_plot = is_bar_plot)
-end
-
-
 """
     plotDistances(dists::AbstractArray, title::String; is_bar_plot::Bool=true)
 
@@ -144,45 +133,4 @@ function plotDistancesIndependence(distances::AbstractArray, dimname::String)
         push!(figures, fig)
     end
     return figures
-end
-
-
-"""
-    plotWeightContributions(independence::DimArray, performance::DimArray)
-
-Plot performance against independence weights.
-
-# Arguments: 
-- independence: (dims:model) normalized independence weights
-- performance: (dims:model) normalized performance weights 
-"""
-function plotWeightContributions(
-    independence::DimArray,
-    performance::DimArray;
-    xlabel::String = "Normalized performance weights",
-    ylabel::String = "Normalized independence weights",
-    title::String = "",
-)
-    #L"Performance\n $e^{-(D_i/\sigma_D)^2}$",
-    #L"Independence\n\n $1 + \sum_{j≠i}^M e^{-(S_{ij}/\sigma_S)^2}$",  
-    fig = Figure(size = (800, 600), fontsize = 16)
-    ax = Axis(
-        fig[1, 1],
-        xlabel = xlabel,
-        ylabel = ylabel,
-        title = title,
-        xlabelsize = 24,
-        ylabelsize = 24,
-    )
-    scatter!(ax, Array(performance), Array(independence))
-    m = maximum([maximum(independence), maximum(performance)])
-    extra = 0.0005
-    lines!(ax, [0, m + extra], [0, m + extra], color = :gray)
-    text!(
-        Array(performance),
-        Array(independence),
-        text = Array(dims(performance, :model)),
-        align = (:center, :top),
-    )
-    return fig
 end

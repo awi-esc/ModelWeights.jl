@@ -28,12 +28,12 @@ Return `data` at model dimensions `model_dims` at `indices`.
 function indexModel(
     data::YAXArray, model_dims::NTuple{N, Symbol}, indices::Vector{Int}
 ) where {N}
-    data = deepcopy(data)
+    data = YAXArray(data.axes, data.data, deepcopy(data.properties))
     dim_names = dimNames(data)
     index_vec = map(dim_names) do name 
         name in model_dims ? indices : Colon()
     end
-    data = data[index_vec...]
+    data = data[index_vec...] # this indexing materializes the data, i.e. its not lazy anymore!
     subsetMeta!(data.properties, indices)
     return data
 end
@@ -91,7 +91,7 @@ entry in their metadata, further combined with the properties in `meta` if provi
 
 All elements in `data` must share all dimensions except for time (if present).
 For timeseries data, the time dimension may cover different ranges. In that case the 
-maximal timeseries is used and filled with NaN for missing values.  
+maximal overlapping time period is used.
 
 The combined YAXArray has the additional dimension `new_dim` (default: :model) with `names`
 as values. If `names` is not provided, default values 'model1', 'model2, etc. are used 
@@ -144,7 +144,7 @@ function combineModelsFromMultipleFiles(
     if has_0_dims
         dimData = dimData[temp = 1]
     end
-    dimData = YAXArray(dimData.axes, dimData.data, meta_dict)
+    dimData = YAXArray(dimData.axes, dimData, meta_dict)
     if length(model_names) != length(unique(model_names))
         duplicates = unique([m for m in model_names if sum(model_names .== m) > 1])
         @warn "Some datasets appear more than once" duplicates
@@ -294,33 +294,33 @@ function approxAreaWeights(latitudes::AbstractVector{<:Number})
     return YAXArray((Dim{:lat}(latitudes),), area_weights)
 end
 
-"""
-    makeAreaWeightMatrix
 
-# Arguments:
-- mask: first two dimensions must refer to lon, lat
 """
-function makeAreaWeightMatrix(
+    areaWeightMatrix(
+        latitudes::AbstractVector{<:Number},
+        longitudes::AbstractVector{<:Number},
+        mask::YAXArray{T}
+    )
+
+Return matrix of size length(longitudes) x length(latitudes) with normalized area weights 
+(approximated based on latitudes) and set to 0 at positions where mask is 1.
+
+"""
+function areaWeightMatrix(
+    latitudes::AbstractVector{<:Number},
     longitudes::AbstractVector{<:Number},
-    latitudes::AbstractVector{<:Number};
-    mask::Union{YAXArray, Nothing} = nothing
-)
+    mask::YAXArray{T}
+) where {T <: Union{Missing, Int, Bool}}
+    throwErrorIfDimMissing(mask, [:lon, :lat]; include = :all)
     area_weights = approxAreaWeights(latitudes)
-    area_weighted_mat = ones(length(longitudes)) * area_weights.data' # matrix multipication
-    if !isnothing(mask)
-        s_mask = size(mask)
-        if length(s_mask) > 2
-            if length(s_mask) > 3 
-                throw(ArgumentError("area weight matrix only implemented for lonxlat and lonxlatxmodel input"))
-            end
-            n_models = s_mask[3]
-            area_weighted_mat = cat(fill(area_weighted_mat, n_models)...; dims=3)
-        end
-        area_weighted_mat[mask] .= 0
-    end
-    area_weighted_mat = area_weighted_mat ./ sum(area_weighted_mat, dims=(1,2))
-    dimensions = isnothing(mask) ? (Dim{:lon}(longitudes), Dim{:lat}(latitudes)) : dims(mask)
-    return YAXArray(dimensions, area_weighted_mat)
+    s = otherdims(mask, (:lon, :lat))
+    aw_mat = !isempty(s) ? 
+        repeat(area_weights', length(longitudes), 1, size(s)...) :
+        repeat(area_weights', length(longitudes))
+    aw_mat = YAXArray(mask.axes, aw_mat)
+    aw_mat[mask] .= 0
+    normalized_aw_mat = mapslices(x -> x ./ sum(x), aw_mat; dims=(:lon, :lat))
+    return normalized_aw_mat
 end
 
 
@@ -976,7 +976,6 @@ function distancesData(model_data::DataMap, obs_data::DataMap, diagnostics::Vect
     end
 end
 
-
 """
     distancesData(models::YAXArray, observations::YAXArray)
 
@@ -986,9 +985,18 @@ If several observational datasets are present, the average across all is taken.
 """
 function distancesData(models::YAXArray, observations::YAXArray)
     obs = hasdim(observations, :model) ? avgObsDatasets(observations) : observations
-    # copy of data needed?
-    maskMissing = @d (ismissing.(obs) .+ ismissing.(models)) .> 0 # observations or model is missing (or both)
-    return areaWeightedRMSE(models, obs,  maskMissing)
+    obs = YAXArray(obs.axes, Array(obs), deepcopy(obs.properties))
+    models = YAXArray(models.axes, Array(models), deepcopy(models.properties))
+    mask_missing = @d (ismissing.(obs) .+ ismissing.(models)) .> 0 # observations or model is missing (or both)
+    model_dim = modelDim(models)
+    model_names = lookup(models, model_dim)
+    rmses = YAXArray((Dim{model_dim}(model_names),), ones(length(model_names)))
+    for (i, m) in enumerate(model_names)
+        data_m = getAtModel(models, model_dim, m)
+        mask = getAtModel(mask_missing, model_dim, m)
+        rmses[i] = areaWeightedRMSE(data_m, obs, mask)
+    end
+    return rmses
 end
 
 
@@ -1021,52 +1029,56 @@ Compute the area weighted RMSE between model predictions for each pair of models
 - `data::YAXArray`: first two dimensions must be 'lon', 'lat', third 'model' or 'member'.
 """
 function distancesModels(data::YAXArray)
-    # data = deepcopy(data) copy of data needed?
-    # only take values where none (!) of the models has infinite values!! (Not just the two that are compared to one another)
+    data = YAXArray(data.axes, Array(data), deepcopy(data.properties))
+    # only take values where none (!) of the models have missing values!! (Not just the two that are compared to one another)
     dim_symbol = modelDim(data)
-    nb_models = length(dims(data, dim_symbol))
+    models = lookup(data, dim_symbol)
+    nb_models = length(models)
     mask_missing = dropdims(any(ismissing, data, dims = dim_symbol), dims = dim_symbol)
 
     matrixS = zeros(nb_models, nb_models)
-    for (i, model_i) in enumerate(eachslice(data[:, :, 1:(end-1)]; dims = dim_symbol))
-        for (j, model_j) in enumerate(eachslice(data[:, :, (i+1):end]; dims = dim_symbol))
-            idx = j + i
-            matrixS[i, idx] = areaWeightedRMSE(model_i, model_j, mask_missing)
+    for (i, model_i) in enumerate(models[1:(end-1)])
+        for (j, model_j) in enumerate(models[(i+1):end])
+            m1 = getAtModel(data, dim_symbol, model_i)
+            m2 = getAtModel(data, dim_symbol, model_j)
+            matrixS[i, j + i] = areaWeightedRMSE(m1, m2, mask_missing)
         end
     end
     symDistMatrix = matrixS .+ matrixS'
-    dim = Array(dims(data, dim_symbol))
     new_dim1 = dim_symbol == :member ? :member1 : model1
     new_dim2 = dim_symbol == :member ? :member2 : model2
-    return YAXArray((Dim{new_dim1}(dim), Dim{new_dim2}(dim)), symDistMatrix)
+    return YAXArray((Dim{new_dim1}(collect(models)), Dim{new_dim2}(collect(models))), symDistMatrix)
 end
 
 
 """
-    generalizedDistances(distances_all::YAXArray, weights::YAXArray)
+    generalizedDistances(
+        distances_all::YAXArray, weights::YAXArray; norm_avg_members::Bool = true
+    )
 
 For every diagnostic in `distances_all`, compute the weighted sum of all diagnostics.
 
 # Arguments:
 - `distances_all::YAXArray`: must have dimension :diagnostic.
+- `weights::YAXArray`: weights assigned to each diagnostic.
+- `norm_avg_members::Bool`: if true (default), average distances per model are computed 
+BEFORE computing the median that is used to normalize the distances (seperately for each 
+diagnostic); if false, median is computed across all individual members of each diagnostic.
 """
-function generalizedDistances(distances_all::YAXArray, weights::YAXArray)
+function generalizedDistances(distances_all::YAXArray, weights::YAXArray; norm_avg_members::Bool = true)
     throwErrorIfDimMissing(distances_all, :diagnostic)
     model_dims = modelDims(distances_all)
+    norm = dropdims(median(distances_all, dims=model_dims), dims=model_dims)
+
     has_model_dim = :model in model_dims
     if !has_model_dim
         distances_all = :member1 in  model_dims ?
             summarizeMembersMatrix(distances_all, false) :
             summarizeMembersVector(distances_all)
     end
-    
     dimensions = modelDims(distances_all)
-    norm = dropdims(median(distances_all, dims=dimensions), dims=dimensions)
+    norm = norm_avg_members ? dropdims(median(distances_all, dims=dimensions), dims=dimensions) : norm
     normalized_distances = @d distances_all ./ norm
-
-    # normalized_distances = model_vs_data ? 
-    #     summarizeMembersVector(normalized_distances) :
-    #     summarizeMembersMatrix(normalized_distances, false)
     
     weighted_dists = @d normalized_distances .* weights
     return dropdims(sum(weighted_dists, dims = :diagnostic), dims=:diagnostic)
@@ -1074,22 +1086,29 @@ end
 
 
 """
-    generalizedDistances(distances_all::Vector{YAXArray}, weights::YAXArray)
+    generalizedDistances(
+        distances_all::Vector{<:YAXArray}, diagnostics::Vector{String}, weights::YAXArray
+    )
 
 # Arguments:
-- `distances_all::Vector{YAXArray}`: each entry refers to the distances of one diagnostic, 
+- `distances_all::Vector{<:YAXArray}`: each entry refers to the distances of one diagnostic, 
 each must have dimension 'model', 'member' or 'member1' and 'member2' (must be identical for 
 every entry!).
-- `weights::YAXArray`
+- `diagnostics:: Vector{String}`: names of diagnostics.
+- `weights::YAXArray`: weights assigned to each diagnostic.
+- `norm_avg_members::Bool`: if true (default), average distances per model are computed 
+BEFORE computing the median that is used to normalize the distances (seperately for each 
+diagnostic); if false, median is computed across all individual members of each diagnostic.
 """
 function generalizedDistances(
-    distances_all::Vector{<:YAXArray}, diagnostics::Vector{String}, weights::YAXArray
+    distances_all::Vector{<:YAXArray}, diagnostics::Vector{String}, weights::YAXArray;
+    norm_avg_members::Bool = true
 )
     if length(distances_all) != length(diagnostics)
         throw(ArgumentError("distances must be computed for every diagnostic, found $(length(distances_all)) distances, but $(length(diagnostics)) diagnostics."))
     end
     map(x -> throwErrorIfDimMissing(x, [:model, :member, :member1]; include=:any), distances_all)
-
+    normalizations = median.(distances_all)
     # average model members
     model_dims = modelDims.(distances_all)
     has_model_dim = all(t -> :model in t, model_dims)
@@ -1098,30 +1117,19 @@ function generalizedDistances(
             summarizeMembersMatrix.(distances_all, false) :
             summarizeMembersVector.(distances_all)
     end
-    # normalize
-    normalizations = median.(distances_all)
+    normalizations = norm_avg_members ? median.(distances_all) : normalizations
     normalized_distances = map(distances_all, normalizations, diagnostics) do dists, norm, diagnostic
-        d = @d dists ./ norm
+        d = Array(dists) ./ norm
+        dimensions = dims(dists)
         YAXArray(
-            (dims(d)..., Dim{:diagnostic}([diagnostic])), 
-            reshape(d.data, (size(dims(d))..., 1)), 
-            d.properties
+            (dimensions..., Dim{:diagnostic}([diagnostic])), 
+            reshape(d, (size(dimensions)..., 1)), 
+            deepcopy(dists.properties)
         )
     end
-    # average; distances_all either has (in every entry) :member or :member1 and :member2
-    # normalized_distances = all(hasdim.(distances_all, :member1)) ?
-    #     summarizeMembersMatrix.(normalized_distances, false) :
-    #     summarizeMembersVector.(normalized_distances)
-    
-    # for matrix, dimensions are symmetric, just take first, st. it also works for vector
-    dimension = filter(x -> x != :diagnostic, dimNames(normalized_distances[1]))[1]
-    models = map(x -> dims(x, dimension) , normalized_distances)
-    shared_models = intersect(models...)
-    
-    distances = map(dists -> subsetModelData(dists, shared_models), normalized_distances)
-    distances = cat(distances..., dims = Dim{:diagnostic}(diagnostics))
+    distances = cat(normalized_distances...; dims=Dim{:diagnostic}(diagnostics))
     weighted_dists = @d distances .* weights
-    return dropdims(sum(weighted_dists, dims = :diagnostic), dims=:diagnostic)
+    return mapslices(sum, weighted_dists; dims = (:diagnostic,))
 end
 
 
@@ -1219,7 +1227,7 @@ end
 
 
 """
-    areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractArray)
+    areaWeightedRMSE(m1::YAXrray, m2::YAXArray, mask::YAXArray)
 
 Compute the area weighted (approximated by cosine of latitudes in radians) root mean squared 
 error between `m1` and `m2`. 
@@ -1229,20 +1237,38 @@ error between `m1` and `m2`.
 - `m2`: must have dimensions 'lon', 'lat' as first dimensions.
 - `mask`: indicates missing values (1 refers to missing, 0 to non-missing).
 """
-function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, mask::AbstractArray)
-    if dims(m1, :lon) != dims(m2, :lon) || dims(m1, :lat) != dims(m2, :lat)
-        msg = "To compute area weigehted RMSE, $m1 and $m2 must be defined on the same lon,lat-grid!"
+function areaWeightedRMSE(m1::YAXArray, m2::YAXArray, mask::YAXArray)
+    map(ds -> throwErrorIfDimMissing(ds, [:lat, :lon]; include = :all), [m1, m2, mask])
+    latitudes, longitudes = lookup(m1, :lat), lookup(m1, :lon)
+    if m1.axes != m2.axes || m1.axes != mask.axes
+        # if latitudes != lookup(m2, :lat) || longitudes != lookup(m2, :lon)
+        msg = "To compute area weigehted RMSE, $m1 and $m2 and $mask must have same dimensions!"
         throw(ArgumentError(msg))
     end
+    aw_mat = areaWeightMatrix(latitudes, longitudes, mask)
+    # valid = .!mask
+    # area_weights = approxAreaWeights(latitudes)
+    squared_diff = (Array(m1) .- Array(m2)) .^ 2
+    # aw_mat = repeat(area_weights.data', length(longitudes))
+    # normalized_aw_mat = aw_mat ./ sum(aw_mat)
+    #normalized_aw_mat = aw_mat
+
      # set data set to 0 whenever any of both is missing, 
     # i.e. the returned object has one entry for every model now, if m1, m2 have a 3rd model dimension
-    masked_m1 = ifelse.(mask .== true, 0, m1)
-    masked_m2 = ifelse.(mask .== true, 0, m2)
-
-    squared_diff = @d (masked_m1 .- masked_m2) .^ 2
-    areaweights_mat = makeAreaWeightMatrix(parent(dims(m1, :lon)), parent(dims(m1, :lat)); mask)
-    weighted_vals = @d areaweights_mat .* squared_diff
-    return sqrt.(sum(coalesce.(weighted_vals, 0), dims=(1,2))[lon=1, lat=1])
+    #masked_m1 = ifelse.(mask .== true, 0, m1)
+    #masked_m2 = ifelse.(mask .== true, 0, m2)
+    #squared_diff = @d (masked_m1 .- masked_m2) .^ 2
+    #values = @d area_weights .* squared_diff
+    #areaweights_mat = makeAreaWeightMatrix(parent(dims(m1, :lon)), parent(dims(m1, :lat)); mask)
+    # weighted_vals = @d areaweights_mat .* squared_diff
+    # return sqrt.(sum(coalesce.(weighted_vals, 0), dims=(1,2))[lon=1, lat=1])
+    
+    # valid_weights = normalized_aw_mat[valid]
+    # valid_sq_diff = squared_diff[valid]
+    # weighted_vals = valid_weights .* valid_sq_diff
+    return sqrt(sum(skipmissing(aw_mat .* squared_diff)))
+    #return sqrt(sum(weighted_vals))
+    #return sqrt(sum(weighted_vals) ./ sum(valid_weights))
 end
 
 
@@ -1341,7 +1367,7 @@ end
 
 Check model names as retrieved from the metadata for potential inconsistencies wrt filename.
 """
-function metaDataChecksCMIP(meta::NCDatasets.CommonDataModel.Attributes, path::String)
+function metaDataChecksCMIP(meta::Dict{String, T}, path::String) where T <: Any
     name = meta[getCMIPModelsKey(Dict(meta))]
     if !occursin(name, basename(path)) && !(name in keys(MODEL_NAME_FIXES))
         @warn "model name as read from metadata of stored .nc file ($name) and used as dimension name is not identical to name appearing in filename $(basename(path))."
@@ -1381,6 +1407,7 @@ function modelDims(data::YAXArray)
     dim_names = string.(dimNames(data))
     model_dims = filter(d -> occursin("model", d), dim_names)
     if isempty(model_dims)
+        # check if it contains dimension with name 'member'
         model_dims = filter(d -> occursin("member", d), dim_names)
     end
     if isempty(model_dims)
@@ -1482,7 +1509,7 @@ function alignWeightsAndData(data::YAXArray, weights::YAXArray)
         @warn msg data_no_weights
         # Only include data for which there are weights
         indices = findall(x -> !(x in data_no_weights), models_data)
-        data = Data.indexModel(data, (dim_symbol,), indices)
+        data = indexModel(data, (dim_symbol,), indices)
     end
     # weights for which we don't have data
     weights_no_data = filter(x -> !(x in models_data), models_weights)
@@ -1490,7 +1517,7 @@ function alignWeightsAndData(data::YAXArray, weights::YAXArray)
         @warn "Weights were renormalized since data of models missing for which weights have been computed: $weights_no_data"
         # renormalize weights
         indices = findall(m -> m in dims(data, dim_symbol), models_weights)
-        weights = Data.indexModel(weights, (dim_symbol,), indices)
+        weights = indexModel(weights, (dim_symbol,), indices)
         weights = weights ./ sum(weights)
     end
     return (weights, data)

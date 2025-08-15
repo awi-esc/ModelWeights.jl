@@ -8,6 +8,9 @@ using Colors
 using ColorSchemes
 using DimensionalData
 using NCDatasets
+using NetCDF
+using Statistics
+using YAXArrays
 
 # Load data for computing weights (output from ESMValTool recipe)
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358"; 
@@ -25,7 +28,6 @@ model_data = mw.defineDataMap(
         "mips" => ["CMIP5", "CMIP6"]
     )
 )
-
 obs_data =  mw.defineDataMap(
     path_data, 
     path_recipes, 
@@ -41,10 +43,7 @@ obs_data = mwd.apply(obs_data, mwd.setDim, :model, nothing, ["ERA5"])
     
 
 # Compute Weights (performance based on historical period)
-target_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/";
-fn_jld2 = "weights-climwip-simplified.jld2";
-fn_nc = "weights-climwip-simplified.nc";
-config_weights = mww.ConfigWeights(
+config = mww.ConfigWeights(
     performance = Dict(
         "tas_CLIM_calculate_weights_climwip" => 1, 
         "pr_CLIM_calculate_weights_climwip" => 2, 
@@ -58,49 +57,106 @@ config_weights = mww.ConfigWeights(
     sigma_independence = 0.5,
     sigma_performance = 0.5
 );
+# this is done just to cmopare with their data which is sorted that way
+mwd.apply!(model_data, mwd.sortLongitudesEast2West)
+mwd.apply!(obs_data, mwd.sortLongitudesEast2West)
+weights = mww.climwipWeights(model_data, obs_data, config; suffix_name="simplified", norm_avg_members = false);
 
-dists_perform = mwd.distancesData(model_data, obs_data, config_weights.performance);
-dists_indep = mwd.distancesModels(model_data, config_weights.independence);
-weights = mww.climwipWeights(dists_indep, dists_perform, config_weights);
+
+# check performance distances
+PATH_TO_WORK_DIR = "reproduce-climwip-figs/recipe_climwip_test_basic_data/work"
+models = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_tas_CLIM.nc"), "model_ensemble")
+performanceTas = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_tas_CLIM.nc"), "dtas_CLIM");
+performancePr = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_pr_CLIM.nc"), "dpr_CLIM");
+performancePsl = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip", "climwip", "performance_psl_CLIM.nc"), "dpsl_CLIM");
+
+dTas = weights.performance_distances["tas_CLIM_calculate_weights_climwip"].data
+dPr = weights.performance_distances["pr_CLIM_calculate_weights_climwip"].data
+dPsl = weights.performance_distances["psl_CLIM_calculate_weights_climwip"].data
+all(isapprox.(performanceTas, dTas))
+all(isapprox.(performancePr, dPr))
+all(isapprox.(performancePsl, dPsl))
+
+dPerformance = [dTas, dPr, dPsl] ./ median.([dTas, dPr, dPsl])
+Di = sum([1/4, 2/4, 1/4] .* dPerformance)
+performanceOverall = NetCDF.ncread("/albedo/work/projects/p_forclima/britta/esmvaltool-output/recipe_climwip_test_basic_20250129_104840/work/calculate_weights_climwip/climwip/performance_overall_mean.nc", "overall_mean")
+all(isapprox.(Di, performanceOverall))
+# our computed generalized distances yield slightly different results:
+weights.Di.data 
+# this is because we first summarize members into one average distance for each model and then take the median
+# instead of taking the median over all models and members:
+
+# check independence distances
+independenceTas = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip/climwip/independence_tas_CLIM.nc"), "dtas_CLIM")
+independencePr = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip/climwip/independence_pr_CLIM.nc"), "dpr_CLIM")
+
+dTas = weights.independence_distances["tas_CLIM_calculate_weights_climwip"].data
+dPr = weights.independence_distances["pr_CLIM_calculate_weights_climwip"].data
+# the following is different because we normalize the area weights, which they don't for the independence weights (using pdist with unnormalized weights)
+# (if we don't normalize the weights we get the same results as they do)
+all(isapprox.(independenceTas, dTas))
+all(isapprox.(independencePr, dPr))
+
+# yet the computed generalized distances are identical because the normalization of the median cancels out, since our distance values and their distance values
+# just differ by a factor (the same across all model pairs):
+independenceTas ./ dTas
+independencePr ./ dPr
+
+dIndependence = [dTas, dPr] ./ median.([dTas, dPr])
+Sij = sum([2/3, 1/3] .* dIndependence)
+independence_overall = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip/climwip/independence_overall_mean.nc"), "overall_mean")
+all(isapprox.(Sij, independence_overall))
+# our generalized distances are again slightly different because we first summarize members into one average distance for each model and then take the median
+# instead of taking the median over all models and members (as we did here):
+weights.Sij.data
 
 
-# Load weights from disk
-weights = mw.readDataFromDisk(config_weights.target_path; variable="weights");
+# results from ESMValTool run
+orig_wP = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip/climwip/performance_overall_mean.nc"))
+orig_wI = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip/climwip/independence_overall_mean.nc"))
+orig_wIP = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip/climwip/weights.nc"))
+models = orig_wIP["model_ensemble"][:]
+orig_w = YAXArray((Dim{:member}(models),), orig_wIP["weight"][:])
+orig_w.data
+
+# comparison with our weights (slightly different for reasons mentioned above)
+weights.w[weight = At("wIP-simplified")].data
+
 
 # make some Plots
 fig_weights = mwp.plotWeights(weights.w; title="Climwip test basic; weights")
-# mwp.plotWeightContributions(weights.wI, weights.wP)
-# figs_performance = mwp.plotDistancesByVar(
-#     weights.performance_distances, "Performance distances "; is_bar_plot=true
-# )
-
+# plot generalized distances
 figs_Sij = mwp.plotDistancesIndependence(weights.Sij, "model1")
 figs_Sij[1]
-sij_var = dropdims(
-    reduce(+, weights.independence_distances, dims=:diagnostic), 
-    dims=:diagnostic
-)
-figs_sij = mwp.plotDistancesIndependence(sij_var, "member1")
+# TODO: plot distances performance
+
+# plot distances for all members
+dists = weights.independence_distances["tas_CLIM_calculate_weights_climwip"]
+figs_sij = mwp.plotDistancesIndependence(dists, "member1")
+figs_sij[1]
+dists = weights.independence_distances["pr_CLIM_calculate_weights_climwip"]
+figs_sij = mwp.plotDistancesIndependence(dists, "member1")
 figs_sij[1]
 
+
+
 # Climwip Plots - Temperature map plots
-data_temp_map_future = mwd.loadDataFromESMValToolRecipes(
-    path_data, path_recipes;
-    dir_per_var = false,
+data_temp_map_future = mw.defineDataMap(
+    path_data, path_recipes, :esmvaltool_recipes; 
     dtype = "cmip",
-    filename_format = :esmvaltool,
+    dir_per_var = false,
     constraint = Dict(
         "aliases" => ["weighted_temperature_map_future"],
-         "mips" => ["CMIP5", "CMIP6"]
+        "mips" => ["CMIP5", "CMIP6"]
     )
 )
-data_temp_map_reference = mwd.loadDataFromESMValToolRecipes(
-    path_data, path_recipes;
+data_temp_map_reference = mw.defineDataMap(
+    path_data, path_recipes, :esmvaltool_recipes;
     dir_per_var = false,
     dtype = "cmip",
-    filename_format = :esmvaltool,
     constraint = Dict("aliases" => ["weighted_temperature_map_reference"])
 )
+
                 
 # compute weighted averages and plot results
 data_ref = data_temp_map_reference["tas_CLIM_weighted_temperature_map_reference"];
@@ -108,7 +164,8 @@ data_future = data_temp_map_future["tas_CLIM_weighted_temperature_map_future"];
 # just to align with original data
 data_ref = data_ref[lat = Where(x -> x <= 68.75)];
 data_future = data_future[lat = Where(x -> x <= 68.75)];
-diff = data_future .- data_ref;
+# hier weiter!
+diff = data_future.data .- data_ref.data;
 
 # sanity checks: compare to original data (must have adapted the latitudes above)
 function compareToOrigData(data, data_orig)
@@ -118,8 +175,11 @@ function compareToOrigData(data, data_orig)
     @assert approxEqual
 end
 
+members = lookup(weights.performance_distances[1], :member)
+w_members = mww.distributeWeightsAcrossMembers(weights.w[weight = At("wIP-simplified")], collect(members))
+
 title_f1 = "Weighted mean temp. change 2081-2100 minus 1995-2014";
-weighted_avg = mww.weightedAvg(diff; weights = weights.w_members);
+weighted_avg = mww.weightedAvg(YAXArray(dims(diff), collect(diff)); weights = w_members);
 #weighted_avg = mw.sortLongitudesWest2East(weighted_avg);
 f1 = Figure();
 cmap = cgrad([:white, :salmon, :red, :darkred], 10; categorical = true)
@@ -136,7 +196,7 @@ f1
 
 title_f2 = "Weighted minus unweighted mean temp. change: 2081-2100 minus 1995-2014";
 unweighted_avg = mww.weightedAvg(diff; use_members_equal_weights=false);
-#unweighted_avg = mw.sortLongitudesWest2East(unweighted_avg);
+#unweighted_avg = mwd.sortLongitudesWest2East(unweighted_avg);
 diff_wu = weighted_avg .- unweighted_avg;
 
 f2 = Figure();
@@ -152,16 +212,13 @@ mwp.plotValsOnMap!(f2, diff_wu, title_f2;
 f2
 
 begin
-    data_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_map/weighted_temperature_map/temperature_change_weighted_map.nc");
+    data_orig = NCDataset(joinpath(PATH_TO_WORK_DIR, "weighted_temperature_map/weighted_temperature_map/temperature_change_weighted_map.nc"));
     data_ww_orig = data_orig["__xarray_dataarray_variable__"][:,:];
     compareToOrigData(weighted_avg, data_ww_orig)
-    # d = DimArray(data_ww_orig, (Dim{:lon}(Array(dims(weighted_avg, :lon))), Dim{:lat}(Array(dims(weighted_avg, :lat)))))
-    # f = Figure();
-    # mw.plotValsOnMap!(f, d, title_f1 * " (original data)"; ColorSchemes.Reds.colors);
 end
 
 begin
-    data_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_map/weighted_temperature_map/temperature_change_difference_map.nc");
+    data_orig = NCDataset(joinpath(PATH_TO_WORK_DIR, "weighted_temperature_map/weighted_temperature_map/temperature_change_difference_map.nc"));
     data_wu_orig = data_orig["__xarray_dataarray_variable__"][:,:];
     compareToOrigData(diff_wu, data_wu_orig)
 end
@@ -177,7 +234,7 @@ data_temp_graph = mw.defineDataMap(
 );
 data_graph = data_temp_graph["tas_ANOM_weighted_temperature_graph"];
 # this will compute the weighted avg based on the average across the respective members of each model
-#weighted_avg = mw.applyWeights(data_graph, weights.w_members);
+#weighted_avg = mww.applyWeights(data_graph, w_members);
 
 weighted_avg = mww.weightedAvg(data_graph; weights = weights.w_members);
 unweighted_avg = mww.weightedAvg(data_graph; use_members_equal_weights = false);

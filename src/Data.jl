@@ -15,6 +15,7 @@ using DataFrames
 using DimensionalData
 using Interpolations
 using NCDatasets
+using NetCDF
 using JLD2
 using Serialization
 using Setfield

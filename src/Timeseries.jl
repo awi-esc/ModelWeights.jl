@@ -44,11 +44,14 @@ end
 
 
 function detrend(data::YAXArray)
-    return @d data .- linearTrend(data; full_predictions = true)
+    trend = linearTrend(data; full_predictions = true)
+    return detrend(data, trend)
 end
 
 function detrend(data::YAXArray, trend::YAXArray)
-    return @d data .- trend
+    data_mat = YAXArray(data.axes, Array(data), deepcopy(data.properties))
+    trend_mat = YAXArray(trend.axes, Array(trend), deepcopy(trend.properties))
+    return @d data_mat .- trend_mat
 end
 
 function warnIfOutOfTimerange(df::YAXArray, start_year::Int, end_year::Int)

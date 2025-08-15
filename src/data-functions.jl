@@ -15,8 +15,7 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
         @warn "Vector of models to subset data to is empty!"
         return data
     end
-    data = deepcopy(data)
-    model_dims = modelDims(data)
+    model_dims = Tuple(modelDims(data))
     dimensions = Array(dims(data, model_dims[1]))
     if occursin("member", string(model_dims[1]))
         models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
@@ -249,13 +248,12 @@ function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
     for (i, m) in enumerate(models_uniq)
         dat = data[model = model_indices[m]]
         summarized = fn(dat; dims = (:model,))[model = At("combined")]
-        meta = subsetMeta(data.properties, model_indices[m]; simplify = true)
+        meta = subsetMeta(deepcopy(data.properties), model_indices[m]; simplify = true)
         summarized_data_all[i] = YAXArray(dims(summarized), summarized.data, meta)
     end
     summarized_data = combineModelsFromMultipleFiles(
         summarized_data_all; model_names = models_uniq
     )
-    summarized_data = replace(summarized_data, NaN => missing)
     return summarized_data
 end
 
@@ -354,7 +352,7 @@ function loadPreprocData(
     
     for (i, (path, meta)) in enumerate(zip(paths, filenames_meta))
         @debug "processing file.." * path
-        ds = NCDataset(path)
+        ds = open_dataset(path)
         clim_var = !isnothing(meta_info) ? get(meta_info, "variable", meta.variable) : meta.variable
         ds_var = nothing
         try 
@@ -366,18 +364,18 @@ function loadPreprocData(
         # if clim_var == "amoc"
         #     ds_var = ds["msftmz"]
         # end
-        props = Dict{String, Any}(ds_var.attrib) # metadata just for this file!
+        props = Dict{String, Any}(ds_var.properties) # metadata just for this file!
         if clim_var == "msftmz"
             sector = get(ds, "sector", nothing)
             if !isnothing(sector)
-                merge!(props, sector.attrib)
+                merge!(props, sector.properties)
             end
         end
         props["path"] = path 
         if is_cmip
-            metaDataChecksCMIP(ds.attrib, path)
-            mip = get(ds.attrib, "project_id", nothing) # for CMIP5
-            mip = isnothing(mip) ? get(ds.attrib, "mip_era", nothing) : mip # for CMIP6
+            metaDataChecksCMIP(ds.properties, path)
+            mip = get(ds.properties, "project_id", nothing) # for CMIP5
+            mip = isnothing(mip) ? get(ds.properties, "mip_era", nothing) : mip # for CMIP6
             if isnothing(mip)
                 msg = "dtype set to $(dtype). Only CMIP5+CMIP6 supported, yet neither project_id nor mip_era found in data at $path !"
                 @warn msg
@@ -389,19 +387,28 @@ function loadPreprocData(
                 props["mip_era"] = mip
             end
         end
-        dimension_names = dimnames(ds_var)
+        dimension_names = dimNames(ds_var)
+        #dimensions = dims(ds_var)
+        #dimension_names = dimnames(ds_var)
+
         dimensions = Vector(undef, length(dimension_names))
         for (idx_dim, d) in enumerate(dimension_names)
-            if d in ["bnds", "string21", "time"]
+            if d == :time
                 continue
             end
-            dimensions[idx_dim] = Dim{Symbol(d)}(collect(ds_var[d][:]))
+            # if d in ["bnds", "string21", "time"]
+            #     continue
+            # end
+            dimensions[idx_dim] = Dim{d}(Array(dims(ds_var, d)))
+            #dimensions[idx_dim] = Dim{Symbol(d)}(collect(ds_var[d][:]))
         end
         
         exclude_file = false
-        if "time" in dimension_names
+        if :time in dimension_names # with NCDataset "time"
             # NOTE: just YEAR and MONTH are saved in the time dimension
-            times = map(x -> DateTime(Dates.year(x), Dates.month(x)), ds_var["time"][:])
+            times = collect(lookup(ds_var, :time))
+            times = map(x -> DateTime(Dates.year(x), Dates.month(x)), times) 
+            #times = map(x -> DateTime(Dates.year(x), Dates.month(x)), ds_var["time"][:])
             if absent(constraint_ts) 
                 @debug "There were no start and end year for timeseries provided!"
                 constraint_ts = Dict()
@@ -410,7 +417,8 @@ function loadPreprocData(
             if isempty(indices_time)
                 exclude_file = true
             else
-                idx_time = findfirst(dimension_names .== "time")
+                idx_time = findfirst(dimension_names .== :time)
+                #idx_time = findfirst(dimension_names .== "time")
                 indices = Vector(undef, length(dimension_names))
                 for i in 1:length(dimension_names)
                     indices[i] = i == idx_time ? indices_time : Colon()
@@ -419,20 +427,21 @@ function loadPreprocData(
                 dimensions[idx_time] = Dim{:time}(collect(times[indices_time]))
             end
         end
-        #data[i] = YAXArray(Tuple(dimensions), Array(ds_var), props)
-        props["handles"] = ds
+        #props["handles"] = ds
+        fv = get(props, "_FillValue", missing)
+        ds_var = map(x -> x == fv  ? missing : x, ds_var)
         data[i] = exclude_file ? [] : YAXArray(Tuple(dimensions), ds_var, props)
         # replace missing values by NaN?
         # data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(ds_var), NaN), props)
-        #close(ds)
     end
     indices = findall(x -> !isempty(x), data)
     if !isempty(model_names)
         model_names = model_names[indices]
     end
-    return isempty(indices) ? 
+    result =  isempty(indices) ? 
         nothing : 
         combineModelsFromMultipleFiles(data[indices]; model_names, new_dim, sorted, meta=meta_info)
+    return result
 end
 
 
@@ -498,7 +507,7 @@ function loadDataMapCore(
         if any(x -> x==0, found_data)
             @warn "no data found for ids: $(ids[.!found_data])"
             filter!(!isnothing, data)
-            data = YAXArray.(data)
+            data = YAXArray.(data) # why needed?
         end
         if isempty(data)
             return nothing

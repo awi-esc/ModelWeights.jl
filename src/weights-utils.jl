@@ -281,7 +281,6 @@ function climwipWeights(
     return climwipWeights(combined_wP, wI; out, name_combined)
 end
 
-
 # functions for climwipWeights with historical performance:
 """
     climwipWeights(
@@ -297,7 +296,8 @@ function climwipWeights(
     model_data::DataMap,
     obs_data::DataMap,
     config::ConfigWeights;
-    suffix_name::String = "historical"
+    suffix_name::String = "historical",
+    norm_avg_members::Bool = true
 )
     diagnostics_indep = Data.activeDiagnostics(config.independence)
     diagnostics_perform = Data.activeDiagnostics(config.performance)
@@ -309,8 +309,8 @@ function climwipWeights(
     dists_perform_all = Data.distancesData(model_data, obs_data, diagnostics_perform)
     dists_indep_all = Data.distancesModels(model_data, diagnostics_indep)
 
-    Di = Data.generalizedDistances(dists_perform_all, diagnostics_perform, weights_perform)
-    Sij = Data.generalizedDistances(dists_indep_all, diagnostics_indep, weights_indep)
+    Di = Data.generalizedDistances(dists_perform_all, diagnostics_perform, weights_perform; norm_avg_members)
+    Sij = Data.generalizedDistances(dists_indep_all, diagnostics_indep, weights_indep; norm_avg_members)
 
     wP = performanceWeights(Di, config.sigma_performance)
     wI = independenceWeights(Sij, config.sigma_independence)
@@ -318,13 +318,21 @@ function climwipWeights(
     w = wP .* wI
     w = w ./ sum(w)
 
-    names = String.(map(x -> join([x, suffix_name], "-"), ["wIP", "wI", "wP"]))
-    weights_arr = cat([w, wI, wP]..., dims = Dim{:weight}(names))
+    names_weights = String.(map(x -> join([x, suffix_name], "-"), ["wIP", "wI", "wP"]))
+    weights_arr = cat([w, wI, wP]..., dims = Dim{:weight}(names_weights))
+    
+    # save dists and diagnostics as dictionaries
+    dists_perform, dists_indep = Dict(), Dict()
+    for (diag, dists) in zip(diagnostics_perform, dists_perform_all)
+        dists_perform[diag] = dists
+    end
+    for (diag, dists) in zip(diagnostics_indep, dists_indep_all)
+        dists_indep[diag] = dists
+    end
+    
     return ClimWIP(
-        performance_distances = dists_perform_all,
-        independence_distances = dists_indep_all,
-        performance_diagnostics = diagnostics_perform,
-        independence_diagnostics = diagnostics_indep,
+        performance_distances = dists_perform,
+        independence_distances = dists_indep,
         Di = Di,
         Sij = Sij,
         w = weights_arr,

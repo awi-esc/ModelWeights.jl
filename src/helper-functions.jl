@@ -100,43 +100,37 @@ end
 
 
 """
-    kelvinToCelsius(data::AbstractArray)
+    kelvinToCelsius(data::YAXArray)
 
 Return a copy of `data` with values given in Kelvin covnerted into Degree Celsius.
 
 """
 function kelvinToCelsius(data::YAXArray)
-    units = data.properties["units"]
-    df = deepcopy(data)
-    if isa(units, String) && units == "K"
-        df = df .- 273.15
-        df.properties["units"] = "degC"
-    elseif isa(units, Vector)
-        indices = findall(units .== "K")
-        if !isempty(indices)
-            if hasdim(df, :member)
-                df[member=indices] .= df[member=indices] .- 273.15
-            else
-                df[model=indices] .= df[model=indices] .- 273.15
-            end
-            df.properties["units"] = "degC"
-        end
-    end
+    df = YAXArray(data.axes, copy(data.data), deepcopy(data.properties))
+    kelvinToCelsius!(df)
     return df
 end
 
-
-"""
-    kelvinToCelsius!(datamap::DataMap)
-
-Modify entries of `datamap` s.t. all data is given in Degree Celsius (instead) of Kelvin.
-"""
-function kelvinToCelsius!(datamap::DataMap)
-    for (id, da) in datamap
-        datamap[id] = kelvinToCelsius(da)
+function kelvinToCelsius!(data::YAXArray)
+    units = data.properties["units"]
+    if isa(units, String) && units == "K"
+        data = data .- 273.15
+        data.properties["units"] = "degC"
+    elseif isa(units, Vector)
+        indices = findall(units .== "K")
+        if !isempty(indices)
+            model_dim = modelDims(data)
+            if model_dim == :member
+                data[member = indices] .= data[member = indices] .- 273.15
+            else
+                data[model = indices] .= data[model = indices] .- 273.15
+            end
+            units[indices] .= "degC"
+        end
     end
     return nothing
 end
+
 
 
 function absent(x::Union{Vector, String, Dict, Nothing}) 
@@ -181,7 +175,7 @@ end
 Return the names of the dimensions of `data` as vector of symbols.
 """
 function dimNames(data::YAXArray)
-    return map(d -> typeof(d).parameters[1], dims(data))
+    return collect(DimensionalData.name.(dims(data)))
 end
 
 

@@ -273,7 +273,7 @@ weights = mw.readDataFromDisk(joinpath(weights_dir, "weights-lgm-cooling.jld2");
 # TODO: Plot generalized distances
 
 # Plot performance and independence weights together
-f = mw.plotWeightContributions(weights.wI, weights.wP)
+#f = mw.plotWeightContributions(weights.wI, weights.wP)
 
 # ds_Sij = ds_weights["Sij"];
 # src_names = dimnames(ds_Sij);

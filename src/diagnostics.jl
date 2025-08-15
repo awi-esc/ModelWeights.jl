@@ -15,24 +15,19 @@ Missing data is accounted for in the area-weights.
 """
 function globalMeans(data::YAXArray)
     throwErrorIfDimMissing(data, [:lon, :lat]; include = :any)
-    longitudes = Array(dims(data, :lon))
-    latitudes = Array(dims(data, :lat))
-    area_weights = approxAreaWeights(coalesce.(latitudes, NaN))
-    s = otherdims(data, (:lon, :lat))
-    area_weighted_mat =
-        isempty(s) ? repeat(area_weights', length(longitudes), 1) :
-        repeat(area_weights', length(longitudes), 1, size(s)...)
-    masks = ismissing.(data)
-    area_weighted_mat = ifelse.(masks .== 1, missing, area_weighted_mat)
-
-    weighted_unnormalized_vals = area_weighted_mat .* data
-    normalization = mapslices(area_weighted_mat, dims = ("lon", "lat")) do x
-        sum(skipmissing(x))
+    longitudes = collect(lookup(data, :lon))
+    latitudes = collect(lookup(data, :lat))
+    mask = Bool.(mapslices(model -> ismissing.(model), data; dims=(:lon, :lat)))
+    aw_mat = areaWeightMatrix(latitudes, longitudes, mask) # is normalized
+    # make sure that units are identical across models 
+    units = data.properties["units"]
+    if length(unique(units)) != 1
+        if any(x -> x != "degC" && x != "K", units)
+            throw(ArgumentError("Data for all models must be defined in the same units to compute global mean! Only degC and K are converted into degC."))
+        end
+        data = kelvinToCelsius(data)
     end
-    weighted_normalized_vals = @d weighted_unnormalized_vals ./ normalization
-    gms = mapslices(weighted_normalized_vals, dims = ("lon", "lat")) do x
-        sum(skipmissing(x))
-    end
+    gms = mapslices(x -> sum(skipmissing(x)), aw_mat .* Array(data); dims=(:lon, :lat))
     return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), deepcopy(data.properties))
 end
 
@@ -43,17 +38,18 @@ end
 Compute difference of `orig_data` and `ref_data`.  
 """
 function anomalies(orig_data::YAXArray, ref_data::YAXArray)
-    dimension = modelDim(orig_data)
+    data = YAXArray(orig_data.axes, Array(orig_data.data), deepcopy(orig_data.properties))
+    dimension = modelDim(data)
     if !hasdim(ref_data, dimension)
         err_msg = "To compute anomalies, ref data must have same model dimension as data (found data: $dimension, found ref_data: $(dims(ref_data)))"
         throw(ArgumentError(err_msg))
     end
-    dims_orig = Array(dims(orig_data, dimension))
+    dims_orig = Array(dims(data, dimension))
     dims_ref = Array(dims(ref_data, dimension))
     if length(dims_orig) > length(dims_ref) 
         throw(ArgumentError("To compute anomalies, reference data must contain all models of original data!"))
     end
-    if orig_data.properties["units"] != orig_data.properties["units"]
+    if data.properties["units"] != data.properties["units"]
         @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
         return nothing
     end
@@ -61,8 +57,7 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray)
         indices = findall(x -> x in dims_orig, dims_ref)
         ref_data = indexModel(ref_data, (dimension,), indices)
     end
-    anomalies = @d orig_data .- ref_data
-    return YAXArray(dims(orig_data), anomalies.data, deepcopy(orig_data.properties))
+    return @d data .- ref_data
 end
 
 
