@@ -33,6 +33,18 @@ function throwErrorIfDimMissing(data::YAXArray, dims::Vector{Symbol}; include::S
 end
 
 
+function throwErrorIfNotLonLat(data::YAXArray)
+    try
+        dimensions = DimensionalData.name.(dims(data))
+        if dimensions[1:2]  != (:lon, :lat)
+            throw(ArgumentError("Input data must have :lon as first and :lat as second dimension! Found:$(dimensions)"))
+        end
+    catch _
+        throw(ArgumentError("Input data must have :lon as first and :lat as second dimension! Found:$(DimensionalData.name.(dims(data)))"))
+    end
+    return nothing
+end
+
 """
     combineAll(v::Vararg{Vector{String}}; sep::String="_")
 

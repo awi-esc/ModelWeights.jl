@@ -19,7 +19,6 @@ export writeDataToDisk, readDataFromDisk
 
 export uncertaintyRanges,
     globalMeans,
-    approxAreaWeights,
     anomalies,
     anomaliesGM
 export linearTrend

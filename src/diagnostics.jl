@@ -14,11 +14,10 @@ Missing data is accounted for in the area-weights.
 - `data::YAXArray`: must have dimensions 'lon' and 'lat'.
 """
 function globalMeans(data::YAXArray)
-    throwErrorIfDimMissing(data, [:lon, :lat]; include = :any)
-    longitudes = collect(lookup(data, :lon))
+    throwErrorIfNotLonLat(data)
     latitudes = collect(lookup(data, :lat))
     mask = Bool.(mapslices(model -> ismissing.(model), data; dims=(:lon, :lat)))
-    aw_mat = areaWeightMatrix(latitudes, longitudes, mask) # is normalized
+    aw_mat = areaWeightMatrix(latitudes, Array(mask)) # is normalized, lon x lat
     # make sure that units are identical across models 
     units = data.properties["units"]
     if length(unique(units)) != 1
@@ -27,7 +26,7 @@ function globalMeans(data::YAXArray)
         end
         data = kelvinToCelsius(data)
     end
-    gms = mapslices(x -> sum(skipmissing(x)), aw_mat .* Array(data); dims=(:lon, :lat))
+    gms = dropdims(mapslices(x -> sum(skipmissing(x)), aw_mat .* Array(data); dims=(1, 2)); dims=(1,2))
     return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), deepcopy(data.properties))
 end
 

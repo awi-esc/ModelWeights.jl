@@ -57,7 +57,7 @@ config = mww.ConfigWeights(
     sigma_independence = 0.5,
     sigma_performance = 0.5
 );
-# this is done just to cmopare with their data which is sorted that way
+# this is done just to compare with their data which is sorted that way
 mwd.apply!(model_data, mwd.sortLongitudesEast2West)
 mwd.apply!(obs_data, mwd.sortLongitudesEast2West)
 weights = mww.climwipWeights(model_data, obs_data, config; suffix_name="simplified", norm_avg_members = false);

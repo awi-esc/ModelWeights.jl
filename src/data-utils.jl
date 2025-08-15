@@ -284,43 +284,30 @@ end
 
 
 """
-    approxAreaWeights(latitudes::Vector{<:Number})
-
-Create a YAXArray with the cosine of `latitudes` which approximates the cell 
-area on the respective latitude.
-"""
-function approxAreaWeights(latitudes::AbstractVector{<:Number})
-    area_weights = cos.(deg2rad.(latitudes))
-    return YAXArray((Dim{:lat}(latitudes),), area_weights)
-end
-
-
-"""
     areaWeightMatrix(
-        latitudes::AbstractVector{<:Number},
-        longitudes::AbstractVector{<:Number},
-        mask::YAXArray{T}
-    )
+        latitudes::AbstractVector{<:Number}, mask::YAXArray{T}
+    ) where {T <: Union{Missing, Int, Bool}}
 
 Return matrix of size length(longitudes) x length(latitudes) with normalized area weights 
 (approximated based on latitudes) and set to 0 at positions where mask is 1.
 
+# Arguments:
+- `latitudes::AbstractVector{<:Number}`: to approximate area weights with cosine of latitudes.
+- `mask::AbstractArray{T}`: lon, lat as first and second dimension respectively where lat must 
+have same length as `latitudes`.
 """
 function areaWeightMatrix(
-    latitudes::AbstractVector{<:Number},
-    longitudes::AbstractVector{<:Number},
-    mask::YAXArray{T}
+    latitudes::AbstractVector{<:Number}, mask::AbstractArray{T}
 ) where {T <: Union{Missing, Int, Bool}}
-    throwErrorIfDimMissing(mask, [:lon, :lat]; include = :all)
-    area_weights = approxAreaWeights(latitudes)
-    s = otherdims(mask, (:lon, :lat))
-    aw_mat = !isempty(s) ? 
-        repeat(area_weights', length(longitudes), 1, size(s)...) :
-        repeat(area_weights', length(longitudes))
-    aw_mat = YAXArray(mask.axes, aw_mat)
+    if size(mask)[2] != length(latitudes)
+        throw(ArgumentError("Second dimension of mask must be lat and equal $(length(latitudes)), found:$(size(mask))"))
+    end
+    area_weights = cos.(deg2rad.(latitudes))
+    s = size(mask)
+    n_lon = s[1]
+    aw_mat = length(s) > 2 ? repeat(area_weights', n_lon, 1, s[3:end]...) : repeat(area_weights', n_lon)
     aw_mat[mask] .= 0
-    normalized_aw_mat = mapslices(x -> x ./ sum(x), aw_mat; dims=(:lon, :lat))
-    return normalized_aw_mat
+    return mapslices(x -> x ./ sum(x), aw_mat; dims=(1,2))
 end
 
 
@@ -984,19 +971,27 @@ Compute the distance as the area-weighted RMSE between model predictions and obs
 If several observational datasets are present, the average across all is taken.
 """
 function distancesData(models::YAXArray, observations::YAXArray)
+    throwErrorIfDimMissing(models, [:lon, :lat]; include = :all)
     obs = hasdim(observations, :model) ? avgObsDatasets(observations) : observations
-    obs = YAXArray(obs.axes, Array(obs), deepcopy(obs.properties))
-    models = YAXArray(models.axes, Array(models), deepcopy(models.properties))
-    mask_missing = @d (ismissing.(obs) .+ ismissing.(models)) .> 0 # observations or model is missing (or both)
     model_dim = modelDim(models)
     model_names = lookup(models, model_dim)
-    rmses = YAXArray((Dim{model_dim}(model_names),), ones(length(model_names)))
-    for (i, m) in enumerate(model_names)
-        data_m = getAtModel(models, model_dim, m)
-        mask = getAtModel(mask_missing, model_dim, m)
-        rmses[i] = areaWeightedRMSE(data_m, obs, mask)
+    if otherdims(models, model_dim) != dims(obs)
+        throw(ArgumentError("dimensions of model and observation data must align! Found $(otherdims(models, model_dim)) and $(dims(obs))"))
     end
-    return rmses
+    latitudes = collect(lookup(models, :lat))
+    obs_data = Array(obs)
+    model_data = Array(models)
+    mask_missing =  (ismissing.(obs_data) .+ ismissing.(model_data)) .> 0 # observations or model is missing (or both)
+    # mask_missing has same dimensions as model_data (due to broadcasting)
+    idx_model = dimnum(models, model_dim)
+    rmses = similar(model_names, Float64)
+    @inbounds for i in eachindex(model_names)
+        data_m = selectdim(model_data, idx_model, i)
+        mask = selectdim(mask_missing, idx_model, i)
+        aw_mat = areaWeightMatrix(latitudes, mask)
+        rmses[i] = areaWeightedRMSE(data_m, obs_data, aw_mat)
+    end
+    return YAXArray((Dim{model_dim}(model_names),), rmses)
 end
 
 
@@ -1029,25 +1024,29 @@ Compute the area weighted RMSE between model predictions for each pair of models
 - `data::YAXArray`: first two dimensions must be 'lon', 'lat', third 'model' or 'member'.
 """
 function distancesModels(data::YAXArray)
-    data = YAXArray(data.axes, Array(data), deepcopy(data.properties))
-    # only take values where none (!) of the models have missing values!! (Not just the two that are compared to one another)
     dim_symbol = modelDim(data)
-    models = lookup(data, dim_symbol)
+    models = collect(lookup(data, dim_symbol))
+    idx_model = dimnum(data, dim_symbol)
     nb_models = length(models)
-    mask_missing = dropdims(any(ismissing, data, dims = dim_symbol), dims = dim_symbol)
-
+    
+    arr = Array(data)
+    # only take values where none (!) of the models have missing values!! (Not just the two that are compared to one another)
+    mask_missing = dropdims(any(ismissing, arr, dims=idx_model), dims = idx_model)
+    aw_mat = areaWeightMatrix(collect(lookup(data, :lat)), mask_missing)
     matrixS = zeros(nb_models, nb_models)
-    for (i, model_i) in enumerate(models[1:(end-1)])
-        for (j, model_j) in enumerate(models[(i+1):end])
-            m1 = getAtModel(data, dim_symbol, model_i)
-            m2 = getAtModel(data, dim_symbol, model_j)
-            matrixS[i, j + i] = areaWeightedRMSE(m1, m2, mask_missing)
+    @inbounds for i in range(1, length(models)-1)
+        @inbounds for j in range(i+1, length(models))
+            m1 = selectdim(arr, idx_model, i)
+            m2 = selectdim(arr, idx_model, j)
+            matrixS[i, j] = areaWeightedRMSE(m1, m2, aw_mat)
         end
     end
     symDistMatrix = matrixS .+ matrixS'
     new_dim1 = dim_symbol == :member ? :member1 : model1
     new_dim2 = dim_symbol == :member ? :member2 : model2
-    return YAXArray((Dim{new_dim1}(collect(models)), Dim{new_dim2}(collect(models))), symDistMatrix)
+    return YAXArray(
+        (Dim{new_dim1}(models), Dim{new_dim2}(models)), symDistMatrix, deepcopy(data.properties)
+    )
 end
 
 
@@ -1227,7 +1226,7 @@ end
 
 
 """
-    areaWeightedRMSE(m1::YAXrray, m2::YAXArray, mask::YAXArray)
+    areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
 
 Compute the area weighted (approximated by cosine of latitudes in radians) root mean squared 
 error between `m1` and `m2`. 
@@ -1235,40 +1234,14 @@ error between `m1` and `m2`.
 # Arguments:
 - `m1`: must have dimensions 'lon', 'lat' as first dimensions.
 - `m2`: must have dimensions 'lon', 'lat' as first dimensions.
-- `mask`: indicates missing values (1 refers to missing, 0 to non-missing).
+- `aw_mat`: matrix with normalized area weights, of same size as `m1` and `m2`.
 """
-function areaWeightedRMSE(m1::YAXArray, m2::YAXArray, mask::YAXArray)
-    map(ds -> throwErrorIfDimMissing(ds, [:lat, :lon]; include = :all), [m1, m2, mask])
-    latitudes, longitudes = lookup(m1, :lat), lookup(m1, :lon)
-    if m1.axes != m2.axes || m1.axes != mask.axes
-        # if latitudes != lookup(m2, :lat) || longitudes != lookup(m2, :lon)
-        msg = "To compute area weigehted RMSE, $m1 and $m2 and $mask must have same dimensions!"
-        throw(ArgumentError(msg))
+function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
+    if size(m1) != size(m2) || size(m1) != size(aw_mat)
+        throw(ArgumentError("All input arrays must have same size to compute areaweighted rmse! Found: $(size.([m1, m2, mask]))."))
     end
-    aw_mat = areaWeightMatrix(latitudes, longitudes, mask)
-    # valid = .!mask
-    # area_weights = approxAreaWeights(latitudes)
     squared_diff = (Array(m1) .- Array(m2)) .^ 2
-    # aw_mat = repeat(area_weights.data', length(longitudes))
-    # normalized_aw_mat = aw_mat ./ sum(aw_mat)
-    #normalized_aw_mat = aw_mat
-
-     # set data set to 0 whenever any of both is missing, 
-    # i.e. the returned object has one entry for every model now, if m1, m2 have a 3rd model dimension
-    #masked_m1 = ifelse.(mask .== true, 0, m1)
-    #masked_m2 = ifelse.(mask .== true, 0, m2)
-    #squared_diff = @d (masked_m1 .- masked_m2) .^ 2
-    #values = @d area_weights .* squared_diff
-    #areaweights_mat = makeAreaWeightMatrix(parent(dims(m1, :lon)), parent(dims(m1, :lat)); mask)
-    # weighted_vals = @d areaweights_mat .* squared_diff
-    # return sqrt.(sum(coalesce.(weighted_vals, 0), dims=(1,2))[lon=1, lat=1])
-    
-    # valid_weights = normalized_aw_mat[valid]
-    # valid_sq_diff = squared_diff[valid]
-    # weighted_vals = valid_weights .* valid_sq_diff
     return sqrt(sum(skipmissing(aw_mat .* squared_diff)))
-    #return sqrt(sum(weighted_vals))
-    #return sqrt(sum(weighted_vals) ./ sum(valid_weights))
 end
 
 
