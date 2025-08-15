@@ -18,8 +18,8 @@ There are three predefined filename formats:
 - `MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE` (:esmvaltool_cmip5)
 - `MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID` (:esmvaltool_cmip6)
 
-It is also possible to use the format ``:esmvaltool`` which will specify for every file 
-whether it corresponds to CMIP5 or CMIP6. 
+It is also possible to use the format `:esmvaltool` so that for every file it is automatically
+derived based on the fileformat whether it corresponds to CMIP5 or CMIP6.
 
 Further, it is possible to specify your own filename format. TODO
 
