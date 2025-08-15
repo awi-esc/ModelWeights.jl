@@ -24,12 +24,62 @@ end
 
 @testset "Test renameDict" begin
     d = Dict{String, Vector{Int}}("b" => [7, 10], "c" => [17, 2])
-    mwd.renameDict!(d, ["b"], ["bg"])
+    ModelWeights.Data.renameDict!(d, ["b"], ["bg"])
     @test haskey(d, "bg")
     @test !haskey(d, "b")
 
     d = Dict{Symbol, String}(:b => "oct", :c => "feb")
-    mwd.renameDict!(d, [:c], [:cb])
+    ModelWeights.Data.renameDict!(d, [:c], [:cb])
     @test haskey(d, :cb)
     @test !haskey(d, :c)
+end
+
+
+@testset "Test kelvinToCelsius" begin
+    mat = rand(2,3,4)
+    mat[:,:, [1,3]] .+= 280
+    mat[:,:, [2,4]] .+= 28 
+    data = YAXArray(
+        (Dim{:lon}([0, 100]), Dim{:lat}([-10, 0, 10]), Dim{:model}(["m1", "m2", "m3", "m4"])), 
+        mat,
+        Dict{String, Any}("units" => ["K", "degC", "K", "degC"])
+    )
+    df = ModelWeights.Data.kelvinToCelsius(data)
+    @test all(df.properties["units"] .== "degC") # changes in new meta data
+    @test data.properties["units"][[1,3]] == ["K", "K"] # no changes in original metadata
+    @test all(df.data[:, :, [1, 3]] .< 280) # changes in new data
+    @test all(data.data[:, :, [1, 3]] .> 280) # no changes in original data
+end
+
+
+@testset "Test dimNames" begin
+    mat = rand(2,3,4)
+    dimensions = (Dim{:lon}([0, 100]), Dim{:lat}([-10, 0, 10]), Dim{:model}(["m1", "m2", "m3", "m4"]))
+    data = YAXArray(dimensions, mat)
+
+    names = ModelWeights.Data.dimNames(data)
+    @test all(x -> x in names, [:lon, :lat, :model])
+    @test length(names) == 3
+end
+
+@testset "Test setDim sideeffects" begin
+    mat = rand(2,3,4)
+    dimensions = (Dim{:lon}([0, 100]), Dim{:lat}([-10, 0, 10]), Dim{:model}(["m1", "m2", "m3", "m4"]))
+    
+    data = YAXArray(dimensions, mat)
+    df = ModelWeights.Data.setDim(data, :model, "mymodel", nothing)
+    dimensions_data = ModelWeights.Data.dimNames(data)
+    dimensions_df = ModelWeights.Data.dimNames(df)
+
+    # test dimension names
+    @test :model in dimensions_data
+    @test !(:mymodel in dimensions_data)
+    @test :mymodel in dimensions_df
+    @test !(:model in dimensions_df)
+
+    # test dimension values
+    data = YAXArray(dimensions, mat)
+    df = ModelWeights.Data.setDim(data, :model, "MODEL", ["M1", "M2", "M3", "M4"])
+    @test lookup(df, :MODEL) == ["M1", "M2", "M3", "M4"]
+    @test lookup(data, :model) == ["m1", "m2", "m3", "m4"]
 end
