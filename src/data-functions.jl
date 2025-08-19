@@ -319,7 +319,7 @@ end
         paths::Vector{String},
         filename_format::Union{Symbol, String};
         sorted::Bool = true, 
-        dtype::String = "undef",
+        dtype::String = "cmip",
         names::Vector{String} = Vector{String}(),
         meta_info::Union{Dict{String, T}, Nothing} = nothing,
         constraint_ts::Union{Dict, Nothing} = nothing
@@ -329,14 +329,14 @@ Return data loaded from `paths` as single YAXArray.
 
 Each path points to a different model, i.e. the data for one dataset is loaded from multiple 
 files and all datasets in `paths` must share the same dimensions. Which variable is loaded 
-is inferred from the filenames (from `paths`), or if `meta_info` has key 'variable', the 
+is inferred from the filenames (in `paths`), or if `meta_info` has key 'variable', the 
 respective value is used.
 """
 function loadPreprocData(
     paths::Vector{String},
     filename_format::Union{Symbol, String};
     sorted::Bool = true, 
-    dtype::String = "undef",
+    dtype::String = "cmip",
     model_names::Vector{String} = Vector{String}(),
     meta_info::Union{Dict{String, T}, Nothing} = nothing,
     constraint_ts::Union{Dict, Nothing} = nothing
@@ -450,7 +450,7 @@ end
         all_paths::Vector{Vector{String}},
         ids::Vector{String},
         constraints::Vector{Dict};
-        dtype::String = "undef",
+        dtype::String = "cmip",
         filename_format::Union{Symbol, String} = :cmip,
         sorted::Bool = true,
         preview::Bool = false,
@@ -465,7 +465,7 @@ function loadDataMapCore(
     all_paths::Vector{Vector{String}},
     ids::Vector{String},
     constraints::Vector{<:Dict{<:Any, <:Any}};
-    dtype::String = "undef",
+    dtype::String = "cmip",
     filename_format::Union{Symbol, String} = :cmip,
     sorted::Bool = true,
     preview::Bool = false,
@@ -527,7 +527,7 @@ function loadDataMapCore(
     all_paths::Vector{Vector{String}},
     ids::Vector{String},
     constraint::Union{<:Dict{String, <:Any}, Nothing};
-    dtype::String = "undef",
+    dtype::String = "cmip",
     filename_format::Union{Symbol, String} = :cmip,
     sorted::Bool = true,
     preview::Bool = false,
@@ -572,7 +572,7 @@ function loadDataFromESMValToolRecipes(
     constraint::Union{Dict, Nothing} = nothing,
     preview::Bool = false,
     sorted::Bool = true, 
-    dtype::String = "undef",
+    dtype::String = "cmip",
     filename_format::Union{Symbol, String} = :esmvaltool
 )
     checkDataStructure(path_data, dir_per_var)
@@ -600,7 +600,7 @@ end
         constraint::Union{Dict, Nothing} = nothing,
         preview::Bool = false,
         sorted::Bool = true,
-        dtype::String = "undef"
+        dtype::String = "cmip"
     )
 
 Return a DataMap-instance that contains the data specified in `content`, potentially 
@@ -617,7 +617,7 @@ function loadDataFromYAML(
     constraint::Union{Dict, Nothing} = nothing,
     preview::Bool = false,
     sorted::Bool = true, 
-    dtype::String = "undef",
+    dtype::String = "cmip",
     filename_format::Union{Symbol, String} = :esmvaltool
 )
     fn_err(x) = throw(ArgumentError("$(x) must be provided in config yaml file!"))
@@ -667,7 +667,7 @@ function defineDataMap(
     constraint::Union{Dict,Nothing} = nothing,
     preview::Bool = false,
     sorted::Bool = true,
-    dtype::String = "undef",
+    dtype::String = "cmip",
     filename_format::Union{Symbol, String} = :esmvaltool
 )
     return loadDataFromYAML(yaml_content; constraint, preview, sorted, dtype, filename_format)
@@ -679,7 +679,7 @@ function defineDataMap(
     constraint::Union{Dict,Nothing} = nothing,
     preview::Bool = false,
     sorted::Bool = true,
-    dtype::String = "undef",
+    dtype::String = "cmip",
     filename_format::Union{Symbol, String} = :esmvaltool
 )
     return loadDataFromYAML(
@@ -696,7 +696,7 @@ function defineDataMap(
     constraint::Union{Dict, Nothing} = nothing,
     preview::Bool = false,
     sorted::Bool = true, 
-    dtype::String = "undef",
+    dtype::String = "cmip",
     filename_format::Union{Symbol, String} = :esmvaltool
 )
     if source != :esmvaltool_recipes
@@ -716,7 +716,7 @@ end
         meta_data::Dict{String, T} = Dict{String, Any}(),
         constraint::Union{Dict, Nothing} = nothing,
         sorted::Bool = true, 
-        dtype::String = "undef",
+        dtype::String = "cmip",
         filename_format::Union{Symbol, String} = :cmip
     ) where T <: Any
 
@@ -730,7 +730,7 @@ function defineDataMap(
     meta_data::Dict{String, T} = Dict{String, Any}(),
     constraint::Union{Dict, Nothing} = nothing,
     filename_format::Union{Symbol, String} = :cmip,
-    dtype::String = "undef",
+    dtype::String = "cmip",
     preview::Bool = false,
     sorted::Bool = true
 ) where T <: Any
@@ -757,7 +757,7 @@ end
         meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
         constraint::Union{Dict, Nothing} = nothing,
         sorted::Bool = true, 
-        dtype::String = "undef",
+        dtype::String = "cmip",
         filename_format::Union{Symbol, String} = :cmip
     ) where T <: Any
 
@@ -770,7 +770,7 @@ function defineDataMap(
     meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
     constraint::Union{Dict, Nothing} = nothing,
     filename_format::Union{Symbol, String} = :cmip,
-    dtype::String = "undef",
+    dtype::String = "cmip",
     preview::Bool = false,
     sorted::Bool = true,
 ) where T <: Any
@@ -800,7 +800,7 @@ end
         meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
         constraint::Union{Dict, Nothing} = nothing,
         sorted::Bool = true, 
-        dtype::String = "undef",
+        dtype::String = "cmip",
         filename_format::Union{Symbol, String} = :cmip
     ) where T <: Any
 
@@ -817,7 +817,7 @@ function defineDataMap(
     meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
     constraint::Union{Dict, Nothing} = nothing,
     filename_format::Union{Symbol, String} = :cmip,
-    dtype::String = "undef",
+    dtype::String = "cmip",
     preview::Bool = false,
     sorted::Bool = true
 ) where T <: Any

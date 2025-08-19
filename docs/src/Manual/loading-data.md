@@ -8,10 +8,22 @@ We name this type alias a `DataMap`.
 ## Load several datasets into a DataMap
 
 Data is loaded with the function `defineDataMap`. It defines several methods that we explain further below. 
-They usually provide (among others) the keyword arguments `dtype` and `filename_format`. 
 
-`filename_format` is needed as the information that is needed to load the specified data is retrieve 
-from the filenames. 
+The `defineDataMap` methods provide a set of default keyword arguments: 
+
+- `preview::Bool = false`: set to true if instead of loading the data, a list of paths to 
+the data that would be loaded with the given paths and constraints, is returned.
+
+- `sorted::Bool = true`: set to false, if the loaded data should not be sorted alphabetically according to 
+the model dimension.
+
+
+The most important two arguments are `filename_format` and `dtype` which we will explain in turn next:
+
+### Filename format
+
+- `filename_format::Union{Symbol, String}`: This argument is important since the data is loaded based on the information retrieved from the filenames of the data.
+
 There are three predefined filename formats:
 
 - `VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE` (:cmip), default value
@@ -23,9 +35,15 @@ derived based on the fileformat whether it corresponds to CMIP5 or CMIP6.
 
 Further, it is possible to specify your own filename format. TODO
 
-The keyword argument `dtype` is just used to provide specific meta data when `dtype="cmip"`.
-This should be specified when working with CMIP data, since by default the data type is set to undefined.
+### Data Type (dtype) 
 
+- `dtype::String = "cmip"`
+
+For now, the keyword argument `dtype` is just used to provide specific meta data when `dtype="cmip"`.
+This argument should be specified when *not* working with CMIP data, since cmip is the default value.
+
+
+### Metadata
 
 The metadata of each dataset (the ``.properties`` Dictionary of each YAXArray in a DataMap) 
 contains the metadata loaded from the original files as well as additional information if it is provided

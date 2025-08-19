@@ -1,49 +1,28 @@
 # Filtering data
 
-When loading data with the function `defineDataMap`, there is the option to filter the data in several ways, using the the optional keyword argument `constraint` which is a dictionary.
+When loading data with the function `defineDataMap`, there is the option to filter the data in several ways, using the the optional keyword argument `constraint`.
+Note that the filtering is done based on the information retrieved from the filenames. That is, the provided values must correspond to how the data is stored. For CMIP6 data, variables must, for instance, point to the variables' id, e.g. 'tas', 'psl', etc. 
 
-All keys in `constraint` except for two map to a Vector of Strings. The two exceptions are 
-`level_shared` and `timeseries` discussed seperately below. 
+The following keys are considered for the dictionary `constraint`. If not stated otherwise, they map to a vector.
 
-## Filtering based on filenames
-
-The following keys can be used to constrain the data that shall be loaded into the DataMap:
-
-````julia
-
-constraint = Dict(
-    "variables" => ["tas", "tos"],
-    "models" => [],
-    "variants" => [],
-    "experiments" => [],
-    "mips" => [],
-    "grids" => [],
-    "table_ids" => [],
-    "filename" => [],
-    "timeranges" => Dict(),
-    "level_shared" => # one of: "member", "model", :member, :model
-)
-
-````
-
-- `filename`:
-- `mips`: 
-- `models`: if provided, only these models are loaded. It is possible to include (1)
-general models (e.g., "ACCESS-CM2"), which would load all available simulations of the respective
-model or (2) specific model simulations. The latter are specified as the `MODELNAME#VARIANT`, e.g., `"ACCESS-CM2#r1i1p1f1"`.  
-
-
+-  `experiments`: load only data from given experiments, e.g. ["lgm", "historical"]
+- `filenames`:  load only data from any of the given files
+-  `grids`: load only data with given grids, e.g. ["gn"]
+- `mips`: load only data from given projects, e.g. to load only CMIP5 data, set to ["CMIP5"]
+- `models`: load only data from given models. It is possible to include (1) general models (e.g., "ACCESS-CM2"), which would load all available simulations of the respective model or (2) specific model simulations. The latter are specified as the `MODELNAME#VARIANT`, e.g., `"ACCESS-CM2#r1i1p1f1"`.  
+- `table_ids`: load only data from given tables, e.g. ["Amon", "Omon"]
+- `variables`: if provided, only data for given variables is loaded, otherwise all data in the specified directories is loaded.
+- `variants`: load only specific runs, e.g. ["r1i1p1f1", ...]
+- `timeranges`: load only data from files for given timeranges, e.g. ["185001-1850012", "195001-195012"]
+- `level_shared::Union{String, Symbol}`: one of: "member", "model", :member, :model. The function that is called to constrain the loaded data by the models/members shared across all datasets is `subsetModelData`. For more details see next paragraph. 
 
 ## `level_shared`: Datasets that share the same members/models
 
-The function that is called to constrain the loaded data by the models/members shared across all 
-datasets is `subsetModelData`. Note that this loads the data into memory.
+This is the most important constraint. It allows to filter the data such that every loaded dataset contains only data from the same models or, more restricted, the same model variants/simulations. If set to `"member"` (or :member), data is only loaded if the respective \emph{model simulation} is present for all specified datasets, i.e. for every variable and experiment. If it is set to `"model"` (or :model), data is only loaded from models that provide data for all specified datasets, yet independent of the exact simulations. That is, every loaded dataset may have of a different number of simulations for each model.
 
 
-## `timeseries`: 
 
-
-### Optional parameters for filtering data
+### Further filtering options for data preprocessed with ESMValTool
 For both functions, `loadDataFromESMValToolRecipes` and `loadDataFromYAML`, there is a set of optional parameters in order to constrain the loaded data:
 
 - `preview`: If set to false (default), the data will not be loaded and only the metadata with the information that we added that specifies which data will be loaded is returned.

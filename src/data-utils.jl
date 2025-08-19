@@ -873,7 +873,7 @@ function isRetained(fn_meta::FilenameMeta, constraint::Dict)
         isOk(meta, :timerange, get(constraint, "timeranges", Vector{String}())) &&
         isOk(meta, :grid, get(constraint, "grids", Vector{String}())) &&
         isOk(meta, :tableid, get(constraint, "table_ids", Vector{String}())) &&
-        isOk(meta, :fn, get(constraint, "filename", Vector{String}()))
+        isOk(meta, :fn, get(constraint, "filenames", Vector{String}()))
 end
 
 
