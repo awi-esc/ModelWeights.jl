@@ -88,7 +88,7 @@ defineDataMap("path/to/lgm/tos", "lgm-tos"; dtype = "cmip")
 
 ### Loading data preprocessed with ESMValTool 
 
-#### Based on recipes
+#### [Based on recipes](@id loading-data-recipes) 
 If you use ESMValTool to preprocess data, you can use the recipes for preprocessing the data 
 as config files to load the or some of the data into a ModelWeights.DataMap.
 The first argument points to the top-level directory where the data is stored, namely the same
@@ -103,7 +103,7 @@ In this case, the default value for `filename_format` is set to :esmvaltool, not
 defineDataMap("path/to/base/data/dir", "path/to/recipes/dir", :esmvaltool_recipes; dtype = "cmip")
 ````
 
-#### Based on config files
+#### [Based on config files](@id loading-data-config)
 
 If the data was preprocessed with ESMValTool, it is also possible to specify a config yaml file with 
 the required values. Here is an example that loads tas and tos data for the experiments 

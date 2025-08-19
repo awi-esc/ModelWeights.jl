@@ -21,40 +21,32 @@ The following keys are considered for the dictionary `constraint`. If not stated
 This is the most important constraint. It allows to filter the data such that every loaded dataset contains only data from the same models or, more restricted, the same model variants/simulations. If set to `"member"` (or :member), data is only loaded if the respective \emph{model simulation} is present for all specified datasets, i.e. for every variable and experiment. If it is set to `"model"` (or :model), data is only loaded from models that provide data for all specified datasets, yet independent of the exact simulations. That is, every loaded dataset may have of a different number of simulations for each model.
 
 
+## Further filtering options for data preprocessed with ESMValTool
 
-### Further filtering options for data preprocessed with ESMValTool
-For both functions, `loadDataFromESMValToolRecipes` and `loadDataFromYAML`, there is a set of optional parameters in order to constrain the loaded data:
+Besides the possibility to specify the paths to the data directories directly, there are two more ways to load data that was preprocessed with ESMValTool, using the function `defineDataMap`:
 
-- `preview`: If set to false (default), the data will not be loaded and only the metadata with the information that we added that specifies which data will be loaded is returned.
-
-- `dir_per_var`: If set to true (default), only subdirectories of the base\_path that contain `_VARIABLE` in their name will be searched. 
+- `defineDataMap(path_data, path_recipes, source; dir_per_var::Bool=true)`: The first argument points to the top-level directory that contains the data, the second argument points to a directory that contains one or more ESMValTool recipes and source must be set to `:esmvaltool_recipes`. See [loading data section based on recipes](@ref loading-data-recipes)  for more information.
+The additional keyword argument `dir_per_var` specifies whether there was one recipe per variable. If that's the case, there is a single directory for every variable and thus, to load data for a specific variable only subdirectories of the directory that `path_data` points to that contain the respective variable, more precisely `_VARIABLE` (e.g. `_tas`), in their name will be considered.
 
 
-```@raw html
-<!-- `subset_shared`: Can be either `nothing` (default), `ModelWeights.MODEL` or `ModelWeights.MEMBER`. If set to `MODEL`, only data from the same models will be loaded. If, for instance, data from lgm and historical experiments shall be loaded, this configuration will ensure that for both, only the same models are loaded, i.e. those for which both experiments were done. While this considers models, not specific simulations, setting subset\_shared to `MEMBER` would only load models that share the exact same simulations (i.e. the same member\_id abbreviation, e.g. `r1i1p1f1`). -->
-```
+- `defineDataMap(yaml_content::Dict)` and `defineDataMap(path_config::String)`: Here, the only positional argument is either a dictionary with the configuration or a path to a yaml file with the respective configurations. See [loading data section based on config files](@ref loading-data-config) for more information.
 
-- `subset` is an optional parameter of type `Constraint` or `Nothing`. A Constraint further constrains the data to be loaded and has the following fields:
+In both cases, it is possible to constrain the directories from where data is loaded by specifying `base_subdirs` in the dictionary input argument `constraint`:
+
+- `"base_subdirs"::Vector{String}`: If specified and if there is a single directory for every variable (default: true), only data is loaded from subdirectories of the given data path (`base_path_data` + `base_dir` when loading from yaml file) that contain any of the given strings in their name.
+
+
+TODO: following must be updated
+- `subset`
    
     - `variables`: The short name of the climate variable, e.g. ["tas", "tos"].
     
-    - `statistics`: The statistic/diagnostic that was used when preprocessing the data. The names are generally arbitrary, but need to be identical to those you used in the preprocessing; for instance, we refer to the climatological average as "CLIM", s.t. an example value for this argument is ["CLIM"].
+    - `statistics`: The statistic/diagnostic that was used when preprocessing the data. The names are generally arbitrary, but need to be identical to those you used in the recipe for preprocessing the data; for instance, we refer to the climatological average as "CLIM", s.t. an example value for this argument is ["CLIM"].
     
-    - `aliases`: Like for `statistics`, the names are arbitrary but must be identical to what you used when preprocessing the data; e.g. ["historical", "historical1"].
-    An alias should refer to a certain `timerange` of a certain experiment, e.g. we call the time period from 1951-1980 'historical1'. To load only this data, it thus does not matter whether you set `timerange=["1951-1980"]` or `alias=["historical1"]`.
+    - `aliases`: Like for `statistics`, the names are arbitrary but must be identical to the name you used in the recipe for preprocessing the data; an alias may, for instance, refer to a certain `timerange` of a certain experiment, e.g. `"historical-1950-1980"`.
     
     - `timeranges`: Timeranges to be loaded; especially for historical data, you may preprocess data for different timeranges,  e.g. ["full", "1980-2014"]. 
-
-    - `projects`:  e.g. ["CMIP5", "CMIP6"]. All filenames of the data to be loaded must contain at least one of the given strings. If not specified and `is_model_data=true`, it is set to ["CMIP"]. If not specified and `is_model_data=false`, it is set to ["ERA5"], the default observational dataset used.
-
-    - `models`: List of models or individual model members, e.g. ["AWI-CM-1-1-MR"]. All filenames must contain at least one of the given strings + "_". The underscore is important since some models have names that are substrings of other models, e.g. "CNRM-CM5" and "CNRM-CM5-C2". 
    
-    - `base_subdirs`: If there is one directory for each climate variable (dir\_per\_var=true), you can use this argument to subset the considered subdirectories: if given, the data will be loaded only from subdirectories of the given base\_dir that contain any of the provided values in `base_subdirs` in their name. That is, it's not necessary to specify full directory names here, parts of it are sufficient.
 
-
-Note that when using the option to load data preprocessed with ESMValTool from a seperate yaml file, 
-in which it's possible to specify filtering options for each datasets, these values will be overwritten,
-if the same key is provided in the function argument, too. 
-That is, the function argument takes precedence over what had been specified in the yaml file if a key is specified in both.
-Otherwise if a key is just given in the yaml file, it will still be applied in the filtering.
+Note that when using the option to load data preprocessed with ESMValTool from a seperate yaml file, in which it's possible to specify filtering options for each datasets, these values will be overwritten, if the same key is provided in the function argument, too. That is, the function argument takes precedence over what had been specified in the yaml file if a key is specified in both. If a key is just given in the yaml file, it will still be applied in the filtering.
 

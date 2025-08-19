@@ -668,17 +668,12 @@ end
 
 
 """
-    metaDataFromYAML(content::Dict)
+    metaDataFromYAML(ds::Dict)
 
-Return metadata of data specified in `content` possibly constrained by values in `arg_constraint`.
-
-For constraints that are specified in `content` as well as in the `arg_constraint` argument, 
-the values of the latter have precedence over the former. The constraints given
-in the argument `arg_constraint` are applied to EVERY dataset specified in the config 
-file.
+Return metadata of data specified in `ds`.
 
 # Arguments:
-- `content`: content of config yaml file specifying meta attributes and paths of data
+- `ds`: content of config yaml file specifying meta attributes and paths of data.
 """
 function metaDataFromYAML(ds::Dict)
     fn_err(x) = throw(ArgumentError("$(x) must be provided for each dataset in config yaml file!"))
