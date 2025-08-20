@@ -152,45 +152,59 @@ end
 
 
 """
-    plotEnsembleSpread(data::AbstractArray, lon::Number, lat::Number)
+    plotEnsembleSpread(
+        data::YAXArray; fn::Function=Statistics.median, title::String="", ylabel::String=""
+    )
 
-Create figure with boxplots for each model in `data` that have several ensemble members.
+Plot models against values of all model members. Add summary statistics (default: median) 
+when computed across all model members and when average values across members of each model 
+are computed first.
+
+# Arguments:
+- `data::YAXArray`: must have single dimension :member.
+- `fn::Function=Statistics.median`: function to summarize data.
+- `title::String`: (optional) plot title.
+- `ylabel::String`: (optional) label for y-axis.
 """
-function plotEnsembleSpread(data::YAXArray, lon::Number, lat::Number)
-    # models = unique(dims(data, :model));
-    # models_ensembles = filter(x -> length(dims(data[model = Where(m -> m == x)], :model)) > 1, models);
-    # data_ensembles = data[model = Where(x -> x in models_ensembles)];
-    data_ensembles = data
-    models_ensembles = unique(dims(data, :model))
-    # translate list of unique models into list of integers for boxplot
-    categories = Array(dims(data_ensembles, :model))
-    categoriesInts = collect(1:length(categories))
-    for (i, m) in enumerate(models_ensembles)
-        categoriesInts[findall(categories .== m)] .= i
+function plotEnsembleSpread(
+    data::YAXArray; fn::Function=Statistics.median, title::String="", ylabel::String=""
+)
+    if !hasdim(data, :member) || length(otherdims(data, :member)) >= 1
+        msg = "To plot ensemble spread input data must have a single dimension :member"
+        throw(ArgumentError(msg))
+    end
+    members = collect(lookup(data, :member))
+    df = Data.setLookupsFromMemberToModel(data, ["member"]) 
+    models = collect(lookup(df, :model))
+    model_labels = unique(models)
+    model_ints  = collect(1:length(members))
+    for (i, m) in enumerate(model_labels)
+        indices = findall(models .== m)
+        model_ints[indices] .= i
+    end
+    counts = StatsBase.countmap(model_ints)
+    model_labels = map(((i, x),) -> x * " ($(string(counts[i])))", enumerate(model_labels))
+
+    units = unique(df.properties["units"])
+    if length(units) != 1
+        @warn "Not all data is defined in the same units! Found: $(units)!"
     end
 
-    fig = getFigure((16, 8), 18)
-    t1 = data.properties["long_name"] * " (" * data.properties["variable_id"] * ")"
-    t = join(["at ", longitude2EastWest(lon), latitude2NorthSouth(lat)], " ")
-    t2 = "Spread of models with several ensemble members " * t
-
+    fig = Figure()
     ax = Axis(
         fig[1, 1],
         xlabel = "Models",
-        ylabel = data.properties["units"],
-        title = join([t1, t2], "\n"),
-        xticks = (collect(1:length(models_ensembles)), models_ensembles),
-        xticklabelrotation = pi / 2,
+        ylabel = ylabel,
+        title = title,
+        xticks = (1:length(model_labels), model_labels),
+        xticklabelrotation = pi / 2
     )
+    scatter!(ax, model_ints, collect(df.data))
 
-    if !(lon in Array(dims(data_ensembles, :lon)))
-        msg = "location and data are not given in the same longitudes scale, \
-         use either (0° to 360°) or (-180° to 180°)!"
-        throw(ArgumentError(msg))
-    end
-    values =
-        dropdims(data_ensembles[lon=Where(x->x==lon), lat=Where(x->x==lat)], dims = :lon)
-    boxplot!(ax, categoriesInts, Array(dropdims(values, dims = :lat)))
+    summarized_members = fn(df)
+    summarized_avg_models = fn(Data.summarizeMembers(data))
+    hlines!(ax, summarized_members; linestyle = :dash, color = :magenta)
+    hlines!(ax, summarized_avg_models; linestyle = :dash, color = :green)
     return fig
 end
 
