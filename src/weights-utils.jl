@@ -60,7 +60,7 @@ function equalWeights(data::YAXArray; use_members::Bool = true)
     n_models = length(unique(models))
     if dimension == :member
         # make sure that the number of members per model is considered
-        counts = countmap(models)
+        counts = Data.countMap(models)
         n_members = length(dimnames)
         w =
             use_members ? [1 / n_models * 1 / counts[m] for m in models] :

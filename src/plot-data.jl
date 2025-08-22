@@ -182,12 +182,15 @@ function plotEnsembleSpread(
         indices = findall(models .== m)
         model_ints[indices] .= i
     end
-    counts = StatsBase.countmap(model_ints)
+
+    counts = Data.countMap(model_ints)
     model_labels = map(((i, x),) -> x * " ($(string(counts[i])))", enumerate(model_labels))
 
-    units = unique(df.properties["units"])
-    if length(units) != 1
-        @warn "Not all data is defined in the same units! Found: $(units)!"
+    units = get(df.properties, "units", nothing)
+    if !isnothing(units)
+        if length(unique(units)) != 1
+            @warn "Not all data is defined in the same units! Found: $(units)!"
+        end
     end
 
     fig = Figure()

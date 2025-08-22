@@ -1,11 +1,8 @@
 module Weights
 
-import StatsBase: countmap
-
 using DimensionalData
 using Distributions
 using JLD2
-#using LinearAlgebra
 using NCDatasets
 using Serialization
 using Setfield

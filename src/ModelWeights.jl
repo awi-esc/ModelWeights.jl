@@ -17,6 +17,8 @@ export climwipWeights
 export joinDataMaps
 export writeDataToDisk, readDataFromDisk
 
+export apply, apply!
+
 export uncertaintyRanges,
     globalMeans,
     anomalies,

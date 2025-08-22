@@ -18,9 +18,9 @@ function globalMeans(data::YAXArray)
     latitudes = collect(lookup(data, :lat))
     mask = Bool.(mapslices(model -> ismissing.(model), data; dims=(:lon, :lat)))
     aw_mat = areaWeightMatrix(latitudes, Array(mask)) # is normalized, lon x lat
-    # make sure that units are identical across models 
-    units = data.properties["units"]
-    if length(unique(units)) != 1
+    # make sure that, if provided, units are identical across models 
+    units = get(data.properties, "units", nothing)
+    if !isnothing(units) && length(unique(units)) != 1
         if any(x -> x != "degC" && x != "K", units)
             throw(ArgumentError("Data for all models must be defined in the same units to compute global mean! Only degC and K are converted into degC."))
         end
@@ -48,7 +48,9 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray)
     if length(dims_orig) > length(dims_ref) 
         throw(ArgumentError("To compute anomalies, reference data must contain all models of original data!"))
     end
-    if data.properties["units"] != data.properties["units"]
+    units_orig = get(data.properties, "units", nothing)
+    units_ref = get(ref_data.properties, "units", nothing) 
+    if !(isnothing(units_orig) || isnothing(units_ref)) && units_ref != units_orig
         @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
         return nothing
     end
@@ -67,6 +69,7 @@ end
 
 
 function standardDev(data::YAXArray, dimension::Symbol)
+    throwErrorIfDimMissing(data, dimension)
     standard_devs = dropdims(Statistics.std(data, dims = dimension), dims = dimension)
     return YAXArray(otherdims(data, dimension), standard_devs, deepcopy(data.properties))
 end

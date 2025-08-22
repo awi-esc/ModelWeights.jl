@@ -83,3 +83,14 @@ end
     @test lookup(df, :MODEL) == ["M1", "M2", "M3", "M4"]
     @test lookup(data, :model) == ["m1", "m2", "m3", "m4"]
 end
+
+
+@testset "Test countMap" begin
+    data1 = ["a", "b", "b", "c", "b", "a"]
+    counts = ModelWeights.Data.countMap(data1)
+    @test counts["a"] == 2 && counts["b"] == 3 && counts["c"] == 1
+
+    data2 = [7, 10, 17, 17, 91, 91, 910]
+    counts = ModelWeights.Data.countMap(data2)
+    @test counts[7] == 1 && counts[10] == 1 && counts[17] == 2 && counts[91] == 2 && counts[910] == 1
+end

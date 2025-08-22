@@ -12,7 +12,7 @@ Takes care of metadata.
 """
 function subsetModelData(data::YAXArray, shared_models::Vector{String})
     if isempty(shared_models)
-        @warn "Vector of models to subset data to is empty!"
+        @warn "Vector of models to subset data to is empty! Data is not filtered."
         return data
     end
     model_dims = Tuple(modelDims(data))
@@ -156,14 +156,6 @@ function alignPhysics(data::YAXArray, members::AbstractVector{String})
         end
     end
     return subsetModelData(data, members_kept)
-
-    # if !isnothing(level_shared)
-    #     shared_models = sharedModels(data, level_shared, fn_format)
-    #     for (id, model_data) in data
-    #         data[id] = subsetModelData(model_data, shared_models)
-    #     end
-    # end
-    #return data
 end
 
 
@@ -303,13 +295,24 @@ function summarizeMembersMatrix(data::YAXArray, updateMeta::Bool; fn::Function=S
 end
 
 
-
 function addMasks!(datamap::DataMap, id_orog_data::String)
     orog_data = datamap[id_orog_data]
     datamap["mask_land"] = getMask(orog_data; mask_out_land = false)
     datamap["mask_ocean"] = getMask(orog_data; mask_out_land = true)
     return nothing
 end
+
+
+function filterOutModels(data::YAXArray, excluded_models::Vector{String})
+    throwErrorIfDimMissing(data, [:model, :member]; include = :any)
+    model_dim = modelDim(data)
+    models = lookup(data, model_dim)
+    indices_ok = findall(
+        x -> !(x in excluded_models) && !(split(x, MODEL_MEMBER_DELIM)[1] in excluded_models), models
+    )
+    return model_dim == :model ? data[model = indices_ok] : data[member = indices_ok]
+end
+
 
 ### ----------------------------------------------------------------------------------------
 ###                                LOADING DATA                                           
@@ -427,10 +430,9 @@ function loadPreprocData(
                 dimensions[idx_time] = Dim{:time}(collect(times[indices_time]))
             end
         end
-        #props["handles"] = ds
         fv = get(props, "_FillValue", missing)
         ds_var = map(x -> x == fv  ? missing : x, ds_var)
-        data[i] = exclude_file ? [] : YAXArray(Tuple(dimensions), ds_var, props)
+        data[i] = exclude_file ? [] : YAXArray(Tuple(dimensions), allowmissing(ds_var), props)
         # replace missing values by NaN?
         # data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(ds_var), NaN), props)
     end

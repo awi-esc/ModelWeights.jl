@@ -971,7 +971,8 @@ function distancesData(models::YAXArray, observations::YAXArray)
     model_dim = modelDim(models)
     model_names = lookup(models, model_dim)
     if otherdims(models, model_dim) != dims(obs)
-        throw(ArgumentError("dimensions of model and observation data must align! Found $(otherdims(models, model_dim)) and $(dims(obs))"))
+        msg = "Found: Model dims (other than model dim): $(DimensionalData.name.(otherdims(models, model_dim))) and observational dims: $(DimensionalData.name.(dims(obs)))"
+        throw(ArgumentError("dimensions of model (other than model dim) and observation data must align!" * msg))
     end
     latitudes = collect(lookup(models, :lat))
     obs_data = Array(obs)
@@ -1210,11 +1211,11 @@ function loadModelsFromCSV(
     dropmissing!(models, col_models)
     ids = models[!, col_models]
     if !isnothing(col_variants)
-        variants = map(s -> strip.(split(s, ";")), models[!, col_variants])
+        variants = map(s -> String.(strip.(split(s, ";"))), models[!, col_variants])
         for (i, m) in enumerate(models[!, col_models])
             variants[i] = map(v -> join([m, v], MODEL_MEMBER_DELIM), variants[i])
         end
-        ids = vcat(variants...)
+        ids = unique(vcat(variants...))
     end
     return String.(ids)
 end

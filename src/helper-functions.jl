@@ -12,22 +12,22 @@ end
 """
 function throwErrorIfDimMissing(data::YAXArray, dim::Symbol)
     if !hasdim(data, dim)
-        throw(ArgumentError("Data must have dimension $(dim). Found: $(dims(data))"))
+        throw(ArgumentError("Data must have dimension $(dim). Found: $(name.(dims(data)))"))
     end
     return nothing
 end
 
 """
-    throwErrorIfDimMissing(data::YAXArray, dims::Vector{Symbol}; include::Symbol=:all)
+    throwErrorIfDimMissing(data::YAXArray, dimensions::Vector{Symbol}; include::Symbol=:all)
 
-Throw ArgumentError if `data` does not have ALL dimensions in `dims` when `include=:all` 
-(default), or if `data` does not have ANY dimension in `dims`.
+Throw ArgumentError if `data` does not have ALL dimensions in `dimensions` when 
+`include=:all` (default), or if `data` does not have ANY dimension in `dimensions`.
 """
-function throwErrorIfDimMissing(data::YAXArray, dims::Vector{Symbol}; include::Symbol=:all)
-    if include == :all && any(x -> !hasdim(data, x), dims)
-        throw(ArgumentError("Data must have all of dimensions $(dims). Found: $(dims(data))"))
-    elseif  all(x -> !hasdim(data, x), dims)
-        throw(ArgumentError("Data must have any of dimensions $(dims). Found: $(dims(data))"))
+function throwErrorIfDimMissing(data::YAXArray, dimensions::Vector{Symbol}; include::Symbol=:all)
+    if include == :all && any(x -> !hasdim(data, x), dimensions)
+        throw(ArgumentError("Data must have all of dimensions $(dimensions). Found: $(DimensionalData.name.(DimensionalData.dims(data)))"))
+    elseif  all(x -> !hasdim(data, x), dimensions)
+        throw(ArgumentError("Data must have any of dimensions $(dimensions). Found: $(DimensionalData.name.(DimensionalData.dims(data)))"))
     end
     return nothing
 end
@@ -322,4 +322,14 @@ function longitudesEastWest(data::AbstractArray)
     indices_east = findall(x -> x < 180, longitudes)
     indices_west = findall(x -> x >= 180, longitudes)
     return (east = indices_east, west = indices_west)
+end
+
+
+function countMap(data::Vector{T}) where T <: Any
+    counts = Dict()
+    for cat in unique(data)
+        nb = count(i -> i == cat, data)
+        counts[cat] = nb
+    end
+    return counts
 end
