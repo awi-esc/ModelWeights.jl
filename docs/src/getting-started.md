@@ -70,15 +70,15 @@ Both provide keyword arguments `ids` and `ids_new`. If `ids` is not provided, th
 
 For example, to compute (area weighted) global means for all datasets:
 
-```@example 
+````julia 
 mw.Data.apply(dm_members, mw.Data.globalMeans)
-```
+````
 
 for a subset, modifying original DataMap:
 
-```@example 
+````julia
 mw.Data.apply!(dm_members, mw.Data.globalMeans; ids = ["lgm_tas_CLIM"], ids_new = ["lgm_tas_GM"])
-```
+````
 
 The first argument to `apply` (or `apply!`) is always the DataMap, the second the function that takes as first argument a YAXArray, followed by the positional and then possibly keyword arguments that the function expects.
 
@@ -126,35 +126,35 @@ config = mw.Weights.ConfigWeights(
 
 Let's compute the diagnostics we haven't computed yet that we just specified, the anomalies with respect to the global mean (denoted as "ANOM-GM"). For model data:
 
-```@example
+````julia
 ids = collect(keys(dm_models))
 ids_new = map(x -> replace(x, "CLIM" => "ANOM-GM"), ids)
 mw.Data.apply!(dm_models, mw.Data.anomaliesGM; ids, ids_new)
-```
+````
 
 And for observational data:
 
-```@example
+````julia
 ids = collect(keys(dm_obs))
 ids_new = map(x -> replace(x, "CLIM" => "ANOM-GM"), ids)
 mw.Data.apply!(dm_obs, mw.Data.anomaliesGM; ids, ids_new)
-```
+````
 
 Before we can compute weights, we need to make sure that the keys for the observations and models for the diagnostics are identical:
 
-```@example
+````julia
 mw.Data.renameDict!(
     dm_models,
     ["lgm_tas_ANOM-GM", "lgm_tos_ANOM-GM"],
     ["tas_ANOM-GM", "tos_ANOM-GM"]
 )
-```
+````
 
 Now, we're ready to compute model weights:
 
-```@example
+````julia
 weights = mw.Weights.climwipWeights(dm_models, dm_obs, config)
-```
+````
 
 
 
