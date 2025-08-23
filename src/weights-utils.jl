@@ -210,8 +210,12 @@ function applyWeights(model_data::YAXArray, weights::YAXArray)
             @warn "Weights renormalized since computed for more models than models in given data."
         end
     end
-    results = map(x -> weightedAvg(model_data; weights=weights[weight=At(x)]), weights.weight)
-    results_yax = cat(results...; dims=dims(weights, :weight))
+    if hasdim(weights, :weight)
+        results = map(x -> weightedAvg(model_data; weights=weights[weight=At(x)]), weights.weight)
+        results_yax = cat(results...; dims=dims(weights, :weight))
+    else
+        results_yax = weightedAvg(model_data; weights)
+    end
     return YAXArray(dims(results_yax), Array(results_yax), results_yax.properties)
 end
 
