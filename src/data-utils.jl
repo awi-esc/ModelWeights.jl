@@ -1267,10 +1267,17 @@ function uncertaintyRanges(
             Array{Union{Missing, Float64}}(undef, length(timesteps), 2),
             meta
         ) :
-        YAXArray(
-            (dims(data, :time), dims(w, :weight), Dim{:confidence}(["lower", "upper"])),
-            Array{Union{Missing, Float64}}(undef, length(timesteps), length(w.weight), 2),
-            meta
+        (hasdim(w, :weight) ? 
+            YAXArray(
+                (dims(data, :time), dims(w, :weight), Dim{:confidence}(["lower", "upper"])),
+                Array{Union{Missing, Float64}}(undef, length(timesteps), length(w.weight), 2),
+                meta
+            ) :
+            YAXArray(
+                (dims(data, :time), Dim{:confidence}(["lower", "upper"])),
+                Array{Union{Missing, Float64}}(undef, length(timesteps), 2),
+                meta
+            )
         )
     for t in timesteps
         arr = Array(data[time = At(t)])
@@ -1284,13 +1291,22 @@ function uncertaintyRanges(
                 uncertainty_ranges[time=At(t), confidence=At("lower")] = lower
                 uncertainty_ranges[time=At(t), confidence=At("upper")] = upper
             else
-                for weight_id in collect(w.weight)
-                    weights, df = alignWeightsAndData(data[time = At(t)], w[weight = At(weight_id)])
+                if hasdim(w, :weight)
+                    for weight_id in collect(w.weight)
+                        weights, df = alignWeightsAndData(data[time = At(t)], w[weight = At(weight_id)])
+                        lower, upper = interpolatedWeightedQuantiles(
+                            quantiles, collect(skipmissing(df)); weights
+                        )
+                        uncertainty_ranges[time=At(t), confidence=At("lower"), weight=At(weight_id)] = lower
+                        uncertainty_ranges[time=At(t), confidence=At("upper"), weight=At(weight_id)] = upper
+                    end
+                else
+                    weights, df = alignWeightsAndData(data[time = At(t)], w)
                     lower, upper = interpolatedWeightedQuantiles(
                         quantiles, collect(skipmissing(df)); weights
                     )
-                    uncertainty_ranges[time=At(t), confidence=At("lower"), weight=At(weight_id)] = lower
-                    uncertainty_ranges[time=At(t), confidence=At("upper"), weight=At(weight_id)] = upper
+                    uncertainty_ranges[time=At(t), confidence=At("lower")] = lower
+                    uncertainty_ranges[time=At(t), confidence=At("upper")] = upper
                 end
             end
         end
