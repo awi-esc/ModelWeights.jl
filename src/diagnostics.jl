@@ -73,3 +73,9 @@ function standardDev(data::YAXArray, dimension::Symbol)
     standard_devs = dropdims(Statistics.std(data, dims = dimension), dims = dimension)
     return YAXArray(otherdims(data, dimension), standard_devs, deepcopy(data.properties))
 end
+
+
+function climatology(data::YAXArray)
+    throwErrorIfDimMissing(data, :time)
+    return dropdims(mean(data; dims=:time); dims=:time)
+end

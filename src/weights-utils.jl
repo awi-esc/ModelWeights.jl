@@ -462,3 +462,130 @@ function normalizeConfigWeight(config::ConfigWeights)
     indep = Data.normalizeDict(config.independence)
     return ConfigWeights(perform, indep, config.sigma_performance, config.sigma_independence)
 end
+
+
+function brier(p_hat::Number, outcome::Int)
+    if outcome != 1 && outcome != 0
+        throw(ArgumentError("Event can either be observed (1) or not (1), input must be a number!"))
+    end
+    return (p_hat - outcome)^2
+end
+
+
+"""
+    rrps(p_hat::Vector{<:Number}, cat::Int)
+"""
+function rps(p_hat::Vector{<:Number}, cat::Int)
+    if cat > length(p_hat)
+        throw(ArgumentError("The length of the forecast probability vector ($p_hat) is smaller then the observed category ($cat)"))
+    end
+    cdf_p = cumsum(p_hat)
+    obs = zeros(length(p_hat))
+    obs[cat] = 1
+    cdf_obs = cumsum(obs)
+    return sum((cdf_p .- cdf_obs).^2)
+end
+
+
+function crps(data::Vector{<:Number}, obs::Number)
+    # expected absolute error between forecast points and observation
+    ev_obs = mean(abs.(data .- obs))
+    # expected absolute difference between two random forecast points (each sample pair)
+    ev_pairs = mean(abs.(data .- data'))
+    return ev_obs - 0.5 * ev_pairs
+end
+
+
+function crpss(forecast::Vector{<:Number}, baseline::Vector{<:Number}, obs::Number)
+    crps_fc = crps(forecast, obs)
+    crps_baseline = crps(baseline, obs)
+    return 1 - (crps_fc/crps_baseline)
+end
+
+"""
+   crpss(forecast::YAXArray, baseline::YAXArray, observations::YAXArray})
+   
+Compute Continuous Ranked Probability Skill Score for `forecast` with respect to `baseline`. 
+There is one forecast and one baseline prediction per time and for every timestep there is 
+exactly one observation. The CRPSS is based on the average CRPS across timesteps.
+
+# Arguments:
+- `forecast::YAXArray`: must have dimension :time and :model or :member
+- `baseline::YAXArray`: must have dimension :time and :model or :member
+- `observations::YAXArray`: must have only dimension :time
+"""
+function crpss(forecast::YAXArray, baseline::YAXArray, observations::YAXArray)
+    Data.throwErrorIfDimMissing(forecast, :time)
+    Data.throwErrorIfDimMissing(baseline, :time)
+    Data.throwErrorIfDimMissing(observations, :time)
+    timesteps = lookup(forecast, :time)
+    if (timesteps != lookup(baseline, :time)) || (timesteps != lookup(observations, :time))
+        throw(ArgumentError("forecast, baseline and observation must all be defined for the same time points!"))
+    end
+
+    start_y, end_y = Dates.year.(timesteps[[1, end]])
+    n_years = end_y - start_y + 1
+
+    crps = Dict("forecast" => Vector{Float64}(undef, n_years), "baseline" => Vector{Float64}(undef, n_years))
+    for ts in range(1, n_years)
+        # for observations there is one value per timestep
+        crps["forecast"][ts] = crps(forecast[time=ts], observations[time=ts].data[1])
+        crps["baseline"][ts] = crps(baseline[time=ts], observations[time=ts].data[1])
+    end
+
+    crps_fc = mean(crps["forecast"])
+    crps_baseline = mean(crps["baseline"])
+    return 1 - (crps_fc / crps_baseline)
+end
+
+"""
+    crpss(predictions::YAXArray, observations::YAXArray, weights::YAXArray)
+
+Compute Continuous Ranked Probability Skill Score where `predictions` is the unweighted 
+baseline and `predictions` weighted wrt `weights` are the forecast probabilities.
+
+There is one forecast prediction per time (predictions of an ensemble of models) and for 
+every timestep there is exactly one observation. The CRPSS is based on the average CRPS
+across timesteps.
+
+# Arguments:
+- `predictions::YAXArray`: must have dimension :time and :model or :member
+- `observations::YAXArray`: must have only dimension :time
+- `weights::YAXArray`: 
+"""
+function crpss_weighted(predictions::YAXArray, observations::YAXArray, weights::YAXArray)
+    level_predictions = Data.modelDim(predictions)
+    level_weights = Data.modelDim(weights)
+    if level_weights != level_predictions
+        throw(ArgumentError("Predictions and weights must be defined on the same level. Found: Predictions: $level_predictions, Weights: $level_weights."))
+    end    
+    Data.throwErrorIfDimMissing(predictions, :time)
+    Data.throwErrorIfDimMissing(observations, :time)
+    timesteps = lookup(predictions, :time)
+    if timesteps != lookup(observations, :time)
+        throw(ArgumentError("forecast and observations must all be defined for the same time points!"))
+    end
+    start_y, end_y = Dates.year.(timesteps[[1, end]])
+    n_years = end_y - start_y + 1
+
+    weights_n = Int.(round.(weights .* 1000))
+    crps_data = Dict(
+        "forecast" => Vector{Float64}(undef, n_years),
+        "baseline" => Vector{Float64}(undef, n_years)
+    )
+    for ts in range(1, n_years)
+        forecast = predictions[time = ts]
+        forecast_unweighted = collect(forecast.data)
+        # build data vectors for when weights are considered
+        forecast_weighted = vcat(map(idx -> repeat(forecast_unweighted[idx:idx], weights_n[idx]), 1:length(forecast_unweighted))...)
+   
+        # for observations there is one value per timestep
+        observed = observations[time=ts].data[1]
+        crps_data["forecast"][ts] = crps(forecast_weighted, observed)
+        crps_data["baseline"][ts] = crps(forecast_unweighted, observed)
+    end
+
+    crps_weighted = mean(crps_data["forecast"])
+    crps_unweighted = mean(crps_data["baseline"])
+    return 1 - (crps_weighted / crps_unweighted)
+end

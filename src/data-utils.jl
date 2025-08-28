@@ -147,7 +147,7 @@ function combineModelsFromMultipleFiles(
     dimData = YAXArray(dimData.axes, dimData, meta_dict)
     if length(model_names) != length(unique(model_names))
         duplicates = unique([m for m in model_names if sum(model_names .== m) > 1])
-        @warn "Some datasets appear more than once" duplicates
+        @warn "Some data appear more than once" duplicates
     end
     return dimData
 end
@@ -1475,38 +1475,60 @@ function indicesTimeseries(times::Vector{DateTime}, constraint_ts::Dict)
     end_y = get(constraint_ts, "end_y", Inf)
     indices_time = findall(t -> Dates.year(t) >= start_y && Dates.year(t) <= end_y, times)
     times = times[indices_time]
-    
     # only use data that's exactly from start to end!
     start_wrong = start_y != -Inf && (!isempty(times) && start_y != minimum(map(Dates.year, times)))
     end_wrong   = end_y != Inf && (!isempty(times) && end_y != maximum(map(Dates.year, times)))
-
     return (isempty(times) || start_wrong || end_wrong) ? [] : indices_time
 end
 
 
 function alignWeightsAndData(data::YAXArray, weights::YAXArray)
-    dim_symbol = Data.modelDim(data)
-    models_data = collect(dims(data, dim_symbol))
-    models_weights = collect(dims(weights, dim_symbol))
+    level_data = Data.modelDim(data)
+    level_weights = Data.modelDim(weights)
+    if level_data != level_weights
+        if level_data == :member
+            data = mwd.summarizeMembers(data)
+        else
+            weights = mwd.summarizeMembers(weights; fn=sum)
+        end
+    end
+    models_data = collect(dims(data, level_data))
+    models_weights = collect(dims(weights, level_data))
     data_no_weights = [model for model in models_data if !(model in models_weights)]
     if !isempty(data_no_weights)
         msg = "No weights were computed for follwoing models, thus not considered in the weighted average:"
         @warn msg data_no_weights
         # Only include data for which there are weights
         indices = findall(x -> !(x in data_no_weights), models_data)
-        data = indexModel(data, (dim_symbol,), indices)
+        data = indexModel(data, (level_data,), indices)
     end
     # weights for which we don't have data
     weights_no_data = filter(x -> !(x in models_data), models_weights)
     if !isempty(weights_no_data)
         @warn "Weights were renormalized since data of models missing for which weights have been computed: $weights_no_data"
         # renormalize weights
-        indices = findall(m -> m in dims(data, dim_symbol), models_weights)
-        weights = indexModel(weights, (dim_symbol,), indices)
+        indices = findall(m -> m in dims(data, level_data), models_weights)
+        weights = indexModel(weights, (level_data,), indices)
         weights = weights ./ sum(weights)
     end
     return (weights, data)
 end
+
+
+"""
+    subsetDataMap(data::DataMap, ids::Vector{String})
+
+Return new DataMap with data from `data` at `ids`.
+"""
+function subsetDataMap(data::DataMap, ids::Vector{String})
+    arrs = Vector{YAXArray}(undef, length(ids))
+    for (i, id) in enumerate(ids)
+        df = data[id]
+        arrs[i] = YAXArray(dims(df), df.data, deepcopy(df.properties))
+    end
+    return defineDataMap(arrs, ids)
+end
+
 
 # TODO
 # function warnIfModelConstraintNotFulfilled(

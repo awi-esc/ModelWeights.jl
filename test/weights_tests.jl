@@ -1,6 +1,16 @@
 import ModelWeights.Data as mwd
 import ModelWeights.Weights as mww
 
+weights_members = YAXArray(
+    (Dim{:weight}(["wP1", "wP2"]), Dim{:member}(["ESM1#r1i1p1f1", "ESM2#r1i1p1f1", "ESM2#r1i1p1f2"])), 
+    [0.2 0.7 0.1; 0.6 0.3 0.1]
+)
+weights_models = YAXArray(
+    (Dim{:weight}(["wP1", "wP2"]), Dim{:model}(["ESM1", "ESM2"])), 
+    [0.2 0.8; 0.6 0.4]
+)
+
+
 @testset "Test distancesData" begin
 end
 

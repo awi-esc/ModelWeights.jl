@@ -206,8 +206,11 @@ function plotEnsembleSpread(
 
     summarized_members = fn(df)
     summarized_avg_models = fn(Data.summarizeMembers(data))
-    hlines!(ax, summarized_members; linestyle = :dash, color = :magenta)
-    hlines!(ax, summarized_avg_models; linestyle = :dash, color = :green)
+    fn_name = string(nameof(fn)) 
+    l1, l2 =  fn_name * " across all members", fn_name * " members first summarized within model"
+    hlines!(ax, summarized_members; linestyle = :dash, color=:magenta, label=l1)
+    hlines!(ax, summarized_avg_models; linestyle = :dash, color=:green, label=l2)
+    axislegend(fontsize = 10)
     return fig
 end
 
@@ -372,4 +375,16 @@ function makeScatterPlot(
         axislegend(ax, merge = true, position = legend.position)
     end
     return (f, ax)
+end
+
+
+function plotECDF(v::Vector{<:Number}; variable::String="", title::String="Empirical CDF")
+    fn = ecdf(v)
+    indices = sortperm(v)
+    sorted = unique(v[indices]) 
+    f, ax = mwp.makeScatterPlot(
+        sorted, fn.(sorted); 
+        captions = (x=variable, y="Cumulative Probability", title=title)
+    )
+    return f
 end
