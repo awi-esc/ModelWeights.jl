@@ -10,7 +10,17 @@ Equal weights line is added to the plot.
 - `title::String`:
 - `sort_by::String`: value of weight dimension according to which data is sorted
 """
-function plotWeights(weights::YAXArray; title::String="", sort_by::String="", fs::Number=15)
+function plotWeights(
+    weights::YAXArray; 
+    title::String = "", 
+    sort_by::String = "", 
+    fs::Number = 15, 
+    legend_inside::Bool = true,
+    leg_pos::Symbol = :rt,
+    leg_frame::Bool = true,
+    leg_orientation::Symbol = :vertical,
+    leg_rows::Int = 1
+)
     sort_by = isempty(sort_by) ? weights.weight[1] : sort_by
     indices = Array(sortperm(weights[weight = At(sort_by)], rev=true))
     
@@ -43,7 +53,27 @@ function plotWeights(weights::YAXArray; title::String="", sort_by::String="", fs
     # add equal weight for reference
     ys_equal = [1 / n_models for _ in range(1, n_models)]
     lines!(ax, xs, ys_equal, color = :gray, label = "equal weighting", linestyle=:dash)
-    fig[1,2] = axislegend(ax, position = :cc, merge = true, framevisible = false)
+    if leg_orientation == :horizontal
+        leg = axislegend(
+            ax, 
+            position = leg_pos,
+            merge = true, 
+            framevisible = leg_frame, 
+            orientation = leg_orientation,
+            nbanks = leg_rows
+        )
+    else
+        leg = axislegend(
+            ax, 
+            position = leg_pos,
+            merge = true, 
+            framevisible = leg_frame, 
+            orientation = leg_orientation
+        )
+    end
+    if !legend_inside
+        fig[1,2] = leg
+    end 
     return fig
 end
 
