@@ -96,3 +96,8 @@ plots*/
 
 
 scripts/playground/
+
+
+# some specific data files:
+
+test/data/climwip-simplified/**/*.xml

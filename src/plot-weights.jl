@@ -51,64 +51,49 @@ end
 """
     plotDistances(dists::AbstractArray, title::String; is_bar_plot::Bool=true)
 
-Plot figure of distances for every combination of variable and diagnostic in 
-`dists`.
+Plot figure of distances.
 
 # Arguments:
-- `dists`: must have dimensions `:variable`, `:diagnostic`
-- `title`:
-- `is_bar_plot`:
+- `dists::AbstractArray`:
+- `title::String`:
+- `is_bar_plot::Bool = true`:
 """
 function plotDistances(dists::AbstractArray, title::String; is_bar_plot::Bool = true)
-    models = hasdim(dists, :member) ? dims(dists, :member) : dims(dists, :model)
-    variables = dims(dists, :variable)
-    # if isnothing(variables)
-    #     variables = ["variables combined"]
-    #     dists_reshaped = reshape(dists, (size(dists)..., 1))
-    #     dists = DimArray(dists_reshaped, (dims(dists)..., Dim{:variable}(variables)))
-    # end
-    diagnostics = dims(dists, :diagnostic)
-    # if isnothing(diagnostics)
-    #     diagnostics = ["Generalized distance"]
-    #     dists_reshaped = reshape(dists, (size(dists)..., 1))
-    #     dists = DimArray(dists_reshaped, (dims(dists)..., Dim{:diagnostic}(Array(diagnostics))))
-    # end
-
-    figures = []
+    model_dim = Data.modelDim(dists)
+    models = lookup(dists, model_dim)
     xs = 1:length(models)
-    for diag in Array(diagnostics)
-        for var in variables
-            fig = Figure()
-            ax = Axis(
-                fig[1, 1],
-                xticks = (xs, Array(models)),
-                xticklabelrotation = pi / 4,
-                xlabel = "Model member",
-                title = title * "Variable: $var, Diagnostic: $diag",
-            )
-            ys = vec(dists[variable=At(var), diagnostic=At(diag)])
-            if is_bar_plot
-                barplot!(ax, xs, ys, label = "$var")
-            else
-                scatter!(ax, xs, ys)
-                lines!(ax, xs, ys, label = "$var")
-            end
-            axislegend(ax, merge = true, position = :lt)
-            push!(figures, fig)
-        end
+    fig = Figure()
+    ax = Axis(
+        fig[1, 1],
+        xticks = (xs, collect(models)),
+        xticklabelrotation = pi / 4,
+        xlabel = String(model_dim),
+        title = title
+    )
+    ys = collect(dists.data)
+    if is_bar_plot
+        barplot!(ax, xs, ys)
+    else
+        scatter!(ax, xs, ys)
+        lines!(ax, xs, ys)
     end
-    return figures
+    return fig
 end
 
 
 """
-    plotDistancesIndependence(distances::AbstractArray, dimname::String)
+    plotDistancesIndependence(
+        distances::AbstractArray, dimname::String; title::String="Generalized distances Sij"
+    )
 
 # Arguments:
-- `distances`:
-- `dimname`:
+- `distances::AbstractArray`:
+- `dimname::String`:
+- `title::String`:
 """
-function plotDistancesIndependence(distances::AbstractArray, dimname::String)
+function plotDistancesIndependence(
+    distances::AbstractArray, dimname::String; title::String="Generalized distances Sij"
+)
     figures = []
     ensembles = collect(dims(distances, Symbol(dimname)))
     if hasdim(distances, :variable)
@@ -126,7 +111,7 @@ function plotDistancesIndependence(distances::AbstractArray, dimname::String)
     else
         fig = plotDistMatrices(
             Array(distances),
-            "Generalized distances Sij",
+            title,
             ensembles,
             ensembles,
         )

@@ -1,0 +1,253 @@
+INFO    [28395] 
+______________________________________________________________________
+          _____ ____  __  ____     __    _ _____           _
+         | ____/ ___||  \/  \ \   / /_ _| |_   _|__   ___ | |
+         |  _| \___ \| |\/| |\ \ / / _` | | | |/ _ \ / _ \| |
+         | |___ ___) | |  | | \ V / (_| | | | | (_) | (_) | |
+         |_____|____/|_|  |_|  \_/ \__,_|_| |_|\___/ \___/|_|
+______________________________________________________________________
+
+ESMValTool - Earth System Model Evaluation Tool.
+
+http://www.esmvaltool.org
+
+CORE DEVELOPMENT TEAM AND CONTACTS:
+  Birgit Hassler (Co-PI; DLR, Germany - birgit.hassler@dlr.de)
+  Alistair Sellar (Co-PI; Met Office, UK - alistair.sellar@metoffice.gov.uk)
+  Bouwe Andela (Netherlands eScience Center, The Netherlands - b.andela@esciencecenter.nl)
+  Lee de Mora (PML, UK - ledm@pml.ac.uk)
+  Niels Drost (Netherlands eScience Center, The Netherlands - n.drost@esciencecenter.nl)
+  Veronika Eyring (DLR, Germany - veronika.eyring@dlr.de)
+  Bettina Gier (UBremen, Germany - gier@uni-bremen.de)
+  Remi Kazeroni (DLR, Germany - remi.kazeroni@dlr.de)
+  Nikolay Koldunov (AWI, Germany - nikolay.koldunov@awi.de)
+  Axel Lauer (DLR, Germany - axel.lauer@dlr.de)
+  Saskia Loosveldt-Tomas (BSC, Spain - saskia.loosveldt@bsc.es)
+  Ruth Lorenz (ETH Zurich, Switzerland - ruth.lorenz@env.ethz.ch)
+  Benjamin Mueller (LMU, Germany - b.mueller@iggf.geo.uni-muenchen.de)
+  Valeriu Predoi (URead, UK - valeriu.predoi@ncas.ac.uk)
+  Mattia Righi (DLR, Germany - mattia.righi@dlr.de)
+  Manuel Schlund (DLR, Germany - manuel.schlund@dlr.de)
+  Breixo Solino Fernandez (DLR, Germany - breixo.solinofernandez@dlr.de)
+  Javier Vegas-Regidor (BSC, Spain - javier.vegas@bsc.es)
+  Klaus Zimmermann (SMHI, Sweden - klaus.zimmermann@smhi.se)
+
+For further help, please read the documentation at
+http://docs.esmvaltool.org. Have fun!
+
+INFO    [28395] Package versions
+INFO    [28395] ----------------
+INFO    [28395] ESMValCore: 0.1.0.dev9426+gcbe1178
+INFO    [28395] ESMValTool: 0.1.0.dev11033+gd0b7a93
+INFO    [28395] ----------------
+INFO    [28395] Using config file /albedo/home/brgrus001/.esmvaltool/config-user.yml
+INFO    [28395] Writing program log files to:
+/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/run/main_log.txt
+/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/run/main_log_debug.txt
+/albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/run/cmor_log.txt
+INFO    [28395] Starting the Earth System Model Evaluation Tool at time: 2024-10-13 07:33:59 UTC
+INFO    [28395] ----------------------------------------------------------------------
+INFO    [28395] RECIPE   = /albedo/home/brgrus001/ESMDataPrep/recipes/climwip-simplified.yml
+INFO    [28395] RUNDIR     = /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/run
+INFO    [28395] WORKDIR    = /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/work
+INFO    [28395] PREPROCDIR = /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc
+INFO    [28395] PLOTDIR    = /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/plots
+INFO    [28395] ----------------------------------------------------------------------
+INFO    [28395] Running tasks using at most 128 processes
+INFO    [28395] If your system hangs during execution, it may not have enough memory for keeping this number of tasks in memory.
+INFO    [28395] If you experience memory problems, try reducing 'max_parallel_tasks' in your user configuration file.
+WARNING [28395] Using the Dask basic scheduler. This may lead to slow computations and out-of-memory errors. Note that the basic scheduler may still be the best choice for preprocessor functions that are not lazy. In that case, you can safely ignore this warning. See https://docs.esmvaltool.org/projects/ESMValCore/en/latest/quickstart/configure.html#dask-distributed-configuration for more information. 
+WARNING [28395] You have enabled NetCDF compression. Accessing .nc files can be much slower than expected if your access pattern does not match their internal pattern. Make sure to specify the expected access pattern in the recipe as a parameter to the 'save' preprocessor function. If the problem persists, try disabling NetCDF compression.
+INFO    [28395] For Dataset: tas, Amon, native6, ERA5, v1, supplementaries: sftlf, *, *: ignoring supplementary variable 'sftlf', unable to expand wildcards 'mip', 'version'.
+INFO    [28395] For Dataset: pr, Amon, native6, ERA5, v1, supplementaries: sftlf, *, *: ignoring supplementary variable 'sftlf', unable to expand wildcards 'mip', 'version'.
+INFO    [28395] For Dataset: psl, Amon, native6, ERA5, v1, supplementaries: sftlf, *, *: ignoring supplementary variable 'sftlf', unable to expand wildcards 'mip', 'version'.
+INFO    [28395] Creating tasks from recipe
+INFO    [28395] Creating tasks for diagnostic calculate_weights_climwip
+INFO    [28395] Creating preprocessor task calculate_weights_climwip/tas_CLIM
+INFO    [28395] Creating preprocessor 'climatological_mean' task for variable 'tas_CLIM'
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: sftlf, fx, historical, r0i0p0, v20120115
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, ['v20120413', 'v20130325'], supplementaries: sftlf, fx, historical, r0i0p0, v20120413
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: sftlf, fx, historical, r0i0p0, v20140307
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+WARNING [28395] Preprocessor function mask_landsea works best when at least one supplementary variable of ['sftlf', 'sftof'] is defined in the recipe for Dataset:
+{'diagnostic': 'calculate_weights_climwip',
+ 'variable_group': 'tas_CLIM',
+ 'dataset': 'ERA5',
+ 'project': 'native6',
+ 'mip': 'Amon',
+ 'short_name': 'tas',
+ 'alias': 'native6',
+ 'frequency': 'mon',
+ 'long_name': 'Near-Surface Air Temperature',
+ 'modeling_realm': ['atmos'],
+ 'original_short_name': 'tas',
+ 'preprocessor': 'climatological_mean',
+ 'recipe_dataset_index': 7,
+ 'standard_name': 'air_temperature',
+ 'tier': 3,
+ 'timerange': '1995/2014',
+ 'type': 'reanaly',
+ 'units': 'K',
+ 'version': 'v1'}
+session: 'climwip-simplified_20241013_073358'.
+INFO    [28395] Found input files for Dataset: tas, Amon, native6, ERA5, v1
+INFO    [28395] PreprocessingTask calculate_weights_climwip/tas_CLIM created.
+INFO    [28395] Creating preprocessor task calculate_weights_climwip/pr_CLIM
+INFO    [28395] Creating preprocessor 'climatological_mean' task for variable 'pr_CLIM'
+INFO    [28395] Found input files for Dataset: pr, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: sftlf, fx, historical, r0i0p0, v20120115
+INFO    [28395] Found input files for Dataset: pr, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, ['v20120413', 'v20130325'], supplementaries: sftlf, fx, historical, r0i0p0, v20120413
+INFO    [28395] Found input files for Dataset: pr, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: sftlf, fx, historical, r0i0p0, v20140307
+INFO    [28395] Found input files for Dataset: pr, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: pr, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: pr, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: pr, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+WARNING [28395] Preprocessor function mask_landsea works best when at least one supplementary variable of ['sftlf', 'sftof'] is defined in the recipe for Dataset:
+{'diagnostic': 'calculate_weights_climwip',
+ 'variable_group': 'pr_CLIM',
+ 'dataset': 'ERA5',
+ 'project': 'native6',
+ 'mip': 'Amon',
+ 'short_name': 'pr',
+ 'alias': 'native6',
+ 'frequency': 'mon',
+ 'long_name': 'Precipitation',
+ 'modeling_realm': ['atmos'],
+ 'original_short_name': 'pr',
+ 'preprocessor': 'climatological_mean',
+ 'recipe_dataset_index': 7,
+ 'standard_name': 'precipitation_flux',
+ 'tier': 3,
+ 'timerange': '1995/2014',
+ 'type': 'reanaly',
+ 'units': 'kg m-2 s-1',
+ 'version': 'v1'}
+session: 'climwip-simplified_20241013_073358'.
+INFO    [28395] Found input files for Dataset: pr, Amon, native6, ERA5, v1
+INFO    [28395] PreprocessingTask calculate_weights_climwip/pr_CLIM created.
+INFO    [28395] Creating preprocessor task calculate_weights_climwip/psl_CLIM
+INFO    [28395] Creating preprocessor 'climatological_mean' task for variable 'psl_CLIM'
+INFO    [28395] Found input files for Dataset: psl, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: sftlf, fx, historical, r0i0p0, v20120115
+INFO    [28395] Found input files for Dataset: psl, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, ['v20120413', 'v20130325'], supplementaries: sftlf, fx, historical, r0i0p0, v20120413
+INFO    [28395] Found input files for Dataset: psl, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: sftlf, fx, historical, r0i0p0, v20140307
+INFO    [28395] Found input files for Dataset: psl, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: psl, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: psl, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: psl, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+WARNING [28395] Preprocessor function mask_landsea works best when at least one supplementary variable of ['sftlf', 'sftof'] is defined in the recipe for Dataset:
+{'diagnostic': 'calculate_weights_climwip',
+ 'variable_group': 'psl_CLIM',
+ 'dataset': 'ERA5',
+ 'project': 'native6',
+ 'mip': 'Amon',
+ 'short_name': 'psl',
+ 'alias': 'native6',
+ 'frequency': 'mon',
+ 'long_name': 'Sea Level Pressure',
+ 'modeling_realm': ['atmos'],
+ 'original_short_name': 'psl',
+ 'preprocessor': 'climatological_mean',
+ 'recipe_dataset_index': 7,
+ 'standard_name': 'air_pressure_at_mean_sea_level',
+ 'tier': 3,
+ 'timerange': '1995/2014',
+ 'type': 'reanaly',
+ 'units': 'Pa',
+ 'version': 'v1'}
+session: 'climwip-simplified_20241013_073358'.
+INFO    [28395] Found input files for Dataset: psl, Amon, native6, ERA5, v1
+INFO    [28395] PreprocessingTask calculate_weights_climwip/psl_CLIM created.
+INFO    [28395] Creating tasks for diagnostic weighted_temperature_graph
+INFO    [28395] Creating preprocessor task weighted_temperature_graph/tas_ANOM
+INFO    [28395] Creating preprocessor 'temperature_anomalies' task for variable 'tas_ANOM'
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: areacella, fx, historical, r0i0p0, v20120115
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, ['v20120413', 'v20130325'], supplementaries: areacella, fx, historical, r0i0p0, v20120413
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: areacella, fx, historical, r0i0p0, v20140307
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: areacella, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: areacella, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: areacella, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: areacella, fx, historical, r0i0p0, v20130312
+INFO    [28395] PreprocessingTask weighted_temperature_graph/tas_ANOM created.
+INFO    [28395] Creating tasks for diagnostic weighted_temperature_map_future
+INFO    [28395] Creating preprocessor task weighted_temperature_map_future/tas_CLIM
+INFO    [28395] Creating preprocessor 'climatological_mean' task for variable 'tas_CLIM'
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: sftlf, fx, historical, r0i0p0, v20120115
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: sftlf, fx, historical, r0i0p0, v20140307
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, v20120413, supplementaries: sftlf, fx, historical, r0i0p0
+INFO    [28395] PreprocessingTask weighted_temperature_map_future/tas_CLIM created.
+INFO    [28395] Creating tasks for diagnostic weighted_temperature_map_reference
+INFO    [28395] Creating preprocessor task weighted_temperature_map_reference/tas_CLIM
+INFO    [28395] Creating preprocessor 'climatological_mean' task for variable 'tas_CLIM'
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-0, ['historical', 'rcp85'], r1i1p1, v20120727, supplementaries: sftlf, fx, historical, r0i0p0, v20120115
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, BNU-ESM, ['historical', 'rcp85'], r1i1p1, v20120510, supplementaries: sftlf, fx, historical, r0i0p0, v20140307
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r1i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r2i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r3i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, CCSM4, ['historical', 'rcp85'], r4i1p1, v20160829, supplementaries: sftlf, fx, historical, r0i0p0, v20130312
+INFO    [28395] Found input files for Dataset: tas, Amon, CMIP5, ACCESS1-3, ['historical', 'rcp85'], r1i1p1, ['v20120413', 'v20130325'], supplementaries: sftlf, fx, historical, r0i0p0, v20120413
+INFO    [28395] PreprocessingTask weighted_temperature_map_reference/tas_CLIM created.
+INFO    [28395] These tasks will be executed: weighted_temperature_map_future/tas_CLIM, calculate_weights_climwip/tas_CLIM, calculate_weights_climwip/psl_CLIM, weighted_temperature_map_reference/tas_CLIM, calculate_weights_climwip/pr_CLIM, weighted_temperature_graph/tas_ANOM
+INFO    [28395] Wrote recipe with version numbers and wildcards to:
+file:///albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/run/climwip-simplified_filled.yml
+INFO    [28395] Using the Dask basic scheduler.
+INFO    [28395] Running 6 tasks using 6 processes
+INFO    [28399] Starting task calculate_weights_climwip/tas_CLIM in process [28399]
+INFO    [28400] Starting task calculate_weights_climwip/pr_CLIM in process [28400]
+INFO    [28401] Starting task calculate_weights_climwip/psl_CLIM in process [28401]
+INFO    [28402] Starting task weighted_temperature_graph/tas_ANOM in process [28402]
+INFO    [28403] Starting task weighted_temperature_map_future/tas_CLIM in process [28403]
+INFO    [28404] Starting task weighted_temperature_map_reference/tas_CLIM in process [28404]
+INFO    [28395] Progress: 6 tasks running, 0 tasks waiting for ancestors, 0/6 done
+WARNING [28402] /albedo/home/brgrus001/.conda/envs/esmvaltool-fork-dev/lib/python3.12/site-packages/iris/coords.py:2154: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+WARNING [28402] /albedo/home/brgrus001/.conda/envs/esmvaltool-fork-dev/lib/python3.12/site-packages/iris/coords.py:2154: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+WARNING [28402] /albedo/home/brgrus001/.conda/envs/esmvaltool-fork-dev/lib/python3.12/site-packages/iris/coords.py:2154: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+WARNING [28402] /albedo/home/brgrus001/.conda/envs/esmvaltool-fork-dev/lib/python3.12/site-packages/iris/coords.py:2154: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+INFO    [28403] Successfully completed task weighted_temperature_map_future/tas_CLIM (priority 4) in 0:00:21.553771
+INFO    [28395] Progress: 5 tasks running, 0 tasks waiting for ancestors, 1/6 done
+WARNING [28402] /albedo/home/brgrus001/.conda/envs/esmvaltool-fork-dev/lib/python3.12/site-packages/iris/coords.py:2154: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+WARNING [28402] /albedo/home/brgrus001/.conda/envs/esmvaltool-fork-dev/lib/python3.12/site-packages/iris/coords.py:2154: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+INFO    [28404] Successfully completed task weighted_temperature_map_reference/tas_CLIM (priority 5) in 0:00:43.194546
+WARNING [28402] /albedo/home/brgrus001/.conda/envs/esmvaltool-fork-dev/lib/python3.12/site-packages/iris/coords.py:2154: IrisVagueMetadataWarning: Cannot check if coordinate is contiguous: Invalid operation for 'year', with 0 bound(s). Contiguous bounds are only defined for 1D coordinates with 2 bounds. Metadata may not be fully descriptive for 'year'. Ignoring bounds.
+  warnings.warn(
+
+INFO    [28395] Progress: 4 tasks running, 0 tasks waiting for ancestors, 2/6 done
+INFO    [28402] Successfully completed task weighted_temperature_graph/tas_ANOM (priority 3) in 0:00:48.144514
+INFO    [28395] Progress: 3 tasks running, 0 tasks waiting for ancestors, 3/6 done
+INFO    [28400] Successfully completed task calculate_weights_climwip/pr_CLIM (priority 1) in 0:00:58.608199
+INFO    [28395] Progress: 2 tasks running, 0 tasks waiting for ancestors, 4/6 done
+INFO    [28399] Successfully completed task calculate_weights_climwip/tas_CLIM (priority 0) in 0:01:00.747898
+INFO    [28395] Progress: 1 tasks running, 0 tasks waiting for ancestors, 5/6 done
+INFO    [28401] Successfully completed task calculate_weights_climwip/psl_CLIM (priority 2) in 0:01:01.441476
+INFO    [28395] Progress: 0 tasks running, 0 tasks waiting for ancestors, 6/6 done
+INFO    [28395] Successfully completed all tasks.
+INFO    [28395] Wrote recipe with version numbers and wildcards to:
+file:///albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/run/climwip-simplified_filled.yml
+INFO    [28395] Wrote recipe output to:
+file:///albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/index.html
+INFO    [28395] It looks like you are connected to a remote machine via SSH. To show the output html file, you can try the following command on your local machine:
+server=10.100.1.1 && port=31415 && ssh -t -L ${port}:localhost:${port} brgrus001@${server} /albedo/home/brgrus001/.conda/envs/esmvaltool-fork-dev/bin/python3.12 -m http.server ${port} -d /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358
+Then visit http://localhost:31415 in your browser
+INFO    [28395] If the port 31415 is already in use, you can replace it with any other free one (e.g., 12789). If you are connected through a jump host, replace the server IP address 10.100.1.1 with your SSH server name
+INFO    [28395] Ending the Earth System Model Evaluation Tool at time: 2024-10-13 07:35:01 UTC
+INFO    [28395] Time for running the recipe was: 0:01:02.002407
+INFO    [28395] Maximum memory used (estimate): 3.7 GB
+INFO    [28395] Sampled every second. It may be inaccurate if short but high spikes in memory consumption occur.
+INFO    [28395] Run was successful

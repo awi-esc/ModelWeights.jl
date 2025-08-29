@@ -131,11 +131,12 @@ function plotAMOC(data::YAXArray)
     fig = getFigure((8, 5), 12)
     t = "variable: amoc, experiment: " * data.properties["experiment_id"]
 
-    unit = data.properties["units"]
+    unit = get(data.properties, "units", "")
+    xlab = isempty(unit) ? "" : "Transport in " * unit
     ax = Axis(
         fig[1, 1],
         title = join(["AMOC strength (at 26.5°N)", t], "\n"),
-        xlabel = "Transport in " * unit,
+        xlabel = xlab
     )
     if length(dims(data)) == 1
         # data for full period
@@ -265,56 +266,61 @@ end
 """
     plotTempGraph
 
-    # TODO: change quantileLabels and uncertaintyRanges, the latter should contain 
+    # TODO: change quantileLabels and uncertainty_ranges, the latter should contain 
     # the quantile labels
 """
 function plotTempGraph(
     data::YAXArray,
     averages::NamedTuple,
-    uncertaintyRanges::NamedTuple,
+    uncertainty_ranges::NamedTuple,
     title::String;
     ylabel::String = "",
 )
     f = Figure()
     years = Dates.year.(Array(dims(data, :time)))
     xticks = years[1]:20:years[end]
+    units = unique(get(data.properties, "units", []))
+    if length(units) > 1
+        throw(ArgumentError("multiple units in data!"))
+    elseif isempty(units)
+        @warn "plotTempGraph: no units given in metadata!"
+    end
+    unit = !isempty(units) ? units[1] : ""
+    ylab = isempty(ylabel) ? (isempty(unit) ? "Temperature" : "Temperature in $unit") : ylabel
     ax = Axis(
         f[1, 1],
         xticks = (xticks, string.(xticks)),
         limits = ((years[1] - 10, years[end] + 10), (-1, 5)),
-        title = title,#"Temperature anomaly relative to " * name_ref_period,
+        title = title,
         xlabel = "Year",
-        ylabel = isempty(ylabel) ? "Temperature in " * data.properties["units"] : ylabel,
+        ylabel = ylab,
     )
     # add ranges TODO: make label with fn argument
-    lowerUnw = uncertaintyRanges.unweighted[confidence=At("lower")]
-    upperUnw = uncertaintyRanges.unweighted[confidence=At("upper")]
+    lower_unw = collect(uncertainty_ranges.unweighted[confidence=At("lower")])
+    upper_unw = collect(uncertainty_ranges.unweighted[confidence=At("upper")])
     band!(
         ax,
         years,
-        vec(lowerUnw),
-        vec(upperUnw),
+        coalesce.(lower_unw, NaN),
+        coalesce.(upper_unw, NaN),
         color = (:red, 0.2),
         label = "Non-weighted 16.7-83.3 perc range",
     )
-
-    lowerWeighted = uncertaintyRanges.weighted[confidence=At("lower")]
-    upperWeighted = uncertaintyRanges.weighted[confidence=At("upper")]
+    lower_weighted = collect(uncertainty_ranges.weighted[confidence=At("lower")])
+    upper_weighted = collect(uncertainty_ranges.weighted[confidence=At("upper")])
     band!(
         ax,
         years,
-        vec(lowerWeighted),
-        vec(upperWeighted),
+        coalesce.(lower_weighted, NaN),
+        coalesce.(upper_weighted, NaN),
         color = (:green, 0.2),
         label = "Weighted 16.7-83.3perc range",
     )
-
     # add results for each model model seperately
     for m in dims(data, :member)
         y = data[member=At(m)]
         lines!(ax, years, Array(y), color = :gray80, label = "Ensemble members")
     end
-
     lines!(ax, years, vec(averages.unweighted), color = :red, label = "Non-weighted mean")
     lines!(ax, years, vec(averages.weighted), color = :green, label = "Weighted mean")
     axislegend(ax, merge = true, position = :lt)

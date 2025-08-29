@@ -1,0 +1,196 @@
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc
+: alias: ACCESS1-0
+  dataset: ACCESS1-0
+  diagnostic: weighted_temperature_map_future
+  end_year: 2100
+  ensemble: r1i1p1
+  exp: historical-rcp85
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc
+  frequency: mon
+  institute:
+  - CSIRO-BOM
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 0
+  short_name: tas
+  standard_name: air_temperature
+  start_year: 2081
+  timerange: 2081/2100
+  units: K
+  variable_group: tas_CLIM
+  version: v20120727
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc
+: alias: ACCESS1-3
+  dataset: ACCESS1-3
+  diagnostic: weighted_temperature_map_future
+  end_year: 2100
+  ensemble: r1i1p1
+  exp: historical-rcp85
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_ACCESS1-3_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc
+  frequency: mon
+  institute:
+  - CSIRO-BOM
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 6
+  short_name: tas
+  standard_name: air_temperature
+  start_year: 2081
+  timerange: 2081/2100
+  units: K
+  variable_group: tas_CLIM
+  version: v20120413
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc
+: alias: BNU-ESM
+  dataset: BNU-ESM
+  diagnostic: weighted_temperature_map_future
+  end_year: 2100
+  ensemble: r1i1p1
+  exp: historical-rcp85
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_BNU-ESM_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc
+  frequency: mon
+  institute:
+  - BNU
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 1
+  short_name: tas
+  standard_name: air_temperature
+  start_year: 2081
+  timerange: 2081/2100
+  units: K
+  variable_group: tas_CLIM
+  version: v20120510
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc
+: alias: CCSM4_r1i1p1
+  dataset: CCSM4
+  diagnostic: weighted_temperature_map_future
+  end_year: 2100
+  ensemble: r1i1p1
+  exp: historical-rcp85
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r1i1p1_tas_2081-2100.nc
+  frequency: mon
+  institute:
+  - NCAR
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 2
+  short_name: tas
+  standard_name: air_temperature
+  start_year: 2081
+  timerange: 2081/2100
+  units: K
+  variable_group: tas_CLIM
+  version: v20160829
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_2081-2100.nc
+: alias: CCSM4_r2i1p1
+  dataset: CCSM4
+  diagnostic: weighted_temperature_map_future
+  end_year: 2100
+  ensemble: r2i1p1
+  exp: historical-rcp85
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r2i1p1_tas_2081-2100.nc
+  frequency: mon
+  institute:
+  - NCAR
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 3
+  short_name: tas
+  standard_name: air_temperature
+  start_year: 2081
+  timerange: 2081/2100
+  units: K
+  variable_group: tas_CLIM
+  version: v20160829
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_2081-2100.nc
+: alias: CCSM4_r3i1p1
+  dataset: CCSM4
+  diagnostic: weighted_temperature_map_future
+  end_year: 2100
+  ensemble: r3i1p1
+  exp: historical-rcp85
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r3i1p1_tas_2081-2100.nc
+  frequency: mon
+  institute:
+  - NCAR
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 4
+  short_name: tas
+  standard_name: air_temperature
+  start_year: 2081
+  timerange: 2081/2100
+  units: K
+  variable_group: tas_CLIM
+  version: v20160829
+? /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_2081-2100.nc
+: alias: CCSM4_r4i1p1
+  dataset: CCSM4
+  diagnostic: weighted_temperature_map_future
+  end_year: 2100
+  ensemble: r4i1p1
+  exp: historical-rcp85
+  filename: /albedo/work/projects/p_forclima/preproc_data_esmvaltool/climwip/climwip-simplified_20241013_073358/preproc/weighted_temperature_map_future/tas_CLIM/CMIP5_CCSM4_Amon_historical-rcp85_r4i1p1_tas_2081-2100.nc
+  frequency: mon
+  institute:
+  - NCAR
+  long_name: Near-Surface Air Temperature
+  mip: Amon
+  modeling_realm:
+  - atmos
+  preprocessor: climatological_mean
+  product:
+  - output1
+  - output2
+  project: CMIP5
+  recipe_dataset_index: 5
+  short_name: tas
+  standard_name: air_temperature
+  start_year: 2081
+  timerange: 2081/2100
+  units: K
+  variable_group: tas_CLIM
+  version: v20160829
