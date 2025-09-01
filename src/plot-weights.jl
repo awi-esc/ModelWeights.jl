@@ -149,3 +149,53 @@ function plotDistancesIndependence(
     end
     return figures
 end
+
+
+function plotCRPSSPseudoObs(
+    crpss_all::Vector{Dict{T1, T2}}, labels::Vector{String}, colors::Vector{Symbol};
+    ylabel::String = "CRPSS forecast: weighted, baseline: unweighted"
+) where {T1, T2 <: Any}
+    figs = []
+    models = sort(collect(keys(crpss_all[1])))
+    n = length(models)
+    target_periods = lookup(crpss_all[1][models[1]], :target_period)
+    scenarios = lookup(crpss_all[1][models[1]], :scenario)
+    for tp in target_periods
+        for scenario in scenarios
+            # get data for respective scenario and target time period:
+            title = scenario * " for target period " * tp
+            xs = 1:n
+            fig = Figure()
+            ax = Axis(
+                fig[1, 1],
+                xticks = (xs, models),
+                xticklabelrotation = pi / 4,
+                ylabel = ylabel,
+                title = title
+            )
+            n_groups = length(crpss_all)
+            crpss_vals_all = map(
+                i -> map(
+                        m -> only(crpss_all[i][m][scenario = At(scenario), target_period = At(tp)]),
+                        models
+                    ),
+                1:n_groups
+            )
+            groups = vcat(map(i -> repeat([i], length(xs)), 1:n_groups)...)
+            xs_flat = vcat(repeat(xs, n_groups)...)
+            barplot!(
+                ax, xs_flat, vcat(crpss_vals_all...); 
+                dodge = groups,
+                color = repeat(colors, inner=n),
+                label = repeat(labels, inner=n)
+            )
+            if length(labels) > 1
+                axislegend(ax, [PolyElement(color=c) for c in colors], labels, position=:rb, merge=true)
+            end
+            push!(figs, fig)
+            #name = join(["CRPSS-combined-vs-classic-wP", scenario, tp, ".png"], "-", "")
+            #mwp.savePlot(fig, joinpath(plot_dir, name); overwrite=true)
+        end
+    end
+    return figs
+end

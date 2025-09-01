@@ -473,7 +473,7 @@ end
 
 
 """
-    rrps(p_hat::Vector{<:Number}, cat::Int)
+    rps(p_hat::Vector{<:Number}, cat::Int)
 """
 function rps(p_hat::Vector{<:Number}, cat::Int)
     if cat > length(p_hat)
@@ -487,105 +487,150 @@ function rps(p_hat::Vector{<:Number}, cat::Int)
 end
 
 
-function crps(data::Vector{<:Number}, obs::Number)
+function crps(samples::Vector{<:Number}, obs::Number)
     # expected absolute error between forecast points and observation
-    ev_obs = mean(abs.(data .- obs))
+    ev_obs = mean(abs.(samples .- obs))
     # expected absolute difference between two random forecast points (each sample pair)
-    ev_pairs = mean(abs.(data .- data'))
+    ev_pairs = mean(abs.(samples .- samples'))
     return ev_obs - 0.5 * ev_pairs
 end
 
 
-function crpss(forecast::Vector{<:Number}, baseline::Vector{<:Number}, obs::Number)
-    crps_fc = crps(forecast, obs)
-    crps_baseline = crps(baseline, obs)
-    return 1 - (crps_fc/crps_baseline)
-end
-
-"""
-   crpss(forecast::YAXArray, baseline::YAXArray, observations::YAXArray})
-   
-Compute Continuous Ranked Probability Skill Score for `forecast` with respect to `baseline`. 
-There is one forecast and one baseline prediction per time and for every timestep there is 
-exactly one observation. The CRPSS is based on the average CRPS across timesteps.
-
-# Arguments:
-- `forecast::YAXArray`: must have dimension :time and :model or :member
-- `baseline::YAXArray`: must have dimension :time and :model or :member
-- `observations::YAXArray`: must have only dimension :time
-"""
-function crpss(forecast::YAXArray, baseline::YAXArray, observations::YAXArray)
-    Data.throwErrorIfDimMissing(forecast, :time)
-    Data.throwErrorIfDimMissing(baseline, :time)
-    Data.throwErrorIfDimMissing(observations, :time)
-    timesteps = lookup(forecast, :time)
-    if (timesteps != lookup(baseline, :time)) || (timesteps != lookup(observations, :time))
-        throw(ArgumentError("forecast, baseline and observation must all be defined for the same time points!"))
-    end
-
-    start_y, end_y = Dates.year.(timesteps[[1, end]])
-    n_years = end_y - start_y + 1
-
-    crps = Dict("forecast" => Vector{Float64}(undef, n_years), "baseline" => Vector{Float64}(undef, n_years))
-    for ts in range(1, n_years)
-        # for observations there is one value per timestep
-        crps["forecast"][ts] = crps(forecast[time=ts], observations[time=ts].data[1])
-        crps["baseline"][ts] = crps(baseline[time=ts], observations[time=ts].data[1])
-    end
-
-    crps_fc = mean(crps["forecast"])
-    crps_baseline = mean(crps["baseline"])
+function crpss(
+    samples_forecast::Vector{<:Number}, samples_baseline::Vector{<:Number}, obs::Number
+)
+    crps_fc = crps(samples_forecast, obs)
+    crps_baseline = crps(samples_baseline, obs)
     return 1 - (crps_fc / crps_baseline)
 end
 
 """
-    crpss(predictions::YAXArray, observations::YAXArray, weights::YAXArray)
+   crpss(samples_forecast::YAXArray, samples_baseline::YAXArray, observations::YAXArray})
+   
+Compute Continuous Ranked Probability Skill Score for forecast with respect to baseline. 
+    
+For every timestep there are predicted samples of the forecast (`samples_forecast`) and of
+the baseline `samples_baseline` (respectively one per model in the ensemble) and for every 
+timestep there is exactly one observation. The CRPSS is based on the average CRPS across timesteps.
 
-Compute Continuous Ranked Probability Skill Score where `predictions` is the unweighted 
-baseline and `predictions` weighted wrt `weights` are the forecast probabilities.
+# Arguments:
+- `samples_forecast::YAXArray`: must have dimension :time and :model or :member
+- `samples_baseline::YAXArray`: must have dimension :time and :model or :member
+- `observations::YAXArray`: must have only dimension :time
+"""
+function crpss(samples_forecast::YAXArray, samples_baseline::YAXArray, observations::YAXArray)
+    Data.throwErrorIfDimMissing(samples_forecast, :time)
+    Data.throwErrorIfDimMissing(samples_baseline, :time)
+    Data.throwErrorIfDimMissing(observations, :time)
+    timesteps = lookup(samples_forecast, :time)
+    if (timesteps != lookup(samples_baseline, :time)) || (timesteps != lookup(observations, :time))
+        throw(ArgumentError("forecast, baseline and observation must all be defined for the same time points!"))
+    end
+    start_y, end_y = Dates.year.(timesteps[[1, end]])
+    n_years = end_y - start_y + 1
 
-There is one forecast prediction per time (predictions of an ensemble of models) and for 
+    crps_data = Dict(
+        "forecast" => Vector{Float64}(undef, n_years), 
+        "baseline" => Vector{Float64}(undef, n_years)
+    )
+    for ts in range(1, n_years)
+        # for observations there is one value per timestep
+        crps_data["forecast"][ts] = crps(collect(samples_forecast[time=ts]), only(observations[time=ts]))
+        crps_data["baseline"][ts] = crps(collect(samples_baseline[time=ts]), only(observations[time=ts]))
+    end
+    crps_fc = mean(crps_data["forecast"])
+    crps_baseline = mean(crps_data["baseline"])
+    return 1 - (crps_fc / crps_baseline)
+end
+
+
+"""
+    crpss(samples::YAXArray, observations::YAXArray, weights::YAXArray)
+
+Compute Continuous Ranked Probability Skill Score for weighted vs. unweighted predictions for timeseries.
+
+For every timestep there are predicted samples, one per model in the ensemble and for 
 every timestep there is exactly one observation. The CRPSS is based on the average CRPS
 across timesteps.
 
 # Arguments:
-- `predictions::YAXArray`: must have dimension :time and :model or :member
+- `samples::YAXArray`: must have dimension :time and :model or :member
 - `observations::YAXArray`: must have only dimension :time
-- `weights::YAXArray`: 
+- `weights::YAXArray`: must have same model dimension as `samples` (:model or :member)
 """
-function crpss_weighted(predictions::YAXArray, observations::YAXArray, weights::YAXArray)
-    level_predictions = Data.modelDim(predictions)
+function crpss_weighted(samples::YAXArray, observations::YAXArray, weights::YAXArray)
+    level_predictions = Data.modelDim(samples)
     level_weights = Data.modelDim(weights)
     if level_weights != level_predictions
         throw(ArgumentError("Predictions and weights must be defined on the same level. Found: Predictions: $level_predictions, Weights: $level_weights."))
     end    
-    Data.throwErrorIfDimMissing(predictions, :time)
+    Data.throwErrorIfDimMissing(samples, :time)
     Data.throwErrorIfDimMissing(observations, :time)
-    timesteps = lookup(predictions, :time)
+    timesteps = lookup(samples, :time)
     if timesteps != lookup(observations, :time)
         throw(ArgumentError("forecast and observations must all be defined for the same time points!"))
     end
     start_y, end_y = Dates.year.(timesteps[[1, end]])
     n_years = end_y - start_y + 1
-
-    weights_n = Int.(round.(weights .* 1000))
-    crps_data = Dict(
-        "forecast" => Vector{Float64}(undef, n_years),
-        "baseline" => Vector{Float64}(undef, n_years)
-    )
+    
+    crps_weighted = Vector{Number}(undef, n_years)
+    crps_unweighted = Vector{Number}(undef, n_years)
     for ts in range(1, n_years)
-        forecast = predictions[time = ts]
-        forecast_unweighted = collect(forecast.data)
-        # build data vectors for when weights are considered
-        forecast_weighted = vcat(map(idx -> repeat(forecast_unweighted[idx:idx], weights_n[idx]), 1:length(forecast_unweighted))...)
-   
-        # for observations there is one value per timestep
-        observed = observations[time=ts].data[1]
-        crps_data["forecast"][ts] = crps(forecast_weighted, observed)
-        crps_data["baseline"][ts] = crps(forecast_unweighted, observed)
+        forecast_samples = samples[time = ts]
+        weighted_samples = weightSamples(forecast_samples, weights)
+        crps_weighted[ts] = crps(collect(weighted_samples), observations[ts])
+        crps_unweighted[ts] = crps(collect(forecast_samples), observations[ts])
     end
+    crps_fc = mean(crps_weighted)
+    crps_baseline = mean(crps_unweighted)
+    return 1 - (crps_fc / crps_baseline)
+end
 
-    crps_weighted = mean(crps_data["forecast"])
-    crps_unweighted = mean(crps_data["baseline"])
+"""
+    crpss_weighted(samples::YAXArray, observed::Number, weights::YAXArray)
+
+Compute Continuous Ranked Probability Skill Score for weighted vs. unweighted predictions.
+
+`samples` is one prediction per model in the ensemble, `observed` is the observed value.
+
+# Arguments:
+- `samples::YAXArray`: must have dimension :model or :member
+- `observed::Number`:
+- `weights::YAXArray`: must have same model dimension as `samples` (:model or :member)
+"""
+function crpss_weighted(samples::YAXArray, observed::Number, weights::YAXArray)
+    level_predictions = Data.modelDim(samples)
+    level_weights = Data.modelDim(weights)
+    if level_weights != level_predictions
+        throw(ArgumentError("Predictions and weights must be defined on the same level. Found: Predictions: $level_predictions, Weights: $level_weights."))
+    end
+    weighted_samples = weightSamples(samples, weights)
+    crps_weighted = crps(collect(weighted_samples), observed)
+    crps_unweighted = crps(collect(samples), observed)
     return 1 - (crps_weighted / crps_unweighted)
+end
+
+"""
+    weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 100)
+
+Repeat each entry in `samples` proportional to respective value given in `weights` so that 
+the returned vector has `n` entries.
+
+# Arguments:
+- `samples::YAXArray`: must have dimension :model or :member.
+- `weights::YAXArray`: must have same model dimension as `samples` (:model or :member).
+- `n::Int = 100`: length of returned vector. 
+"""
+function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 100)    
+    level_predictions = Data.modelDim(samples)
+    level_weights = Data.modelDim(weights)
+    if level_weights != level_predictions
+        throw(ArgumentError("Predictions and weights must be defined for the same models. Found: Predictions: $level_predictions, Weights: $level_weights."))
+    end
+    weights_n = rand(Distributions.Multinomial(n, weights))
+    nb_samples = length(samples)
+    weighted_samples = vcat(map(i -> repeat(samples[i:i], weights_n[i]), 1:nb_samples)...)
+    models_vals = collect(lookup(samples, level_predictions))
+    models = vcat(map(i -> repeat(models_vals[i:i], weights_n[i]), 1:nb_samples)...)    
+    return YAXArray((Dim{level_predictions}(models),), weighted_samples)
 end
