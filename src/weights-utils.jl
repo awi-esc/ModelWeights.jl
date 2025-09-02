@@ -621,7 +621,7 @@ the returned vector has `n` entries.
 - `weights::YAXArray`: must have same model dimension as `samples` (:model or :member).
 - `n::Int = 100`: length of returned vector. 
 """
-function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 100)    
+function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)    
     level_predictions = Data.modelDim(samples)
     level_weights = Data.modelDim(weights)
     if level_weights != level_predictions
