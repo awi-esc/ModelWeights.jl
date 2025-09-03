@@ -8,6 +8,7 @@ export summarizeMembers, summarizeMembers!
 export alignPhysics, addMasks!
 export defineDataMap, loadPreprocData
 
+import StatsBase.ecdf
 
 using CSV
 using Dates

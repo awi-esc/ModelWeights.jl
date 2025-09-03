@@ -384,13 +384,19 @@ function makeScatterPlot(
 end
 
 
-function plotECDF(v::Vector{<:Number}; variable::String="", title::String="Empirical CDF")
-    fn = ecdf(v)
-    indices = sortperm(v)
-    sorted = unique(v[indices]) 
-    f, ax = mwp.makeScatterPlot(
-        sorted, fn.(sorted); 
-        captions = (x=variable, y="Cumulative Probability", title=title)
-    )
+function plotECDF(vals::Vector{<:Number}; variable::String="", title::String="Empirical CDF")
+    fn = ecdf(vals)
+    indices = sortperm(vals)
+    sorted = unique(vals[indices]) 
+    f = Figure()
+    ax = Axis(f[1,1], xticks=vals, title = title, ylabel = "Cumulative Probability", xlabel=variable)
+    ylims!(0,1)
+    for (i, v) in enumerate(sorted[1:end-1])
+        p = fn(v)
+        next_v = sorted[i + 1]
+        scatter!(v, p, color=:grey)
+        lines!([v, sorted[i+1]], [p, p], color=:grey)
+        lines!([next_v, next_v], [p, fn(next_v)], color=:grey)
+    end
     return f
 end

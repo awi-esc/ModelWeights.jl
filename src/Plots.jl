@@ -1,5 +1,7 @@
 module Plots
 
+import StatsBase.ecdf
+
 using CairoMakie
 using ColorSchemes
 using Dates

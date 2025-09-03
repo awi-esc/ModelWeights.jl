@@ -1256,94 +1256,134 @@ Compute weighted `quantiles` of timeseries `data`.
 lower and upper bound in this order.
 """
 function uncertaintyRanges(
-    data::AbstractArray; w::Union{YAXArray, Nothing} = nothing, quantiles = [0.167, 0.833]
+    data::AbstractArray; 
+    weights::Union{YAXArray, Nothing} = nothing, 
+    q_lower::Number = 0.167, q_upper::Number = 0.833
 )
-    timesteps = dims(data, :time)
+    model_dim = modelDim(data)
     meta = deepcopy(data.properties)
-    meta["_quantiles"] = string.(quantiles)
-    uncertainty_ranges = isnothing(w) ?
-        YAXArray(
-            (dims(data, :time), Dim{:confidence}(["lower", "upper"])),
-            Array{Union{Missing, Float64}}(undef, length(timesteps), 2),
-            meta
-        ) :
-        (hasdim(w, :weight) ? 
-            YAXArray(
-                (dims(data, :time), dims(w, :weight), Dim{:confidence}(["lower", "upper"])),
-                Array{Union{Missing, Float64}}(undef, length(timesteps), length(w.weight), 2),
-                meta
-            ) :
-            YAXArray(
-                (dims(data, :time), Dim{:confidence}(["lower", "upper"])),
-                Array{Union{Missing, Float64}}(undef, length(timesteps), 2),
-                meta
-            )
-        )
-    for t in timesteps
-        arr = Array(data[time = At(t)])
-        if sum(ismissing.(arr)) >= length(arr) - 1 # at least two values must be given
-            lower, upper = missing, missing
-        else
-            if isnothing(w)
-                lower, upper = interpolatedWeightedQuantiles(
-                    quantiles, collect(skipmissing(arr))
-                )
-                uncertainty_ranges[time=At(t), confidence=At("lower")] = lower
-                uncertainty_ranges[time=At(t), confidence=At("upper")] = upper
-            else
-                if hasdim(w, :weight)
-                    for weight_id in collect(w.weight)
-                        weights, df = alignWeightsAndData(data[time = At(t)], w[weight = At(weight_id)])
-                        lower, upper = interpolatedWeightedQuantiles(
-                            quantiles, collect(skipmissing(df)); weights
-                        )
-                        uncertainty_ranges[time=At(t), confidence=At("lower"), weight=At(weight_id)] = lower
-                        uncertainty_ranges[time=At(t), confidence=At("upper"), weight=At(weight_id)] = upper
-                    end
-                else
-                    weights, df = alignWeightsAndData(data[time = At(t)], w)
-                    lower, upper = interpolatedWeightedQuantiles(
-                        quantiles, collect(skipmissing(df)); weights
-                    )
-                    uncertainty_ranges[time=At(t), confidence=At("lower")] = lower
-                    uncertainty_ranges[time=At(t), confidence=At("upper")] = upper
-                end
-            end
+    meta["_confidence_quantiles"] = string.([q_lower, q_upper])
+    # TODO: check missing values!!
+    #     if sum(ismissing.(slice)) >= length(slice) - 1 # at least two values must be given
+    #         qs = [missing, missing]
+    #     end
+    if isnothing(weights) || !hasdim(weights, :weight)
+        if !isnothing(weights)
+            weights, data = alignWeightsAndData(data, weights)
         end
+        qs = mapslices(
+            slice -> map(q -> quantile(coalesce.(slice, NaN), q; w=weights), [q_lower, q_upper]),
+            data,
+            dims=(model_dim,)
+        )
+        qs = setDim(qs, :OutAxis1, :confidence, ["lower", "upper"])
+    else
+        quantiles = []
+        for weight_id in lookup(weights, :weight)
+            w, df = alignWeightsAndData(data, weights[weight = At(weight_id)])
+            qs = mapslices(
+                slice -> map(q -> quantile(coalesce.(slice, NaN), q; w=w), [q_lower, q_upper]),
+                df,
+                dims=(model_dim,)
+            )
+            qs = setDim(qs, :OutAxis1, :confidence, ["lower", "upper"])
+            push!(quantiles, qs)
+        end
+        qs = concatenatecubes(quantiles, dims(weights, :weight))
     end
-    return uncertainty_ranges
+    return YAXArray(dims(qs), qs.data, meta)
 end
 
 
-"""
-    interpolatedWeightedQuantiles(
-        quantiles::Vector{<:Number}, vals::Vector; weights=nothing
-    )
+# """
+#     interpolatedWeightedQuantiles(
+#         quantiles::Vector{<:Number}, vals::Vector; weights=nothing
+#     )
 
-This implementation follows the one used by Brunner et al.
+# This implementation follows the one used by Brunner et al.
+# """
+# function interpolatedWeightedQuantiles(
+#     quantiles::Vector{<:Number}, vals::Vector; weights = nothing
+# )
+#     if isnothing(weights)
+#         weights = Array{eltype(vals)}(undef, length(vals))
+#         weights[ismissing.(vals) .== false] .= 1
+#     end
+#     indices_sorted = Array(sortperm(vals)) # gives indices of smallest to largest data point
+#     weights_sorted = weights[indices_sorted]
+#     weighted_quantiles = cumsum(weights_sorted) - 0.5 * weights_sorted
+#     weighted_quantiles = reshape(weighted_quantiles, length(weighted_quantiles), 1)
+#     # TODO: recheck missing values!
+#     weighted_quantiles =
+#         (weighted_quantiles .- minimum(skipmissing(weighted_quantiles))) ./
+#         maximum(skipmissing(weighted_quantiles))
+
+#     interp_linear = Interpolations.linear_interpolation(
+#         vec(weighted_quantiles),
+#         vals[indices_sorted],
+#         extrapolation_bc = Interpolations.Line(),
+#     )
+#     return interp_linear(quantiles)
+# end
+
 """
-function interpolatedWeightedQuantiles(
-    quantiles::Vector{<:Number}, vals::Vector; weights = nothing
+    quantile(samples::Vector{<:Number}, p::Number)
+
+Compute the p-th quantile.
+"""
+function quantile(
+    samples::AbstractArray{<:Number}, 
+    p::Number;
+    w::Union{Nothing, AbstractArray{<:Number}} = nothing,
+    interpolate::Bool = true
 )
-    if isnothing(weights)
-        weights = Array{eltype(vals)}(undef, length(vals))
-        weights[ismissing.(vals) .== false] .= 1
+    if p < 0 || p > 1
+        throw(ArgumentError("It must hold: 0<p<=1! Found: $p"))
     end
-    indices_sorted = Array(sortperm(vals)) # gives indices of smallest to largest data point
-    weights_sorted = weights[indices_sorted]
-    weighted_quantiles = cumsum(weights_sorted) - 0.5 * weights_sorted
-    weighted_quantiles = reshape(weighted_quantiles, length(weighted_quantiles), 1)
-    # TODO: recheck missing values!
-    weighted_quantiles =
-        (weighted_quantiles .- minimum(skipmissing(weighted_quantiles))) ./
-        maximum(skipmissing(weighted_quantiles))
-
-    interp_linear = Interpolations.linear_interpolation(
-        vec(weighted_quantiles),
-        vals[indices_sorted],
-        extrapolation_bc = Interpolations.Line(),
-    )
-    return interp_linear(quantiles)
+    indices = sortperm(samples)
+    samples = samples[indices]
+    n = length(samples)
+    if isnothing(w)
+        probs_cum = cumsum(repeat([1/n], n))
+    else
+        probs_cum = cumsum(w[indices])
+    end
+    idx = findfirst(x -> x >= p, probs_cum)
+    
+    h = (n - 1) * p + 1
+    interpolate = isinteger(h) ? false : interpolate
+    
+    if interpolate
+        if isnothing(w)
+            # use linear interpolation default definition used in numpy
+            m = 1 - p
+            j = Int(floor(n * p + m))
+            gamma = n * p + m - j
+            result = (1-gamma) * samples[j] + gamma * samples[j+1]
+        else
+            # for interpolation + weighted, use empirical cdf:
+            q1 = probs_cum[idx]
+            if q1 == p
+                result = samples[idx]
+            else
+                if idx==1
+                    result = samples[1]
+                else
+                    # standard linear interpolation
+                    x0, x1 = samples[idx - 1], samples[idx]
+                    q0, q1 = probs_cum[idx - 1], probs_cum[idx]
+                    result =  x0 + ((p - q0)/(q1 - q0)) * (x1 - x0)
+                end
+            end
+        end
+    else
+        result = samples[idx]
+        # without interpolation: this is the same
+        # fn = StatsBase.ecdf(samples; weights=w)
+        # probs = fn.(samples)
+        # idx = findfirst(x -> x >=p, probs)
+    end
+    return result
 end
 
 
@@ -1487,9 +1527,9 @@ function alignWeightsAndData(data::YAXArray, weights::YAXArray)
     level_weights = Data.modelDim(weights)
     if level_data != level_weights
         if level_data == :member
-            data = mwd.summarizeMembers(data)
+            data = summarizeMembers(data)
         else
-            weights = mwd.summarizeMembers(weights; fn=sum)
+            weights = summarizeMembers(weights; fn=sum)
         end
     end
     models_data = collect(dims(data, level_data))

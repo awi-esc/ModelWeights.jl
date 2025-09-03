@@ -152,14 +152,14 @@ end
 
 
 function plotCRPSSPseudoObs(
-    crpss_all::Vector{Dict{T1, T2}}, labels::Vector{String}, colors::Vector{Symbol};
+    crpss_all::Vector{T}, labels::Vector{String}, colors::Vector{Symbol};
     ylabel::String = "CRPSS forecast: weighted, baseline: unweighted"
-) where {T1, T2 <: Any}
+) where {T <: Any}
     figs = []
-    models = sort(collect(keys(crpss_all[1])))
+    models = sort(lookup(crpss_all[1], :pseudo_obs))
     n = length(models)
-    target_periods = lookup(crpss_all[1][models[1]], :target_period)
-    scenarios = lookup(crpss_all[1][models[1]], :scenario)
+    target_periods = lookup(crpss_all[1], :target_period)
+    scenarios = lookup(crpss_all[1], :scenario)
     for tp in target_periods
         for scenario in scenarios
             # get data for respective scenario and target time period:
@@ -176,7 +176,7 @@ function plotCRPSSPseudoObs(
             n_groups = length(crpss_all)
             crpss_vals_all = map(
                 i -> map(
-                        m -> only(crpss_all[i][m][scenario = At(scenario), target_period = At(tp)]),
+                        m -> only(crpss_all[i][scenario=At(scenario), target_period=At(tp), pseudo_obs=At(m)]),
                         models
                     ),
                 1:n_groups
@@ -198,4 +198,46 @@ function plotCRPSSPseudoObs(
         end
     end
     return figs
+end
+
+
+function crpssBoxPlot(crpss_wIP::YAXArray; title::String="", leg_pos::Symbol=:rb)
+    tps = lookup(crpss_wIP, :target_period)
+    scenarios = lookup(crpss_wIP, :scenario)
+    colors = [:sienna2, :orchid3]
+    f = Figure()
+    ax = Axis(
+        f[1, 1],
+        xticks = (1:length(tps), tps),
+        ylabel = "CRPSS",
+        title = title
+    )
+    # dodged barplot
+    ys_all = []
+    grps_all = []
+    xs_all = []
+    for (i, tp) in enumerate(tps)
+        ys = collect.(map(sc -> crpss_wIP[target_period = At(tp), scenario=At(sc)], scenarios))
+        push!(ys_all, vcat(ys...))
+        grps = vcat(map(x -> repeat([x], length(ys[x])), 1:length(scenarios))...)
+        push!(grps_all, grps)
+        xs = repeat([i], length(vcat(ys...)))
+        push!(xs_all, xs)
+        
+        boxplot!(
+            ax, xs, vcat(ys...); 
+            dodge = grps,
+            color = repeat(colors, inner=length(ys[1])),
+            label = repeat(scenarios, inner=length(ys[1]))
+        )
+    end
+    axislegend(
+        ax, 
+        [PolyElement(color=c) for c in colors], 
+        scenarios, 
+        position=leg_pos,
+        orientation = :horizontal,
+        merge=true
+    )
+    return f
 end
