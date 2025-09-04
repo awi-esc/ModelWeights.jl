@@ -1295,37 +1295,6 @@ function uncertaintyRanges(
 end
 
 
-# """
-#     interpolatedWeightedQuantiles(
-#         quantiles::Vector{<:Number}, vals::Vector; weights=nothing
-#     )
-
-# This implementation follows the one used by Brunner et al.
-# """
-# function interpolatedWeightedQuantiles(
-#     quantiles::Vector{<:Number}, vals::Vector; weights = nothing
-# )
-#     if isnothing(weights)
-#         weights = Array{eltype(vals)}(undef, length(vals))
-#         weights[ismissing.(vals) .== false] .= 1
-#     end
-#     indices_sorted = Array(sortperm(vals)) # gives indices of smallest to largest data point
-#     weights_sorted = weights[indices_sorted]
-#     weighted_quantiles = cumsum(weights_sorted) - 0.5 * weights_sorted
-#     weighted_quantiles = reshape(weighted_quantiles, length(weighted_quantiles), 1)
-#     # TODO: recheck missing values!
-#     weighted_quantiles =
-#         (weighted_quantiles .- minimum(skipmissing(weighted_quantiles))) ./
-#         maximum(skipmissing(weighted_quantiles))
-
-#     interp_linear = Interpolations.linear_interpolation(
-#         vec(weighted_quantiles),
-#         vals[indices_sorted],
-#         extrapolation_bc = Interpolations.Line(),
-#     )
-#     return interp_linear(quantiles)
-# end
-
 """
     quantile(samples::Vector{<:Number}, p::Number)
 
