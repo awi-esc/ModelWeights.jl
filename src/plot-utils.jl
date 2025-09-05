@@ -4,13 +4,17 @@ function getFigure(figsize, fontsize)
     return fig
 end
 
-function savePlot(fig, target_path::String; overwrite::Bool=false)
+function savePlot(fig, target_path::String; overwrite::Bool=false, verbose::Bool=true)
     target_path = overwrite ? target_path : Data.individuatePath(target_path)
     save(target_path, fig)
-    @info "saved plot to " target_path
+    if verbose
+        @info "saved plot to " target_path
+    end
 end
 
-function savePlot(fig, target_dir::String, target_fn::String; overwrite::Bool=false)
+function savePlot(
+    fig, target_dir::String, target_fn::String; overwrite::Bool=false, verbose::Bool=true
+)
     savePlot(fig, joinpath(target_dir, target_fn); overwrite)
 end
 
