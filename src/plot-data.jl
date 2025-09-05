@@ -14,23 +14,20 @@ function plotValsOnMap!(
     means::AbstractArray,
     title::String;
     colors = nothing,
-    color_range = nothing,
-    high_clip = (1, 0, 0),
-    low_clip = (0, 0, 1),
-    pos = (x = 1, y = 1),
-    pos_legend = (x = 1, y = 2),
-    xlabel = "Longitude",
-    ylabel = "Latitude",
-    xlabel_rotate = pi / 4,
+    color_range::Union{Nothing, Tuple} = nothing,
+    pos::NamedTuple = (x = 1, y = 1),
+    pos_legend::NamedTuple = (x = 1, y = 2),
+    xlabel::String = "Longitude",
+    ylabel::String = "Latitude",
+    xlabel_rotate::Number = 0,
     nb_ticks::Union{Int,Nothing} = nothing,
-    east_west_labels = false,
+    east_west_labels::Bool = false,
+    alpha::Number = 0.8
 )
     means = Data.sortLongitudesWest2East(means)
     dims_lat = Array(dims(means, :lat))
     dims_lon = Array(dims(means, :lon))
-    if any(x -> x > 179, dims_lon)
-        dims_lon = Data.lon360to180.(dims_lon)
-    end
+    dims_lon = Data.lon360to180.(dims_lon)
 
     # scaling plot 
     lon_min, lon_max = minimum(dims_lon) - 1, maximum(dims_lon) + 1
@@ -41,13 +38,13 @@ function plotValsOnMap!(
     # axis ticks and labels
     xticks = isnothing(nb_ticks) ? [ceil(dims_lon[1]), 0, round(dims_lon[end])] : dims_lon
     yticks = isnothing(nb_ticks) ? [ceil(dims_lat[1]), 0, round(dims_lat[end])] : dims_lat
-    lonLabels = east_west_labels ? longitude2EastWest.(xticks) : string.(xticks)
-    latLabels = east_west_labels ? latitude2NorthSouth.(yticks) : string.(yticks)
+    lon_labels = east_west_labels ? longitude2EastWest.(xticks) : string.(xticks)
+    lat_labels = east_west_labels ? latitude2NorthSouth.(yticks) : string.(yticks)
 
-    step_lon = isnothing(nb_ticks) ? 1 : Int(round(length(lonLabels) / nb_ticks))
-    step_lat = isnothing(nb_ticks) ? 1 : Int(round(length(latLabels) / nb_ticks))
-    x_ticks_labels = (xticks[1:step_lon:end], lonLabels[1:step_lon:end])
-    y_ticks_labels = (yticks[1:step_lat:end], latLabels[1:step_lat:end])
+    step_lon = isnothing(nb_ticks) ? 1 : Int(round(length(lon_labels) / nb_ticks))
+    step_lat = isnothing(nb_ticks) ? 1 : Int(round(length(lat_labels) / nb_ticks))
+    x_ticks_labels = (xticks[1:step_lon:end], lon_labels[1:step_lon:end])
+    y_ticks_labels = (yticks[1:step_lat:end], lat_labels[1:step_lat:end])
 
     ax = Axis(
         fig[pos.x, pos.y],
@@ -62,19 +59,17 @@ function plotValsOnMap!(
     if isnothing(colors)
         colors = reverse(ColorSchemes.redblue.colors)
     end
-    hm =
-        isnothing(color_range) ?
-        heatmap!(ax, lon, lat, Array(means), colormap = colors, alpha = 0.8) :
+    hm = isnothing(color_range) ?
+        heatmap!(lon, lat, Array(means); colormap=colors, alpha=alpha) :
         heatmap!(
-            ax,
             lon,
             lat,
-            Array(means),
+            Array(means);
             colormap = colors,
-            alpha = 0.8,
+            alpha = alpha,
             colorrange = color_range,
-            highclip = high_clip,
-            lowclip = low_clip,
+            highclip = colors[end],
+            lowclip = colors[1]
         )
     lines!(GeoMakie.coastlines(); color = :black)
     if !isnothing(pos_legend)
