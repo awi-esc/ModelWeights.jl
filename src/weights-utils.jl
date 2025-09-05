@@ -487,7 +487,7 @@ function rps(p_hat::Vector{<:Number}, cat::Int)
 end
 
 
-function crps(samples::Vector{<:Number}, obs::Number)
+function crps(samples::AbstractVector{<:Union{Missing, Number}}, obs::Number)
     # expected absolute error between forecast points and observation
     ev_obs = mean(abs.(samples .- obs))
     # expected absolute difference between two random forecast points (each sample pair)
@@ -496,12 +496,51 @@ function crps(samples::Vector{<:Number}, obs::Number)
 end
 
 
+"""
+    crps(samples::YAXArray{<:Union{Missing, Number}}, obs::YAXArray)
+
+Compute Continuous Ranked Probability Score (CRPS) for predicted `samples` and observation `obs`.
+
+# Arguments:
+- `samples`: can have multiple dimensions (e.g. just model or model x lon x lat)
+- `obs`: must have the same dimension as `samples` except for the model dimension (:model or :member)
+which is only present in `samples`.
+"""
+function crps(samples::YAXArray{<:Union{Missing, Number}}, obs::YAXArray)
+    model_dim = Data.modelDim(samples)
+    dimensions = otherdims(samples, model_dim)
+    if dimensions != dims(obs)
+        throw(ArgumentError("Models and observations must be defined on same grid!"))
+    end
+    if length(dimensions) == 0
+        values = YAXArray(Dim{:dummy}(["d"]), ones(1))
+        values[dummy=1] = crps(collect(samples), only(obs))
+    else
+        values = YAXArray(dimensions, ones(size(dimensions)))
+        for (I, slice) in zip(CartesianIndices(obs), eachslice(samples; dims=dimensions))
+            values[I] = crps(collect(slice), only(obs[I]))
+        end
+    end
+    return values
+end
+
+
 function crpss(
-    samples_forecast::Vector{<:Number}, samples_baseline::Vector{<:Number}, obs::Number
+    samples_forecast::AbstractVector{<:Union{Missing, Number}}, 
+    samples_baseline::AbstractVector{<:Union{Missing, Number}},
+    obs::Number
 )
     crps_fc = crps(samples_forecast, obs)
     crps_baseline = crps(samples_baseline, obs)
     return 1 - (crps_fc / crps_baseline)
+end
+
+function crpss(crps_fc::YAXArray, crps_baseline::YAXArray, single_val::Bool)
+    result = 1 .- (crps_fc ./ crps_baseline)
+    if single_val
+        result = only(result)
+    end
+    return result
 end
 
 """
@@ -530,20 +569,22 @@ function crpss(samples_forecast::YAXArray, samples_baseline::YAXArray, observati
     n_years = end_y - start_y + 1
 
     crps_data = Dict(
-        "forecast" => Vector{Float64}(undef, n_years), 
-        "baseline" => Vector{Float64}(undef, n_years)
+        "forecast" => Vector{YAXArray}(undef, n_years), 
+        "baseline" => Vector{YAXArray}(undef, n_years)
     )
     for ts in range(1, n_years)
-        # for observations there is one value per timestep
-        crps_data["forecast"][ts] = crps(collect(samples_forecast[time=ts]), only(observations[time=ts]))
-        crps_data["baseline"][ts] = crps(collect(samples_baseline[time=ts]), only(observations[time=ts]))
+        crps_data["forecast"][ts] = crps(samples_forecast[time=ts], observations[time=ts])
+        crps_data["baseline"][ts] = crps(samples_baseline[time=ts], observations[time=ts])
     end
-    crps_fc = mean(crps_data["forecast"])
-    crps_baseline = mean(crps_data["baseline"])
-    return 1 - (crps_fc / crps_baseline)
+    crps_fc = dropdims(mean(crps_data["forecast"], dims=:time); dims=:time)
+    crps_baseline = dropdims(mean(crps_data["baseline"]); dims=:time)
+    
+    dimensions = otherdims(samples, (model_dim, :time))
+    return crpss(crps_fc, crps_baseline, length(dimensions)==0)
 end
 
 
+# Note: this function does not call crpss with the weighted samples because the weighted samples model dimension differs at every time step...!
 """
     crpss(samples::YAXArray, observations::YAXArray, weights::YAXArray)
 
@@ -558,7 +599,7 @@ across timesteps.
 - `observations::YAXArray`: must have only dimension :time
 - `weights::YAXArray`: must have same model dimension as `samples` (:model or :member)
 """
-function crpss_weighted(samples::YAXArray, observations::YAXArray, weights::YAXArray)
+function crpss_weighted(samples::YAXArray, observations::YAXArray, weights::YAXArray; n::Int=100)
     level_predictions = Data.modelDim(samples)
     level_weights = Data.modelDim(weights)
     if level_weights != level_predictions
@@ -573,17 +614,21 @@ function crpss_weighted(samples::YAXArray, observations::YAXArray, weights::YAXA
     start_y, end_y = Dates.year.(timesteps[[1, end]])
     n_years = end_y - start_y + 1
     
-    crps_weighted = Vector{Number}(undef, n_years)
-    crps_unweighted = Vector{Number}(undef, n_years)
+    crps_weighted = Vector{YAXArray}(undef, n_years)
+    crps_unweighted = Vector{YAXArray}(undef, n_years)
     for ts in range(1, n_years)
         forecast_samples = samples[time = ts]
-        weighted_samples = weightSamples(forecast_samples, weights)
-        crps_weighted[ts] = crps(collect(weighted_samples), observations[ts])
-        crps_unweighted[ts] = crps(collect(forecast_samples), observations[ts])
+        weighted_samples = weightSamples(forecast_samples, weights; n)
+        crps_weighted[ts] = crps(weighted_samples, observations[time=ts])
+        crps_unweighted[ts] = crps(forecast_samples, observations[time=ts])
     end
-    crps_fc = mean(crps_weighted)
-    crps_baseline = mean(crps_unweighted)
-    return 1 - (crps_fc / crps_baseline)
+    crps_weighted = concatenatecubes(crps_weighted, Dim{:time}(timesteps))
+    crps_unweighted = concatenatecubes(crps_unweighted, Dim{:time}(timesteps))
+    crps_fc = dropdims(mean(crps_weighted, dims=:time); dims=:time)
+    crps_baseline = dropdims(mean(crps_unweighted, dims=:time); dims=:time)
+
+    dimensions = otherdims(samples, (level_predictions, :time))
+    return crpss(crps_fc, crps_baseline, length(dimensions)==0)
 end
 
 """
@@ -598,20 +643,20 @@ Compute Continuous Ranked Probability Skill Score for weighted vs. unweighted pr
 - `observed::Number`:
 - `weights::YAXArray`: must have same model dimension as `samples` (:model or :member)
 """
-function crpss_weighted(samples::YAXArray, observed::Number, weights::YAXArray)
+function crpss_weighted(samples::YAXArray, observed::Number, weights::YAXArray; n::Int=100)
     level_predictions = Data.modelDim(samples)
     level_weights = Data.modelDim(weights)
     if level_weights != level_predictions
         throw(ArgumentError("Predictions and weights must be defined on the same level. Found: Predictions: $level_predictions, Weights: $level_weights."))
     end
-    weighted_samples = weightSamples(samples, weights)
-    crps_weighted = crps(collect(weighted_samples), observed)
-    crps_unweighted = crps(collect(samples), observed)
+    weighted_samples = weightSamples(samples, weights; n)
+    crps_weighted = crps(weighted_samples, observed)
+    crps_unweighted = crps(samples, observed)
     return 1 - (crps_weighted / crps_unweighted)
 end
 
 """
-    weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 100)
+    weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)
 
 Repeat each entry in `samples` proportional to respective value given in `weights` so that 
 the returned vector has `n` entries.
@@ -619,7 +664,7 @@ the returned vector has `n` entries.
 # Arguments:
 - `samples::YAXArray`: must have dimension :model or :member.
 - `weights::YAXArray`: must have same model dimension as `samples` (:model or :member).
-- `n::Int = 100`: length of returned vector. 
+- `n::Int = 1000`: length of returned vector. 
 """
 function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)    
     level_predictions = Data.modelDim(samples)
@@ -628,9 +673,11 @@ function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)
         throw(ArgumentError("Predictions and weights must be defined for the same models. Found: Predictions: $level_predictions, Weights: $level_weights."))
     end
     weights_n = rand(Distributions.Multinomial(n, weights))
-    nb_samples = length(samples)
-    weighted_samples = vcat(map(i -> repeat(samples[i:i], weights_n[i]), 1:nb_samples)...)
-    models_vals = collect(lookup(samples, level_predictions))
-    models = vcat(map(i -> repeat(models_vals[i:i], weights_n[i]), 1:nb_samples)...)    
-    return YAXArray((Dim{level_predictions}(models),), weighted_samples)
+    nb_samples = length(lookup(samples, level_predictions))
+
+    weighted_samples = mapslices(vec -> vcat([fill(x,n) for (x,n) in zip(vec, weights_n)]...), samples, dims=(level_predictions,))
+    names = collect(lookup(samples, level_predictions))
+    names_rep = vcat(map(i -> repeat(names[i:i], weights_n[i]), 1:nb_samples)...)    
+    weighted_samples = Data.setDim(weighted_samples, :OutAxis1, level_predictions, names_rep)
+    return weighted_samples
 end
