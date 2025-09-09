@@ -314,7 +314,7 @@ function plotTempGraph(
     # add results for each model model seperately
     for m in dims(data, :member)
         y = data[member=At(m)]
-        lines!(ax, years, Array(y), color = :gray80, label = "Ensemble members")
+        lines!(ax, years, Array(y), color = :gray80, linewidth=1, label = "Ensemble members")
     end
     lines!(ax, years, vec(averages.unweighted), color = :red, label = "Non-weighted mean")
     lines!(ax, years, vec(averages.weighted), color = :green, label = "Weighted mean")
