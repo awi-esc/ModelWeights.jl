@@ -76,15 +76,15 @@ performancePsl = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_cli
 dTas = weights.performance_distances["tas_CLIM_calculate_weights_climwip"].data
 dPr = weights.performance_distances["pr_CLIM_calculate_weights_climwip"].data
 dPsl = weights.performance_distances["psl_CLIM_calculate_weights_climwip"].data
-all(isapprox.(performanceTas, dTas))
-all(isapprox.(performancePr, dPr))
-all(isapprox.(performancePsl, dPsl))
+@assert all(isapprox.(performanceTas, dTas))
+@assert all(isapprox.(performancePr, dPr))
+@assert all(isapprox.(performancePsl, dPsl))
 
 dPerformance = [dTas, dPr, dPsl] ./ median.([dTas, dPr, dPsl])
 Di = sum([1/4, 2/4, 1/4] .* dPerformance)
 performanceOverall = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip/climwip/performance_overall_mean.nc"), "overall_mean")
 
-all(isapprox.(Di, performanceOverall))
+@assert all(isapprox.(Di, performanceOverall))
 # our computed generalized distances yield slightly different results (if norm_avg_members was true):
 weights.Di.data 
 # this is because we first summarize members into one average distance for each model and then take the median
@@ -109,8 +109,9 @@ independencePr ./ dPr
 dIndependence = [dTas, dPr] ./ median.([dTas, dPr])
 Sij = sum([2/3, 1/3] .* dIndependence)
 independence_overall = NetCDF.ncread(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip/climwip/independence_overall_mean.nc"), "overall_mean")
-all(isapprox.(Sij, independence_overall))
-# our generalized distances are again slightly different because we first summarize members into one average distance for each model and then take the median
+@assert all(isapprox.(Sij, independence_overall))
+# our generalized distances are again slightly different (if norm_avg_members=true) because 
+# we first summarize members into one average distance for each model and then take the median
 # instead of taking the median over all models and members (as we did here):
 weights.Sij.data
 
@@ -122,7 +123,7 @@ orig_wIP = NCDataset(joinpath(PATH_TO_WORK_DIR, "calculate_weights_climwip/climw
 models = orig_wIP["model_ensemble"][:]
 orig_w = YAXArray((Dim{:member}(models),), orig_wIP["weight"][:])
 orig_w.data
-# comparison with our weights (slightly different for reasons mentioned above)
+# comparison with our weights (slightly different if norm_avg_members=true) for reasons mentioned above)
 weights.w[weight = At("wIP-simplified")].data
 
 # make some Plots
@@ -178,12 +179,16 @@ data_future = data_temp_map_future["tas_CLIM_weighted_temperature_map_future"];
 data_ref = data_ref[lat = Where(x -> x <= 68.75)];
 data_future = data_future[lat = Where(x -> x <= 68.75)];
 
+data_ref = mwd.summarizeMembers(data_ref)
+data_future = mwd.summarizeMembers(data_future)
+w_members = weights.w[weight = At("wIP-simplified")]
+
 diff = data_future.data .- data_ref.data;
 members = mwd.sharedModels(Dict{String, YAXArray}(weights.performance_distances), :member)
 w_members = mww.distributeWeightsAcrossMembers(weights.w[weight = At("wIP-simplified")], members)
 
 title_f1 = "Weighted mean temp. change 2081-2100 minus 1995-2014";
-weighted_avg = mww.weightedAvg(YAXArray(dims(diff), collect(diff)); weights = w_members);
+weighted_avg = mww.weightedAvg(diff; weights = w_members);
 #weighted_avg = mw.sortLongitudesWest2East(weighted_avg);
 f1 = Figure();
 cmap = cgrad([:white, :salmon, :red, :darkred], 10; categorical = true)
@@ -215,23 +220,44 @@ mwp.plotValsOnMap!(f2, diff_wu, title_f2;
 mwp.savePlot(f2, joinpath(plot_dir, "weighted-minus-unweighted-temp-change.png"))
 
 # sanity checks: compare to original data (must have adapted the latitudes above)
-function compareToOrigData(data, data_orig)
-    mat = isapprox.(data, data_orig, atol=10^-4);
-    @assert ismissing.(data_orig) == ismissing.(data)
+function compareToOrigData(data, data_orig; atol = 10^-4)
+    mat = isapprox.(data, data_orig, atol=atol);
     approxEqual = all(x -> ismissing(x) || x, mat)
     @assert approxEqual
 end
 
+function compareMissings(data, data_orig)
+    indices_orig = ismissing.(data_orig)
+    indices = ismissing.(data)
+    @assert indices_orig == indices
+end
+
+
+# Missings fails!! We have more missings than them...
 begin
     data_orig = NCDataset(joinpath(PATH_TO_WORK_DIR, "weighted_temperature_map/weighted_temperature_map/temperature_change_weighted_map.nc"));
     data_ww_orig = data_orig["__xarray_dataarray_variable__"][:,:];
     compareToOrigData(Array(weighted_avg), data_ww_orig)
+    compareMissings(Array(weighted_avg), data_ww_orig)
 end
 
+# # debug different missing indices
+# indices_missing_ref = ismissing.(Array(data_ref.data))
+# indices_missing_ref =
+
+# mat = Array(weighted_avg.data)
+# indices_orig = ismissing.(data_ww_orig)
+# indices = ismissing.(weighted_avg.data)
+# # when original is missing, we also get missing values?
+# mat[indices_orig.==1] .== 1
+# data_ww_orig[indices.==1].==1
+
+# Missings fails!!
 begin
     data_orig = NCDataset(joinpath(PATH_TO_WORK_DIR, "weighted_temperature_map/weighted_temperature_map/temperature_change_difference_map.nc"));
     data_wu_orig = data_orig["__xarray_dataarray_variable__"][:,:];
     compareToOrigData(Array(diff_wu), data_wu_orig)
+    compareMissings(Array(diff_wu), data_wu_orig)
 end
 
 
@@ -243,15 +269,14 @@ data_temp_graph = mw.defineDataMap(
     dir_per_var = false,
     constraint = Dict("aliases" => ["weighted_temperature_graph"])
 );
-# transpose brings time to second dimension, otherwise slicing in uncertaintyRanges fails..
-data_graph = transpose(data_temp_graph["tas_ANOM_weighted_temperature_graph"]);
+data_graph = data_temp_graph["tas_ANOM_weighted_temperature_graph"];
 # this will compute the weighted avg based on the average across the respective members of each model
 #weighted_avg = mww.applyWeights(data_graph, w_members);
 
 weighted_avg = mww.weightedAvg(data_graph; weights = w_members);
 unweighted_avg = mww.weightedAvg(data_graph; use_members_equal_weights = false);
 
-uncertainties_weighted = mwd.uncertaintyRanges(data_graph; w = w_members);
+uncertainties_weighted = mwd.uncertaintyRanges(data_graph; weights = w_members);
 uncertainties_unweighted = mwd.uncertaintyRanges(data_graph);
 
 f3 = mwp.plotTempGraph(
@@ -263,36 +288,31 @@ f3 = mwp.plotTempGraph(
 )
 mwp.savePlot(f3, joinpath(plot_dir, "temp-graph-anomalies.png"))
 tas_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/recipe_climwip_test_basic_data/work/weighted_temperature_graph/weighted_temperature_graph/temperature_anomalies.nc")["tas"];
-@assert Array(tas_orig["tas"]) == Array(transpose(data_graph))
-
-# Recheck the following:
-#unc_unweighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range.nc");
-# compareToOrigData(unc_unweighted_orig["tas"][:,:][1,:], map(x -> x[1], uncertainties_unweighted))
-# compareToOrigData(unc_unweighted_orig["tas"][:,:][2,:], map(x -> x[2], uncertainties_unweighted))
-# unc_weighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range_weighted.nc");
-# compareToOrigData(unc_weighted_orig["tas"][:,:][1,:], map(x -> x[1], uncertainties_weighted))
-# # # TODO: only this is not equal for a handful of indices!
-# uncertainties_weighted_orig = unc_weighted_orig["tas"][:,:][2,:];
-# uncertainties_weighted = map(x -> x[2], uncertainties_weighted);
-# diff = uncertainties_weighted .- uncertainties_weighted_orig;
-# indices = findall(x -> x>0.0001, diff)
-# diff[indices]
-# compareToOrigData(uncertainties_weighted_orig, uncertainties_weighted)
-
-data_graph_models = mwd.summarizeMembers(data_graph);
+compareToOrigData(Array(tas_orig["tas"]), Array(data_graph))
+compareMissings(Array(tas_orig["tas"]), Array(data_graph))
 
 weighted_avg_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/central_estimate_weighted.nc")
 compareToOrigData(weighted_avg_orig["tas"][:], weighted_avg[:])
+compareMissings(weighted_avg_orig["tas"][:], weighted_avg[:].data)
 unweighted_avg_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/central_estimate.nc")
-compareToOrigData(unweighted_avg_orig["tas"][:], unweighted_avg[:])
+compareToOrigData(unweighted_avg_orig["tas"][:], unweighted_avg[:].data)
+compareMissings(unweighted_avg_orig["tas"][:], unweighted_avg[:].data)
 
 
 
 
-# TODO: Plot ensemble spread for some models with >1 ensemble member
-# data = modelDataRef["CLIM"]["tas"]
-# models_kept = ["EC-Earth3", "ACCESS-CM2"]
-# indices = findall(m -> m in models_kept, Array(dims(data, :model)))
-# shared_models = data.metadata["full_model_names"][indices]
-# data = sw.getModelSubset(data, shared_models)
-# sw.plotEnsembleSpread(data, 7.5, 82.5)
+# Recheck uncertainties!! There is a slight mismatch between our and their results!
+unc_unweighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range.nc");
+compareToOrigData(unc_unweighted_orig["tas"][:,:][1,:], uncertainties_unweighted[confidence = At("lower")].data; atol=10^-2)
+# compareToOrigData(unc_unweighted_orig["tas"][:,:][2,:], uncertainties_unweighted[confidence = At("upper")].data)
+unc_weighted_orig = NCDataset("/albedo/home/brgrus001/ModelWeights/reproduce-climwip-figs/orig-data-temp-graph/uncertainty_range_weighted.nc");
+# compareToOrigData(unc_weighted_orig["tas"][:,:][1,:], map(x -> x[1], uncertainties_weighted))
+# # # TODO: only this is not equal for a handful of indices!
+uncertainties_weighted_orig = unc_weighted_orig["tas"][:,:][2,:];
+uncertainties_weighted = uncertainties_weighted[confidence = At("upper")];
+diff = uncertainties_weighted .- uncertainties_weighted_orig;
+indices = findall(x -> x>0.0001, diff)
+diff[indices]
+compareToOrigData(uncertainties_weighted_orig, uncertainties_weighted; atol=10^-2)
+
+

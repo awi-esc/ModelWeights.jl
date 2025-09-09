@@ -25,24 +25,23 @@ function weightedAvg(
     weights::Union{YAXArray, Nothing} = nothing,
     use_members_equal_weights::Bool = true
 )
-    data = deepcopy(data)
-    weights = deepcopy(weights)
-    dim_symbol = Data.modelDim(data)
+    model_dim = Data.modelDim(data)
     equal_weighting = isnothing(weights)
     if equal_weighting
         weights = equalWeights(data; use_members = use_members_equal_weights)
-    elseif !hasdim(weights, dim_symbol)
-        msg = "weight vector must have same dimension as data (found: data: $dim_symbol, weights::$(dims(weights)))!"
+    elseif !hasdim(weights, model_dim)
+        msg = "weight vector must have same dimension as data (found: data: $model_dim, weights::$(dims(weights)))!"
         throw(ArgumentError(msg))
     end
     
-    models_align = sort(collect(dims(data, dim_symbol))) == sort(collect(dims(weights, dim_symbol)))
+    models_align = sort(collect(dims(data, model_dim))) == sort(collect(dims(weights, model_dim)))
     if !equal_weighting && !models_align
         weights, data = Data.alignWeightsAndData(data, weights)
     end
     weighted_data = @d data .* weights
-    weighted_avg = sum(weighted_data, dims = dim_symbol)
-    return Data.getAtModel(weighted_avg, dim_symbol, "combined")
+    #weighted_avg = mapslices(x -> sum(skipmissing(x)), weighted_data; dims=(model_dim,))
+    weighted_avg = mapslices(x -> sum(x), weighted_data; dims=(model_dim,))
+    return weighted_avg
 end
 
 
