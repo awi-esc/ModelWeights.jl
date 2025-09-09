@@ -153,7 +153,7 @@ end
 
 function plotCRPSSPseudoObs(
     crpss_all::Vector{T}, labels::Vector{String}, colors::Vector{Symbol};
-    ylabel::String = "CRPSS forecast: weighted, baseline: unweighted"
+    ylabel::String = "CRPSS weighted vs. unweighted"
 ) where {T <: Any}
     figs = []
     models = sort(lookup(crpss_all[1], :pseudo_obs))
@@ -201,17 +201,24 @@ function plotCRPSSPseudoObs(
 end
 
 
-function crpssBoxPlot(crpss_wIP::YAXArray; title::String="", leg_pos::Symbol=:rb)
+function crpssBoxPlot(
+    crpss_wIP::YAXArray,  colors::Vector{Symbol}; 
+    title::String="", leg_pos::Symbol=:rb, ylabel::String="CRPSS", 
+    yticks::AbstractArray{<:Number},
+    ymax::Number=1
+)
     tps = lookup(crpss_wIP, :target_period)
     scenarios = lookup(crpss_wIP, :scenario)
-    colors = [:sienna2, :orchid3]
     f = Figure()
     ax = Axis(
         f[1, 1],
         xticks = (1:length(tps), tps),
-        ylabel = "CRPSS",
+        yticks = (yticks, string.(yticks)),
+        ylabel = ylabel,
         title = title
     )
+    ylims!(ax, nothing, ymax)
+    hlines!(ax, 0; color=:black)
     # dodged barplot
     ys_all = []
     grps_all = []
@@ -237,7 +244,8 @@ function crpssBoxPlot(crpss_wIP::YAXArray; title::String="", leg_pos::Symbol=:rb
         scenarios, 
         position=leg_pos,
         orientation = :horizontal,
-        merge=true
+        merge=true,
+        framevisible=false
     )
     return f
 end
