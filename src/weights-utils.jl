@@ -205,7 +205,7 @@ function applyWeights(model_data::YAXArray, weights::YAXArray)
         model_data = model_data[model = Where(x -> x in shared_models)]
         weights = weights[model = Where(x -> x in shared_models)]
         weights = weights ./ sum(weights; dims=:model)
-        if length(shared_models) < length(models_weights)
+        if length(shared_models) < length(models)
             @warn "Weights renormalized since computed for more models than models in given data."
         end
     end

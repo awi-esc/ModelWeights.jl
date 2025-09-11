@@ -16,6 +16,7 @@ function plotWeights(
     sort_by::String = "", 
     fs::Number = 15, 
     legend_inside::Bool = true,
+    legend_labels::Union{Dict{String, String}, Nothing} = nothing,
     leg_pos::Symbol = :rt,
     leg_frame::Bool = true,
     leg_orientation::Symbol = :vertical,
@@ -35,8 +36,8 @@ function plotWeights(
         ylabel = "Weight",
         title = title,
         titlesize = fs,
-        xticklabelsize = fs,
-        yticklabelsize = fs,
+        xticklabelsize = fs-2,
+        yticklabelsize = fs-2,
         xlabelsize = fs,
         ylabelsize = fs
     )
@@ -44,10 +45,11 @@ function plotWeights(
     for label in labels
         ys = Array(weights[weight = At(label)])
         sorted_ys = ys[indices]
+        legend_label = isnothing(legend_labels) ? label : legend_labels[label]
         if label == sort_by
-            scatterlines!(ax, xs, sorted_ys, label = label, alpha = 0.5)
+            scatterlines!(ax, xs, sorted_ys, label = legend_label, alpha = 0.5)
         else
-            scatter!(ax, xs, sorted_ys, label = label, alpha = 0.5)
+            scatter!(ax, xs, sorted_ys, label = legend_label, alpha = 0.5)
         end
     end
     # add equal weight for reference
@@ -57,7 +59,8 @@ function plotWeights(
         leg = axislegend(
             ax, 
             position = leg_pos,
-            merge = true, 
+            merge = true,
+            labelsize = fs - 2,
             framevisible = leg_frame, 
             orientation = leg_orientation,
             nbanks = leg_rows

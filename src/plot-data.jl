@@ -224,8 +224,8 @@ function plotTimeseries!(
     label::String = "",
     label_unc::String = "",
     linestyle::Symbol = :solid,
-    linewidth = 2,
-    alpha = 0.2,
+    linewidth = 3,
+    alpha = 0.5
 )
     plots = []
     timesteps = Array(dims(vals, :time))
@@ -394,4 +394,37 @@ function plotECDF(vals::Vector{<:Number}; variable::String="", title::String="Em
         lines!([next_v, next_v], [p, fn(next_v)], color=:grey)
     end
     return f
+end
+
+
+function plotPDF(xs, ys, xlabel::String;
+    samples::Vector{<:Number},
+    selected_samples::Vector{<:Number},
+    selected_names::Vector{String},
+    label::String="",
+    label_samples::String="",
+    markersize::Number=20,
+    colors
+)
+    f_pdf = Figure()
+    ax = Axis(f_pdf[1,1], xlabel = xlabel, ylabel = "Density")
+    if isempty(label)
+        scatter!(ax, xs, ys)
+    else
+        scatter!(ax, xs, ys, label=label)
+    end
+
+    # also plot samples if given
+    scatter_y = rand(Distributions.Normal(0, 0.02), length(samples))
+    if isempty(label_samples)
+        scatter!(ax, samples, scatter_y)
+    else
+        scatter!(ax, samples, scatter_y, label=label_samples)
+    end
+    # label and color models where the ecs based performance weight deviates much from the historical based
+    for (i, s) in enumerate(selected_samples)   
+        scatter!(ax, s, scatter_y[i], label="$(selected_names[i])", color=colors[i], markersize=markersize)
+    end
+    axislegend()
+    return f_pdf
 end

@@ -6,6 +6,7 @@ using CairoMakie
 using ColorSchemes
 using Dates
 using DimensionalData
+using Distributions
 using GeoMakie
 using Statistics
 using TextWrap
