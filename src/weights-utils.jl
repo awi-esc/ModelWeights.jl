@@ -622,7 +622,7 @@ function crpss_weighted(samples::YAXArray, observations::YAXArray, weights::YAXA
     Data.throwErrorIfDimMissing(samples, :time)
     Data.throwErrorIfDimMissing(observations, :time)
     timesteps = lookup(samples, :time)
-    if timesteps != lookup(observations, :time)
+    if Dates.year.(timesteps) != Dates.year.(lookup(observations, :time))
         throw(ArgumentError("forecast and observations must all be defined for the same time points!"))
     end
     start_y, end_y = Dates.year.(timesteps[[1, end]])

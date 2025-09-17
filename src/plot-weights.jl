@@ -156,7 +156,8 @@ end
 
 function plotCRPSSPseudoObs(
     crpss_all::Vector{T}, labels::Vector{String}, colors::Vector{Symbol};
-    ylabel::String = "CRPSS weighted vs. unweighted"
+    ylabel::String = "CRPSS weighted vs. unweighted",
+    leg_pos::Symbol = :rb
 ) where {T <: Any}
     figs = []
     models = sort(lookup(crpss_all[1], :pseudo_obs))
@@ -172,7 +173,7 @@ function plotCRPSSPseudoObs(
             ax = Axis(
                 fig[1, 1],
                 xticks = (xs, models),
-                xticklabelrotation = pi / 4,
+                xticklabelrotation = pi / 2,
                 ylabel = ylabel,
                 title = title
             )
@@ -193,7 +194,9 @@ function plotCRPSSPseudoObs(
                 label = repeat(labels, inner=n)
             )
             if length(labels) > 1
-                axislegend(ax, [PolyElement(color=c) for c in colors], labels, position=:rb, merge=true)
+                axislegend(
+                    ax, [PolyElement(color=c) for c in colors], labels, position=leg_pos, merge=true
+                )
             end
             push!(figs, fig)
             #name = join(["CRPSS-combined-vs-classic-wP", scenario, tp, ".png"], "-", "")
