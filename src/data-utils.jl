@@ -147,7 +147,16 @@ function combineModelsFromMultipleFiles(
     dimData = YAXArray(dimData.axes, dimData, meta_dict)
     if length(model_names) != length(unique(model_names))
         duplicates = unique([m for m in model_names if sum(model_names .== m) > 1])
-        @warn "Some data appear more than once" duplicates
+        # handle duplicates
+        indices_remove = []
+        models = collect(lookup(dimData, new_dim))
+        for m in duplicates
+            indices = findall(x -> x == m, models)
+            push!(indices_remove, indices[2:end]...)
+        end
+        indices_keep = filter(x -> !(x in indices_remove), collect(1:length(models)))
+        # TODO: fix to do this also with arbitrary new_dim name!
+        dimData = getByIdxModel(dimData, new_dim, indices_keep)
     end
     return dimData
 end
@@ -272,7 +281,7 @@ function filterPathsSharedModels(
 end
 
 
-function modelsFromMemberIDs(members::AbstractVector{<:String}; uniq::Bool=false)
+function modelsFromMemberIDs(members::AbstractVector{<:AbstractString}; uniq::Bool=false)
     models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members)
     return uniq ? unique(models) : models
 end

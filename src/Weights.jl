@@ -40,6 +40,30 @@ end
     end
 end
 
+"""
+    MMEWeights(weights::YAXArray, ids::Vector{String}, name::String)
+
+Combine weights given in `weights` at `ids` into a normalized MMEWeight.
+
+# Arguments:
+- `weights::YAXArray`: Must have dimensions :weight and :model.
+- `ids::Vector{String}`: weights in `weights` where dimension :weights equals these ids will be combined.
+- `name::String`: Name of the new MMEWeights-instance.
+"""
+function MMEWeights(weights::YAXArray, ids::Vector{String}, name::String)
+    Data.throwErrorIfDimMissing(weights, [:model, :weight])
+
+    models = collect(lookup(weights, :model))
+    wP = YAXArray((Dim{:model}(models),), ones(length(models)))
+    for id in ids
+        wP = @d wP .* weights[weight = At(id)]
+    end
+    wP = wP ./ sum(wP)
+    return MMEWeights(w=wP, name=name)
+end
+
+
+
 @kwdef struct ClimWIP
     performance_distances::Dict # from diagnostics to performance distances for all members
     independence_distances::Dict # from diagnostics to independence distances for all members

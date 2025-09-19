@@ -240,32 +240,44 @@ function likelihoodWeights(
 end
 
 
-
+# TODO: add config for independence weight, maybe abstract config struct, that can 
+# be more general than ConfigWeights.
+# return ClimWIP object
 function climwipWeights(
-    wP::MMEWeights, wI::MMEWeights; out::Symbol = :only_combined, name_combined::String = ""
+    wP::MMEWeights, wI::MMEWeights; suffix_combined::String = ""
 )
-    w_combined = wP.w .* wI.w
-    w_combined = w_combined ./ sum(w_combined)    
-    if isempty(name_combined)
-        name_combined = join([wP.name, wI.name], "-")
-    end
-    if out == :only_combined
-        return YAXArray(
-            (Dim{:model}(lookup(w_combined, :model)), Dim{:weight}([name_combined])), 
-            reshape(w_combined.data, :, 1)
-        )
-    else
-        weights_arr = cat([wP.w, wI.w, w_combined]..., dims=Dim{:weight}([wP.name, wI.name, name_combined]))
-        return weights_arr
-    end
+    wIP = wP.w .* wI.w
+    wIP = wIP ./ sum(wIP)    
+    # if isempty(name_combined)
+    #     name_combined = join([wP.name, wI.name], "-")
+    # end
+    # if out == :only_combined
+    #     return YAXArray(
+    #         (Dim{:model}(lookup(wIP, :model)), Dim{:weight}([name_combined])), 
+    #         reshape(wIP.data, :, 1)
+    #     )
+    # else
+        # weights_arr = cat([wP.w, wI.w, wIP]..., dims=Dim{:weight}([wP.name, wI.name, name_combined]))
+        # return weights_arr
+    # end
+    name_combined = isempty(suffix_combined) ? "wIP" : "wIP_" * suffix_combined
+    weights_arr = cat([wP.w, wI.w, wIP]..., dims=Dim{:weight}([wP.name, wI.name, name_combined]))
+    return ClimWIP(
+        performance_distances = Dict(),
+        independence_distances = Dict(),
+        Di = YAXArray(rand(1,1)),
+        Sij = YAXArray(rand(1,1)),
+        w = weights_arr,
+        config = ConfigWeights()
+    )
 end
 
 
 function climwipWeights(
     weights_perform::AbstractVector{MMEWeights},
-    wI::MMEWeights;
-    out::Symbol = :only_combined,
-    name_combined::String = ""
+    wI::MMEWeights,
+    suffix_combined_wP::String;
+    suffix_combined::String = ""
 )
     models = map(mme -> sort(lookup(mme.w, :model)), weights_perform) 
     if length(unique(models)) != 1
@@ -274,14 +286,13 @@ function climwipWeights(
 
     wP = similar(weights_perform[1].w)
     wP .= 1
-    name = ""
     for mme_weights in weights_perform
         wP = @d wP .* mme_weights.w
-        name = join([name, mme_weights.name], "-")
     end
     wP = wP ./ sum(wP)
-    combined_wP = MMEWeights(w=wP, name=name[2:end])
-    return climwipWeights(combined_wP, wI; out, name_combined)
+    name_wP = isempty(suffix_combined_wP) ? "wP" : "wP_" * suffix_combined_wP
+    combined_wP = MMEWeights(w = wP, name = name_wP)
+    return climwipWeights(combined_wP, wI; suffix_combined)
 end
 
 # functions for climwipWeights with historical performance:

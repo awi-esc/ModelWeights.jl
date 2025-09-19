@@ -419,6 +419,7 @@ function loadPreprocData(
             indices_time = indicesTimeseries(times, constraint_ts)
             if isempty(indices_time)
                 exclude_file = true
+                @info "excluded $path because of missing time indices!"
             else
                 idx_time = findfirst(dimension_names .== :time)
                 #idx_time = findfirst(dimension_names .== "time")
@@ -435,6 +436,7 @@ function loadPreprocData(
         data[i] = exclude_file ? [] : YAXArray(Tuple(dimensions), allowmissing(ds_var), props)
         # replace missing values by NaN?
         # data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(ds_var), NaN), props)
+        @debug "$(basename(path)) is excluded: $(isempty(data[i]))"
     end
     indices = findall(x -> !isempty(x), data)
     if !isempty(model_names)
