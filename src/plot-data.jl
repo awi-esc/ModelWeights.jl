@@ -404,6 +404,8 @@ function plotPDF(xs, ys, xlabel::String;
     label::String="",
     label_samples::String="",
     markersize::Number=20,
+    ncols_leg::Number=2,
+    label_size::Number=12,
     colors
 )
     f_pdf = Figure()
@@ -425,6 +427,6 @@ function plotPDF(xs, ys, xlabel::String;
     for (i, s) in enumerate(selected_samples)   
         scatter!(ax, s, scatter_y[i], label="$(selected_names[i])", color=colors[i], markersize=markersize)
     end
-    axislegend()
+    axislegend(labelsize=label_size, nbanks=ncols_leg)
     return f_pdf
 end
