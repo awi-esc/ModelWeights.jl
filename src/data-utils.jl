@@ -1,4 +1,37 @@
 """
+    nbModelMembers(data::YAXArray)
+
+Return a dictionary mapping from models in `data` to the number of its members.
+"""
+function nbModelMembers(data::YAXArray)
+    throwErrorIfDimMissing(data, :member)
+    data = setLookupsFromMemberToModel(data, ["member"])
+    models = collect(lookup(data, :model))
+    return countMap(models)
+end
+
+"""
+    convertToYAX(dm::DataMap; dim_name::Symbol = :diagnostic)
+
+Convert a DataMap into a YAXArray. All entries in `dm` must have the same dimensions.
+"""
+function convertToYAX(dm::DataMap; dim_name::Symbol = :diagnostic)
+    # TODO: add dimension checks!
+    diagnostics = collect(keys(dm))
+    dimensions = dims(dm[diagnostics[1]])
+
+    data = YAXArray(
+        (dimensions..., Dim{dim_name}(diagnostics)), 
+        rand(size(dimensions)..., length(diagnostics))
+    )
+    for d in diagnostics        
+        data[diagnostic = At(d)] .= dm[d]
+    end
+    return data
+end
+
+
+"""
     getAtModel(data::YAXArray, dimension::Symbol, model::String)
 
 Return `data` where `dimension` (member or model) has value `model`.
@@ -295,10 +328,10 @@ end
 """
     areaWeightMatrix(
         latitudes::AbstractVector{<:Number}, mask::YAXArray{T}
-    ) where {T <: Union{Missing, Int, Bool}}
+    ) where {T <: Union{Missing, Bool}}
 
 Return matrix of size length(longitudes) x length(latitudes) with normalized area weights 
-(approximated based on latitudes) and set to 0 at positions where mask is 1.
+(approximated based on latitudes) and set to 0 at positions where mask is true.
 
 # Arguments:
 - `latitudes::AbstractVector{<:Number}`: to approximate area weights with cosine of latitudes.
@@ -307,7 +340,7 @@ have same length as `latitudes`.
 """
 function areaWeightMatrix(
     latitudes::AbstractVector{<:Number}, mask::AbstractArray{T}
-) where {T <: Union{Missing, Int, Bool}}
+) where {T <: Union{Missing, Bool}}
     if size(mask)[2] != length(latitudes)
         throw(ArgumentError("Second dimension of mask must be lat and equal $(length(latitudes)), found:$(size(mask))"))
     end
@@ -1243,7 +1276,7 @@ error between `m1` and `m2`.
 """
 function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
     if size(m1) != size(m2) || size(m1) != size(aw_mat)
-        throw(ArgumentError("All input arrays must have same size to compute areaweighted rmse! Found: $(size.([m1, m2, mask]))."))
+        throw(ArgumentError("All input arrays must have same size to compute areaweighted rmse! Found: $(size.([m1, m2, aw_mat]))."))
     end
     squared_diff = (Array(m1) .- Array(m2)) .^ 2
     return sqrt(sum(skipmissing(aw_mat .* squared_diff)))
