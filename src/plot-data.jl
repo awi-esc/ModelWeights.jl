@@ -6,8 +6,8 @@
 Plot contours of world with an overlayed heatmap of the input data.
 
 # Arguments:
-- `nb_ticks`: if nothing (default), just min lat/lon, max lat/lon and 0 are labeled.
 - `pos::NamedTuple(x::Int,y::Int)`: position of plot in `fig`
+- `color_range::Union{Nothing, Tuple}`: Real values, outside this range, a single color is used.
 """
 function plotValsOnMap!(
     fig::Figure,

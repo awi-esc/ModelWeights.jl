@@ -22,9 +22,14 @@ function plotWeights(
     leg_orientation::Symbol = :vertical,
     leg_rows::Int = 1
 )
-    sort_by = isempty(sort_by) ? weights.weight[1] : sort_by
-    indices = Array(sortperm(weights[weight = At(sort_by)], rev=true))
-    
+    is_single_w = !hasdim(weights, :weight)
+    if is_single_w
+        indices = 1:length(weights)
+    else
+        sort_by = isempty(sort_by) ? weights.weight[1] : sort_by
+        indices = Array(sortperm(weights[weight = At(sort_by)], rev=true))
+    end
+
     n_models = length(weights.model)
     xs = 1:n_models
     fig = Figure(size=(600,350))
@@ -41,42 +46,49 @@ function plotWeights(
         xlabelsize = fs,
         ylabelsize = fs
     )
-    labels = lookup(weights, :weight)
-    for label in labels
-        ys = Array(weights[weight = At(label)])
-        sorted_ys = ys[indices]
-        legend_label = isnothing(legend_labels) ? label : legend_labels[label]
-        if label == sort_by
-            scatterlines!(ax, xs, sorted_ys, label = legend_label, alpha = 0.5)
-        else
-            scatter!(ax, xs, sorted_ys, label = legend_label, alpha = 0.5)
+    if !is_single_w
+        labels = lookup(weights, :weight)
+        for label in labels
+            ys = Array(weights[weight = At(label)])
+            sorted_ys = ys[indices]
+            legend_label = isnothing(legend_labels) ? label : legend_labels[label]
+            if label == sort_by
+                scatterlines!(ax, xs, sorted_ys, label = legend_label, alpha = 0.5)
+            else
+                scatter!(ax, xs, sorted_ys, label = legend_label, alpha = 0.5)
+            end
         end
+    else
+        scatterlines!(ax, xs, Array(weights), alpha = 0.5)
     end
     # add equal weight for reference
     ys_equal = [1 / n_models for _ in range(1, n_models)]
     lines!(ax, xs, ys_equal, color = :gray, label = "equal weighting", linestyle=:dash)
-    if leg_orientation == :horizontal
-        leg = axislegend(
-            ax, 
-            position = leg_pos,
-            merge = true,
-            labelsize = fs - 2,
-            framevisible = leg_frame, 
-            orientation = leg_orientation,
-            nbanks = leg_rows
-        )
-    else
-        leg = axislegend(
-            ax, 
-            position = leg_pos,
-            merge = true, 
-            framevisible = leg_frame, 
-            orientation = leg_orientation
-        )
+    
+    if !is_single_w
+        if leg_orientation == :horizontal
+            leg = axislegend(
+                ax, 
+                position = leg_pos,
+                merge = true,
+                labelsize = fs - 2,
+                framevisible = leg_frame, 
+                orientation = leg_orientation,
+                nbanks = leg_rows
+            )
+        else
+            leg = axislegend(
+                ax, 
+                position = leg_pos,
+                merge = true, 
+                framevisible = leg_frame, 
+                orientation = leg_orientation
+            )
+        end
+        if !legend_inside
+            fig[1,2] = leg
+        end
     end
-    if !legend_inside
-        fig[1,2] = leg
-    end 
     return fig
 end
 
