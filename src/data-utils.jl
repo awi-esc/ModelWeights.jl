@@ -1272,14 +1272,14 @@ error between `m1` and `m2`.
 # Arguments:
 - `m1`: must have dimensions 'lon', 'lat' as first dimensions.
 - `m2`: must have dimensions 'lon', 'lat' as first dimensions.
-- `aw_mat`: matrix with normalized area weights, of same size as `m1` and `m2`.
+- `aw_mat`: matrix with area weights, of same size as `m1` and `m2`, that will be normalized.
 """
 function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
     if size(m1) != size(m2) || size(m1) != size(aw_mat)
         throw(ArgumentError("All input arrays must have same size to compute areaweighted rmse! Found: $(size.([m1, m2, aw_mat]))."))
     end
     squared_diff = (Array(m1) .- Array(m2)) .^ 2
-    return sqrt(sum(skipmissing(aw_mat .* squared_diff)))
+    return sqrt(sum(skipmissing(aw_mat .* squared_diff))./ sum(aw_mat))
 end
 
 
