@@ -1,5 +1,17 @@
 # general helper functions
 
+"""
+    average(data::YAXArray, dimension::Symbol)
+
+Wrapper function for mean that removes 'dimension' from the returned YAXArray.
+"""
+function average(data::YAXArray, dimension::Symbol)
+    avg = mean(data; dims=dimension)    
+    indices = map(x -> x == dimension ? 1 : Colon(), dimNames(data))
+    return avg[indices...]
+end
+
+
 function sharedKeys(d1, d2)
     keys1 = collect(keys(d1))
     keys2 = collect(keys(d2))
