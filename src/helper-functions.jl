@@ -11,6 +11,17 @@ function average(data::YAXArray, dimension::Symbol)
     return avg[indices...]
 end
 
+"""
+    add(data::YAXArray, dimension::Symbol)
+
+Wrapper function for sum that removes 'dimension' from the returned YAXArray.
+"""
+function add(data::YAXArray, dimension::Symbol)
+    result = sum(data; dims=dimension)    
+    indices = map(x -> x == dimension ? 1 : Colon(), dimNames(data))
+    return result[indices...]
+end
+
 
 function sharedKeys(d1, d2)
     keys1 = collect(keys(d1))
