@@ -1006,6 +1006,10 @@ end
 Compute the distance as the area-weighted RMSE between model predictions and observations.
 
 If several observational datasets are present, the average across all is taken.
+
+# Arguments:
+- `models::YAXArray`: must have dimensions 'lon', 'lat' and one of 'model', 'member'.
+- `observations::YAXArray`: may have dimension 'model', then average across datasets is used.
 """
 function distancesData(models::YAXArray, observations::YAXArray)
     throwErrorIfDimMissing(models, [:lon, :lat]; include = :all)
@@ -1017,12 +1021,12 @@ function distancesData(models::YAXArray, observations::YAXArray)
         throw(ArgumentError("dimensions of model (other than model dim) and observation data must align!" * msg))
     end
     latitudes = collect(lookup(models, :lat))
-    obs_data = Array(obs)
-    model_data = Array(models)
+    obs_data = collect(obs)
+    model_data = collect(models)
     mask_missing =  (ismissing.(obs_data) .+ ismissing.(model_data)) .> 0 # observations or model is missing (or both)
     # mask_missing has same dimensions as model_data (due to broadcasting)
     idx_model = dimnum(models, model_dim)
-    rmses = similar(model_names, Float64)
+    rmses = similar(model_names, eltype(model_data))
     @inbounds for i in eachindex(model_names)
         data_m = selectdim(model_data, idx_model, i)
         mask = selectdim(mask_missing, idx_model, i)
@@ -1031,6 +1035,45 @@ function distancesData(models::YAXArray, observations::YAXArray)
     end
     return YAXArray((Dim{model_dim}(model_names),), rmses)
 end
+
+
+"""
+
+    distancesData(
+        models::AbstractArray, observations::AbstractArray, latitudes::AbstractVector
+    )
+
+Compute the distance as the area-weighted RMSE between model predictions and observations.
+
+
+# Arguments:
+- `models`: with dimensions 'lon', 'lat', 'model'/'member' (in this order)
+- `observations`: with dimensions 'lon', 'lat' (in this order)
+- `latitudes`: for computing area weight matrices
+"""
+function distancesData(
+    models::AbstractArray, observations::AbstractArray, latitudes::AbstractVector
+)
+    if size(models)[[1, 2]] != size(observations)
+        throw(ArgumentError("Dimensions mismatch between model and data!"))
+    end
+    N_models = size(models)[3]
+    mask_missing =  (ismissing.(observations) .+ ismissing.(models)) .> 0 # observations or model is missing (or both)
+    # mask_missing has same dimensions as model_data (due to broadcasting)
+    rmses = Vector{eltype(models)}(undef, N_models)
+    @inbounds for i in range(1, N_models)
+        data_m = selectdim(models, 3, i)
+        mask = selectdim(mask_missing, 3, i)
+        aw_mat = areaWeightMatrix(latitudes, mask)
+        rmses[i] = areaWeightedRMSE(data_m, observations, aw_mat)
+    end
+    return rmses
+end
+
+
+
+
+
 
 
 function distancesModels(model_data::DataMap, config::Dict{String, Number})
