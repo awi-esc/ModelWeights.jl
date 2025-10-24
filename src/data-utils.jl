@@ -1071,7 +1071,31 @@ function distancesData(
 end
 
 
+"""
 
+    distancesData(
+        models::AbstractArray, observations::AbstractArray, latitudes::AbstractVector
+    )
+
+Compute the distance as the area-weighted RMSE between model predictions and observations.
+
+Neither the observations nor the model data must contain missing values.
+
+# Arguments:
+- `models`: with dimensions 'lon', 'lat', 'model'/'member' (in this order)
+- `observations`: with dimensions 'lon', 'lat' (in this order)
+- `latitudes`: for computing area weight matrices
+"""
+function distancesData(
+    models::AbstractArray, observations::AbstractArray, latitudes::AbstractVector
+)
+    if size(models)[[1, 2]] != size(observations)
+        throw(ArgumentError("Dimensions mismatch between model and data!"))
+    end
+    mask = areaWeightMatrix(latitudes, fill(false, size(models)))
+    squared_diff = (models .- observations) .^ 2
+    return sqrt(sum(mask .* squared_diff, dims=(1,2)))
+end
 
 
 
