@@ -339,9 +339,9 @@ Return matrix of size length(longitudes) x length(latitudes) with normalized are
 have same length as `latitudes`.
 """
 function areaWeightMatrix(
-    latitudes::AbstractVector{<:Number}, mask::AbstractArray{T}
-) where {T <: Union{Missing, Bool}}
-    if size(mask)[2] != length(latitudes)
+    latitudes::AbstractVector{<:Number}, mask::AbstractArray{Bool}
+) #where {T <: Union{Missing, Bool}}
+    if size(mask, 2) != length(latitudes)
         throw(ArgumentError("Second dimension of mask must be lat and equal $(length(latitudes)), found:$(size(mask))"))
     end
     area_weights = cos.(deg2rad.(latitudes))
@@ -349,7 +349,7 @@ function areaWeightMatrix(
     n_lon = s[1]
     aw_mat = length(s) > 2 ? repeat(area_weights', n_lon, 1, s[3:end]...) : repeat(area_weights', n_lon)
     aw_mat[mask] .= 0
-    return mapslices(x -> x ./ sum(x), aw_mat; dims=(1,2))
+    return aw_mat ./ sum(aw_mat; dims=(1,2))
 end
 
 
@@ -1045,40 +1045,6 @@ end
 
 Compute the distance as the area-weighted RMSE between model predictions and observations.
 
-
-# Arguments:
-- `models`: with dimensions 'lon', 'lat', 'model'/'member' (in this order)
-- `observations`: with dimensions 'lon', 'lat' (in this order)
-- `latitudes`: for computing area weight matrices
-"""
-function distancesData(
-    models::AbstractArray, observations::AbstractArray, latitudes::AbstractVector
-)
-    if size(models)[[1, 2]] != size(observations)
-        throw(ArgumentError("Dimensions mismatch between model and data!"))
-    end
-    N_models = size(models)[3]
-    mask_missing =  (ismissing.(observations) .+ ismissing.(models)) .> 0 # observations or model is missing (or both)
-    # mask_missing has same dimensions as model_data (due to broadcasting)
-    rmses = Vector{eltype(models)}(undef, N_models)
-    @inbounds for i in range(1, N_models)
-        data_m = selectdim(models, 3, i)
-        mask = selectdim(mask_missing, 3, i)
-        aw_mat = areaWeightMatrix(latitudes, mask)
-        rmses[i] = areaWeightedRMSE(data_m, observations, aw_mat)
-    end
-    return rmses
-end
-
-
-"""
-
-    distancesData(
-        models::AbstractArray, observations::AbstractArray, latitudes::AbstractVector
-    )
-
-Compute the distance as the area-weighted RMSE between model predictions and observations.
-
 Neither the observations nor the model data must contain missing values.
 
 # Arguments:
@@ -1089,12 +1055,14 @@ Neither the observations nor the model data must contain missing values.
 function distancesData(
     models::AbstractArray, observations::AbstractArray, latitudes::AbstractVector
 )
-    if size(models)[[1, 2]] != size(observations)
+    if (size(models, 1) != size(observations, 1)) || (size(models, 2) != size(observations, 2))
+        # throw(ArgumentError("Dimensions mismatch between model ($(size(models))) and data ($(size(data)))!"))
         throw(ArgumentError("Dimensions mismatch between model and data!"))
     end
     mask = areaWeightMatrix(latitudes, fill(false, size(models)))
     squared_diff = (models .- observations) .^ 2
-    return sqrt(sum(mask .* squared_diff, dims=(1,2)))
+    mse = sum(mask .* squared_diff, dims=(1,2))
+    return sqrt.(vec(mse))
 end
 
 
