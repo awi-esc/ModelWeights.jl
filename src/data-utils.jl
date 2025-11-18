@@ -1005,13 +1005,14 @@ end
 
 Compute the distance as the area-weighted RMSE between model predictions and observations.
 
-If several observational datasets are present, the average across all is taken.
+If `observations' has dimension 'model' (for several observational datasets), the average across all is taken.
 
 # Arguments:
-- `models::YAXArray`: must have dimensions 'lon', 'lat' and one of 'model', 'member'.
-- `observations::YAXArray`: may have dimension 'model', then average across datasets is used.
+- `models::YAXArray`: dimensions must be 'lon', 'lat', 'model'/'member'.
+- `observations::YAXArray`: dimensions must be 'lon', 'lat' and possibly 'model'.
+- `metric::Symbol`: :rmse for Root Mean Squared Error (default) or :mse for Mean Squared Error
 """
-function distancesData(models::YAXArray, observations::YAXArray)
+function distancesData(models::YAXArray, observations::YAXArray; metric::Symbol=:rmse)
     throwErrorIfDimMissing(models, [:lon, :lat]; include = :all)
     obs = hasdim(observations, :model) ? avgObsDatasets(observations) : observations
     model_dim = modelDim(models)
@@ -1026,14 +1027,18 @@ function distancesData(models::YAXArray, observations::YAXArray)
     mask_missing =  (ismissing.(obs_data) .+ ismissing.(model_data)) .> 0 # observations or model is missing (or both)
     # mask_missing has same dimensions as model_data (due to broadcasting)
     idx_model = dimnum(models, model_dim)
-    rmses = similar(model_names, eltype(model_data))
+    distances = similar(model_names, eltype(model_data))
+    if !(metric in [:rmse, :mse])
+        throw(ArgumentError("Optional argument :metric must be :rmse (default) or :mse! Found: $metric"))
+    end
+    fn = metric == :rmse ? areaWeightedRMSE : areaWeightedMSE
     @inbounds for i in eachindex(model_names)
         data_m = selectdim(model_data, idx_model, i)
         mask = selectdim(mask_missing, idx_model, i)
         aw_mat = areaWeightMatrix(latitudes, mask)
-        rmses[i] = areaWeightedRMSE(data_m, obs_data, aw_mat)
+        distances[i] = fn(data_m, obs_data, aw_mat)
     end
-    return YAXArray((Dim{model_dim}(model_names),), rmses)
+    return YAXArray((Dim{model_dim}(model_names),), distances)
 end
 
 
@@ -1048,8 +1053,8 @@ Compute the distance as the area-weighted RMSE between model predictions and obs
 Neither the observations nor the model data must contain missing values.
 
 # Arguments:
-- `models`: with dimensions 'lon', 'lat', 'model'/'member' (in this order)
-- `observations`: with dimensions 'lon', 'lat' (in this order)
+- `models`: dimensions must be 'lon', 'lat', 'model'/'member' (in this order)
+- `observations`: dimensions must be 'lon', 'lat' (in this order)
 - `latitudes`: for computing area weight matrices
 """
 function distancesData(
@@ -1299,6 +1304,27 @@ end
 
 
 """
+    areaWeightedMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
+
+Compute the area weighted (approximated by cosine of latitudes in radians) mean squared 
+error between `m1` and `m2`.
+
+# Arguments:
+- `m1`: must have dimensions 'lon', 'lat' as first dimensions.
+- `m2`: must have dimensions 'lon', 'lat' as first dimensions.
+- `aw_mat`: matrix with area weights, of same size as `m1` and `m2`, that will be normalized.
+"""
+function areaWeightedMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
+    if size(m1) != size(m2) || size(m1) != size(aw_mat)
+        throw(ArgumentError("All input arrays must have same size to compute areaweighted rmse! Found: $(size.([m1, m2, aw_mat]))."))
+    end
+    squared_diff = (Array(m1) .- Array(m2)) .^ 2
+    return sum(skipmissing(aw_mat .* squared_diff))./ sum(aw_mat)
+end
+
+
+
+"""
     areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
 
 Compute the area weighted (approximated by cosine of latitudes in radians) root mean squared 
@@ -1310,12 +1336,10 @@ error between `m1` and `m2`.
 - `aw_mat`: matrix with area weights, of same size as `m1` and `m2`, that will be normalized.
 """
 function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
-    if size(m1) != size(m2) || size(m1) != size(aw_mat)
-        throw(ArgumentError("All input arrays must have same size to compute areaweighted rmse! Found: $(size.([m1, m2, aw_mat]))."))
-    end
-    squared_diff = (Array(m1) .- Array(m2)) .^ 2
-    return sqrt(sum(skipmissing(aw_mat .* squared_diff))./ sum(aw_mat))
+    return sqrt(areaWeightedMSE(m1, m2, aw_mat))
 end
+
+
 
 
 """

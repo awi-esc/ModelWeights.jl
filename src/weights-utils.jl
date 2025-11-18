@@ -354,6 +354,27 @@ function climwipWeights(
     )
 end
 
+
+function performanceWeights(
+    model_data::DataMap,
+    obs_data::DataMap,
+    diagnostics::AbstractVector{<:String};
+    suffix_name::String = "",
+    sigma_D::Number = 1/sqrt(2)
+)
+    dists_perform_all = Data.distancesData(model_data, obs_data, diagnostics)
+    dists_perform_all = Data.summarizeMembers.(dists_perform_all)
+    models = collect(lookup(dists_perform_all[1], :model))
+    wPs = Vector{MMEWeights}(undef, length(diagnostics))
+    for (i, d) in enumerate(diagnostics)
+        wP_unnormalized = exp.(-Array(dists_perform_all[i].data)./(2*sigma_D^2))
+        wP = wP_unnormalized ./ sum(wP_unnormalized)
+        wPs[i] = MMEWeights(w = YAXArray((Dim{:model}(models),), wP), name=d * suffix_name)
+    end
+    return wPs
+end
+
+
 """
     climwipWeights(
         dists_indep_all::YAXArray, 
@@ -729,3 +750,48 @@ function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)
     end
     return YAXArray((dimensions..., Dim{level_predictions}(models)), weighted_samples)
 end
+
+
+"""
+Compute weights proportional to area weighted mean squared error between model data and observations.
+# Arguments:
+- `data::YAXArray`: must have dimensions 'lon','lat', 'model'/'member' and 'diagnostic'.
+- `obs::YAXArray`: must have dimensions 'lon','lat' and possibly 'model', and 'diagnostic'.
+- `w_diagnostics::YAXArray`: must have dimension 'diagnostic with same values as in `model` and `data`;
+values are normalized to sum to 1.
+"""
+function weightsAIC(data::YAXArray, obs::YAXArray, w_diagnostics::YAXArray)
+    map(x -> Data.throwErrorIfDimMissing(x, [:diagnostic]), [data, obs, w_diagnostics])
+    diagnostics = lookup(w_diagnostics, :diagnostic)
+    n_a = (w_diagnostics./sum(w_diagnostics)) .* length(diagnostics)
+    model_dim = Data.modelDim(data)
+    n_models = length(lookup(data, model_dim))
+
+    lls = zeros(n_models)
+    for d in diagnostics
+        mses = Data.distancesData(data[diagnostic = At(d)], obs[diagnostic = At(d)]; metric=:mse)
+        mse_min = minimum(mses)
+        lls .+= n_a[diagnostic = At(d)].data[] * log.(mse_min ./ mses)
+    end
+    likelihoods = exp.(lls)
+    weights = likelihoods ./ sum(likelihoods)
+    return YAXArray((dims(data, model_dim),), weights)
+end
+
+
+"""
+Compute weights proportional to area weighted mean squared error between model data and observations.
+# Arguments:
+- `data::YAXArray`: must have dimensions 'lon','lat', 'model'/'member'.
+- `obs::YAXArray`: must have dimensions 'lon','lat' and possibly 'model'.
+"""
+function weightsAIC(data::YAXArray, obs::YAXArray)
+    model_dim = Data.modelDim(data)
+    mses = Data.distancesData(data, obs; metric=:mse)
+    mse_min = minimum(mses)
+    likelihoods = mse_min ./ mses
+    weights = likelihoods ./ sum(likelihoods)
+    return YAXArray((dims(data, model_dim),), weights)
+end
+
+
