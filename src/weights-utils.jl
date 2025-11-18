@@ -786,12 +786,10 @@ Compute weights proportional to area weighted mean squared error between model d
 - `obs::YAXArray`: must have dimensions 'lon','lat' and possibly 'model'.
 """
 function weightsAIC(data::YAXArray, obs::YAXArray)
-    model_dim = Data.modelDim(data)
     mses = Data.distancesData(data, obs; metric=:mse)
-    mse_min = minimum(mses)
-    likelihoods = mse_min ./ mses
+    likelihoods = 1 ./ mses
     weights = likelihoods ./ sum(likelihoods)
-    return YAXArray((dims(data, model_dim),), weights)
+    return YAXArray((dims(data, Data.modelDim(data)),), weights)
 end
 
 
