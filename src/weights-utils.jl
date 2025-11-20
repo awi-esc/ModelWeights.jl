@@ -752,44 +752,76 @@ function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)
 end
 
 
-"""
-Compute weights proportional to area weighted mean squared error between model data and observations.
-# Arguments:
-- `data::YAXArray`: must have dimensions 'lon','lat', 'model'/'member' and 'diagnostic'.
-- `obs::YAXArray`: must have dimensions 'lon','lat' and possibly 'model', and 'diagnostic'.
-- `w_diagnostics::YAXArray`: must have dimension 'diagnostic with same values as in `model` and `data`;
-values are normalized to sum to 1.
-"""
-function weightsAIC(data::YAXArray, obs::YAXArray, w_diagnostics::YAXArray)
-    map(x -> Data.throwErrorIfDimMissing(x, [:diagnostic]), [data, obs, w_diagnostics])
-    diagnostics = lookup(w_diagnostics, :diagnostic)
-    n_a = (w_diagnostics./sum(w_diagnostics)) .* length(diagnostics)
-    model_dim = Data.modelDim(data)
-    n_models = length(lookup(data, model_dim))
-
-    lls = zeros(n_models)
-    for d in diagnostics
-        mses = Data.distancesData(data[diagnostic = At(d)], obs[diagnostic = At(d)]; metric=:mse)
-        mse_min = minimum(mses)
-        lls .+= n_a[diagnostic = At(d)].data[] * log.(mse_min ./ mses)
-    end
-    likelihoods = exp.(lls)
-    weights = likelihoods ./ sum(likelihoods)
-    return YAXArray((dims(data, model_dim),), weights)
-end
-
-
-"""
-Compute weights proportional to area weighted mean squared error between model data and observations.
-# Arguments:
-- `data::YAXArray`: must have dimensions 'lon','lat', 'model'/'member'.
-- `obs::YAXArray`: must have dimensions 'lon','lat' and possibly 'model'.
-"""
-function weightsAIC(data::YAXArray, obs::YAXArray)
+function computeLLInverseMSE(data::YAXArray, obs::YAXArray)
     mses = Data.distancesData(data, obs; metric=:mse)
-    likelihoods = 1 ./ mses
-    weights = likelihoods ./ sum(likelihoods)
-    return YAXArray((dims(data, Data.modelDim(data)),), weights)
+    if hasdim(mses, :member)
+        mses = Data.summarizeMembers(mses)
+    end
+    mse_min = minimum(mses)
+    return log.(mse_min ./ mses)
+end
+
+"""
+    llInverseMSE(data::YAXArray, obs::YAXArray)
+
+Compute log likelihood for every diagnostic in `data`. Return a YAXArray with dimensions
+'model' and 'diagnostic' if `data` has dimension 'diagnostic'.
+"""
+function llInverseMSE(data::YAXArray, obs::YAXArray)    
+    diagnostics = hasdim(data, :diagnostic) ? lookup(data, :diagnostic) : nothing
+    model_dim = Data.modelDim(data)
+    models = model_dim==:member ? lookup(Data.summarizeMembers(data), :model) : lookup(data, :model)
+    
+    if !isnothing(diagnostics)
+        lls = zeros(length(models), length(diagnostics))
+        for (i, d) in enumerate(diagnostics)
+            lls[:,i] .= computeLLInverseMSE(data[diagnostic = At(d)], obs[diagnostic = At(d)])
+        end
+        lls = YAXArray(
+            (Dim{:model}(models), Dim{:diagnostic}(diagnostics)), lls
+        )
+    else
+        lls = YAXArray((Dim{:model}(models),), computeLLInverseMSE(data, obs))
+    end
+    return lls
 end
 
 
+"""
+    computeWeights(lls::YAXArray, w_diagnostics::YAXArray)
+
+# Arguments:
+- `lls::YAXArray`: log likelihoods, must have dimensions 'model', 'diagnostic'
+- `diagnostic::YAXArray`: must have dimension 'diagnostic' with the same values as in `lls`
+"""
+function computeWeights(lls::YAXArray, w_diagnostics::YAXArray)
+    d_lls = lookup(lls, :diagnostic)
+    d_w = lookup(w_diagnostics, :diagnostic)
+    if d_lls != d_w
+        throw(ArgumentError("diagnostics must be identical with diagnostics for weights"))
+    end
+    nb_diagnostics = length(filter(x -> x > 0, w_diagnostics))
+    n_a = (w_diagnostics./sum(w_diagnostics)) .* nb_diagnostics
+    lls_combined = lls * n_a # matrix multiplication, same as sum(lls .* n_a, dims=2)
+    likelihoods = exp.(lls_combined)
+    return likelihoods ./ sum(likelihoods)
+end
+
+
+
+"""
+    computeWeights(lls::YAXArray)
+
+# Arguments:
+- `lls::YAXArray`: log likelihoods, must have dimension 'model'
+"""
+function computeWeights(lls::YAXArray)
+    likelihoods = exp.(lls)
+    return likelihoods ./ sum(likelihoods)
+end
+
+
+
+function softmax(scores)
+    return exp.(scores) ./ sum(exp.(scores))
+end
