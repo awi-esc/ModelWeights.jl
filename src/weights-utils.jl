@@ -813,9 +813,13 @@ end
     computeWeights(lls::YAXArray)
 
 # Arguments:
-- `lls::YAXArray`: log likelihoods, must have dimension 'model'
+- `lls::YAXArray`: log likelihoods, must have dimension 'model' and possibly 'diagnostic' as 
+second dimension. If severl diangostics, equal weights for each are used (lls just summed up).
 """
 function computeWeights(lls::YAXArray)
+    if length(size(lls)) == 2
+        lls = sum(lls; dims=2)
+    end
     likelihoods = exp.(lls)
     return likelihoods ./ sum(likelihoods)
 end
