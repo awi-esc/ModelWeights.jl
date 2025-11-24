@@ -825,7 +825,19 @@ function computeWeights(lls::YAXArray)
 end
 
 
-
 function softmax(scores)
     return exp.(scores) ./ sum(exp.(scores))
+end
+
+
+function convertZSamplesToWeights(chain, n_iter, N_models; as_matrix::Bool=true)
+    zsamples = zeros(n_iter, N_models);
+    for m in 1:N_models
+        zsamples[:, m] .= chain.value[:, Symbol("z[$m]")]
+    end
+    psamples = zeros(n_iter, N_models)
+    for i in 1:n_iter
+        psamples[i,:] .= softmax(zsamples[i,:])
+    end
+    return !as_matrix ? map(x -> psamples[:,x], 1:N_models) : psamples
 end
