@@ -752,14 +752,15 @@ function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)
 end
 
 
-function computeLLInverseMSE(data::YAXArray, obs::YAXArray)
+function computeLLInverseMSE(data::YAXArray, obs::YAXArray; best_model::Union{YAXArray, Nothing}=nothing)
     mses = Data.distancesData(data, obs; metric=:mse)
     if hasdim(mses, :member)
         mses = Data.summarizeMembers(mses)
     end
-    mse_min = minimum(mses)
-    return log.(mse_min ./ mses)
+    mses_best = isnothing(best_model) ? minimum(mses) : Data.distancesData(best_model, obs; metric=:mse)
+    return log.(mses_best ./ mses)
 end
+
 
 """
     llInverseMSE(data::YAXArray, obs::YAXArray)
@@ -767,7 +768,7 @@ end
 Compute log likelihood for every diagnostic in `data`. Return a YAXArray with dimensions
 'model' and 'diagnostic' if `data` has dimension 'diagnostic'.
 """
-function llInverseMSE(data::YAXArray, obs::YAXArray)    
+function llInverseMSE(data::YAXArray, obs::YAXArray; best_model::Union{YAXArray, Nothing}=nothing)    
     diagnostics = hasdim(data, :diagnostic) ? lookup(data, :diagnostic) : nothing
     model_dim = Data.modelDim(data)
     models = model_dim==:member ? lookup(Data.summarizeMembers(data), :model) : lookup(data, :model)
@@ -775,13 +776,14 @@ function llInverseMSE(data::YAXArray, obs::YAXArray)
     if !isnothing(diagnostics)
         lls = zeros(length(models), length(diagnostics))
         for (i, d) in enumerate(diagnostics)
-            lls[:,i] .= computeLLInverseMSE(data[diagnostic = At(d)], obs[diagnostic = At(d)])
+            bm = isnothing(best_model) ? nothing : best_model[diagnostic = At(d)]
+            lls[:,i] .= computeLLInverseMSE(data[diagnostic = At(d)], obs[diagnostic = At(d)]; best_model = bm)
         end
         lls = YAXArray(
             (Dim{:model}(models), Dim{:diagnostic}(diagnostics)), lls
         )
     else
-        lls = YAXArray((Dim{:model}(models),), computeLLInverseMSE(data, obs))
+        lls = YAXArray((Dim{:model}(models),), computeLLInverseMSE(data, obs; best_model))
     end
     return lls
 end
@@ -793,20 +795,22 @@ end
 # Arguments:
 - `lls::YAXArray`: log likelihoods, must have dimensions 'model', 'diagnostic'
 - `diagnostic::YAXArray`: must have dimension 'diagnostic' with the same values as in `lls`
+- `adjust_w::Bool` If true (default), `w_diagnostics` is normalized to sum to 1 and scaled by 
+the number of diagnostics, otherwise `w_diagnostics` is not changed at all.
 """
-function computeWeights(lls::YAXArray, w_diagnostics::YAXArray)
+function computeWeights(lls::YAXArray, w_diagnostics::YAXArray; adjust_w::Bool = true)
     d_lls = lookup(lls, :diagnostic)
     d_w = lookup(w_diagnostics, :diagnostic)
     if d_lls != d_w
         throw(ArgumentError("diagnostics must be identical with diagnostics for weights"))
     end
     nb_diagnostics = length(filter(x -> x > 0, w_diagnostics))
-    n_a = (w_diagnostics./sum(w_diagnostics)) .* nb_diagnostics
+
+    n_a = adjust_w ? (w_diagnostics./sum(w_diagnostics)) .* nb_diagnostics : w_diagnostics
     lls_combined = lls * n_a # matrix multiplication, same as sum(lls .* n_a, dims=2)
     likelihoods = exp.(lls_combined)
     return likelihoods ./ sum(likelihoods)
 end
-
 
 
 """
