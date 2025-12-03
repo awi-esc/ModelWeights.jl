@@ -255,9 +255,9 @@ end
 Convert dictionary `data` into a YAXArray with new dimension `dim_name` 
 (default is :diagnostic) whose lookup names are the keys of `data`.
 """
-function dict2YAX(data::Dict{String, <:Number}; dim_name::Symbol = :diagnostic)
+function dict2YAX(data::Dict{String, T}; dim_name::Symbol = :diagnostic) where T<:Number
     yax = YAXArray(
-        (Dim{:diagnostic}(collect(keys(data))),), Array{Float64}(undef, length(data))
+        (Dim{:diagnostic}(collect(keys(data))),), Array{T}(undef, length(data))
     )
     for k in keys(data)
         yax[diagnostic = At(k)] = data[k]
@@ -355,4 +355,18 @@ function countMap(data::Vector{T}) where T <: Any
         counts[cat] = nb
     end
     return counts
+end
+
+
+function insertSingletonDim(A::AbstractArray, idx::Int)
+    old_size = size(A)
+    new_size = ntuple(i -> i < idx ? old_size[i] : (i > idx ? old_size[i-1] : 1), ndims(A)+1)
+    return reshape(A, new_size)
+end
+
+function insertSingletonDim(A::YAXArray, idx::Int, name::Symbol, val::String)
+    A_mat = insertSingletonDim(Array(A), idx)
+    old_dims = DimensionalData.dims(A)
+    new_dims =  ntuple(i -> i < idx ? old_dims[i] : (i > idx ? old_dims[i-1] : Dim{name}([val])), ndims(A)+1)
+    return YAXArray(new_dims, A_mat, copy(A.properties))
 end

@@ -180,6 +180,59 @@ function summarizeMembers(data::YAXArray; fn::Function = Statistics.mean)
         )
 end
 
+
+""" 
+    summarizeMembers(
+        data::AbstractArray,
+        dim::Int,
+        members::AbstractArray{String}; 
+        fn::Function=Statistics.mean
+    )
+
+For each model compute a summary statistic (default: mean) across all its members. 
+Return Array summarized in model dimension.
+
+# Arguments:
+- `data::AbstractArray`: must have dimension 'member' and at least one other arbitrary dimension 
+- `dim::Int`: index of member dimension
+- `members::AbstractArray{String}`: names of members corresponding to member dimension in `data`.
+- `fn::Function`: Function to be applied on data
+"""
+function summarizeMembers(
+    data::AbstractArray, 
+    dim::Int, 
+    members::AbstractArray{String}; 
+    fn::Function = Statistics.mean
+)
+    models_all = membersToModels(members)
+    models_uniq = unique(models_all)
+    n_models = length(models_uniq)
+    # save indices for each model
+    model_indices = Dict{String, Vector{Int}}()
+    for (i, m) in pairs(models_all) # pairs maps from indices to entries
+        get!(model_indices, m, Vector{Int}()) 
+        push!(model_indices[m], i)
+    end
+    T = eltype(data)
+    summarized_data_all = Vector{AbstractArray{T}}(undef, n_models)
+    for (i, m) in enumerate(models_uniq)
+        dat = selectdim(data, dim, model_indices[m])
+        summarized = fn(dat; dims = (dim,))
+        summarized_data_all[i] = selectdim(summarized, dim, 1)
+    end
+    n_dims = length(size(data))
+    summarized_data = cat(summarized_data_all..., dims = n_dims)
+    if n_dims > 1
+        indices = Array(1:n_dims)
+        indices[end] = dim
+        indices[dim] = n_dims
+        summarized_data = permutedims(summarized_data, Tuple(indices))
+    end
+    return summarized_data 
+end
+
+
+
 """
     summarizeMembers!(data::DataMap; fn::Function=Statistics.mean)
 

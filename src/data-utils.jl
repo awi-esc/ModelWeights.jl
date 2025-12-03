@@ -339,8 +339,8 @@ Return matrix of size length(longitudes) x length(latitudes) with normalized are
 have same length as `latitudes`.
 """
 function areaWeightMatrix(
-    latitudes::AbstractVector{<:Number}, mask::AbstractArray{Bool}
-) #where {T <: Union{Missing, Bool}}
+    latitudes::AbstractVector{T}, mask::AbstractArray{Bool}
+) where T<:Number #where {T <: Union{Missing, Bool}}
     if size(mask, 2) != length(latitudes)
         throw(ArgumentError("Second dimension of mask must be lat and equal $(length(latitudes)), found:$(size(mask))"))
     end
@@ -479,10 +479,21 @@ function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
     for (i, dim) in enumerate(dim_names)
         unique_members = Array(dims(data, Symbol(dim)))
         models = map(x -> String.(split(x, MODEL_MEMBER_DELIM)[1]), unique_members)
-        new_dim_name = n_dims > 1 ? "model" * string(i) : "model" # Test this (why?)
+        new_dim_name = n_dims > 1 ? "model" * string(i) : "model"
         data = setDim(data, dim, new_dim_name, models)
     end
     return data
+end
+
+
+"""
+    membersToModels(members::AbstractArray{String})
+
+# Arguments:
+- `members::AbstractArray{String}`: unique names of model members with model name followed by separator followed by unique identifiers.
+"""
+function membersToModels(members::AbstractArray{String})
+    return map(x -> String.(split(x, MODEL_MEMBER_DELIM)[1]), members)
 end
 
 
@@ -963,7 +974,11 @@ function constrainMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict)
     return nothing
 end
 
+"""
+    avgObsDatasets(observations::YAXArray)
 
+Take mean across dimension 'model'. Returned YAXArray does not have dimension 'model'.
+"""
 function avgObsDatasets(observations::YAXArray)
     if !hasdim(observations, :model)
         throw(ArgumentError("Obs data requires dim :model when averaging across datasets."))
@@ -1041,6 +1056,53 @@ function distancesData(models::YAXArray, observations::YAXArray; metric::Symbol=
     return YAXArray((Dim{model_dim}(model_names),), distances)
 end
 
+
+
+"""
+    distancesData(
+        model_data::AbstractArray, 
+        obs_data::AbstractArray,
+        model_names::AbstractArray{<:String},
+        latitudes::AbstractArray{<:Real}; 
+        metric::Symbol=:rmse
+    )
+
+Compute the distance as the area-weighted RMSE (default) or MSE between model predictions and observations.
+
+# Arguments:
+- `model_data::AbstractArray`: dimensions must be 'lon', 'lat' and 'model'/'member' in 3rd dimension.
+- `obs_data::AbstractArray`: dimensions must be 'lon', 'lat'.
+- `latitudes::AbstractArray{<:Real}`: values of latitudes in `model_data` and `obs_data`. 
+- `metric::Symbol`: :rmse for Root Mean Squared Error (default) or :mse for Mean Squared Error,
+- `idx_model::Int`: number of model/member-dimension in `model_data`.
+"""
+function distancesData(
+    model_data::AbstractArray, 
+    obs_data::AbstractArray, 
+    latitudes::AbstractArray{<:Real}; 
+    metric::Symbol=:rmse,
+    idx_model::Int = 3
+)
+    s = size(model_data)
+    if length(s) != length(size(obs_data))
+        obs_data = insertSingletonDim(obs_data, idx_model)
+    end
+    mask_missing =  (ismissing.(obs_data) .+ ismissing.(model_data)) .> 0 # observations or model is missing (or both)
+    obs_data = selectdim(obs_data, idx_model, 1)
+    
+    distances = Vector{eltype(model_data)}(undef, size(model_data)[idx_model])
+    if !(metric in [:rmse, :mse])
+        throw(ArgumentError("Optional argument :metric must be :rmse (default) or :mse!"))
+    end
+    fn = metric == :rmse ? areaWeightedRMSE : areaWeightedMSE
+    @inbounds for i in 1:s[idx_model]
+        data_m = selectdim(model_data, idx_model, i)
+        mask = selectdim(mask_missing, idx_model, i)
+        aw_mat = areaWeightMatrix(latitudes, mask)
+        distances[i] = fn(data_m, obs_data, aw_mat)
+    end
+    return distances
+end
 
 """
 
@@ -1318,7 +1380,7 @@ function areaWeightedMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractA
     if size(m1) != size(m2) || size(m1) != size(aw_mat)
         throw(ArgumentError("All input arrays must have same size to compute areaweighted rmse! Found: $(size.([m1, m2, aw_mat]))."))
     end
-    squared_diff = (Array(m1) .- Array(m2)) .^ 2
+    squared_diff = (m1 .- m2) .^ 2
     return sum(skipmissing(aw_mat .* squared_diff))./ sum(aw_mat)
 end
 

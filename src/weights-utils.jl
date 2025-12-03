@@ -762,6 +762,24 @@ function computeLLInverseMSE(data::YAXArray, obs::YAXArray; best_model::Union{YA
 end
 
 
+function computeLLInverseMSE(
+    data::AbstractArray, 
+    obs::AbstractArray,
+    latitudes::AbstractArray{<:Real},
+    idx_model::Int,
+    model_names::AbstractArray{String},
+    best_model::AbstractArray;
+    summarize_members::Bool = true,
+)
+    mses = Data.distancesData(data, obs, latitudes; metric=:mse, idx_model)
+    if summarize_members
+        mses = Data.summarizeMembers(data, 1, model_names)
+    end
+    mses_best = isempty(best_model) ? minimum(mses) : Data.distancesData(best_model, obs, latitudes; metric=:mse, idx_model)
+    return log.(mses_best ./ mses)
+end
+
+
 """
     llInverseMSE(data::YAXArray, obs::YAXArray)
 
@@ -784,6 +802,62 @@ function llInverseMSE(data::YAXArray, obs::YAXArray; best_model::Union{YAXArray,
         )
     else
         lls = YAXArray((Dim{:model}(models),), computeLLInverseMSE(data, obs; best_model))
+    end
+    return lls
+end
+
+
+"""
+    llInverseMSE(
+        data::AbstractArray, 
+        obs::AbstractArray,
+        model_names::AbstractArray{String}, # if summarize_members is true these refer to members
+        latitudes::AbstractArray{<:Real},
+        model_dim::Int,
+        summarize_members::Bool,
+        diagnostic_dim::Int;
+        best_model::Union{AbstractArray, Nothing}=nothing
+    )
+
+Compute log likelihood for every diagnostic in `data`. Return an Array with dimensions
+'model' and 'diagnostic' if `data` has dimension 'diagnostic'.
+"""
+function llInverseMSE(
+    data::AbstractArray,
+    obs::AbstractArray,
+    model_names::AbstractArray{String}, # if summarize_members is true these refer to members
+    latitudes::AbstractArray{<:Real},
+    model_dim::Int,
+    summarize_members::Bool,
+    diagnostic_dim::Int;
+    best_model::Union{AbstractArray, Nothing}=nothing
+)    
+    n_models = length(model_names)
+    if diagnostic_dim != 0
+        n_diagnostics = size(data)[diagnostic_dim]
+        lls = zeros(eltype(data), n_models, n_diagnostics)
+        for k in 1:n_diagnostics
+            bm = isnothing(best_model) ? similar(best_model, eltype(best_model), 0) : selectdim(best_model, diagnostic_dim, k)
+            lls[:,k] .= computeLLInverseMSE(
+                selectdim(data, diagnostic_dim, k), 
+                selectdim(obs, diagnostic_dim, k),
+                latitudes,
+                model_dim,
+                model_names,
+                bm;
+                summarize_members,
+            )
+        end
+    else
+        lls = computeLLInverseMSE(
+                selectdim(data, diagnostic_dim, k), 
+                selectdim(obs, diagnostic_dim, k),
+                latitudes,
+                model_dim,
+                model_names,
+                bm;
+                summarize_members,
+            )
     end
     return lls
 end
