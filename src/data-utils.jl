@@ -1702,6 +1702,32 @@ function subsetDataMap(data::DataMap, ids::Vector{String})
 end
 
 
+"""
+    reduceNbMembers(dat_members::YAXArray; max_n = 5)
+
+For every model in `dat_members` that has more than `max_int` members, randomly sample 
+`max_int` members. Return YAXArray with reduced number of members per model.
+"""
+function reduceNbMembers(dat_members::YAXArray; max_n::Int = 5)
+    nb_members_dict = nbModelMembers(dat_members)
+    members = collect(dat_members.member)
+    df_large = filter(((k,v),) -> v > max_n, nb_members_dict)
+    indices_members = []
+    for model in collect(keys(df_large))
+        indices_model = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), members);
+        include_model = StatsBase.sample(indices_model, max_n, replace=false)
+        push!(indices_members, include_model)
+    end
+    df_ok = filter(((k,v),) -> v <= max_n, nb_members_dict)
+    for model in collect(keys(df_ok))
+        indices_model = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), members);
+        push!(indices_members, indices_model)
+    end
+    indices_members = collect(Iterators.flatten(indices_members))
+    return dat_members[member = indices_members]
+end
+
+
 # TODO
 # function warnIfModelConstraintNotFulfilled(
 #     constraints::Vector{<:Dict{<:Any, <:Any}}, 
