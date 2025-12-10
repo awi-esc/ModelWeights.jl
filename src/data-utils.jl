@@ -1723,7 +1723,7 @@ function reduceNbMembers(dat_members::YAXArray; max_n::Int = 5)
         indices_model = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), members);
         push!(indices_members, indices_model)
     end
-    indices_members = collect(Iterators.flatten(indices_members))
+    indices_members = sort(collect(Iterators.flatten(indices_members)))
     return dat_members[member = indices_members]
 end
 
