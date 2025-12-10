@@ -771,12 +771,18 @@ function computeLLInverseMSE(
     best_model::AbstractArray;
     summarize_members::Bool = true,
 )
+    T = promote_type(eltype(data), eltype(obs), eltype(best_model))
     mses = Data.distancesData(data, obs, latitudes; metric=:mse, idx_model)
     if summarize_members
         mses = Data.summarizeMembers(data, 1, model_names)
     end
-    mses_best = isempty(best_model) ? minimum(mses) : Data.distancesData(best_model, obs, latitudes; metric=:mse, idx_model)
+    if isempty(best_model) 
+        mses_best = fill(T(minimum(mses)), size(mses))
+    else 
+        mses_best = Array{T}(Data.distancesData(best_model, obs, latitudes; metric=:mse, idx_model))
+    end  
     return log.(mses_best ./ mses)
+    #return log.(1 ./ mses)
 end
 
 
@@ -829,34 +835,35 @@ function llInverseMSE(
     latitudes::AbstractArray{<:Real},
     model_dim::Int,
     summarize_members::Bool,
-    diagnostic_dim::Int;
-    best_model::Union{AbstractArray, Nothing}=nothing
-)    
+    diagnostic_dim::Int, # set to 0 if not present
+    best_model::AbstractArray 
+)   
+    T = promote_type(eltype(data), eltype(obs), eltype(best_model))
     n_models = length(model_names)
     if diagnostic_dim != 0
         n_diagnostics = size(data)[diagnostic_dim]
-        lls = zeros(eltype(data), n_models, n_diagnostics)
+        lls = zeros(T, n_models, n_diagnostics)
         for k in 1:n_diagnostics
-            bm = isnothing(best_model) ? similar(best_model, eltype(best_model), 0) : selectdim(best_model, diagnostic_dim, k)
+            bm = !isempty(best_model) ? Array{T}(selectdim(best_model, diagnostic_dim, k)) : Array{T}(best_model)
             lls[:,k] .= computeLLInverseMSE(
-                selectdim(data, diagnostic_dim, k), 
-                selectdim(obs, diagnostic_dim, k),
+                Array{T}(selectdim(data, diagnostic_dim, k)), 
+                Array{T}(selectdim(obs, diagnostic_dim, k)),
                 latitudes,
                 model_dim,
                 model_names,
                 bm;
-                summarize_members,
+                summarize_members
             )
         end
     else
         lls = computeLLInverseMSE(
-                selectdim(data, diagnostic_dim, k), 
-                selectdim(obs, diagnostic_dim, k),
+                data, 
+                obs,
                 latitudes,
                 model_dim,
                 model_names,
-                bm;
-                summarize_members,
+                best_model;
+                summarize_members
             )
     end
     return lls
@@ -908,14 +915,27 @@ function softmax(scores)
 end
 
 
-function convertZSamplesToWeights(chain, n_iter, N_models; as_matrix::Bool=true)
-    zsamples = zeros(n_iter, N_models);
-    for m in 1:N_models
-        zsamples[:, m] .= chain.value[:, Symbol("z[$m]")]
+function convertZSamplesToWeights(samples, n_iter, n_models; as_matrix::Bool=true)
+    n_chains = size(samples.value, 3)
+    zsamples = zeros(n_iter, n_models, n_chains);
+    for c in 1:n_chains
+        for m in 1:n_models
+            zsamples[:, m, c] .= samples.value[:, Symbol("z[$m]"), c]
+        end
     end
-    psamples = zeros(n_iter, N_models)
-    for i in 1:n_iter
-        psamples[i,:] .= softmax(zsamples[i,:])
+    psamples = zeros(n_iter, n_models, n_chains)
+    for c in 1:n_chains
+        for i in 1:n_iter
+            psamples[i,:,c] .= softmax(zsamples[i,:,c])
+        end
     end
-    return !as_matrix ? map(x -> psamples[:,x], 1:N_models) : psamples
+    if !as_matrix
+        weights = Vector(undef, n_chains)
+        for c in 1:n_chains
+            weights[c] = map(x -> psamples[:,x,c], 1:n_models)
+        end
+    else
+        weights = psamples
+    end
+    return weights
 end
