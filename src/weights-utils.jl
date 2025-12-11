@@ -939,3 +939,124 @@ function convertZSamplesToWeights(samples, n_iter, n_models; as_matrix::Bool=tru
     end
     return weights
 end
+
+
+"""
+    bmaCombinedDiagnostics(
+        data::AbstractArray, obs::AbstractArray, wn_diagnostics::AbstractArray
+    )
+
+# Arguments:
+- `data::AbstractArray`: normal distributed model data
+- `obs::AbstractArray`: observed data for same time/location as `data`
+- `wn_diagnostics::AbstractArray`: weights for guassian distributed diagnostics. Do not have to sum to 1.
+Should not contain zero entries! (would do a lot of unnecessary work)
+"""
+@model function bmaCombinedDiagnostics(
+    data::AbstractArray, 
+    obs::AbstractArray, 
+    wn_diagnostics::AbstractArray
+)
+    s1, s2, n_models, n_diagnostics = size(data)
+    z ~ MvNormal(FillArrays.Zeros(n_models), I)
+    w = mww.softmax(z)
+    
+    T = eltype(z)
+    sigma_sq = Vector{T}(undef, n_diagnostics)
+    logw = log.(w)
+    log2pi = T(log(2 * pi))
+
+    for k in 1:n_diagnostics
+        sigma_sq[k] ~ InverseGamma(2, 3)
+        log_sigma_sq = log(sigma_sq[k])
+        logL = zero(T)
+        summed_logs = Vector{T}(undef, n_models)
+        for l1 in 1:s1
+            for l2 in 1:s2
+                x = obs[l1, l2, k]
+                for i in 1:n_models
+                    mu = data[l1, l2, i, k]
+                    logpdf_gaussian = -0.5 * (log2pi + log_sigma_sq) - 0.5 * (x - mu)^2 / sigma_sq[k]
+                    summed_logs[i] = logw[i] + logpdf_gaussian
+                end
+                m = maximum(summed_logs)
+                s = zero(T)
+                @inbounds for i in 1:n_models
+                    s += exp(summed_logs[i] - m)
+                end
+                logL += log(s) + m
+                # muuuch slower due to allocations:
+                #summed_logs .-= maximum(summed_logs)
+                #logL += log(sum(exp.(summed_logs)))
+            end
+        end
+        @addlogprob! wn_diagnostics[k] * logL
+    end
+end
+
+
+"""
+    bmaCombinedDiagnostics(
+        data::AbstractArray, obs::AbstractArray, wn_diagnostics::AbstractArray,
+
+    )
+
+# Arguments:
+- `data::AbstractArray`: normal distributed model data
+- `obs::AbstractArray`: observed data for same time/location as `data`
+- `wn_diagnostics::AbstractArray`: weights for guassian distributed diagnostics. Do not have to sum to 1.
+Should not contain zero entries! (would do a lot of unnecessary work)
+- `data_other::AbstractArray`: 
+- `distr_other::`:
+- `wn_other`:
+"""
+@model function bmaCombinedDiagnostics(
+    data::AbstractArray, 
+    obs::AbstractArray, 
+    wn_diagnostics::AbstractArray,
+    data_other::AbstractArray,
+    distr_other, 
+    wn_other::T
+) where T<:Number
+    s1, s2, n_models, n_diagnostics = size(data)
+    z ~ MvNormal(Zeros(n_models), I)
+    w = mww.softmax(z)
+    
+    Tz = eltype(z)
+    sigma_sq = Vector{Tz}(undef, n_diagnostics)
+    logw = log.(w)
+    log2pi = Tz(log(2 * pi))
+
+    for k in 1:n_diagnostics
+        sigma_sq[k] ~ InverseGamma(2, 3)
+        log_sigma_sq = log(sigma_sq[k])
+        logL = zero(Tz)
+        summed_logs = Vector{Tz}(undef, n_models)
+        for l1 in 1:s1
+            for l2 in 1:s2
+                x = obs[l1, l2, k]
+                for i in 1:n_models
+                    mu = data[l1, l2, i, k]
+                    logpdf_gaussian = -0.5 * (log2pi + log_sigma_sq) - 0.5 * (x - mu)^2 / sigma_sq[k]
+                    summed_logs[i] = logw[i] + logpdf_gaussian
+                end
+                m = maximum(summed_logs)
+                s = zero(Tz)
+                @inbounds for i in 1:n_models
+                    s += exp(summed_logs[i] - m)
+                end
+                logL += log(s) + m
+                # muuuch slower due to allocations:
+                #summed_logs .-= maximum(summed_logs)
+                #logL += log(sum(exp.(summed_logs)))
+            end
+        end
+        @addlogprob! wn_diagnostics[k] * logL
+    end
+
+    logL = 0
+    for i in 1:n_models
+        logL += log(distr_other(data_other[i]))
+    end
+    @addlogprob! wn_other * logL
+end
