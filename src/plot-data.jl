@@ -16,7 +16,7 @@ function plotValsOnMap!(
     colors = nothing,
     color_range::Union{Nothing, Tuple} = nothing,
     pos::NamedTuple = (x = 1, y = 1),
-    pos_legend::NamedTuple = (x = 1, y = 2),
+    pos_legend::Union{Nothing, NamedTuple} = (x = 1, y = 2),
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
