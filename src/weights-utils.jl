@@ -899,7 +899,7 @@ end
 
 # Arguments:
 - `lls::YAXArray`: log likelihoods, must have dimension 'model' and possibly 'diagnostic' as 
-second dimension. If severl diangostics, equal weights for each are used (lls just summed up).
+second dimension. If several diangostics, equal weights for each are used (lls just summed up).
 """
 function computeWeights(lls::YAXArray)
     if length(size(lls)) == 2
@@ -959,7 +959,7 @@ Should not contain zero entries! (would do a lot of unnecessary work)
 )
     s1, s2, n_models, n_diagnostics = size(data)
     z ~ MvNormal(FillArrays.Zeros(n_models), I)
-    w = mww.softmax(z)
+    w = softmax(z)
     
     T = eltype(z)
     sigma_sq = Vector{T}(undef, n_diagnostics)
@@ -998,7 +998,6 @@ end
 """
     bmaCombinedDiagnostics(
         data::AbstractArray, obs::AbstractArray, wn_diagnostics::AbstractArray,
-
     )
 
 # Arguments:
@@ -1006,9 +1005,9 @@ end
 - `obs::AbstractArray`: observed data for same time/location as `data`
 - `wn_diagnostics::AbstractArray`: weights for guassian distributed diagnostics. Do not have to sum to 1.
 Should not contain zero entries! (would do a lot of unnecessary work)
-- `data_other::AbstractArray`: 
-- `distr_other::`:
-- `wn_other`:
+- `data_other::AbstractArray`: e.g. ECS values for every model
+- `distr_other`: e.g., pdf for ECS
+- `wn_other`: weight for other diagnostic (not gaussian)
 """
 @model function bmaCombinedDiagnostics(
     data::AbstractArray, 
@@ -1020,8 +1019,11 @@ Should not contain zero entries! (would do a lot of unnecessary work)
 ) where T<:Number
     s1, s2, n_models, n_diagnostics = size(data)
     z ~ MvNormal(Zeros(n_models), I)
-    w = mww.softmax(z)
+    w = softmax(z)
     
+    expected_val = sum(w .* data_other)
+    @addlogprob! wn_other * log(distr_other(expected_val))
+
     Tz = eltype(z)
     sigma_sq = Vector{Tz}(undef, n_diagnostics)
     logw = log.(w)
@@ -1053,10 +1055,19 @@ Should not contain zero entries! (would do a lot of unnecessary work)
         end
         @addlogprob! wn_diagnostics[k] * logL
     end
+end
 
-    logL = 0
-    for i in 1:n_models
-        logL += log(distr_other(data_other[i]))
+
+function logsumexp(data::AbstractArray{T}) where T<:Number
+    n = length(data)
+    summed_logs = Vector{T}(undef, n)
+    for i in 1:n
+        summed_logs[i] = log(data[i])
     end
-    @addlogprob! wn_other * logL
+    m = maximum(summed_logs)
+    s = zero(T)
+    @inbounds for i in 1:n
+        s += exp(summed_logs[i] - m)
+    end
+    return log(s) + m
 end
