@@ -44,6 +44,23 @@ function weightedAvg(
     return weighted_avg
 end
 
+"""
+    weightedAvg(data::AbstractArray, weights::AbstractArray)
+
+Compute weighted average across last dimension of `data` using `weights`.
+
+# Arguments:
+- `data::AbstractArray`:
+- `weights::AbstractVector`:
+"""
+function weightedAvg(data::AbstractArray, weights::AbstractVector)
+    s = size(data)
+    target_dims = s[1:end-1]
+    n_target_dims = length(target_dims)
+    weighted_avgs = data .* reshape(weights, ntuple(_ -> 1, n_target_dims)..., :)
+    return sum(weighted_avgs, dims=n_target_dims+1)
+end
+
 
 """
     equalWeights(data::YAXArray; use_members::Bool=true)
@@ -915,29 +932,37 @@ function softmax(scores)
 end
 
 
-function convertZSamplesToWeights(samples, n_iter, n_models; as_matrix::Bool=true)
-    n_chains = size(samples.value, 3)
+function formatZSamples(samples, n_models; list_chains::Bool=false)
+    n_iter, _, n_chains = size(samples.value)
     zsamples = zeros(n_iter, n_models, n_chains);
     for c in 1:n_chains
         for m in 1:n_models
             zsamples[:, m, c] .= samples.value[:, Symbol("z[$m]"), c]
         end
     end
+    return list_chains ? chainsAsList(zsamples, n_chains, n_models) : zsamples
+end
+
+function chainsAsList(samples_mat, n_chains, n_models)
+   weights = Vector(undef, n_chains)
+    for c in 1:n_chains
+        weights[c] = map(x -> samples_mat[:,x,c], 1:n_models)
+    end
+    return weights
+end
+
+function convertZSamplesToWeights(samples, n_models; as_matrix::Bool=true)
+    zsamples = formatZSamples(samples, n_models)
+    n_iter, _, n_chains = size(samples.value)
     psamples = zeros(n_iter, n_models, n_chains)
     for c in 1:n_chains
         for i in 1:n_iter
             psamples[i,:,c] .= softmax(zsamples[i,:,c])
         end
     end
-    if !as_matrix
-        weights = Vector(undef, n_chains)
-        for c in 1:n_chains
-            weights[c] = map(x -> psamples[:,x,c], 1:n_models)
-        end
-    else
-        weights = psamples
-    end
-    return weights
+    return !as_matrix ? 
+        chainsAsList(psamples, n_chains, n_models) :
+        psamples
 end
 
 
