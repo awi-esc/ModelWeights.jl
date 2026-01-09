@@ -311,3 +311,30 @@ function boxplotMCMCWeights(
     Makie.vlines!(ax, 1/N_models, color=:grey, linestyle=:dash)
     return f
 end
+
+
+"""
+    plotCorrWeights(models_labels, weights)
+
+# Arguments:
+- `models_labels::AbstractVector`: names of models
+- `weights::AbstractArray`: samples (iterations) x models
+- `pairs::AbstractVector`: tuples for models to be compared against one another
+"""
+function plotCorrWeights(
+    models_labels::AbstractVector,
+    weights::AbstractArray, 
+    pairs::AbstractVector;
+    color::Symbol = :grey
+)
+    f = Figure();
+    for (i, (m1, m2)) in enumerate(pairs)
+        ax = Axis(
+            f[1, i], xlabel = models_labels[m1], ylabel = models_labels[m2],
+            xticks = (0:0.1:1, string.(0:0.1:1)),
+            yticks = (0:0.1:1, string.(0:0.1:1))
+        );
+        Makie.scatter!(ax, weights[:, m1], weights[:, m2], color=color)
+    end
+    return f
+end
