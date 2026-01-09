@@ -17,6 +17,7 @@ function plotValsOnMap!(
     color_range::Union{Nothing, Tuple} = nothing,
     pos::NamedTuple = (x = 1, y = 1),
     pos_legend::Union{Nothing, NamedTuple} = (x = 1, y = 2),
+    orient_legend::Symbol = :vertical,
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
@@ -73,7 +74,11 @@ function plotValsOnMap!(
         )
     lines!(GeoMakie.coastlines(); color = :black)
     if !isnothing(pos_legend)
-        Colorbar(fig[pos_legend.x, pos_legend.y], hm, height = Relative(2 / 3))
+        if orient_legend == :vertical
+            Colorbar(fig[pos_legend.x, pos_legend.y], hm, height = Relative(2 / 3))
+        else
+            Colorbar(fig[pos_legend.x, pos_legend.y], hm, width = Relative(2 / 3), vertical = false)
+        end
         # the width argument is relative to the width of the column#, width=Relative(0.1));
     end
     return nothing
