@@ -30,6 +30,16 @@ function globalMeans(data::YAXArray)
     return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), deepcopy(data.properties))
 end
 
+"""
+# Arguments:
+- `data::AbstractArray`: dimensions: lon, lat, model
+"""
+function globalMeans(data::AbstractArray, latitudes::AbstractArray)
+    mask = Bool.(mapslices(model -> ismissing.(model), data; dims=(1,2)))
+    aw_mat = areaWeightMatrix(latitudes, Array(mask)) # is normalized, lon x lat
+    gms = mapslices(x -> sum(skipmissing(x)), aw_mat .* Array(data); dims=(1, 2))
+    return dropdims(gms; dims=(1,2))
+end
 
 """
     anomalies(orig_data::YAXArray, ref_data::YAXArray)
