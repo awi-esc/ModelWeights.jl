@@ -1401,6 +1401,24 @@ function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::Abstract
     return sqrt(areaWeightedMSE(m1, m2, aw_mat))
 end
 
+"""
+    areaWeightedSquaredErr()
+
+# Arguments:
+- `model_data`: must have same dimensions as `obs_data`
+- `obs_data`: must have same dimensions as `model_data`
+- `latitudes`: 
+"""
+function areaWeightedSquaredErr(
+    model_data::AbstractArray, 
+    obs_data::AbstractArray, 
+    latitudes::AbstractArray{<:Real}; 
+)
+    mask =  (ismissing.(obs_data) .+ ismissing.(model_data)) .> 0 # observations or model is missing (or both)
+    aw_mat = areaWeightMatrix(latitudes, mask)
+    squared_diff = (model_data .- obs_data) .^ 2
+    return skipmissing(aw_mat .* squared_diff) ./ sum(aw_mat)
+end
 
 
 
@@ -1419,7 +1437,7 @@ Compute weighted `quantiles` of timeseries `data`.
 lower and upper bound in this order.
 """
 function uncertaintyRanges(
-    data::AbstractArray; 
+    data::YAXArray; 
     weights::Union{YAXArray, Nothing} = nothing, 
     q_lower::Number = 0.167, q_upper::Number = 0.833
 )
