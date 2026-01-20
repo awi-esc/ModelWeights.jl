@@ -1746,6 +1746,38 @@ function reduceNbMembers(dat_members::YAXArray; max_n::Int = 5)
 end
 
 
+"""
+# Arguments:
+- `data::AbstractArray`: lon x lat x model
+- `n_rep::Int`: number of repetitions for selected model
+- `index::Int`: index of model to be repeated (default: 2nd)
+"""
+function repeatModel(data::AbstractArray, n_rep::Int; index::Int=2)
+    if n_rep == 1
+        return copy(data)
+    end
+    models = Array(data.model)
+    n_models = length(models)
+    m_rep = models[index]
+    models_rep = [map(i -> m_rep * "#" * string(i), 1:n_rep)...]
+    models_new = vec(hcat([models[1:index-1]..., models_rep..., models[index+1:end]...]))
+    s = size(data)
+    data_rep = YAXArray(
+        (dims(data, :lon), dims(data, :lat), Dim{:model}(models_new)),
+        rand(s[1], s[2], length(models) + n_rep - 1)
+    )
+    if index > 1
+        data_rep[:,:,1:index-1] .= Array(data[model=1:index-1])
+    end
+    for i in 1:n_rep
+        data_rep[:, :, index+i-1] .= Array(data[model=index])
+    end
+    if index < n_models
+        data_rep[:, :, index + n_rep : n_models + n_rep - 1] .= Array(data[model = index + 1 : n_models])
+    end
+    return data_rep
+end
+
 # TODO
 # function warnIfModelConstraintNotFulfilled(
 #     constraints::Vector{<:Dict{<:Any, <:Any}}, 
