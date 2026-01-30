@@ -123,8 +123,9 @@ using vectors with missing values for datasets that didn't have the respective m
 entry in their metadata, further combined with the properties in `meta` if provided.
 
 All elements in `data` must share all dimensions except for time (if present).
-For timeseries data, the time dimension may cover different ranges. In that case the 
-maximal overlapping time period is used.
+For timeseries data, the time dimension may cover different ranges. In that case, the 
+maximal possible timerange is used where missing values are added if the timepoint had not been 
+defined for a model.
 
 The combined YAXArray has the additional dimension `new_dim` (default: :model) with `names`
 as values. If `names` is not provided, default values 'model1', 'model2, etc. are used 
@@ -134,7 +135,7 @@ If `sorted` is true, model dimension of returned data is sorted alphabetically a
 vector entries in the metadata dictionary of the returned array are also sorted accordingly.
 """
 function combineModelsFromMultipleFiles(
-    data::AbstractVector{<:AbstractArray}; 
+    data::AbstractVector{<:YAXArray}; 
     model_names::Vector{String} = Vector{String}(),
     meta::Union{Dict{String, T}, Nothing} = nothing,
     new_dim::Symbol = :model,
@@ -146,13 +147,14 @@ function combineModelsFromMultipleFiles(
     end
     data_sizes = unique(map(size, data))
     if length(data_sizes) != 1
+        # dimensions must be identical except for time
         if !all(map(x -> hasdim(x, :time), data))
             msg = "Data does not have the same size across all models: $(data_sizes)"
             throw(ArgumentError(msg))
         else
-            # if difference only in time, use maximal possible timeseries and add NaNs
-            #alignTimeseries!(data)
-            overlapTimeseries!(data)
+            # if difference only in time, use maximal possible timeseries and add missing values
+            alignTimeseries!(data)
+            #overlapTimeseries!(data)
         end
     end
     use_default_names = isempty(model_names)
@@ -677,19 +679,24 @@ end
 
 
 function alignTimeseries!(data::Vector{<:YAXArray})
+    if length(unique(map(x -> size(otherdims(x, :time)), data))) != 1
+        throw(ArgumentError("Dimension sizes must be identical across data to align timeseries!"))
+    end
     if !all(map(x -> hasdim(x, :time), data))
         throw(ArgumentError("All datasets must have time dimension to align timeseries!"))
     end
+    
     year_min = minimum(map(x -> minimum(map(Dates.year, dims(x, :time))), data))
     year_max = maximum(map(x -> maximum(map(Dates.year, dims(x, :time))), data))
     nb_years = year_max - year_min + 1
-
     timerange = DateTime(year_min):Year(1):DateTime(year_max)
+    
+    none_time_dims = otherdims(data[1], :time)
+    s = map(length, none_time_dims)
+    T = Union{Missing, Float32}
     for (i, ds) in enumerate(data)
-        none_time_dims = otherdims(ds, :time)
-        s = map(length, none_time_dims)
         # if ds allows missing values, undef is initialized with missing
-        dat = Array{eltype(ds)}(undef, s..., nb_years)
+        dat = Array{T}(undef, s..., nb_years)
         ds_extended = YAXArray((none_time_dims..., Dim{:time}(timerange)), dat, ds.properties)
         ds_extended[time = Where(x -> Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds
         data[i] = ds_extended    
@@ -832,7 +839,7 @@ end
 """
     parseFilename(filename::String, format::String)
 
-Retrieve information from `filename` and returns it as an object of type FilenameMeta.
+Retrieve information from `filename` and return it as an object of type FilenameMeta.
 """
 function parseFilename(filename::String, format::String)
     parts_format = split(format, "_")
@@ -1776,6 +1783,14 @@ function repeatModel(data::AbstractArray, n_rep::Int; index::Int=2)
         data_rep[:, :, index + n_rep : n_models + n_rep - 1] .= Array(data[model = index + 1 : n_models])
     end
     return data_rep
+end
+
+function initYAX(dimensions)
+    return YAXArray(dimensions, fill(missing, size(dimensions)...))
+end
+
+function emptyYAX(arr::YAXArray)
+    return all(ismissing.(arr))
 end
 
 # TODO

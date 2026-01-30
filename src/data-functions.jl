@@ -398,7 +398,7 @@ function loadPreprocData(
     constraint_ts::Union{Dict, Nothing} = nothing
 ) where T <: Any
     is_cmip = lowercase(dtype) == "cmip"
-    data = Vector{AbstractArray}(undef, length(paths))
+    data = Vector{YAXArray}(undef, length(paths))
     if isempty(model_names) && is_cmip
         model_names = Vector{String}(undef, length(paths))
     end
@@ -486,12 +486,12 @@ function loadPreprocData(
         end
         fv = get(props, "_FillValue", missing)
         ds_var = map(x -> x == fv  ? missing : x, ds_var)
-        data[i] = exclude_file ? [] : YAXArray(Tuple(dimensions), allowmissing(ds_var), props)
+        data[i] = exclude_file ? initYAX(dimensions) : YAXArray(Tuple(dimensions), allowmissing(ds_var), props)
         # replace missing values by NaN?
         # data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(ds_var), NaN), props)
         @debug "$(basename(path)) is excluded: $(isempty(data[i]))"
     end
-    indices = findall(x -> !isempty(x), data)
+    indices = findall(x -> !emptyYAX(x), data)
     if !isempty(model_names)
         model_names = model_names[indices]
     end
@@ -541,6 +541,7 @@ function loadDataMapCore(
     all_meta = absent(meta_data) ? fill(nothing, length(all_paths)) : meta_data
     data = map(all_paths, all_meta, constraints)  do paths, meta, constraint
         # if provided, do the filtering
+        # TODO: constraint cannot be nothing...!
         mask = isnothing(constraint) ? 
             fill(true, length(paths)) :
             maskFileConstraints(paths, filename_format, constraint)
@@ -653,14 +654,14 @@ end
 
 """
     loadDataFromYAML(
-        content::Dict;
+        yaml_content::Dict;
         constraint::Union{Dict, Nothing} = nothing,
         preview::Bool = false,
         sorted::Bool = true,
         dtype::String = "cmip"
     )
 
-Return a DataMap-instance that contains the data specified in `content`, potentially 
+Return a DataMap-instance that contains the data specified in `yaml_content`, potentially 
 constraint by values in `constraint`.
 
 # Arguments:
