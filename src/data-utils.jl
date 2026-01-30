@@ -1074,7 +1074,7 @@ Compute the distance as the area-weighted RMSE (default) or MSE between model pr
 - `obs_data::AbstractArray`: dimensions must be 'lon', 'lat'.
 - `latitudes::AbstractArray{<:Real}`: values of latitudes in `model_data` and `obs_data`. 
 - `metric::Symbol`: :rmse for Root Mean Squared Error (default) or :mse for Mean Squared Error,
-- `idx_model::Int`: number of model/member-dimension in `model_data`.
+- `idx_model::Int`: index of model/member-dimension in `model_data`.
 """
 function distancesData(
     model_data::AbstractArray, 
@@ -1101,38 +1101,8 @@ function distancesData(
         aw_mat = areaWeightMatrix(latitudes, mask)
         distances[i] = fn(data_m, obs_data, aw_mat)
     end
-    return distances
+    return s[idx_model] == 1 ? distances[1] : distances
 end
-
-"""
-
-    distancesData(
-        models::AbstractArray, observations::AbstractArray, latitudes::AbstractVector
-    )
-
-Compute the distance as the area-weighted RMSE between model predictions and observations.
-
-Neither the observations nor the model data must contain missing values.
-
-# Arguments:
-- `models`: dimensions must be 'lon', 'lat', 'model'/'member' (in this order)
-- `observations`: dimensions must be 'lon', 'lat' (in this order)
-- `latitudes`: for computing area weight matrices
-"""
-function distancesData(
-    models::AbstractArray, observations::AbstractArray, latitudes::AbstractVector
-)
-    if (size(models, 1) != size(observations, 1)) || (size(models, 2) != size(observations, 2))
-        # throw(ArgumentError("Dimensions mismatch between model ($(size(models))) and data ($(size(data)))!"))
-        throw(ArgumentError("Dimensions mismatch between model and data!"))
-    end
-    mask = areaWeightMatrix(latitudes, fill(false, size(models)))
-    squared_diff = (models .- observations) .^ 2
-    mse = sum(mask .* squared_diff, dims=(1,2))
-    return sqrt.(vec(mse))
-end
-
-
 
 
 function distancesModels(model_data::DataMap, config::Dict{String, Number})
