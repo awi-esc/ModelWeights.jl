@@ -276,31 +276,39 @@ end
     boxplotWeights(samples, models, title::String="")
 
 # Arguments:
-- `samples`: 1st dim: nb MCMC iterations, 2nd dim: model
+- `samples`: a vector where each element corresponds to one MCMC chain, which contain 
+matrices of size N_iter x N_models
+- `models`: model names
 """
 function boxplotMCMCWeights(
-    samples, models;
+    chains, models;
+    chain = 1,
     xticks::AbstractArray=0.1:0.1:1,
-    title::String="", 
+    xlims::Union{Tuple, Nothing}=nothing,
+    title::String="",
     fig_size=(600,400)
 )
     N_models = length(models)
-    N_iter = length(samples[1])
+    samples = chains[chain]
+    N_iter = size(samples, 1)
     f = Figure(size=fig_size)
     offset = 1
     ys = [(x-1) * offset for x in 1:N_models]
     ax = Axis(f[1,1], xticks = (xticks, string.(xticks)), yticks = (ys, models), title=title, xlabel="Weight")
     Makie.ylims!(ax, -offset/2, maximum(ys) + offset)
+    if !isnothing(xlims)
+        Makie.xlims!(ax, xlims...)
+    end
     for m in 1:length(models)
         Makie.boxplot!(
             ax, 
-            fill(ys[m], N_iter), samples[m], 
+            fill(ys[m], N_iter), samples[:, m], 
             orientation = :horizontal,
             color=:grey
         )
         Makie.scatter!(
             ax, 
-            mean(samples[m]),
+            mean(samples[:, m]),
             ys[m],
             color=RGBf(206/255, 250/255, 220/255),
             marker = :xcross,
