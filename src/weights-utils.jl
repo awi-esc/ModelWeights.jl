@@ -1096,3 +1096,34 @@ function logsumexp(data::AbstractArray{T}) where T<:Number
     end
     return log(s) + m
 end
+
+
+"""
+# Arguments:
+- `data::AbstractArray`: dimensions 'lon' x 'lat' x 'model' x 'diagnostic'
+- `obs::AbstractArray`: dimensions 'lon' x 'lat' x 'diagnostic'
+- `wn_diagnostics::AbstractArray`: probabilities assigned to each diagnostic in `data` (in same order)
+- `prior_params::AbstractArray`: parameters for Dirichlet prior
+- `area_weights`:: area weights to account for different grid cell areas, size equal to first dimensions of `data` and `obs`
+"""
+@model function weightedAvgModel(
+    data::AbstractArray, 
+    obs::AbstractArray, 
+    wn_diagnostics::AbstractArray,
+    prior_params::AbstractArray,
+    area_weights::AbstractArray
+)
+    n_diagnostics = size(data, 4)
+
+    w ~ Dirichlet(prior_params)
+    T = eltype(w)
+    weighted_avg = mww.weightedAvg(data, w, 3) # model is third dimension
+    sigma_sq = Vector{T}(undef, n_diagnostics)
+    
+    for d in 1:n_diagnostics
+        sigma_sq[d] ~ InverseGamma(2, 3)
+        covariance = Diagonal(vec((1 ./ area_weights) .* sigma_sq[d]))
+        logL = Distributions.logpdf(MvNormal(vec(weighted_avg[:, :, 1, d]), covariance), vec(obs[:,:,d]))
+        @addlogprob! wn_diagnostics[d] * logL
+    end
+end
