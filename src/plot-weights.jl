@@ -1,5 +1,12 @@
 """
-    plotWeights(weights::YAXArray; title::String="", sort_by::String="")
+    plotWeights(
+        weights::YAXArray; 
+        fs::Number = 15,
+        sort_by::String = "",
+        weights_labels::Union{Dict{String, String}, Nothing} = nothing, 
+        fig_size::Tuple = (600,450)
+        sort_by::String=""
+    )
 
 Plot `weights` sorted by weight dimension `sort_by` of `weights` if given, otherwise, sorted by first value in weight dimension.
 
@@ -7,96 +14,16 @@ Equal weights line is added to the plot.
 
 # Arguments:
 - `weights::YAXArray`: with dimensions :weight and :model
-- `title::String`:
+- `fs::Number`: fontsize
 - `sort_by::String`: value of weight dimension according to which data is sorted
+- `weights_labels::Union{Dict{String, String}, Nothing} = nothing`: titles of subplots. Default is dimension names for dimension :weight
+- `fig_size::Tuple`:
 """
 function plotWeights(
     weights::YAXArray; 
-    title::String = "", 
-    sort_by::String = "", 
-    fs::Number = 15, 
-    legend_inside::Bool = true,
-    legend_labels::Union{Dict{String, String}, Nothing} = nothing,
-    leg_pos::Symbol = :rt,
-    leg_frame::Bool = true,
-    leg_orientation::Symbol = :vertical,
-    leg_rows::Int = 1
-)
-    is_single_w = !hasdim(weights, :weight)
-    if is_single_w
-        indices = 1:length(weights)
-    else
-        sort_by = isempty(sort_by) ? weights.weight[1] : sort_by
-        indices = Array(sortperm(weights[weight = At(sort_by)], rev=true))
-    end
-
-    n_models = length(weights.model)
-    xs = 1:n_models
-    fig = Figure(size=(600,350))
-    ax = Axis(
-        fig[1, 1],
-        xticks = (xs, Array(weights.model[indices])),
-        xticklabelrotation = pi/2,
-        xlabel = "Model",
-        ylabel = "Weight",
-        title = title,
-        titlesize = fs,
-        xticklabelsize = fs-2,
-        yticklabelsize = fs-2,
-        xlabelsize = fs,
-        ylabelsize = fs
-    )
-    if !is_single_w
-        labels = lookup(weights, :weight)
-        for label in labels
-            ys = Array(weights[weight = At(label)])
-            sorted_ys = ys[indices]
-            legend_label = isnothing(legend_labels) ? label : legend_labels[label]
-            if label == sort_by
-                scatterlines!(ax, xs, sorted_ys, label = legend_label, alpha = 0.5)
-            else
-                scatter!(ax, xs, sorted_ys, label = legend_label, alpha = 0.5)
-            end
-        end
-    else
-        scatterlines!(ax, xs, Array(weights), alpha = 0.5)
-    end
-    # add equal weight for reference
-    ys_equal = [1 / n_models for _ in range(1, n_models)]
-    lines!(ax, xs, ys_equal, color = :gray, label = "equal weighting", linestyle=:dash)
-    
-    if !is_single_w
-        if leg_orientation == :horizontal
-            leg = axislegend(
-                ax, 
-                position = leg_pos,
-                merge = true,
-                labelsize = fs - 2,
-                framevisible = leg_frame, 
-                orientation = leg_orientation,
-                nbanks = leg_rows
-            )
-        else
-            leg = axislegend(
-                ax, 
-                position = leg_pos,
-                merge = true, 
-                framevisible = leg_frame, 
-                orientation = leg_orientation
-            )
-        end
-        if !legend_inside
-            fig[1,2] = leg
-        end
-    end
-    return fig
-end
-
-
-function plotWeights(
-    weights::YAXArray; 
     fs::Number = 15,
-    sort_by::String = "", 
+    sort_by::String = "",
+    labels::Union{AbstractArray{String}, Nothing} = nothing, 
     fig_size::Tuple = (600,450)
 )
     if !hasdim(weights, :weight)
@@ -110,26 +37,32 @@ function plotWeights(
     xs = 1:n_models
     fig = Figure(size=fig_size)
     ys_equal = [1 / n_models for _ in range(1, n_models)]
-    labels = lookup(weights, :weight)
-    n_diagnostics = length(labels)
+
+    weights_labels = lookup(weights, :weight) 
+    if isnothing(labels)
+        labels = weights_labels
+    end
+
+    # axis for last row has model names in xaxis labels
+    n_weights = length(weights_labels)
     ax = Axis(
-        fig[n_diagnostics, 1],
+        fig[n_weights, 1],
         xticks = (xs, Array(weights.model)[indices]),
         xticklabelrotation = pi/2,
         xlabel = "Model",
-        title = labels[n_diagnostics],
+        title = labels[n_weights],
         titlesize = fs,
         xticklabelsize = fs-2,
         yticklabelsize = fs-2,
         xlabelsize = fs,
         ylabelsize = fs
     )
-    for (i,label) in enumerate(labels)
-        ax_i = i==n_diagnostics ? ax : Axis(fig[i,1], title=label)
+    
+    for (i, label) in enumerate(weights_labels)
+        ax_i = i==n_weights ? ax : Axis(fig[i,1], title=labels[i])
         ys = Array(weights[weight = At(label)])
         sorted_ys = ys[indices]
-        scatterlines!(ax_i, xs, sorted_ys, label = label, alpha = 0.5)
-        # add equal weight for reference
+        scatterlines!(ax_i, xs, sorted_ys, alpha = 0.5)
         lines!(ax_i, xs, ys_equal, color = :gray, label = "equal weighting", linestyle=:dash)
     end
     
