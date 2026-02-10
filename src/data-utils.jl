@@ -149,7 +149,7 @@ function combineModelsFromMultipleFiles(
     if length(data_sizes) != 1
         # dimensions must be identical except for time
         if !all(map(x -> hasdim(x, :time), data))
-            msg = "Data does not have the same size across all models: $(data_sizes)"
+            msg = "Data is not defined on the same grid across all models, sizes are: $(data_sizes)"
             throw(ArgumentError(msg))
         else
             # if difference only in time, use maximal possible timeseries and add missing values
