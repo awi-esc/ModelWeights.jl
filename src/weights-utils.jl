@@ -1124,7 +1124,7 @@ end
 
     w ~ Dirichlet(prior_params)
     T = eltype(w)
-    weighted_avg = mww.weightedAvg(data, w, 3) # model is third dimension
+    weighted_avg = weightedAvg(data, w, 3) # model is third dimension
     sigma_sq = Vector{T}(undef, n_diagnostics)
     
     for d in 1:n_diagnostics
