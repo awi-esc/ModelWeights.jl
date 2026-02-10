@@ -93,6 +93,54 @@ function plotWeights(
 end
 
 
+function plotWeights(
+    weights::YAXArray; 
+    fs::Number = 15,
+    sort_by::String = "", 
+    fig_size::Tuple = (600,450)
+)
+    if !hasdim(weights, :weight)
+        indices = 1:length(weights)
+    else
+        sort_by = isempty(sort_by) ? weights.weight[1] : sort_by
+        indices = Array(sortperm(weights[weight = At(sort_by)], rev=true))
+    end
+
+    n_models = length(weights.model)
+    xs = 1:n_models
+    fig = Figure(size=fig_size)
+    ys_equal = [1 / n_models for _ in range(1, n_models)]
+    labels = lookup(weights, :weight)
+    n_diagnostics = length(labels)
+    ax = Axis(
+        fig[n_diagnostics, 1],
+        xticks = (xs, Array(weights.model)[indices]),
+        xticklabelrotation = pi/2,
+        xlabel = "Model",
+        title = labels[n_diagnostics],
+        titlesize = fs,
+        xticklabelsize = fs-2,
+        yticklabelsize = fs-2,
+        xlabelsize = fs,
+        ylabelsize = fs
+    )
+    for (i,label) in enumerate(labels)
+        ax_i = i==n_diagnostics ? ax : Axis(fig[i,1], title=label)
+        ys = Array(weights[weight = At(label)])
+        sorted_ys = ys[indices]
+        scatterlines!(ax_i, xs, sorted_ys, label = label, alpha = 0.5)
+        # add equal weight for reference
+        lines!(ax_i, xs, ys_equal, color = :gray, label = "equal weighting", linestyle=:dash)
+    end
+    
+    Label(fig[:,0], "Weight", rotation=pi/2)
+
+    return fig
+end
+
+
+
+
 """
     plotDistances(dists::AbstractArray, title::String; is_bar_plot::Bool=true)
 
@@ -281,7 +329,8 @@ matrices of size N_iter x N_models
 - `models`: model names
 """
 function boxplotMCMCWeights(
-    chains, models;
+    chains, 
+    models;
     chain = 1,
     xticks::AbstractArray=0.1:0.1:1,
     xlims::Union{Tuple, Nothing}=nothing,
@@ -327,7 +376,7 @@ end
 # Arguments:
 - `models_labels::AbstractVector`: names of models
 - `weights::AbstractArray`: samples (iterations) x models
-- `pairs::AbstractVector`: tuples for models to be compared against one another
+- `pairs::AbstractVector`: tuples for models to be compared against one another as indices
 """
 function plotCorrWeights(
     models_labels::AbstractVector,
