@@ -1,5 +1,6 @@
 module Weights
 
+import LinearAlgebra:Diagonal
 import StatsBase.ecdf
 
 using Dates
