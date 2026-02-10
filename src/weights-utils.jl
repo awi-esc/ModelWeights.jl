@@ -48,17 +48,24 @@ end
     weightedAvg(data::AbstractArray, weights::AbstractArray)
 
 Compute weighted average across last dimension of `data` using `weights`.
-
-# Arguments:
-- `data::AbstractArray`:
-- `weights::AbstractVector`:
 """
 function weightedAvg(data::AbstractArray, weights::AbstractVector)
+    return weightedAvg(data, weights, size(data)[end])
+end
+
+
+"""
+    weightedAvg(data::AbstractArray, weights::AbstractArray)
+
+Compute weighted average across dimension `idx_dim` of `data` using `weights`.
+"""
+function weightedAvg(data::AbstractArray, weights::AbstractVector, idx_dim::Int)
     s = size(data)
     target_dims = s[1:end-1]
     n_target_dims = length(target_dims)
-    weighted_avgs = data .* reshape(weights, ntuple(_ -> 1, n_target_dims)..., :)
-    return sum(weighted_avgs, dims=n_target_dims+1)
+    shape_w = map(x -> x==idx_dim ? length(weights) : 1, 1:n_target_dims+1)
+    weighted_avgs = data .* reshape(weights, shape_w...)
+    return sum(weighted_avgs, dims=idx_dim)
 end
 
 
@@ -1126,4 +1133,28 @@ end
         logL = Distributions.logpdf(MvNormal(vec(weighted_avg[:, :, 1, d]), covariance), vec(obs[:,:,d]))
         @addlogprob! wn_diagnostics[d] * logL
     end
+end
+
+"""
+# Arguments:
+- `model`:
+- `n_iter`: 
+- `n_chains::Int`:
+- `n_models::Int`: 
+- `from_prior::Bool`: if true sample from prior, otherwise use NUTS sampler
+"""
+function drawFromModel(model, n_iter::Int, n_chains::Int, n_models::Int; from_prior::Bool=false)
+    if from_prior
+        @info "Draw from Prior"
+        samples = Turing.sample(model, Prior(), MCMCThreads(), n_iter, n_chains)
+    else
+        samples = Turing.sample(model, NUTS(), MCMCThreads(), n_iter, n_chains)
+    end
+    # model parameters are in the first columns
+    weights_list = map(c -> samples.value[:, 1:n_models, c], 1:n_chains)
+    weights_mat = zeros(n_iter, n_models, n_chains)
+    for i in 1:n_chains 
+        weights_mat[:,:,i] .= weights_list[i][:,1:n_models]
+    end
+    return (samples, weights_mat, weights_list)
 end
