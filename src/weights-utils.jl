@@ -50,7 +50,7 @@ end
 Compute weighted average across last dimension of `data` using `weights`.
 """
 function weightedAvg(data::AbstractArray, weights::AbstractVector)
-    return weightedAvg(data, weights, size(data)[end])
+    return weightedAvg(data, weights, length(size(data)))
 end
 
 
