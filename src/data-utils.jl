@@ -1398,6 +1398,23 @@ function areaWeightedSquaredErr(
 end
 
 
+function computeQuantiles(
+    df::AbstractArray, model_dim::Symbol, w::Union{AbstractArray, Nothing}, lower::Real, upper::Real
+)
+    idx = findfirst(x -> x == model_dim, dimNames(df))
+    out_axes = deleteat!(collect(axes(similar(df))), idx)
+    out_shape = map(length, out_axes)
+    out = Array{eltype(df)}(undef, 2, out_shape...)
+
+    out_dims = otherdims(df, model_dim)
+    for (i,slice) in enumerate(eachslice(df; dims=out_dims))
+        out[1,i] = quantile(coalesce.(slice, NaN), lower; w=w)
+        out[2,i] = quantile(coalesce.(slice, NaN), upper; w=w)
+    end
+    ds = (Dim{:confidence}(["lower", "upper"]), out_dims...)
+    return YAXArray(ds, out)
+end
+
 
 """
     uncertaintyRanges(
@@ -1416,7 +1433,7 @@ lower and upper bound in this order.
 function uncertaintyRanges(
     data::YAXArray; 
     weights::Union{YAXArray, Nothing} = nothing, 
-    q_lower::Number = 0.167, q_upper::Number = 0.833
+    q_lower::Float64 = 0.167, q_upper::Float64 = 0.833
 )
     model_dim = modelDim(data)
     meta = deepcopy(data.properties)
@@ -1429,23 +1446,13 @@ function uncertaintyRanges(
         if !isnothing(weights)
             weights, data = alignWeightsAndData(data, weights)
         end
-        qs = mapslices(
-            slice -> map(q -> quantile(coalesce.(slice, NaN), q; w=weights), [q_lower, q_upper]),
-            data,
-            dims=(model_dim,)
-        )
-        qs = setDim(qs, :OutAxis1, :confidence, ["lower", "upper"])
+        qs = computeQuantiles(data, model_dim, nothing, q_lower, q_upper)
     else
-        quantiles = []
-        for weight_id in lookup(weights, :weight)
+        w_names = lookup(weights, :weight)
+        quantiles = Vector(undef, length(w_names))
+        for (i_w, weight_id) in enumerate(w_names)
             w, df = alignWeightsAndData(data, weights[weight = At(weight_id)])
-            qs = mapslices(
-                slice -> map(q -> quantile(coalesce.(slice, NaN), q; w=w), [q_lower, q_upper]),
-                df,
-                dims=(model_dim,)
-            )
-            qs = setDim(qs, :OutAxis1, :confidence, ["lower", "upper"])
-            push!(quantiles, qs)
+            quantiles[i_w] = computeQuantiles(df, model_dim, w, q_lower, q_upper)
         end
         qs = concatenatecubes(quantiles, dims(weights, :weight))
     end
