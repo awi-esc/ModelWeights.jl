@@ -315,7 +315,8 @@ function plotCorrWeights(
     models_labels::AbstractVector,
     weights::AbstractArray, 
     pairs::AbstractVector;
-    color::Symbol = :grey
+    color::Symbol = :grey,
+    color_means::Union{Symbol, Nothing} = nothing
 )
     f = Figure();
     for (i, (m1, m2)) in enumerate(pairs)
@@ -325,6 +326,9 @@ function plotCorrWeights(
             yticks = (0:0.1:1, string.(0:0.1:1))
         );
         Makie.scatter!(ax, weights[:, m1], weights[:, m2], color=color)
+        if !isnothing(color_means)
+            Makie.scatter!(ax, mean(weights[:, m1]), mean(weights[:, m2]), color=color_means)
+        end
     end
     return f
 end
