@@ -254,10 +254,18 @@ end
 
 
 """
-    boxplotWeights(samples, models, title::String="")
+    boxplotMCMCWeights(
+        chains, 
+        models;
+        chain = 1,
+        xticks::AbstractArray=0.1:0.1:1,
+        xlims::Union{Tuple, Nothing}=nothing,
+        title::String="",
+        fig_size=(600,400)
+    )
 
 # Arguments:
-- `samples`: a vector where each element corresponds to one MCMC chain, which contain 
+- `chains`: a vector where each element corresponds to one MCMC chain, which contain 
 matrices of size N_iter x N_models
 - `models`: model names
 """
@@ -316,9 +324,10 @@ function plotCorrWeights(
     weights::AbstractArray, 
     pairs::AbstractVector;
     color::Symbol = :grey,
-    color_means::Union{Symbol, Nothing} = nothing
+    color_means::Union{Symbol, ColorTypes.RGB, Nothing} = CairoMakie.RGBf(206/255, 250/255, 220/255),
+    fig_size::Union{Tuple, Nothing} = nothing
 )
-    f = Figure();
+    f = isnothing(fig_size) ? Figure() : Figure(size=fig_size)
     for (i, (m1, m2)) in enumerate(pairs)
         ax = Axis(
             f[1, i], xlabel = models_labels[m1], ylabel = models_labels[m2],
@@ -327,7 +336,7 @@ function plotCorrWeights(
         );
         Makie.scatter!(ax, weights[:, m1], weights[:, m2], color=color)
         if !isnothing(color_means)
-            Makie.scatter!(ax, mean(weights[:, m1]), mean(weights[:, m2]), color=color_means)
+            Makie.scatter!(ax, mean(weights[:, m1]), mean(weights[:, m2]), color=color_means, marker='x', markersize=30)
         end
     end
     return f
