@@ -21,9 +21,11 @@ using JLD2
 using Serialization
 using Setfield
 using Statistics
+using TimerOutputs
 using YAML
 using YAXArrays
 
+TO = TimerOutput()
 
 const MODEL_MEMBER_DELIM = "#"
 const MODEL_NAME_FIXES = Dict(
@@ -174,5 +176,11 @@ include("data-utils.jl")
 include("data-functions.jl")
 include("helper-functions.jl")
 include("diagnostics.jl")
+
+
+function resetTimer()
+    TimerOutputs.reset_timer!(TO)
+    @info "Timer reset."
+end
 
 end

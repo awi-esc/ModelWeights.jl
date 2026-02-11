@@ -66,7 +66,9 @@ function indexModel(
     index_vec = map(dim_names) do name 
         name in model_dims ? indices : Colon()
     end
-    data = data[index_vec...] # this indexing materializes the data, i.e. its not lazy anymore!
+    data = view(data, index_vec...)
+    # view is important here, since using the following would materialize the data, i.e. laziness would be lost!
+    #data = data[index_vec...]
     subsetMeta!(data.properties, indices)
     return data
 end
