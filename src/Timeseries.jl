@@ -119,4 +119,26 @@ function filterTimeseries(
     return df
 end
 
+"""
+    function filterTimeseries(data::YAXArray, indices::AbstractArray{<:Int})
+
+# Arguments:
+- `data::YAXArray`:
+- `indices::AbstractArray{<:Int}`: start and end indices
+"""
+function filterTimeseries(
+    data::YAXArray,
+    indices::AbstractArray[<:Int]
+)
+    Data.throwErrorIfDimMissing(data, :time)
+    times = Array(data.time)
+    df = data[time = indices]
+    # TODO: add case when indices exceeds range
+    df = YAXArray(dims(df), Array(df), deepcopy(df.properties))
+    start_year = times[1]
+    end_year = times[end]
+    df.properties["timerange"] = join(string.([start_year, end_year]), "-")
+    return df
+end
+
 end # end module
