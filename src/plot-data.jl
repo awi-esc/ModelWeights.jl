@@ -264,6 +264,42 @@ end
 
 
 """
+    plotTimeseries!(ax::Axis, vals::AbstractArray;)
+
+Plot timeseries of data vector `vals`.
+"""
+function plotTimeseries(
+    vals::YAXArray;
+    linestyle::Symbol = :solid,
+    linewidth = 3,
+    xlabel = "time",
+    ylabel = "",
+    title = ""
+)
+    f = Figure(); 
+    ax = Axis(f[1,1], xlabel=xlabel, ylabel=ylabel, title=title);
+    timesteps = Array(dims(vals, :time))
+
+    if ndims(vals) != 2
+        throw(ArgumentError("Timeseries can only be plotted for data with :time dimension and just one other dimension."))
+    end
+    idx_time_dim = Data.indexDim(vals, :time)
+    idx_other_dim = idx_time_dim == 1 ? 2 : 1
+    indices = idx_time_dim == 1 ? [:, 1] : [1 , :]
+    for _ in eachindex(1:size(vals, idx_other_dim))
+        lines!(
+            ax,
+            timesteps,
+            vec(coalesce.(vals[indices...], NaN)),
+            linestyle = linestyle,
+            linewidth = linewidth
+        )
+    end
+    return f
+end
+
+
+"""
     plotTempGraph
 
     # TODO: change quantileLabels and uncertainty_ranges, the latter should contain 
