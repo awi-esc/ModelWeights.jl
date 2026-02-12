@@ -9,12 +9,12 @@ export alignPhysics, addMasks!
 export defineDataMap, loadPreprocData
 
 import StatsBase
+import Missings:allowmissing
 
 using CSV
 using Dates
 using DataFrames
 using DimensionalData
-using Missings
 using NCDatasets
 using NetCDF
 using JLD2
