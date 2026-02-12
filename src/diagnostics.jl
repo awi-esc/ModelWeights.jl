@@ -16,7 +16,14 @@ Missing data is accounted for in the area-weights.
 function globalMeans(data::YAXArray)
     throwErrorIfNotLonLat(data)
     latitudes = collect(lookup(data, :lat))
-    mask = Bool.(mapslices(model -> ismissing.(model), data; dims=(:lon, :lat)))
+
+    spatial_slices = eachslice(data, dims=otherdims(data, (:lon, :lat)))
+    size_other_dims = size(map(dims, axes(spatial_slices)))
+    mask = falses(size(data)...)
+    for df in eachslice(data, dims=otherdims(data, (:lon, :lat)))
+        mask[:,:, size_other_dims...] = ismissing.(df)
+    end
+    #mask = Bool.(mapslices(model -> ismissing.(model), data; dims=(:lon, :lat)))
     aw_mat = areaWeightMatrix(latitudes, Array(mask)) # is normalized, lon x lat
     # make sure that, if provided, units are identical across models 
     units = get(data.properties, "units", nothing)
