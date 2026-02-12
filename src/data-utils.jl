@@ -1578,6 +1578,12 @@ function modelDims(data::YAXArray)
 end
 
 
+function indexDim(data::YAXArray, dim::Symbol)
+    names = dimNames(data)
+    return findfirst(x -> x == dim, names)
+end
+
+
 
 function apply!(
     dm::DataMap,
