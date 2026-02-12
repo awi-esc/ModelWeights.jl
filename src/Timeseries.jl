@@ -132,7 +132,7 @@ function filterTimeseries(
 )
     Data.throwErrorIfDimMissing(data, :time)
     times = Array(data.time)
-    df = data[time = indices]
+    df = data[time = indices[1] : indices[2]]
     # TODO: add case when indices exceeds range
     df = YAXArray(dims(df), Array(df), deepcopy(df.properties))
     start_year = times[1]
