@@ -128,7 +128,7 @@ end
 """
 function filterTimeseries(
     data::YAXArray,
-    indices::AbstractArray[<:Int]
+    indices::AbstractArray{<:Int}
 )
     Data.throwErrorIfDimMissing(data, :time)
     times = Array(data.time)
