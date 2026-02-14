@@ -28,6 +28,10 @@ function plotWeights(
 )
     if !hasdim(weights, :weight)
         indices = 1:length(weights)
+        weights = YAXArray(
+            (dims(weights)..., Dim{:weight}([""])),
+            Data.insertSingletonDim(weights, 2)
+        )
     else
         sort_by = isempty(sort_by) ? weights.weight[1] : sort_by
         indices = Array(sortperm(weights[weight = At(sort_by)], rev=true))
@@ -59,19 +63,15 @@ function plotWeights(
     )
     
     for (i, label) in enumerate(weights_labels)
-        ax_i = i==n_weights ? ax : Axis(fig[i,1], title=labels[i])
+        ax_i = i==n_weights ? ax : Axis(fig[i, 1], title=labels[i])
         ys = Array(weights[weight = At(label)])
         sorted_ys = ys[indices]
         scatterlines!(ax_i, xs, sorted_ys, alpha = 0.5)
         lines!(ax_i, xs, ys_equal, color = :gray, label = "equal weighting", linestyle=:dash)
     end
-    
     Label(fig[:,0], "Weight", rotation=pi/2)
-
     return fig
 end
-
-
 
 
 """
