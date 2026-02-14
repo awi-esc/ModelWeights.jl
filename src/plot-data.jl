@@ -264,7 +264,7 @@ end
 
 
 """
-    plotTimeseries!(ax::Axis, vals::AbstractArray;)
+    plotTimeseries(ax::Axis, vals::AbstractArray;)
 
 Plot timeseries of data vector `vals`.
 """
@@ -285,8 +285,8 @@ function plotTimeseries(
     end
     idx_time_dim = Data.indexDim(vals, :time)
     idx_other_dim = idx_time_dim == 1 ? 2 : 1
-    indices = idx_time_dim == 1 ? [:, 1] : [1 , :]
-    for _ in eachindex(1:size(vals, idx_other_dim))
+    for idx in eachindex(1:size(vals, idx_other_dim))
+        indices = idx_time_dim == 1 ? [:, idx] : [idx , :]
         lines!(
             ax,
             timesteps,
