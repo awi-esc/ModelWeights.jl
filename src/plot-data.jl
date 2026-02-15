@@ -84,6 +84,33 @@ function plotValsOnMap!(
     return nothing
 end
 
+function plotValsOnMap(    
+    means::AbstractArray,
+    title::String;
+    colors = nothing,
+    color_range::Union{Nothing, Tuple} = nothing,
+    pos::NamedTuple = (x = 1, y = 1),
+    pos_legend::Union{Nothing, NamedTuple} = (x = 1, y = 2),
+    orient_legend::Symbol = :vertical,
+    xlabel::String = "Longitude",
+    ylabel::String = "Latitude",
+    xlabel_rotate::Number = 0,
+    nb_ticks::Union{Int,Nothing} = nothing,
+    east_west_labels::Bool = false,
+    alpha::Number = 0.8
+)
+    f = Figure()
+    plotValsOnMap!(
+        f, means, title; 
+        colors, color_range, 
+        pos, pos_legend, orient_legend, 
+        xlabel, ylabel, xlabel_rotate, nb_ticks, east_west_labels,
+        alpha
+    )
+    return f
+end
+
+
 
 """ plotHistAtPos(data::AbstractArray, location::Dict)
 
