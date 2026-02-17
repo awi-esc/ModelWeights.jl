@@ -64,13 +64,11 @@ function weightedAvg(data::AbstractArray, weights::AbstractVector, idx_dim::Int)
     target_dims = s[1:end-1]
     n_target_dims = length(target_dims)
     shape_w = map(x -> x==idx_dim ? length(weights) : 1, 1:n_target_dims+1)
+    weights = reshape(weights, shape_w...)
     
     is_yax = isa(data, YAXArray)
-    if is_yax
-        # must materialize anyway since in new YAXArrays version this fails otherwise due to DiskArrayEngine
-        data = Array(data)
-    end
-    weighted = data .* reshape(weights, shape_w...)
+    # must materialize anyway since in new YAXArrays version this fails otherwise due to DiskArrayEngine
+    weighted = is_yax ? Array(data) .* weights : data .* weights
     weighted_avg = dropdims(sum(weighted, dims=idx_dim); dims=idx_dim)
     if is_yax
         weighted_avg = YAXArray(
