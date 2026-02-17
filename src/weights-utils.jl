@@ -59,13 +59,26 @@ end
 
 Compute weighted average across dimension `idx_dim` of `data` using `weights`.
 """
-function weightedAvg(data::AbstractArray, weights::AbstractVector, idx_dim::Int)
+function weightedAvg(data::AbstractArray, weights::AbstractVector, idx_dim::Int)    
     s = size(data)
     target_dims = s[1:end-1]
     n_target_dims = length(target_dims)
     shape_w = map(x -> x==idx_dim ? length(weights) : 1, 1:n_target_dims+1)
-    weighted_avgs = data .* reshape(weights, shape_w...)
-    return sum(weighted_avgs, dims=idx_dim)
+    
+    is_yax = isa(data, YAXArray)
+    if is_yax
+        # must materialize anyway since in new YAXArrays version this fails otherwise due to DiskArrayEngine
+        data = Array(data)
+    end
+    weighted = data .* reshape(weights, shape_w...)
+    weighted_avg = dropdims(sum(weighted, dims=idx_dim); dims=idx_dim)
+    if is_yax
+        weighted_avg = YAXArray(
+            (dims(data)[filter(x -> x != idx_dim, 1:length(dims(data)))]...,),   
+            weighted_avg
+        )
+    end
+    return weighted_avg
 end
 
 
@@ -1130,7 +1143,7 @@ end
     for d in 1:n_diagnostics
         sigma_sq[d] ~ InverseGamma(2, 3)
         covariance = Diagonal(vec((1 ./ area_weights) .* sigma_sq[d]))
-        logL = Distributions.logpdf(MvNormal(vec(weighted_avg[:, :, 1, d]), covariance), vec(obs[:,:,d]))
+        logL = Distributions.logpdf(MvNormal(vec(weighted_avg[:, :, d]), covariance), vec(obs[:,:,d]))
         @addlogprob! wn_diagnostics[d] * logL
     end
 end
