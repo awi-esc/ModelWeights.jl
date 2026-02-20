@@ -293,10 +293,13 @@ end
 """
     plotTimeseries(ax::Axis, vals::AbstractArray;)
 
-Plot timeseries of data vector `vals`.
+Plot timeseries of data vector `data`.
+
+# Arguments:
+- `data::YAXArray`: must have dimension 'time' and possibly one other dimension
 """
 function plotTimeseries(
-    vals::YAXArray;
+    data::YAXArray;
     linestyle::Symbol = :solid,
     linewidth = 3,
     xlabel = "time",
@@ -305,21 +308,38 @@ function plotTimeseries(
 )
     f = Figure(); 
     ax = Axis(f[1,1], xlabel=xlabel, ylabel=ylabel, title=title);
-    timesteps = Array(dims(vals, :time))
+    timesteps = Array(dims(data, :time))
 
-    if ndims(vals) != 2
+    nb_dims = ndims(data)
+    if nb_dims > 2
         throw(ArgumentError("Timeseries can only be plotted for data with :time dimension and just one other dimension."))
     end
-    idx_time_dim = Data.indexDim(vals, :time)
-    idx_other_dim = idx_time_dim == 1 ? 2 : 1
-    for idx in eachindex(1:size(vals, idx_other_dim))
-        indices = idx_time_dim == 1 ? [:, idx] : [idx , :]
+    if nb_dims == 1
         lines!(
             ax,
             timesteps,
-            vec(coalesce.(vals[indices...], NaN)),
+            vec(coalesce.(data, NaN)),
             linestyle = linestyle,
             linewidth = linewidth
+        )
+    else
+        idx_time_dim = Data.indexDim(data, :time)
+        idx_other_dim = idx_time_dim == 1 ? 2 : 1
+        n = size(data, idx_other_dim)
+        plots = Vector(undef, n)
+        for idx in eachindex(1:n)
+            indices = idx_time_dim == 1 ? [:, idx] : [idx , :]
+            plots[idx] = lines!(
+                ax,
+                timesteps,
+                vec(coalesce.(data[indices...], NaN)),
+                linestyle = linestyle,
+                linewidth = linewidth
+            )
+        end
+        Legend(
+            f[2,1], plots, Array(dims(data)[idx_other_dim]), framevisible=false, 
+            orientation=:horizontal, nbanks = div(n,4) +1
         )
     end
     return f
