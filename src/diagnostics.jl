@@ -17,13 +17,15 @@ function globalMeans(data::YAXArray)
     throwErrorIfNotLonLat(data)
     latitudes = collect(lookup(data, :lat))
 
-    spatial_slices = eachslice(data, dims=otherdims(data, (:lon, :lat)))
-    size_other_dims = size(map(dims, axes(spatial_slices)))
-    mask = falses(size(data)...)
-    for df in eachslice(data, dims=otherdims(data, (:lon, :lat)))
-        mask[:,:, size_other_dims...] = ismissing.(df)
+    @timeit TO "build mask" begin 
+        spatial = [1,2]
+        other = filter(x -> !(x in spatial), 1:ndims(data))
+        mask = falses(size(data)...)
+        for I in CartesianIndices(axes(data)[other])
+            indices = (:,:,I.I...)
+            @views mask[indices...] .= ismissing.(@views data[indices...])
+        end
     end
-    #mask = Bool.(mapslices(model -> ismissing.(model), data; dims=(:lon, :lat)))
     aw_mat = areaWeightMatrix(latitudes, Array(mask)) # is normalized, lon x lat
     # make sure that, if provided, units are identical across models 
     units = get(data.properties, "units", nothing)
@@ -33,7 +35,9 @@ function globalMeans(data::YAXArray)
         end
         data = kelvinToCelsius(data)
     end
-    gms = dropdims(mapslices(x -> sum(skipmissing(x)), aw_mat .* Array(data); dims=(1, 2)); dims=(1,2))
+
+    temp = aw_mat .* Array(data)
+    gms = @timeit TO "last step" dropdims(mapslices(x -> sum(skipmissing(x)), temp; dims=(1, 2)); dims=(1,2))
     return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), deepcopy(data.properties))
 end
 
@@ -47,6 +51,7 @@ function globalMeans(data::AbstractArray, latitudes::AbstractArray)
     gms = mapslices(x -> sum(skipmissing(x)), aw_mat .* Array(data); dims=(1, 2))
     return dropdims(gms; dims=(1,2))
 end
+
 
 """
     anomalies(orig_data::YAXArray, ref_data::YAXArray)
