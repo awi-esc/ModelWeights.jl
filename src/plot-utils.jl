@@ -172,3 +172,13 @@ function makeSubplots(
     end
     return fig
 end
+
+
+function gradColors(values::AbstractArray)
+    cmap = cgrad(reverse(ColorSchemes.Reds.colors), 0:0.1:1)
+    vmin, vmax = minimum(values), maximum(values)
+    # normalization function
+    norm(v) = (v - vmin) / (vmax - vmin)
+    colors = [cmap[norm(v)] for v in values]
+    return colors
+end
