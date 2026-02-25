@@ -3,7 +3,9 @@ module Timeseries
 using Dates
 using DimensionalData
 using LinearRegression
+using Missings
 using YAXArrays
+
 
 using ..Data
 
@@ -128,17 +130,109 @@ end
 """
 function filterTimeseries(
     data::YAXArray,
-    indices::AbstractArray{<:Int}
+    indices::AbstractArray{<:Int}; 
+    relative::Bool=false
 )
     Data.throwErrorIfDimMissing(data, :time)
     times = Array(data.time)
-    df = data[time = indices[1] : indices[2]]
-    # TODO: add case when indices exceeds range
-    df = YAXArray(dims(df), Array(df), deepcopy(df.properties))
-    start_year = times[1]
-    end_year = times[end]
-    df.properties["timerange"] = join(string.([start_year, end_year]), "-")
-    return df
+    if relative
+        indices_ts = get(data.properties, "timeseries-start-end", nothing)
+        if isnothing(indices_ts) 
+            indices_ts = addStartEnd!(data)
+        end
+        ts_lengths = indices_ts[:,2] .- indices_ts[:,1] .+ 1
+        ts_lengths[ts_lengths .== 1] .= 0
+
+        n = indices[2]-indices[1] + 1
+        dim_time = map(x -> DateTime(x), 1 : n)
+        dimensions = Vector(undef, ndims(data))
+        i_time = Data.indexDim(data, :time)
+        i_model = Data.indexDim(data, :model)
+        for (i,d) in enumerate(dims(data))
+            dimensions[i] = i == i_time ? Dim{:time}(dim_time) : d
+        end
+        s = collect(size(data))
+        s[i_time] = n
+        s_temp = copy(s)
+        dat = YAXArray(Tuple(dimensions), allowmissing(zeros(Tuple(s))))
+        for (i, m) in enumerate(data.model)
+            if ts_lengths[i] == 0
+                s_temp[i_model] = 1
+                vals = fill(missing, s_temp...)
+            else
+                ts_start = indices_ts[i,1] + indices[1] - 1
+                ts_end = ts_start + n - 1
+                #TODO: this fils if ts_start or ts_end exceed boundaries
+                vals = data[model = At(m), time = ts_start : ts_end]
+            end
+            dat[model = At(m)] = vals
+        end
+    else
+        dat = data[time = indices[1] : indices[2]]
+        # TODO: add case when indices exceeds range
+        dat = YAXArray(dims(dat), Array(dat), deepcopy(dat.properties))
+        start_year = times[1]
+        end_year = times[end]
+        dat.properties["timerange"] = join(string.([start_year, end_year]), "-")
+    end
+    return dat
 end
+
+
+function addStartEnd!(data::YAXArray)
+    i_time = Data.indexDim(data, :time)
+    i_model = Data.indexDim(data, Data.modelDim(data))
+    models = lookup(data, i_model)
+    indices = zeros(Int, length(models), 2)
+    times = data.time
+    n_timesteps = length(times)
+    nb_dims_larger_2 = ndims(data) > 2
+
+    model_dim_last = i_model > i_time
+
+    arr = data.data
+    for (i, model) in enumerate(models)
+        ts = 1;
+        i_start = 0; i_end = 0;
+        while ts < n_timesteps && i_start == 0
+            #slice = @view data[model = At(model), time=ts]
+            slice = model_dim_last ? selectdim(arr, i_model, i) : selectdim(arr, i_time, ts)
+            slice = model_dim_last ? selectdim(slice, i_time, ts) : selectdim(slice, i_model, i)
+            all_missing = nb_dims_larger_2 ? all(ismissing, slice) : ismissing(slice.data[])
+            if all_missing
+                ts += 1
+            else
+                i_start = ts
+                ts += 1
+            end
+        end
+
+        if ts == n_timesteps
+            # all missing
+        else
+            while ts < n_timesteps && i_end == 0
+                #slice = @view data[model = At(model), time=ts]
+                slice = model_dim_last ? selectdim(arr, i_model, i) : selectdim(arr, i_time, ts)
+                slice = model_dim_last ? selectdim(slice, i_time, ts) : selectdim(slice, i_model, i)
+
+                all_missing = nb_dims_larger_2 ? all(ismissing, slice) : ismissing(slice.data[])
+                if all_missing
+                    i_end = ts-1
+                else
+                    ts += 1
+                end
+            end
+            if ts == n_timesteps
+                i_end = n_timesteps
+            end
+        end
+        indices[i, 1] = i_start
+        indices[i, 2] = i_end
+    end
+    data.properties["timeseries-start-end"] = indices
+    return indices
+end
+
+
 
 end # end module
