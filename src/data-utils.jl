@@ -1778,6 +1778,19 @@ function emptyYAX(arr::YAXArray)
     return all(ismissing.(arr))
 end
 
+
+"""
+   function mergeYAX(df::AbstractArray{YAXArray}, new_dim::Symbol, new_dim_vals::AbstractArray{String})
+
+   Merge two YAXArrays with identical dimensions into one with additional dimension 'new_dim'.
+"""
+function mergeYAX(
+   df::AbstractArray{<:YAXArray}, new_dim::Symbol, new_dim_vals::AbstractArray{String}
+)
+   return cat(df..., dims=Dim{new_dim}(new_dim_vals))
+end
+
+
 # TODO
 # function warnIfModelConstraintNotFulfilled(
 #     constraints::Vector{<:Dict{<:Any, <:Any}}, 
