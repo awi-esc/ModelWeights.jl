@@ -274,6 +274,12 @@ function likelihoodWeights(
     return YAXArray((Dim{:model}(models), Dim{:weight}([name])), reshape(weights, :, 1))
 end
 
+function likelihoodWeights(vec::AbstractArray{<:Number}, lh_fn::Function, args...)
+    # likelihoods = map(x -> lh_fn(x, args...), vec)
+    likelihoods = lh_fn.(vec, args...)
+    return likelihoods ./ sum(likelihoods)
+end
+
 
 # TODO: add config for independence weight, maybe abstract config struct, that can 
 # be more general than ConfigWeights.
@@ -1185,6 +1191,29 @@ end
 
 """
 # Arguments:
+"""
+@model function weightedAvgModelECS(
+    data::AbstractArray,
+    prior_params::AbstractArray,
+    lh_fn::Function
+)
+    w ~ Dirichlet(prior_params)
+    @addlogprob! length(data) * log(lh_fn(sum(data .* w)))
+end
+
+
+function drawFromSamples(samples, n_iter::Int, n_chains::Int, n_models::Int)
+    # model parameters are in the first columns
+    weights_list = map(c -> samples.value[:, 1:n_models, c], 1:n_chains)
+    weights_mat = zeros(n_iter, n_models, n_chains)
+    for i in 1:n_chains 
+        weights_mat[:,:,i] .= weights_list[i][:,1:n_models]
+    end
+    return (weights_mat, weights_list)
+end
+
+"""
+# Arguments:
 - `model`:
 - `n_iter`: 
 - `n_chains::Int`:
@@ -1198,11 +1227,6 @@ function drawFromModel(model, n_iter::Int, n_chains::Int, n_models::Int; from_pr
     else
         samples = Turing.sample(model, NUTS(), MCMCThreads(), n_iter, n_chains)
     end
-    # model parameters are in the first columns
-    weights_list = map(c -> samples.value[:, 1:n_models, c], 1:n_chains)
-    weights_mat = zeros(n_iter, n_models, n_chains)
-    for i in 1:n_chains 
-        weights_mat[:,:,i] .= weights_list[i][:,1:n_models]
-    end
+    weights_mat, weights_list = drawFromSamples(samples, n_iter, n_chains, n_models)
     return (samples, weights_mat, weights_list)
 end
