@@ -10,6 +10,7 @@ export defineDataMap, loadPreprocData
 
 import StatsBase
 import Missings:allowmissing
+import LinearRegression as lr
 
 using CSV
 using Dates

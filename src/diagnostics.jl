@@ -101,3 +101,31 @@ function climatology(data::YAXArray)
     throwErrorIfDimMissing(data, :time)
     return dropdims(mean(data; dims=:time); dims=:time)
 end
+
+
+
+"""
+    function gregoryECS(data_tas::YAXArray, data_rtmt::YAXArray)
+
+Approximate a model's Equilibriate Climate Sensitivity (ECS) value using the Gregory method,
+based on data from the 4xCO2 and piControl experiment.
+
+# Arguments:
+- `data_tas::YAXArray`: timeseries of global means of tas anomalies wrt piControl experiment
+for 4xCO2 experiment. Must have dimension :model
+- `data_rtmt::YAXArray`: timeseries of global means of rtmt data for 4xCO2 experiment. Must
+have dimension :model
+"""
+function gregoryECS(data_tas::YAXArray, data_rtmt::YAXArray)
+    models = dims(data_tas, :model)
+    estimated_ecs = YAXArray(
+        (models,),
+        zeros(length(models))
+    )
+    for m in models
+        lr_model = lr.linregress(data_tas[model=At(m)].data, data_rtmt[model=At(m)].data)
+        slope, bias = lr.coef(lr_model)
+        estimated_ecs[model = At(m)] = (-1) * bias / (2*slope)
+    end
+    return estimated_ecs
+end
