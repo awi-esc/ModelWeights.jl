@@ -305,11 +305,22 @@ function plotTimeseries(
     xlabel = "time",
     ylabel = "",
     title = "",
-    colors::AbstractArray=[]
+    colors::AbstractArray=[],
+    n_step::Int = 10
 )
-    f = Figure(); 
-    ax = Axis(f[1,1], xlabel=xlabel, ylabel=ylabel, title=title);
     timesteps = Array(dims(data, :time))
+    nt = length(timesteps)
+    timesteps = 1:nt
+
+    if nt < n_step
+        xticks = 1:nt
+    else
+        xticks = [1, (n_step : n_step : nt)...]
+    end
+    xtick_labels = string.(xticks)
+
+    f = Figure(); 
+    ax = Axis(f[1,1], xlabel=xlabel, ylabel=ylabel, title=title, xticks=(xticks, xtick_labels));
 
     nb_dims = ndims(data)
     if nb_dims > 2
@@ -351,7 +362,8 @@ function plotTimeseries(
         end
         Legend(
             f[2,1], plots, Array(dims(data)[idx_other_dim]), framevisible=false, 
-            orientation=:horizontal, nbanks = div(n,4) +1
+            orientation=:horizontal, nbanks = div(n,4) +1, 
+            labelsize=10
         )
     end
     return f
