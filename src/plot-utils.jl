@@ -174,8 +174,8 @@ function makeSubplots(
 end
 
 
-function gradColors(values::AbstractArray)
-    cmap = cgrad(reverse(ColorSchemes.Reds.colors), 0:0.1:1)
+function gradColors(values::AbstractArray; name::Symbol=:thermal, rev=true)
+    cmap = cgrad(name, rev=rev, 0:0.1:1)
     vmin, vmax = minimum(values), maximum(values)
     # normalization function
     norm(v) = (v - vmin) / (vmax - vmin)
