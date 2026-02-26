@@ -304,7 +304,8 @@ function plotTimeseries(
     linewidth = 3,
     xlabel = "time",
     ylabel = "",
-    title = ""
+    title = "",
+    colors::AbstractArray=[]
 )
     f = Figure(); 
     ax = Axis(f[1,1], xlabel=xlabel, ylabel=ylabel, title=title);
@@ -329,13 +330,24 @@ function plotTimeseries(
         plots = Vector(undef, n)
         for idx in eachindex(1:n)
             indices = idx_time_dim == 1 ? [:, idx] : [idx , :]
-            plots[idx] = lines!(
-                ax,
-                timesteps,
-                vec(coalesce.(data[indices...], NaN)),
-                linestyle = linestyle,
-                linewidth = linewidth
-            )
+            if !isempty(colors)
+                plots[idx] = lines!(
+                    ax,
+                    timesteps,
+                    vec(coalesce.(data[indices...], NaN)),
+                    linestyle = linestyle,
+                    linewidth = linewidth,
+                    color = colors[idx]
+                )
+            else
+                plots[idx] = lines!(
+                    ax,
+                    timesteps,
+                    vec(coalesce.(data[indices...], NaN)),
+                    linestyle = linestyle,
+                    linewidth = linewidth
+                )
+            end
         end
         Legend(
             f[2,1], plots, Array(dims(data)[idx_other_dim]), framevisible=false, 
