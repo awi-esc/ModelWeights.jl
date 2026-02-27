@@ -27,8 +27,7 @@ function plotValsOnMap!(
 )
     means = Data.sortLongitudesWest2East(means)
     dims_lat = Array(dims(means, :lat))
-    dims_lon = Array(dims(means, :lon))
-    dims_lon = Data.lon360to180.(dims_lon)
+    dims_lon = Data.lon360to180.(Array(dims(means, :lon)))
 
     # scaling plot 
     lon_min, lon_max = minimum(dims_lon) - 1, maximum(dims_lon) + 1

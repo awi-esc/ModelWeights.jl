@@ -1791,6 +1791,19 @@ function mergeYAX(
 end
 
 
+function limitMap(data::YAXArray, lat::Tuple, lon::Tuple)
+    return data[lat = Where(x -> x > lat[1] && x < lat[2]), lon = Where(x -> x > lon[1] && x < lon[2])]
+end
+
+function limitLat(data::YAXArray, lat::Tuple)
+    return data[lat = Where(x -> x > lat[1] && x < lat[2])]
+end
+
+function limitLon(data::YAXArray, lon::Tuple)
+    return data[lon = Where(x -> x > lon[1] && x < lon[2])]
+end
+
+
 # TODO
 # function warnIfModelConstraintNotFulfilled(
 #     constraints::Vector{<:Dict{<:Any, <:Any}}, 
