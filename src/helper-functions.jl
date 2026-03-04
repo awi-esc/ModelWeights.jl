@@ -154,7 +154,7 @@ function kelvinToCelsius!(data::YAXArray)
     elseif isa(units, Vector)
         indices = findall(units .== "K")
         if !isempty(indices)
-            model_dim = modelDims(data)
+            model_dim = modelDim(data)
             if model_dim == :member
                 data[member = indices] .= data[member = indices] .- 273.15
             else

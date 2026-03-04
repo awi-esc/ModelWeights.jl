@@ -1196,9 +1196,9 @@ function generalizedDistances(distances_all::YAXArray, weights::YAXArray; norm_a
     end
     dimensions = modelDims(distances_all)
     norm = norm_avg_members ? dropdims(median(distances_all, dims=dimensions), dims=dimensions) : norm
-    normalized_distances = @d distances_all ./ norm
+    normalized_distances = distances_all ./ norm
     
-    weighted_dists = @d normalized_distances .* weights
+    weighted_dists = YAXArrays.compute(normalized_distances .* weights) # materializes, otherwise error with new DiskArrayEngine backend
     return dropdims(sum(weighted_dists, dims = :diagnostic), dims=:diagnostic)
 end
 
@@ -1246,8 +1246,8 @@ function generalizedDistances(
         )
     end
     distances = cat(normalized_distances...; dims=Dim{:diagnostic}(diagnostics))
-    weighted_dists = @d distances .* weights
-    return mapslices(sum, weighted_dists; dims = (:diagnostic,))
+    weighted_dists = distances .* weights
+    return dropdims(mapslices(sum, weighted_dists; dims = (:diagnostic,)), dims=:diagnostic)
 end
 
 
@@ -1562,7 +1562,7 @@ end
 """
     modelDims(data::YAXArray)
 
-Return vector of dimensions of `data` that contain either 'model' or 'member'.
+Return a tuple with dimension names of `data` that contain either 'model' or 'member'.
 """
 function modelDims(data::YAXArray)
     dim_names = string.(dimNames(data))
@@ -1574,7 +1574,7 @@ function modelDims(data::YAXArray)
     if isempty(model_dims)
         throw(ArgumentError("Data must contain a dimension with 'member' or 'model' in its name! found: $dim_names"))
     end
-    return Symbol.(model_dims)
+    return Tuple(Symbol.(model_dims))
 end
 
 
@@ -1789,6 +1789,12 @@ function mergeYAX(
 )
    return cat(df..., dims=Dim{new_dim}(new_dim_vals))
 end
+
+# TODO
+# function mergeYAX(df::AbstractArray{<:YAXArray}, dimension::Symbol)
+#     set dimension to be combined to unordered
+#     w2 = set(w2, :weight => DimensionalData.Lookups.ForwardOrdered())
+# end
 
 
 function limitMap(data::YAXArray, lat::Tuple, lon::Tuple)
