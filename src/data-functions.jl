@@ -15,7 +15,7 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
         @warn "Vector of models to subset data to is empty! Data is not filtered."
         return data
     end
-    model_dims = Tuple(modelDims(data))
+    model_dims = modelDims(data)
     dimensions = Array(dims(data, model_dims[1]))
     if occursin("member", string(model_dims[1]))
         models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
@@ -471,6 +471,17 @@ function loadPreprocData(
             times = collect(lookup(ds_var, :time))
             times = map(x -> DateTime(Dates.year(x), Dates.month(x)), times) 
             #times = map(x -> DateTime(Dates.year(x), Dates.month(x)), ds_var["time"][:])
+            #add meta data for time
+            props["time-meta"] = Dict()
+            for t in (:year, :month)
+                if hasproperty(ds, t)
+                    var = ds[t]
+                    for (k,v) in var.properties
+                        props["time-meta"][k] = v
+                    end
+                end
+            end
+            
             if absent(constraint_ts) 
                 @debug "There were no start and end year for timeseries provided!"
                 constraint_ts = Dict()
