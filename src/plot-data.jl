@@ -282,8 +282,8 @@ function plotTimeseries!(
         bandplot = band!(
             ax,
             timesteps,
-            vec(coalesce.(uncertainties[confidence=At("lower")], NaN)),
-            vec(coalesce.(uncertainties[confidence=At("upper")], NaN)),
+            Array(vec(coalesce.(uncertainties[confidence=At("lower")], NaN))),
+            Array(vec(coalesce.(uncertainties[confidence=At("upper")], NaN))),
             color = (color_unc, alpha),
             label = label_unc
         )
@@ -309,7 +309,8 @@ function plotTimeseries(
     ylabel = "",
     title = "",
     colors::AbstractArray=[],
-    n_step::Int = 10
+    n_step::Int = 10,
+    uncertainties::Union{YAXArray, Nothing} = nothing
 )
     timesteps = Array(dims(data, :time))
     nt = length(timesteps)
@@ -318,7 +319,9 @@ function plotTimeseries(
     if nt < n_step
         xticks = 1:nt
     else
-        xticks = [1, (n_step : n_step : nt)...]
+        # xticks = [1, (n_step : n_step : nt)...]
+        indices =  [1, (n_step : n_step : nt)...]
+        xticks =  timesteps[indices]
     end
     xtick_labels = string.(xticks)
 
@@ -337,6 +340,15 @@ function plotTimeseries(
             linestyle = linestyle,
             linewidth = linewidth
         )
+        if !isnothing(uncertainties)
+            band!(
+                ax,
+                timesteps,
+                Array(vec(coalesce.(uncertainties[confidence=At("lower")], NaN))),
+                Array(vec(coalesce.(uncertainties[confidence=At("upper")], NaN))),
+                color = (:darkgrey, 0.9)
+            )
+        end
     else
         idx_time_dim = Data.indexDim(data, :time)
         idx_other_dim = idx_time_dim == 1 ? 2 : 1
