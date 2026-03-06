@@ -23,7 +23,8 @@ function plotValsOnMap!(
     xlabel_rotate::Number = 0,
     nb_ticks::Union{Int,Nothing} = nothing,
     east_west_labels::Bool = false,
-    alpha::Number = 0.8
+    alpha::Number = 0.8,
+    fontsize::Number = 20
 )
     means = Data.sortLongitudesWest2East(means)
     dims_lat = Array(dims(means, :lat))
@@ -36,8 +37,8 @@ function plotValsOnMap!(
     lat = range(lat_min, stop = lat_max, length = length(dims_lat))
 
     # axis ticks and labels
-    xticks = isnothing(nb_ticks) ? [ceil(dims_lon[1]), 0, round(dims_lon[end])] : dims_lon
-    yticks = isnothing(nb_ticks) ? [ceil(dims_lat[1]), 0, round(dims_lat[end])] : dims_lat
+    xticks = isnothing(nb_ticks) ? [ceil(dims_lon[1]), 0, round(dims_lon[end])] : Int.(ceil.(dims_lon))
+    yticks = isnothing(nb_ticks) ? [ceil(dims_lat[1]), 0, round(dims_lat[end])] : Int.(ceil.(dims_lat))
     lon_labels = east_west_labels ? longitude2EastWest.(xticks) : string.(xticks)
     lat_labels = east_west_labels ? latitude2NorthSouth.(yticks) : string.(yticks)
 
@@ -55,6 +56,9 @@ function plotValsOnMap!(
         xticks = x_ticks_labels,
         yticks = y_ticks_labels,
         limits = ((lon_min, lon_max), (lat_min, lat_max)),
+        xticklabelsize = fontsize,
+        yticklabelsize = fontsize,
+        titlesize = fontsize
     )
     if isnothing(colors)
         colors = reverse(ColorSchemes.redblue.colors)
