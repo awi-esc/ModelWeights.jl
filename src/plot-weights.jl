@@ -24,7 +24,12 @@ function plotWeights(
     fs::Number = 15,
     sort_by::String = "",
     labels::Union{AbstractArray{String}, Nothing} = nothing, 
-    fig_size::Tuple = (600,450)
+    fig_size::Tuple = (600,450), 
+    one_plot::Bool = false, 
+    title::String = "",
+    nbanks::Int = 1,
+    ls::Int = 12,
+    colors::Union{Nothing, AbstractArray} = nothing
 )
     if !hasdim(weights, :weight)
         indices = 1:length(weights)
@@ -50,26 +55,35 @@ function plotWeights(
     # axis for last row has model names in xaxis labels
     n_weights = length(weights_labels)
     ax = Axis(
-        fig[n_weights, 1],
+        one_plot ? fig[1,1] : fig[n_weights, 1],
         xticks = (xs, Array(weights.model)[indices]),
         xticklabelrotation = pi/2,
         xlabel = "Model",
-        title = labels[n_weights],
+        ylabel = one_plot ? "Weight" : "",
+        title = one_plot ? title : labels[n_weights],
         titlesize = fs,
         xticklabelsize = fs-2,
         yticklabelsize = fs-2,
         xlabelsize = fs,
         ylabelsize = fs
     )
-    
+    plots = Vector(undef, length(weights_labels))
     for (i, label) in enumerate(weights_labels)
-        ax_i = i==n_weights ? ax : Axis(fig[i, 1], title=labels[i])
+        ax_i = i==n_weights || one_plot ? ax : Axis(fig[i, 1], title=labels[i])
         ys = Array(weights[weight = At(label)])
         sorted_ys = ys[indices]
-        scatterlines!(ax_i, xs, sorted_ys, alpha = 0.5)
+        if isnothing(colors)
+            plots[i] = scatterlines!(ax_i, xs, sorted_ys, alpha = 0.5, label=label)
+               else
+            plots[i] = scatterlines!(ax_i, xs, sorted_ys, alpha = 0.5, color=colors[i])
+        end
         lines!(ax_i, xs, ys_equal, color = :gray, label = "equal weighting", linestyle=:dash)
     end
-    Label(fig[:,0], "Weight", rotation=pi/2)
+    if one_plot
+        Legend(fig[2,1], plots, weights_labels, orientation=:horizontal, framevisible=false, nbanks=nbanks, labelsize=ls)
+    else
+        Label(fig[:,0], "Weight", rotation=pi/2)
+    end
     return fig
 end
 
