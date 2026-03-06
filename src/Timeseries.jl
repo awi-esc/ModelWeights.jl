@@ -155,14 +155,15 @@ function filterTimeseries(
         s[i_time] = n
         s_temp = copy(s)
         dat = YAXArray(Tuple(dimensions), allowmissing(zeros(Tuple(s))))
-        for (i, m) in enumerate(data.model)
+        model_dim = Data.modelDim(data)
+        for (i, m) in enumerate(lookup(data, model_dim))
             if ts_lengths[i] == 0
                 s_temp[i_model] = 1
                 vals = fill(missing, s_temp...)
             else
                 ts_start = indices_ts[i,1] + indices[1] - 1
                 ts_end = ts_start + n - 1
-                #TODO: this fils if ts_start or ts_end exceed boundaries
+                #TODO: this fails if ts_start or ts_end exceed boundaries
                 vals = data[model = At(m), time = ts_start : ts_end]
             end
             dat[model = At(m)] = vals
