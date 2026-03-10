@@ -1188,17 +1188,32 @@ end
     end
 end
 
+@model function weightedAvgModelECS(data::AbstractArray, lh_fn::Function, inflate_lh::Bool)
+    n_models = length(data)
+    z ~ MvNormal(zeros(n_models), I)
+    w = softmax(z)
+    lambda = inflate_lh ? n_models : 1
+    @addlogprob! lambda * log(lh_fn(sum(data .* w)))
+end
 
-"""
-# Arguments:
-"""
+
 @model function weightedAvgModelECS(
-    data::AbstractArray,
-    prior_params::AbstractArray,
-    lh_fn::Function
+    data::AbstractArray, dirichlet_params::AbstractArray, lh_fn::Function, inflate_lh::Bool
 )
-    w ~ Dirichlet(prior_params)
-    @addlogprob! length(data) * log(lh_fn(sum(data .* w)))
+    w ~ Dirichlet(dirichlet_params)
+    lambda = inflate_lh ? length(data) : 1
+    @addlogprob! lambda * log(lh_fn(sum(data .* w)))
+end
+
+
+@model function weightedAvgModelECSMassoud(data::AbstractArray, lh_fn::Function)
+    n_models = length(data)
+    z = Vector(undef, n_models)
+    for i in 1:n_models
+        z[i] ~ Uniform(0,1)
+    end
+    w = z.^8 ./ sum(z.^8)
+    @addlogprob! log(lh_fn(sum(data .* w)))
 end
 
 
@@ -1229,4 +1244,23 @@ function drawFromModel(model, n_iter::Int, n_chains::Int, n_models::Int; from_pr
     end
     weights_mat, weights_list = drawFromSamples(samples, n_iter, n_chains, n_models)
     return (samples, weights_mat, weights_list)
+end
+
+
+# as done in Massoud paper
+function sampleMC(data::YAXArray, lh_fn::Function, n::Int)
+    ws = rand(n, length(data)).^8
+    ws = ws ./ sum(ws; dims=2)
+    likelihoods = Vector(undef, n)
+    for i in 1:n
+        w = ws[i,:]
+        val = weightedAvg(data, w, 1)[1]
+        likelihoods[i] = lh_fn(val)
+    end
+   indices_high_to_low = sortperm(likelihoods, rev=true)
+   likelihoods_sorted = likelihoods[indices_high_to_low]
+   weights_sorted =  ws[indices_high_to_low, :];
+   
+   indices = 1:Int(round((2/3) * n))
+   return (ws, weights_sorted[indices,:], likelihoods_sorted[indices])
 end
