@@ -324,6 +324,37 @@ function boxplotMCMCWeights(
     return f
 end
 
+function densityMCMCWeights(
+    chains, models;
+    chain::Int = 1,
+    xticks::AbstractArray=0.1:0.1:1,
+    xlims::Union{Tuple, Nothing}=nothing,
+    title::String="",
+    fig_size=(600,400)
+
+)
+    samples = chains[chain]
+    N_models = length(models)
+    f = Figure(size=fig_size)
+    offset = 100
+    ys = [(x-1) * offset for x in 1:N_models]
+    ax = Axis(f[1,1], yticks = (ys, models), title=title, xlabel="Weight")
+    if !isnothing(xlims)
+        Makie.xlims!(ax, xlims...)
+    end
+    Makie.ylims!(ax, -offset/2, maximum(ys) + offset)
+    for m in 1:length(models)
+        Makie.density!(
+            ax,
+            samples[:, m], 
+            offset = (m-1) * offset, 
+            color=:x
+        )
+    end
+    Makie.vlines!(ax, 1/N_models, color=:grey, linestyle=:dash)
+    return f
+end
+
 
 """
     plotCorrWeights(models_labels, weights)
