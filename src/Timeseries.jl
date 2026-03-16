@@ -95,19 +95,27 @@ function filterTimeseries(
         df = data[time = Where(
             x -> Dates.year(x) >= start_year && Dates.year(x) <= end_year,
         )]
-        df = YAXArray(dims(df), Array(df), deepcopy(df.properties))
     catch
         @warn "No data found in between $start_year and $end_year !"
         return nothing
     end
+    df = YAXArray(DimensionalData.dims(df), Array(df), deepcopy(df.properties))
     if only_models_non_missing_vals
         dim_symbol = Data.modelDim(df)
-        models_missing_vals = mapslices(x -> any(ismissing.(x)), df, dims = otherdims(df, dim_symbol))
-        n_models = length(dims(models_missing_vals, dim_symbol))
-        indices_missing = findall(x -> x == true, models_missing_vals)
+
+        dims = otherdims(df, dim_symbol)
+        models_missing_vals = dropdims(any(ismissing, df; dims=dims), dims=dims)
+        #models_missing_vals = mapslices(x -> any(ismissing.(x)), df, dims = otherdims(df, dim_symbol))
+        
+        n_models = length(DimensionalData.dims(models_missing_vals, dim_symbol))
+        indices_missing = findall(models_missing_vals)
         if !isempty(indices_missing)
+            if length(indices_missing) == n_models
+                @warn "No data without any missing values!"
+                return nothing
+            end
             models_missing = Data.getByIdxModel(models_missing_vals, dim_symbol, indices_missing)
-            models_missing = dims(models_missing, dim_symbol).val
+            models_missing = DimensionalData.dims(models_missing, dim_symbol).val
             df = dim_symbol == :model ? df[model = Where(x -> !(x in models_missing))] :
                 df[member = Where(x -> !(x in models_missing))]
             # update metadata too

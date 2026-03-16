@@ -557,3 +557,39 @@ function plotPDF(xs, ys, xlabel::String;
     axislegend(labelsize=label_size, nbanks=ncols_leg)
     return f_pdf
 end
+
+
+function plotExpectedECS(
+   ecs_data::AbstractArray, ws_prior::AbstractArray, ws_posterior::AbstractArray;
+   target_distr_x::Union{Nothing, AbstractArray} = nothing, 
+   target_distr_y::Union{Nothing, AbstractArray} = nothing,
+   chain = 1, 
+   title::String = "", 
+   fig_size::Union{Tuple, Nothing} = nothing,
+   pos_legend::Symbol = :rt, 
+   y_individual_vals::Number = 0,
+   marker_size_models::Number = 30
+)
+   # Plot expected ECS for m*-models using prior weights
+   f = isnothing(fig_size) ? Figure() : Figure(size = fig_size);
+   ax = Axis(f[1,1], xlabel="ECS", title=title, xticks=[0, (2:0.5:6)..., 7, 8]);
+   if !isempty(ws_prior)
+      mstar_ecs_prior = chain == 0 ? ws_prior * ecs_data : ws_prior[:,:,chain] * ecs_data
+      Makie.density!(ax, mstar_ecs_prior, color=(:blue, 0.5), label="M* with Prior Weights")
+      Makie.scatter!(ax, mean(mstar_ecs_prior), y_individual_vals, marker='*', markersize=60, color=:darkblue, label="M* with Prior Weights")
+   end
+   for val in ecs_data
+      Makie.scatter!(ax, val, y_individual_vals, color=:darkgrey, marker='*', markersize=marker_size_models, label="Individual models")
+   end
+   Makie.scatter!(ax, mean(ecs_data), y_individual_vals, marker='*', markersize=40, label = "MMM", color=:red)
+   if !isnothing(target_distr_x) && !isnothing(target_distr_y)
+      Makie.lines!(ax, target_distr_x, target_distr_y, label="Target distribution")
+   end
+   if !isempty(ws_posterior)
+      mstar_ecs_posterior = chain == 0 ? ws_posterior * ecs_data : ws_posterior[:,:,chain] * ecs_data
+      Makie.density!(ax, mstar_ecs_posterior, color=(:green, 0.5), label="M* with Posterior Weights")
+      Makie.scatter!(ax, mean(mstar_ecs_posterior), y_individual_vals, marker='*', markersize=60, color=:darkgreen,  label="M* with Posterior Weights")
+   end
+   axislegend(merge=true, position=pos_legend, labelsize=11)
+   return f
+end

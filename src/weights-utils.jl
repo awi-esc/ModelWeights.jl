@@ -1128,7 +1128,7 @@ end
 - `obs::AbstractArray`: dimensions 'lon' x 'lat' x 'diagnostic'
 - `wn_diagnostics::AbstractArray`: probabilities assigned to each diagnostic in `data` (in same order)
 - `prior_params::AbstractArray`: parameters for Dirichlet prior
-- `area_weights`:: area weights to account for different grid cell areas, size equal to first dimensions of `data` and `obs`
+- `area_weights`:: area weights to account for different grid cell areas, size equal to first dimensions of `data` and `obs` (lon x lat)
 """
 @model function weightedAvgModel(
     data::AbstractArray, 
@@ -1217,6 +1217,50 @@ end
 end
 
 
+
+
+"""
+# Arguments:
+"""
+@model function weightedAvgModelCombined(
+    data::AbstractArray, 
+    obs::AbstractArray, 
+    wn_diagnostics::AbstractArray,
+    dirichlet_params::AbstractArray,
+    hyperprior_sigma::AbstractArray,
+    area_weights::AbstractArray,
+    ecs_data::AbstractArray,
+    weigh_lh::Bool, 
+    lh_fn_ecs::Function
+)
+    n_diagnostics = size(data, 4)
+
+    w ~ Dirichlet(dirichlet_params)
+    T = eltype(w)
+    weighted_avg = weightedAvg(data, w, 3) # model is third dimension
+    sigma_sq = Vector{T}(undef, n_diagnostics)
+    
+    if !weigh_lh
+        wn_diagnostics[:] .= 1
+    end
+
+    a ~ Uniform(hyperprior_sigma...)
+    b ~ Uniform(hyperprior_sigma...)
+
+    for d in 1:n_diagnostics
+        sigma_sq[d] ~ InverseGamma(a, b)
+        covariance = Diagonal(vec((1 ./ area_weights) .* sigma_sq[d]))
+        logL = Distributions.logpdf(MvNormal(vec(weighted_avg[:, :, d]), covariance), vec(obs[:,:,d]))
+        @addlogprob! wn_diagnostics[d] * logL
+    end
+
+    # lambda = weigh_lh ? length(ecs_data) : 1
+    # @addlogprob! lambda * log(lh_fn_ecs(sum(ecs_data .* w)))
+end
+
+
+
+
 function drawFromSamples(samples, n_iter::Int, n_chains::Int, n_models::Int)
     # model parameters are in the first columns
     weights_list = map(c -> samples.value[:, 1:n_models, c], 1:n_chains)
@@ -1248,19 +1292,27 @@ end
 
 
 # as done in Massoud paper
-function sampleMC(data::YAXArray, lh_fn::Function, n::Int)
-    ws = rand(n, length(data)).^8
-    ws = ws ./ sum(ws; dims=2)
-    likelihoods = Vector(undef, n)
-    for i in 1:n
-        w = ws[i,:]
+"""
+# Arguments:
+- `prior_weights::AbstractArray`: n_samples x n_models 
+"""
+function sampleMC(data::YAXArray, lh_fn::Function, n_samples::Int; prior_weights::AbstractArray=[])
+    if isempty(prior_weights)
+        prior_weights = rand(n_samples, length(data)).^8
+        prior_weights = prior_weights ./ sum(prior_weights; dims=2)
+    end
+    likelihoods = Vector(undef, n_samples)
+    for i in 1:n_samples
+        w = prior_weights[i,:]
         val = weightedAvg(data, w, 1)[1]
         likelihoods[i] = lh_fn(val)
     end
    indices_high_to_low = sortperm(likelihoods, rev=true)
    likelihoods_sorted = likelihoods[indices_high_to_low]
-   weights_sorted =  ws[indices_high_to_low, :];
+   prior_weights_sorted =  prior_weights[indices_high_to_low, :];
    
-   indices = 1:Int(round((2/3) * n))
-   return (ws, weights_sorted[indices,:], likelihoods_sorted[indices])
+   indices = 1:Int(round((2/3) * n_samples))
+   posterior_weights = prior_weights_sorted[indices, :]
+
+   return (prior_weights_sorted, posterior_weights, likelihoods_sorted)
 end
