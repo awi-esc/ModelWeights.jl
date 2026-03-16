@@ -290,6 +290,8 @@ function boxplotMCMCWeights(
     chains_prior::AbstractArray = [],
     xticks::AbstractArray=0:0.1:1,
     xlims::Union{Tuple, Nothing}=nothing,
+    show_outliers::Bool = true,
+    show_median::Bool = true,
     title::String="",
     fig_size=(600,400)
 )
@@ -314,7 +316,9 @@ function boxplotMCMCWeights(
             ax, 
             fill(ys[m], N_iter), samples[:, m], 
             orientation = :horizontal,
-            color=:grey
+            color=:grey, 
+            show_outliers = show_outliers,
+            show_median = show_median
         )
         Makie.scatter!(
             ax, 
