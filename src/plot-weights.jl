@@ -284,22 +284,28 @@ matrices of size N_iter x N_models
 - `models`: model names
 """
 function boxplotMCMCWeights(
-    chains, 
-    models;
-    chain = 1,
-    xticks::AbstractArray=0.1:0.1:1,
+    chains::AbstractArray, 
+    models::AbstractArray{String};
+    chain::Int = 1,
+    chains_prior::AbstractArray = [],
+    xticks::AbstractArray=0:0.1:1,
     xlims::Union{Tuple, Nothing}=nothing,
     title::String="",
     fig_size=(600,400)
 )
     N_models = length(models)
     samples = chains[chain]
+    prior = !isempty(chains_prior)
     N_iter = size(samples, 1)
     f = Figure(size=fig_size)
-    offset = 1
+    offset = prior ? 2 : 1
     ys = [(x-1) * offset for x in 1:N_models]
     ax = Axis(f[1,1], xticks = (xticks, string.(xticks)), yticks = (ys, models), title=title, xlabel="Weight")
-    Makie.ylims!(ax, -offset/2, maximum(ys) + offset)
+    if prior
+        Makie.ylims!(ax, -offset, maximum(ys) + offset/2)
+    else
+        Makie.ylims!(ax, -offset/2, maximum(ys) + offset/2)
+    end
     if !isnothing(xlims)
         Makie.xlims!(ax, xlims...)
     end
@@ -319,6 +325,25 @@ function boxplotMCMCWeights(
             markersize=14,
             label = "BMA-mean"
         )
+        if prior
+            y = ys[m] - offset / 3
+            Makie.boxplot!(
+                ax, 
+                fill(y, N_iter), chains_prior[chain][:, m], 
+                orientation = :horizontal,
+                color=:grey, 
+                alpha = 0.5
+            )
+            Makie.scatter!(
+                ax, 
+                mean(chains_prior[chain][:, m]),
+                y,
+                color=RGBf(250/255, 206/255, 236/255),
+                marker = :xcross,
+                markersize=14,
+                label = "Mean prior"
+            )
+        end
     end
     Makie.vlines!(ax, 1/N_models, color=:grey, linestyle=:dash)
     return f
