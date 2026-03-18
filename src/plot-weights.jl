@@ -399,18 +399,29 @@ function plotCorrWeights(
     pairs::AbstractVector;
     color::Symbol = :grey,
     color_means::Union{Symbol, ColorTypes.RGB, Nothing} = CairoMakie.RGBf(206/255, 250/255, 220/255),
-    fig_size::Union{Tuple, Nothing} = nothing
+    fig_size::Union{Tuple, Nothing} = nothing,
+    xlims::Union{Nothing, Tuple} = nothing,
+    ylims::Union{Nothing, Tuple} = nothing, 
+    fs::Int = 11
 )
     f = isnothing(fig_size) ? Figure() : Figure(size=fig_size)
     for (i, (m1, m2)) in enumerate(pairs)
         ax = Axis(
-            f[1, i], xlabel = models_labels[m1], ylabel = models_labels[m2],
+            f[1, i], 
+            xlabel = models_labels[m1], ylabel = models_labels[m2],
+            xticklabelsize = fs, yticklabelsize = fs,
             xticks = (0:0.1:1, string.(0:0.1:1)),
             yticks = (0:0.1:1, string.(0:0.1:1))
         );
         Makie.scatter!(ax, weights[:, m1], weights[:, m2], color=color)
         if !isnothing(color_means)
             Makie.scatter!(ax, mean(weights[:, m1]), mean(weights[:, m2]), color=color_means, marker='x', markersize=30)
+        end
+        if !isnothing(xlims)
+            Makie.xlims!(ax, xlims...)
+        end
+        if !isnothing(ylims)
+            Makie.ylims!(ax, ylims...)
         end
     end
     return f
