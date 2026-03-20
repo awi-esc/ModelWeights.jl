@@ -15,7 +15,7 @@ end
 function savePlot(
     fig, target_dir::String, target_fn::String; overwrite::Bool=false, verbose::Bool=true
 )
-    savePlot(fig, joinpath(target_dir, target_fn); overwrite)
+    savePlot(fig, joinpath(target_dir, target_fn); overwrite, verbose)
 end
 
 function plotDistMatrices(distMat, diagnostic, models, modelRefs)
