@@ -1071,9 +1071,9 @@ end
     distancesData(
         model_data::AbstractArray, 
         obs_data::AbstractArray,
-        model_names::AbstractArray{<:String},
         latitudes::AbstractArray{<:Real}; 
-        metric::Symbol=:rmse
+        metric::Symbol=:rmse,
+        idx_model::Int = 3
     )
 
 Compute the distance as the area-weighted RMSE (default) or MSE between model predictions and observations.
@@ -1787,8 +1787,36 @@ end
 function mergeYAX(
    df::AbstractArray{<:YAXArray}, new_dim::Symbol, new_dim_vals::AbstractArray{String}
 )
-   return cat(df..., dims=Dim{new_dim}(new_dim_vals))
+    try 
+        return cat(df..., dims=Dim{new_dim}(new_dim_vals))
+    catch e
+        @warn "input arrays do not all have identical dimensions, missing values will be added!"
+        # dimension names need to be identical
+        names = unique(dimNames.(df))
+        if length(names) != 1
+            throw(ArgumentError("the names of the dimensions of all input arrays must be identical"))
+        end
+        names = names[1]
+        new_dimensions = Vector(undef, length(names) + 1)
+        for (i,d) in enumerate(names)
+            idx = argmax(size.(df, d))
+            new_dimensions[i] = Dim{d}(lookup(df[idx], d))
+        end
+        new_dimensions[end] = Dim{new_dim}(new_dim_vals)
+        l = length.(new_dimensions)
+
+        result = Array{Union{Missing, Float64}}(missing, l...)
+        merged = YAXArray(Tuple(new_dimensions), result)
+        # fill content
+        for (i, dat) in enumerate(df)
+            inds = NamedTuple{Tuple(names)}(Tuple(axes(dat, d) for d in names))
+            merged[inds..., i] .= dat
+        end
+        return merged
+    end
 end
+
+
 
 # TODO
 # function mergeYAX(df::AbstractArray{<:YAXArray}, dimension::Symbol)
