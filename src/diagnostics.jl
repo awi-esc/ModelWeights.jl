@@ -41,6 +41,29 @@ function globalMeans(data::YAXArray)
     return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), deepcopy(data.properties))
 end
 
+# assume no missing values!
+function globalMeansNoMissing(data::YAXArray)
+    throwErrorIfNotLonLat(data)
+    weights = areaWeightMatrix(lookup(data, :lat), Bool.(zeros(size(data, 1), size(data, 2))))
+
+    units = get(data.properties, "units", nothing)
+    if !isnothing(units) && length(unique(units)) != 1
+        if any(x -> x != "degC" && x != "K", units)
+            throw(ArgumentError("Data must have consistent units"))
+        end
+        data = kelvinToCelsius(data)
+    end
+    A = Array(data)
+    # reshape weights for broadcasting WITHOUT allocation
+    W = reshape(weights, size(weights)..., ntuple(_ -> 1, ndims(A)-2)...) 
+    gms = sum(A .* W; dims=(1,2))
+    return YAXArray(
+        otherdims(data, (:lon, :lat)),
+        dropdims(gms; dims=(1,2)),
+        deepcopy(data.properties)
+    )
+end
+
 """
 # Arguments:
 - `data::AbstractArray`: dimensions: lon, lat, model
