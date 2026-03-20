@@ -561,81 +561,98 @@ end
 
 function plotExpectedECS(
    ecs_data::AbstractArray, ws_prior::AbstractArray, ws_posterior::AbstractArray;
+   ws_prior2::AbstractArray = [], ws_posterior2::AbstractArray = [],
    target_distr_x::Union{Nothing, AbstractArray} = nothing, 
    target_distr_y::Union{Nothing, AbstractArray} = nothing,
+   plot_as_row::Bool = true,
    chain = 1, 
-   title::String = "", 
+   titles::AbstractArray{String} = [], 
    fig_size::Union{Tuple, Nothing} = nothing,
    pos_legend::Symbol = :rt, 
    y_individual_vals::Number = 0,
    marker_size_models::Number = 30, 
-   add_legend::Bool = true, 
+   add_legend::Bool = true,
    frame_visible::Bool = true,
-   add_prior_separate_row::Bool = false,
    xlims::Union{Tuple, Nothing} = nothing
 )
    # Plot expected ECS for m*-models using prior weights
-    plots = Vector(undef, 7); labels = Vector(undef, 7);
+    second_distr = !isempty(ws_prior2) || !isempty(ws_posterior2)
+    plots = Vector(undef, 5); labels = Vector(undef, 5);
     f = isnothing(fig_size) ? Figure() : Figure(size = fig_size);
-    row = !isempty(ws_posterior) && add_prior_separate_row ? 2 : 1
-    ax = Axis(f[row, 1], xlabel="ECS", title=title, xticks=1:0.5:6);
+    rows = plot_as_row ? [1,1] : [1,2]
+    cols = plot_as_row ? [1,2] : [1,1]
+    ax = Axis(f[rows[1], cols[1]], xlabel="ECS", title=titles[1], xticks=1:0.5:6);
+    # Plot prior 1
     if !isempty(ws_prior)
         mstar_ecs_prior = chain == 0 ? ws_prior * ecs_data : ws_prior[:,:,chain] * ecs_data
         m1 = Makie.density!(ax, mstar_ecs_prior, color=(:blue, 0.5), label="M* with Prior Weights")
         m11 = Makie.scatter!(ax, mean(mstar_ecs_prior), y_individual_vals, marker='*', markersize=60, color=:darkblue, label="M* with Prior Weights")
-        plots[1] = m1
-        plots[3] = m11
+        plots[1] = [m1, m11]
         labels[1] = "M* with Prior Weights"
-        labels[3] = "M* with Prior Weights"
     end
     n = length(ecs_data)
+    # Plot individual models 1
     for (i,val) in enumerate(ecs_data)
         m2 = Makie.scatter!(ax, val, y_individual_vals, color=:darkgrey, marker='*', markersize=marker_size_models, label="Individual models")
         if i == n 
-            plots[6] = m2
-            labels[6] = "Individual models"
+            plots[4] = m2
+            labels[4] = "Individual models"
         end  
     end
     m3 = Makie.scatter!(ax, mean(ecs_data), y_individual_vals, marker='*', markersize=40, label = "MMM", color=:red)
-    plots[5] = m3
-    labels[5] = "MMM"
+    plots[3] = m3
+    labels[3] = "MMM"
 
+    # Plot target distribution 1
     if !isnothing(target_distr_x) && !isnothing(target_distr_y)
         m4 = Makie.lines!(ax, target_distr_x, target_distr_y, label="Target distribution")
-        plots[7] = m4
-        labels[7] = "Target distribution"
+        plots[5] = m4
+        labels[5] = "Target distribution"
     end
+    # Plot Posterior distribution 1
     if !isempty(ws_posterior)
         mstar_ecs_posterior = chain == 0 ? ws_posterior * ecs_data : ws_posterior[:,:,chain] * ecs_data
         m5 = Makie.density!(ax, mstar_ecs_posterior, color=(:green, 0.5), label="M* with Posterior Weights")
         m51 = Makie.scatter!(ax, mean(mstar_ecs_posterior), y_individual_vals, marker='*', markersize=60, color=:darkgreen,  label="M* with Posterior Weights")
-        plots[2] = m5
+        plots[2] = [m5, m51]
         labels[2] = "M* with Posterior Weights"
-        plots[4] = m51
-        labels[4] = "M* with Posterior Weights"
-        if add_prior_separate_row
-            ax1 = Axis(f[1, 1], xlabel="ECS", title=title, xticks=1:0.5:6);
-            mstar_ecs_prior = chain == 0 ? ws_prior * ecs_data : ws_prior[:,:,chain] * ecs_data
+    end
+    if second_distr
+        t = length(titles) == 1 ? "" : titles[2]
+        ax1 = Axis(f[rows[2], cols[2]], xlabel="ECS", title=t, xticks=1:0.5:6);
+        if !isempty(ws_prior2) # Prior distribution 2
+            mstar_ecs_prior = chain == 0 ? ws_prior2 * ecs_data : ws_prior2[:,:,chain] * ecs_data
             Makie.density!(ax1, mstar_ecs_prior, color=(:blue, 0.5), label="M* with Prior Weights")
             Makie.scatter!(ax1, mean(mstar_ecs_prior), y_individual_vals, marker='*', markersize=60, color=:darkblue, label="M* with Prior Weights")
-            if !isnothing(xlims)
-                Makie.xlims!(ax1, xlims...)
-            end
-            Makie.scatter!(ax1, mean(ecs_data), y_individual_vals, marker='*', markersize=40, label = "MMM", color=:red)
-            for val in ecs_data
-                Makie.scatter!(ax1, val, y_individual_vals, color=:darkgrey, marker='*', markersize=marker_size_models, label="Individual models")
-            end
-            if !isnothing(target_distr_x) && !isnothing(target_distr_y)
-                Makie.lines!(ax1, target_distr_x, target_distr_y, label="Target distribution")
-            end
+        end
+        if !isnothing(xlims)
+            Makie.xlims!(ax1, xlims...)
+        end
+        if !isempty(ws_posterior2) # Posterior distribution 2
+            mstar_ecs_posterior2 = chain == 0 ? ws_posterior2 * ecs_data : ws_posterior2[:,:,chain] * ecs_data
+            Makie.density!(ax1, mstar_ecs_posterior2, color=(:green, 0.5), label="M* with Posterior Weights")
+            Makie.scatter!(ax1, mean(mstar_ecs_posterior2), y_individual_vals, marker='*', markersize=60, color=:darkgreen,  label="M* with Posterior Weights")
+        end
+        # Individual Models 2
+        Makie.scatter!(ax1, mean(ecs_data), y_individual_vals, marker='*', markersize=40, label = "MMM", color=:red)
+        for val in ecs_data
+            Makie.scatter!(ax1, val, y_individual_vals, color=:darkgrey, marker='*', markersize=marker_size_models, label="Individual models")
+        end
+        # Target distribution 2
+        if !isnothing(target_distr_x) && !isnothing(target_distr_y)
+            Makie.lines!(ax1, target_distr_x, target_distr_y, label="Target distribution")
         end
     end
-    if add_prior_separate_row && add_legend
-        Legend(f[:,2], plots, labels, framevisible = frame_visible, labelsize=11, merge=true)
-        colsize!(f.layout, 1, Relative(0.7))  # axis gets 80%
-        colsize!(f.layout, 2, Relative(0.3))  # legend gets 20%
+    if  add_legend && second_distr
+        if plot_as_row
+            Legend(f[2, :], plots, labels, framevisible = frame_visible, orientation = :horizontal, nbanks = 2, merge = true)
+            rowsize!(f.layout, 2, Relative(0.1))
+        else
+            Legend(f[:, 2], plots, labels, framevisible = frame_visible, orientation = :vertical, merge = true)
+            colsize!(f.layout, 2, Relative(0.1))
+        end
     elseif add_legend
-        axislegend(ax, merge=true, position=pos_legend, labelsize=11, framevisible = frame_visible) 
+        axislegend(ax, merge=true, position=pos_legend, framevisible = frame_visible) 
     end
     if !isnothing(xlims)
         Makie.xlims!(ax, xlims...)
