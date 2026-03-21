@@ -21,7 +21,8 @@ function plotValsOnMap!(
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
-    nb_ticks::Union{Int,Nothing} = nothing,
+    xticks::Union{AbstractArray, Nothing} = nothing,
+    yticks::Union{AbstractArray, Nothing} = nothing,
     east_west_labels::Bool = false,
     alpha::Number = 0.8,
     fontsize::Number = 20
@@ -37,16 +38,12 @@ function plotValsOnMap!(
     lat = range(lat_min, stop = lat_max, length = length(dims_lat))
 
     # axis ticks and labels
-    xticks = isnothing(nb_ticks) ? [ceil(dims_lon[1]), 0, round(dims_lon[end])] : Int.(ceil.(dims_lon))
-    yticks = isnothing(nb_ticks) ? [ceil(dims_lat[1]), 0, round(dims_lat[end])] : Int.(ceil.(dims_lat))
+    xticks = isnothing(xticks) ? Int.(ceil.(dims_lon)) : xticks
+    yticks = isnothing(yticks) ? Int.(ceil.(dims_lat)) : yticks
     lon_labels = east_west_labels ? longitude2EastWest.(xticks) : string.(xticks)
     lat_labels = east_west_labels ? latitude2NorthSouth.(yticks) : string.(yticks)
-
-    step_lon = isnothing(nb_ticks) ? 1 : Int(round(length(lon_labels) / nb_ticks))
-    step_lat = isnothing(nb_ticks) ? 1 : Int(round(length(lat_labels) / nb_ticks))
-    x_ticks_labels = (xticks[1:step_lon:end], lon_labels[1:step_lon:end])
-    y_ticks_labels = (yticks[1:step_lat:end], lat_labels[1:step_lat:end])
-
+    x_ticks_labels = (xticks, lon_labels)
+    y_ticks_labels = (yticks, lat_labels)
     ax = Axis(
         fig[pos.x, pos.y],
         title = title,
@@ -55,16 +52,18 @@ function plotValsOnMap!(
         xticklabelrotation = xlabel_rotate,
         xticks = x_ticks_labels,
         yticks = y_ticks_labels,
-        limits = ((lon_min, lon_max), (lat_min, lat_max)),
+        limits = ((xticks[1], xticks[end]), (yticks[1], yticks[end])),
         xticklabelsize = fontsize,
         yticklabelsize = fontsize,
-        titlesize = fontsize
+        titlesize = fontsize,
+        titlefont = :regular
+
     )
     if isnothing(colors)
         colors = reverse(ColorSchemes.redblue.colors)
     end
     hm = isnothing(color_range) ?
-        heatmap!(lon, lat, Array(means); colormap=colors, alpha=alpha) :
+        heatmap!(lon, lat, Array(means); colormap = colors, alpha = alpha) :
         heatmap!(
             lon,
             lat,
@@ -75,14 +74,18 @@ function plotValsOnMap!(
             highclip = colors[end],
             lowclip = colors[1]
         )
-    lines!(GeoMakie.coastlines(); color = :black)
+    lines!(GeoMakie.coastlines(); color = :black, linewidth=.8)
     if !isnothing(pos_legend)
         if orient_legend == :vertical
-            Colorbar(fig[pos_legend.x, pos_legend.y], hm, height = Relative(2 / 3))
+            Colorbar(fig[pos_legend.x, pos_legend.y], hm, width=5)
         else
-            Colorbar(fig[pos_legend.x, pos_legend.y], hm, width = Relative(2 / 3), vertical = false)
+            Colorbar(fig[pos_legend.x, pos_legend.y], hm, 
+                height = 5, 
+                flipaxis = false, 
+                vertical = false,
+                ticklabelsize = fontsize - 2
+            )
         end
-        # the width argument is relative to the width of the column#, width=Relative(0.1));
     end
     return nothing
 end
@@ -98,7 +101,6 @@ function plotValsOnMap(
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
-    nb_ticks::Union{Int,Nothing} = nothing,
     east_west_labels::Bool = false,
     alpha::Number = 0.8
 )
@@ -107,7 +109,7 @@ function plotValsOnMap(
         f, means, title; 
         colors, color_range, 
         pos, pos_legend, orient_legend, 
-        xlabel, ylabel, xlabel_rotate, nb_ticks, east_west_labels,
+        xlabel, ylabel, xlabel_rotate, east_west_labels,
         alpha
     )
     return f
