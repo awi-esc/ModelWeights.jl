@@ -288,18 +288,19 @@ function boxplotMCMCWeights(
     models::AbstractArray{String};
     chain::Int = 1,
     chains_prior::AbstractArray = [],
-    xticks::AbstractArray=0:0.1:1,
-    xlims::Union{Tuple, Nothing}=nothing,
+    xticks::AbstractArray = 0:0.1:1,
+    xlims::Union{Tuple, Nothing} = nothing,
     show_outliers::Bool = true,
     show_median::Bool = true,
-    title::String="",
-    fig_size=(600,400)
+    title::String = "",
+    marker_size::Int = 14,
+    fig_size = (300, 200)
 )
     N_models = length(models)
     samples = chains[chain]
     prior = !isempty(chains_prior)
     N_iter = size(samples, 1)
-    f = Figure(size=fig_size)
+    f = Figure(size = fig_size)
     offset = prior ? 2 : 1
     ys = [(x-1) * offset for x in 1:N_models]
     ax = Axis(f[1,1], xticks = (xticks, string.(xticks)), yticks = (ys, models), title=title, xlabel="Weight")
@@ -325,8 +326,8 @@ function boxplotMCMCWeights(
             mean(samples[:, m]),
             ys[m],
             color=RGBf(206/255, 250/255, 220/255),
-            marker = :xcross,
-            markersize=14,
+            marker = 'x',
+            markersize = marker_size,
             label = "BMA-mean"
         )
         if prior
@@ -344,7 +345,7 @@ function boxplotMCMCWeights(
                 y,
                 color=RGBf(250/255, 206/255, 236/255),
                 marker = :xcross,
-                markersize=14,
+                markersize = marker_size,
                 label = "Mean prior"
             )
         end
@@ -402,7 +403,10 @@ function plotCorrWeights(
     fig_size::Union{Tuple, Nothing} = nothing,
     xlims::Union{Nothing, Tuple} = nothing,
     ylims::Union{Nothing, Tuple} = nothing, 
-    fs::Int = 11
+    fs::Int = 11,
+    marker_size::Int = 14,
+    xticks::AbstractArray = 0:0.1:1,
+    yticks::AbstractArray = 0:0.1:1
 )
     f = isnothing(fig_size) ? Figure() : Figure(size=fig_size)
     for (i, (m1, m2)) in enumerate(pairs)
@@ -410,12 +414,14 @@ function plotCorrWeights(
             f[1, i], 
             xlabel = models_labels[m1], ylabel = models_labels[m2],
             xticklabelsize = fs, yticklabelsize = fs,
-            xticks = (0:0.1:1, string.(0:0.1:1)),
-            yticks = (0:0.1:1, string.(0:0.1:1))
+            xticks = (xticks, string.(xticks)),
+            yticks = (yticks, string.(yticks))
         );
         Makie.scatter!(ax, weights[:, m1], weights[:, m2], color=color)
         if !isnothing(color_means)
-            Makie.scatter!(ax, mean(weights[:, m1]), mean(weights[:, m2]), color=color_means, marker='x', markersize=30)
+            Makie.scatter!(ax, mean(weights[:, m1]), mean(weights[:, m2]),
+                 color = color_means, marker = 'x', markersize = marker_size
+            )
         end
         if !isnothing(xlims)
             Makie.xlims!(ax, xlims...)
