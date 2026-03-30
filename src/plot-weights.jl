@@ -275,7 +275,7 @@ end
         xticks::AbstractArray=0.1:0.1:1,
         xlims::Union{Tuple, Nothing}=nothing,
         title::String="",
-        fig_size=(600,400)
+        fig_size=(325,200)
     )
 
 # Arguments:
@@ -293,7 +293,7 @@ function boxplotMCMCWeights(
     show_outliers::Bool = true,
     show_median::Bool = true,
     title::String = "",
-    marker_size::Int = 14,
+    marker_size::Int = 30,
     fig_size = (300, 200)
 )
     N_models = length(models)
@@ -326,7 +326,7 @@ function boxplotMCMCWeights(
             mean(samples[:, m]),
             ys[m],
             color=RGBf(206/255, 250/255, 220/255),
-            marker = 'x',
+            marker = '*',
             markersize = marker_size,
             label = "BMA-mean"
         )
@@ -344,7 +344,7 @@ function boxplotMCMCWeights(
                 mean(chains_prior[chain][:, m]),
                 y,
                 color=RGBf(250/255, 206/255, 236/255),
-                marker = :xcross,
+                marker = '*',
                 markersize = marker_size,
                 label = "Mean prior"
             )
@@ -404,7 +404,7 @@ function plotCorrWeights(
     xlims::Union{Nothing, Tuple} = nothing,
     ylims::Union{Nothing, Tuple} = nothing, 
     fs::Int = 11,
-    marker_size::Int = 14,
+    marker_size::Int = 30,
     xticks::AbstractArray = 0:0.1:1,
     yticks::AbstractArray = 0:0.1:1
 )
@@ -420,7 +420,7 @@ function plotCorrWeights(
         Makie.scatter!(ax, weights[:, m1], weights[:, m2], color=color)
         if !isnothing(color_means)
             Makie.scatter!(ax, mean(weights[:, m1]), mean(weights[:, m2]),
-                 color = color_means, marker = 'x', markersize = marker_size
+                 color = color_means, marker = '*', markersize = marker_size
             )
         end
         if !isnothing(xlims)

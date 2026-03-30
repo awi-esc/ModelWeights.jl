@@ -16,8 +16,9 @@ function plotValsOnMap!(
     colors = nothing,
     color_range::Union{Nothing, Tuple} = nothing,
     pos::NamedTuple = (x = 1, y = 1),
-    pos_legend::Union{Nothing, NamedTuple} = (x = 1, y = 2),
+    pos_legend::Union{Nothing, NamedTuple} = nothing,
     orient_legend::Symbol = :vertical,
+    legend_label::String = "",
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
@@ -38,10 +39,10 @@ function plotValsOnMap!(
     lat = range(lat_min, stop = lat_max, length = length(dims_lat))
 
     # axis ticks and labels
-    xticks = isnothing(xticks) ? Int.(ceil.(dims_lon)) : xticks
-    yticks = isnothing(yticks) ? Int.(ceil.(dims_lat)) : yticks
-    lon_labels = east_west_labels ? longitude2EastWest.(xticks) : string.(xticks)
-    lat_labels = east_west_labels ? latitude2NorthSouth.(yticks) : string.(yticks)
+    xticks = isnothing(xticks) ? Int.(ceil.([dims_lon[1], dims_lon[end]])) : xticks
+    yticks = isnothing(yticks) ? Int.(ceil.([dims_lat[1], dims_lat[end]])) : yticks
+    lon_labels = east_west_labels ? longitude2EastWest.(xticks) : map(x -> x * "°", string.(xticks))
+    lat_labels = east_west_labels ? latitude2NorthSouth.(yticks) : map(x -> x * "°", string.(yticks))
     x_ticks_labels = (xticks, lon_labels)
     y_ticks_labels = (yticks, lat_labels)
     ax = Axis(
@@ -53,6 +54,8 @@ function plotValsOnMap!(
         xticks = x_ticks_labels,
         yticks = y_ticks_labels,
         limits = ((xticks[1], xticks[end]), (yticks[1], yticks[end])),
+        xticksize = 0,
+        yticksize = 0,
         xticklabelsize = fontsize,
         yticklabelsize = fontsize,
         titlesize = fontsize,
@@ -77,13 +80,15 @@ function plotValsOnMap!(
     lines!(GeoMakie.coastlines(); color = :black, linewidth=.8)
     if !isnothing(pos_legend)
         if orient_legend == :vertical
-            Colorbar(fig[pos_legend.x, pos_legend.y], hm, width=5)
+            Colorbar(fig[pos_legend.x, pos_legend.y], hm, width=5, label = legend_label, ticksvisible = false)
         else
             Colorbar(fig[pos_legend.x, pos_legend.y], hm, 
                 height = 5, 
                 flipaxis = false, 
                 vertical = false,
-                ticklabelsize = fontsize - 2
+                ticklabelsize = fontsize - 2,
+                label = legend_label,
+                ticksvisible = false
             )
         end
     end
