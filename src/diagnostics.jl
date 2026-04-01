@@ -103,7 +103,7 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray)
         indices = findall(x -> x in dims_orig, dims_ref)
         ref_data = indexModel(ref_data, (dimension,), indices)
     end
-    return @d data .- ref_data
+    return data .- ref_data
 end
 
 
