@@ -60,7 +60,7 @@ function warnIfOutOfTimerange(df::YAXArray, start_year::Int, end_year::Int)
     timesteps = dims(df, :time)
     data_start = Dates.year(timesteps[1])
     if data_start != start_year
-        @warn "start_year for is : $(data_start) instead of $start_year !"
+        @warn "start_year is : $(data_start) instead of $start_year !"
     end
     data_end = Dates.year(timesteps[end])
     if data_end != end_year
