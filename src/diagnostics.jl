@@ -90,17 +90,19 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray)
     end
     dims_orig = Array(dims(data, dimension))
     dims_ref = Array(dims(ref_data, dimension))
-    if length(dims_orig) > length(dims_ref) 
+    l = length(dims_orig) - length(dims_ref)
+    if l > 0
         throw(ArgumentError("To compute anomalies, reference data must contain all models of original data!"))
     end
     units_orig = get(data.properties, "units", nothing)
     units_ref = get(ref_data.properties, "units", nothing) 
-    if !(isnothing(units_orig) || isnothing(units_ref)) && units_ref != units_orig
+    
+    indices = l < 0 ? findall(x -> x in dims_orig, dims_ref) : 1:length(dims_orig)
+    if !(isnothing(units_orig) || isnothing(units_ref)) && units_ref[indices] != units_orig
         @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
         return nothing
     end
-    if length(dims_orig) < length(dims_ref)
-        indices = findall(x -> x in dims_orig, dims_ref)
+    if l < 0
         ref_data = indexModel(ref_data, (dimension,), indices)
     end
     return data .- ref_data

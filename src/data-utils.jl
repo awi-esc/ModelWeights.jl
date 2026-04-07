@@ -24,7 +24,8 @@ function convertToYAX(dm::DataMap; dim_name::Symbol = :diagnostic)
         (dimensions..., Dim{dim_name}(diagnostics)), 
         rand(size(dimensions)..., length(diagnostics))
     )
-    for d in diagnostics        
+    for d in diagnostics
+        # @info "adding diagnostic $d ..."        
         data[diagnostic = At(d)] .= dm[d]
     end
     return data
