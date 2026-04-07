@@ -1260,9 +1260,13 @@ end
 
 
 
+"""
+    function drawFromSamples(samples, n_iter::Int, n_chains::Int, n_models::Int)
 
+# Arguments:
+- `samples`: rows are iterations, the first 'n_models' columns are the model weights.
+"""
 function drawFromSamples(samples, n_iter::Int, n_chains::Int, n_models::Int)
-    # model parameters are in the first columns
     weights_list = map(c -> samples.value[:, 1:n_models, c], 1:n_chains)
     weights_mat = zeros(n_iter, n_models, n_chains)
     for i in 1:n_chains 
