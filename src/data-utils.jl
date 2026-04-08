@@ -430,8 +430,8 @@ end
 Save `data` as Julia obj if `target_path` has ending '.jld2', otherwise save as binary.
 If file at `target_path` already exists, timestamp is added if `overwrite` is false (default).
 """
-function writeDataToDisk(data, target_path::String; overwrite::Bool = false)
-    target_path = overwrite ? target_path : Data.individuatePath(target_path)
+function writeDataToDisk(data, target_path::String; overwrite::Bool = false, add_hour::Bool = true)
+    target_path = overwrite ? target_path : Data.individuatePath(target_path; add_hour)
     if endswith(target_path, ".jld2")
         jldsave(target_path; data = data)
     else

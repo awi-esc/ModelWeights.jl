@@ -108,9 +108,12 @@ function warnIfhasMissing(df::YAXArray; name::String="")
 end
 
 
-function currentTime()
-    currentDay = string(Dates.today()) * '_'
-    return currentDay * Dates.format(Dates.now(), "HH_MM")
+function currentTime(;add_hour::Bool=true)
+    current_day = string(Dates.today())
+    if add_hour
+        current_day = current_day * '_' * Dates.format(Dates.now(), "HH_MM")
+    end
+    return current_day
 end
 
 
@@ -120,14 +123,14 @@ end
 If file at `target` path exists, concatenate `target` with current timestep, otherwise 
 simply return `target`.
 """
-function individuatePath(target::String)
+function individuatePath(target::String; add_hour::Bool = true)
     target_dir = dirname(target)
     if !isdir(target_dir)
         mkpath(target_dir)
     end
     if isfile(target)
         msg = "$target already exisits, will use "
-        target = joinpath(target_dir, join([currentTime(), basename(target)], "_"))
+        target = joinpath(target_dir, join([currentTime(;add_hour), basename(target)], "_"))
         @info msg * "$target instead."
     end
     return target
