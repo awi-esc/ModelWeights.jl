@@ -79,7 +79,7 @@ end
 """
     anomalies(orig_data::YAXArray, ref_data::YAXArray)
 
-Compute difference of `orig_data` and `ref_data`.  
+Compute difference of `orig_data` and `ref_data`. Assumes that both are given in the same units.
 """
 function anomalies(orig_data::YAXArray, ref_data::YAXArray)
     data = YAXArray(orig_data.axes, Array(orig_data.data), deepcopy(orig_data.properties))
@@ -94,17 +94,21 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray)
     if l > 0
         throw(ArgumentError("To compute anomalies, reference data must contain all models of original data!"))
     end
-    units_orig = get(data.properties, "units", nothing)
-    units_ref = get(ref_data.properties, "units", nothing) 
-    
+    # model dimensions must be identical
     indices = l < 0 ? findall(x -> x in dims_orig, dims_ref) : 1:length(dims_orig)
-    if !(isnothing(units_orig) || isnothing(units_ref)) && units_ref[indices] != units_orig
-        @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
-        return nothing
-    end
     if l < 0
         ref_data = indexModel(ref_data, (dimension,), indices)
     end
+    if dims_orig != Array(dims(ref_data, dimension))
+        throw(ArgumentError("Model dimensions do not have identical values!"))
+    end
+    # check units: must be ensured that the meta data is correct ....
+    # units_orig = get(data.properties, "units", nothing)
+    # units_ref = get(ref_data.properties, "units", nothing)     
+    # if !(isnothing(units_orig) || isnothing(units_ref)) && units_ref[indices] != units_orig
+    #     @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
+    #     return nothing
+    # end
     return data .- ref_data
 end
 
