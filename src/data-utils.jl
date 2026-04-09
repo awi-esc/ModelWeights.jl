@@ -330,6 +330,16 @@ function modelsFromMemberIDs(data::YAXArray; uniq::Bool=false)
 end
 
 
+function membersFromMemberIDs(data::YAXArray)
+    throwErrorIfDimMissing(data, :member)
+    ids = lookup(data, :member)
+    members = map(x -> String(split(x, MODEL_MEMBER_DELIM)[2]), ids)
+    # remove added grid 
+    members = map(x -> String(split(x, "_")[1]), members)
+    return members
+end
+
+
 """
     areaWeightMatrix(
         latitudes::AbstractVector{<:Number}, mask::YAXArray{T}

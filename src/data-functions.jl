@@ -373,6 +373,20 @@ function filterOutModels(data::YAXArray, excluded_models::Vector{String})
 end
 
 
+function listModels(data::YAXArray)
+    model_dim = modelDim(data)
+
+    if model_dim == :member
+        models = modelsFromMemberIDs(data; uniq=false)
+        members = membersFromMemberIDs(data)
+    else 
+        models = lookup(data, model_dim)
+        members = fill("", length(models))
+    end
+    return DataFrame(model = collect(models), run = members)
+end
+
+
 ### ----------------------------------------------------------------------------------------
 ###                                LOADING DATA                                           
 ### ----------------------------------------------------------------------------------------
