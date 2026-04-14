@@ -80,6 +80,21 @@ function weightedAvg(data::AbstractArray, weights::AbstractVector, idx_dim::Int)
 end
 
 
+function weightedVar(data::YAXArray, w::AbstractVector; correct::Bool=false)
+    d = Data.modelDim(data)
+    idx_d = dimnum(data, d)
+    if correct
+        n = sum(w).^2 ./ sum(w.^2)
+    else
+        n = size(data, idx_d)
+    end
+    w = YAXArray((Dim{d}(lookup(data, d)),), w)
+    wavg = weightedAvg(data, w)
+    sq_dist = map(d -> d.^2, data .- wavg)
+    arr = dropdims(sum(Array(sq_dist .* w); dims = idx_d); dims=idx_d)
+    return (arr ./ sum(w)) .* (n/(n-1))
+end
+
 """
     equalWeights(data::YAXArray; use_members::Bool=true)
 
