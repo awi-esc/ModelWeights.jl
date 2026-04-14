@@ -1276,7 +1276,7 @@ function fixModelNamesMetadata(names::Vector{String})
 end
 
 
-function fixModelNameMetadata(name::String)
+function fixModelNameMetadata(name::AbstractString)
     return get(MODEL_NAME_FIXES, name, name)
 end
 
@@ -1786,7 +1786,8 @@ function initYAX(dimensions)
 end
 
 function emptyYAX(arr::YAXArray)
-    return all(ismissing.(arr))
+    #return all(ismissing.(arr))
+    return all(ismissing, arr) # does not allocate!
 end
 
 
