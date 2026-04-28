@@ -31,7 +31,7 @@ end
 
 
 """
-    throwErrorIfDimMissing(data::YAXArray)
+    throwErrorIfDimMissing(data::YAXArray, dim::Symbol)
 """
 function throwErrorIfDimMissing(data::YAXArray, dim::Symbol)
     if !hasdim(data, dim)
@@ -99,9 +99,9 @@ end
 
 
 function warnIfhasMissing(df::YAXArray; name::String="")
-    base = "Data contains missing values"
-    msg = isempty(name) ? base : base * "; $(name)"
-    if any(ismissing.(df))
+    if any(ismissing, df)
+        base = "Data contains missing values"
+        msg = isempty(name) ? base : "$base; $name"
         @warn msg
     end
     return nothing
@@ -170,42 +170,74 @@ function kelvinToCelsius!(data::YAXArray)
 end
 
 
+function absent(x::AbstractArray)
+    isempty(x) || all(absent, x)
+end
 
-function absent(x::Union{Vector, String, Dict, Nothing}) 
-    return isnothing(x) || isempty(x)
+function absent(x::String)
+    isnothing(x) || isempty(x)
+end
+
+function absent(x::Dict)
+    isempty(x)
+end
+
+function absent(x::Nothing) 
+    return true
 end
 
 """
     setDim(
-        data::YAXArray, 
-        dim::Union{String, Symbol},
-        dim_name::Union{Nothing, String, Symbol},
-        dim_vals::Union{Nothing, Vector{String}}
-    )
+        data::YAXArray, dim::Symbol, dim_name::Symbol, dim_vals::AbstractVector{T}
+    ) where T
 
-Rename dimension `dim` to `dim_name` and/or its values to `dim_vals`.
-If `dim_name` or `dim_vals` is nothing, name/vals don't change.
+Rename dimension `dim` in `data`to `dim_name` and set dimension values of dimension `dim` to `dim_vals`.
 
 # Arguments:
 - `data::YAXArray`:
-- `dim::Union{String, Symbol}`: Name of the dimension to be changed.
-- `dim_name::Union{Nothing, String, Symbol}`: New dimension name.
-- `dim_vals::Union{Nothing, Vector{String}}`:  New dimension values.
+- `dim::Symbol`: Name of the dimension to be changed.
+- `dim_name::Symbol`: New dimension name.
+- `dim_vals::AbstractVector{T}`:  New dimension values.
 """
 function setDim(
-    data::YAXArray, 
-    dim::Union{String, Symbol},
-    dim_name::Union{Nothing, String, Symbol},
-    dim_vals::Union{Nothing, Vector{T}}
-) where T <: Union{String, Number}
-    if !isnothing(dim_vals)
-        data = DimensionalData.set(data, Symbol(dim) => dim_vals)
-    end
-    if !isnothing(dim_name)
-        data = DimensionalData.set(data, Symbol(dim) => Symbol(dim_name))
-    end
+    data::YAXArray, dim::Symbol, dim_name::Symbol, dim_vals::AbstractVector{T}
+) where T
+    data = setDim(data, dim, dim_name)
+    return setDim(data, dim, dim_vals)
+end
+
+
+"""
+    setDim(data::YAXArray, dim::Symbol, dim_name::Symbol)
+
+Rename dimension `dim` to `dim_name` in `data`.
+
+# Arguments:
+- `data::YAXArray`:
+- `dim::Symbol`: Name of the dimension to be changed.
+- `dim_name::Symbol`: New dimension name.
+"""
+function setDim(data::YAXArray, dim::Symbol, dim_name::Symbol)
+    data = DimensionalData.set(data, dim => dim_name)
     return data
 end
+
+
+"""
+    setDim(data::YAXArray, dim::Symbol, dim_vals::AbstractVector{T}) where T
+
+Set dimension values of dimension `dim` in `data` to `dim_vals`.
+
+# Arguments:
+- `data::YAXArray`:
+- `dim::Symbol`: Name of the dimension to be changed.
+- `dim_vals::Vector{String}`:  New dimension values.
+"""
+function setDim(data::YAXArray, dim::Symbol, dim_vals::AbstractVector{T}) where T
+    data = DimensionalData.set(data, dim => dim_vals)
+    return data
+end
+
 
 """
     dimNames(data::YAXArray)
@@ -213,52 +245,60 @@ end
 Return the names of the dimensions of `data` as vector of symbols.
 """
 function dimNames(data::YAXArray)
-    return collect(DimensionalData.name.(dims(data)))
+    #return collect(DimensionalData.name.(dims(data)))
+    return DimensionalData.name.(dims(data))
 end
 
 
 function renameDict!(
     data::Dict{T, V}, ids::AbstractVector{T}, ids_new::AbstractVector{T}
 ) where {T <: Union{String, Symbol}, V}
-    if any(id -> !(id in keys(data)), ids)
-        @warn "Dictionary does not contain all keys $ids, no key renamed."
-        return nothing
-    end
     if length(ids) != length(ids_new)
         throw(ArgumentError("The nb of old and new ids must be the same!"))
     end
-    map(ids, ids_new) do id, id_new
-        data[id_new] = data[id]
-        delete!(data, id)
+    if any(id -> !haskey(data, id), ids)
+        #@warn "Dictionary does not contain all keys $ids, no key renamed."
+        return data
     end
-    return nothing
+    vals = [data[id] for id in ids]
+    for (id, id_new, val) in zip(ids, ids_new, vals)
+        delete!(data, id)
+        data[id_new] = val
+    end
+    return data
 end
 
 
 """
-    normalizeDict(data::Dict{String, <:Number})
+    normalizeDict(data::Dict{String, T}; remove_zero::Bool=true) where T <: Number
 
 Normalize values for every entry in `data` such that they sum up to 1. If remove_zero is
 true (default), the returned dictionary does not contain entries for which values were 0.
 """
-function normalizeDict(data::Dict{String, <:Number}; remove_zero::Bool=true)
+function normalizeDict(data::Dict{String, T}; remove_zero::Bool=true) where T <: Number
     result = Dict{String, Float64}()
     total = sum(values(data))
-    data = remove_zero ? filter(((k, v),) -> v != 0, data) : data
-    for k in keys(data)
-        result[k] = data[k] ./ total 
+    if total == 0
+        throw(ArgumentError("Cannot normalize dict by total value of 0!"))
+    end
+    for (k, v) in data
+        if v != 0
+            result[k] = data[k] / total
+        elseif !remove_zero
+            result[k] = 0
+        end
     end
     return result
 end
 
 
 """
-    dict2YAX(data::Dict{String, <:Number})
+    dict2YAX(data::Dict{String, T}) where {T <: Number}
 
 Convert dictionary `data` into a YAXArray with new dimension `dim_name` 
 (default is :diagnostic) whose lookup names are the keys of `data`.
 """
-function dict2YAX(data::Dict{String, T}; dim_name::Symbol = :diagnostic) where T<:Number
+function dict2YAX(data::Dict{String, T}; dim_name::Symbol = :diagnostic) where {T <: Number}
     yax = YAXArray(
         (Dim{:diagnostic}(collect(keys(data))),), Array{T}(undef, length(data))
     )
@@ -266,38 +306,38 @@ function dict2YAX(data::Dict{String, T}; dim_name::Symbol = :diagnostic) where T
         yax[diagnostic = At(k)] = data[k]
     end
     if dim_name != :diagnostic
-        setDim(yax, :diagnostic, dim_name, nothing)
+        setDim(yax, :diagnostic, dim_name)
     end
     return yax
 end
 
 
 """ 
-    lon360to180(lon::Number)
+    lon360to180(lon::T) where {T <: Real}
     
 Convert longitudes measured from 0° to 360° into  -180° to 180° scale.
 """
-function lon360to180(lon::Number)
+function lon360to180(lon::T) where {T <: Real}
     return lon > 179 ? lon - 360 : lon
 end
 
 function lon360to180(data::YAXArray)
-    return setDim(data, :lon, nothing, lon360to180.(lookup(data, :lon)))
+    return setDim(data, :lon, lon360to180.(lookup(data, :lon)))
 end
 
 
 """ 
-    lon180to360(lon::Number)
+    lon180to360(lon::T) where {T <: Real}
 
 Convert longitudes measured from -180° to 180° into 0° to 360° scale. For western hemisphere 
 (negative longitudes) add 360.
 """
-function lon180to360(lon::Number)
+function lon180to360(lon::T) where {T <: Real}
     return ifelse(lon < 0, lon + 360, lon)
 end
 
 function lon180to360(data::YAXArray)
-    return setDim(data, :lon, nothing, lon180to360.(lookup(data, :lon)))
+    return setDim(data, :lon, lon180to360.(lookup(data, :lon)))
 end
 
 
@@ -342,7 +382,7 @@ Arrange 'data' such that western latitudes come first, then eastern latitudes.
 
 Return NamedTuple with fields 'east' and 'west' pointing to vectors of indices for sorted longitudes.
 """
-function longitudesEastWest(data::AbstractArray)
+function longitudesEastWest(data::AbstractArray{T}) where T <: Number
     data = lon180to360(data)
     longitudes = lookup(data, :lon)
     indices_east = findall(x -> x < 180, longitudes)
@@ -351,11 +391,10 @@ function longitudesEastWest(data::AbstractArray)
 end
 
 
-function countMap(data::Vector{T}) where T <: Any
-    counts = Dict()
-    for cat in unique(data)
-        nb = count(i -> i == cat, data)
-        counts[cat] = nb
+function countMap(data::AbstractVector{T}) where T    
+    counts = Dict{T, Int}()
+    for cat in data
+        counts[cat] = get(counts, cat, 0) + 1
     end
     return counts
 end
@@ -368,8 +407,31 @@ function insertSingletonDim(A::AbstractArray, idx::Int)
 end
 
 function insertSingletonDim(A::YAXArray, idx::Int, name::Symbol, val::String)
-    A_mat = insertSingletonDim(Array(A), idx)
+    return _insertSingletonDim(A, idx, Val(name), val)
+end
+
+function _insertSingletonDim(A::YAXArray, idx::Int, ::Val{name}, val::String) where {name}
+    A_mat = insertSingletonDim(parent(A), idx)
     old_dims = DimensionalData.dims(A)
-    new_dims =  ntuple(i -> i < idx ? old_dims[i] : (i > idx ? old_dims[i-1] : Dim{name}([val])), ndims(A)+1)
+    new_dim = Dim{name}([val])
+
+    new_dims = DimensionalData.DimTuple((
+        old_dims[1:idx-1]...,
+        new_dim,
+        old_dims[idx:end]...
+    ))
     return YAXArray(new_dims, A_mat, copy(A.properties))
+end
+
+
+function dimsEqualButOne(data::AbstractArray{<:YAXArray}; except_dim::Symbol = :time)
+    return _dimsEqualButOne(data, Val(except_dim))
+end
+
+function _dimsEqualButOne(data::AbstractArray{<:YAXArray}, ::Val{D}) where {D}
+    ref = size(otherdims(first(data), D))
+    for i in eachindex(data[2:end])
+        size(otherdims(data[i], D)) == ref || return false
+    end
+    return true
 end

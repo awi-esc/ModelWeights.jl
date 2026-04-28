@@ -1,9 +1,9 @@
 module Data
 
 export Level, MODEL_MEMBER_DELIM
-export DataMap, ESMEnsemble
+export DataMap
 
-export subsetModelData, sharedModels, filterPathsSharedModels!
+export subsetModelData, sharedModels
 export summarizeMembers, summarizeMembers!
 export alignPhysics, addMasks!
 export defineDataMap, loadPreprocData
@@ -16,17 +16,15 @@ using CSV
 using Dates
 using DataFrames
 using DimensionalData
+using Distributed
 using NCDatasets
 using NetCDF
 using JLD2
 using Serialization
 using Setfield
 using Statistics
-using TimerOutputs
 using YAML
 using YAXArrays
-
-TO = TimerOutput()
 
 const MODEL_MEMBER_DELIM = "#"
 const MODEL_NAME_FIXES = Dict(
@@ -35,18 +33,20 @@ const MODEL_NAME_FIXES = Dict(
     "fio-esm" => "FIO-ESM"
 )
 
-@enum Level MODEL_LEVEL = 0 MEMBER_LEVEL = 1
-const LEVEL_LOOKUP = Dict(
-    "model" => MODEL_LEVEL,
-    "member" => MEMBER_LEVEL,
-    :model => MODEL_LEVEL,
-    :member => MEMBER_LEVEL
-)
-function getLevel(level::Union{String, Symbol})
-    msg = "Model level must be one of $(keys(LEVEL_LOOKUP)), but found: $(level)."
-    get(() -> throw(ArgumentError(msg)), LEVEL_LOOKUP, level)
-    return level in [:model, "model"] ? MODEL_LEVEL : MEMBER_LEVEL
-end
+abstract type AbstractLevel end
+abstract type Level <: AbstractLevel end
+abstract type NoLevel <: AbstractLevel end
+
+struct LevMember <: Level end
+struct LevModel <: Level end
+struct LevNone <: NoLevel end
+
+# Internal conversion
+toLevel(::Val{:member}) = LevMember()
+toLevel(::Val{:model})  = LevModel()
+toLevel(::Val{:none}) = LevNone()
+toLevel(l::Level) = l 
+toLevel(::Val{l}) where {l} = throw(ArgumentError("invalid level :$l, expected one of: :member, :model, :none"))
 
 
 mutable struct MetaData
@@ -127,40 +127,139 @@ function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String})
     return datamap
 end
 
+abstract type AbstractFnFormat end
+abstract type FilenameFormat <: AbstractFnFormat end
+abstract type ESMVTFormat <: AbstractFnFormat end
 
-const ESMVT_FORMAT_CMIP5 = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
-const ESMVT_FORMAT_CMIP6 = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
-const CMIP_FORMAT = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
+struct FF_CMIP <: FilenameFormat end
+struct FF_ESMVT_CMIP5 <: FilenameFormat end
+struct FF_ESMVT_CMIP6 <: FilenameFormat end
+struct FF_ESMVT <: ESMVTFormat end
 
-const FILENAME_FORMATS = Dict(
-    :cmip => CMIP_FORMAT,
-    :esmvaltool_cmip5 => ESMVT_FORMAT_CMIP5,
-    :esmvaltool_cmip6 => ESMVT_FORMAT_CMIP6
-)
+# Internal conversion
+toFF(::Val{:cmip}) = FF_CMIP()
+toFF(::Val{:esmvaltool_cmip5})  = FF_ESMVT_CMIP5()
+toFF(::Val{:esmvaltool_cmip6}) = FF_ESMVT_CMIP6()
+toFF(::Val{:esmvaltool}) = FF_ESMVT()
+toFF(f::AbstractFnFormat) = f 
+toFF(::Val{f}) where {f} = throw(ArgumentError("invalid filename format :$f, expected one of: :cmip, :esmvaltool, :esmvaltool_cmip5, :esmvaltool_cmip6"))
 
-@kwdef struct FilenameMeta
-    variable::String
-    tableid::String
-    model::String
-    experiment::String
-    variant::String
+formatString(::FF_CMIP) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
+formatString(::FF_ESMVT_CMIP5) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
+formatString(::FF_ESMVT_CMIP6) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
+
+function _parseFormat(format_string::String)
+    parts = split(format_string, "_")
+    return Dict(Symbol(lowercase(p)) => i for (i, p) in enumerate(parts))
+end
+# # precomputed at definition time
+const CMIP5_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP5()))
+const CMIP6_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP6()))
+const CMIP_FIELD_INDICES = _parseFormat(formatString(FF_CMIP()))
+
+struct FilenameMeta
     fn::String
-    grid::String # in CMIP standard only given for CMIP6, not CMIP5
-    timerange::String # only given in filenames of CMIP standard
-    mip::String # in CMIP standard only given for CMIP5, not CMIP6
+    path::String
+    variable::SubString{String}
+    tableid::SubString{String}
+    model::SubString{String}
+    experiment::SubString{String}
+    variant::SubString{String}
+    grid::SubString{String} # in CMIP standard only given for CMIP6, not CMIP5
+    mip::Union{Nothing, SubString{String}} # in CMIP standard only given for CMIP5, not CMIP6
+    timerange::Union{Nothing, SubString{String}}# only given in filenames of CMIP standard
+    member_id::String
+    
+    function FilenameMeta(
+        fn::String, 
+        path::String,
+        variable::SubString{String}, 
+        tableid::SubString{String}, 
+        model::SubString{String}, 
+        experiment::SubString{String}, 
+        variant::SubString{String}, 
+        grid::SubString{String}, 
+        mip::Union{Nothing, SubString{String}}, 
+        timerange::Union{Nothing, SubString{String}}
+    )
+        member_id = string(model, MODEL_MEMBER_DELIM, variant)
+        if !isnothing(mip) && lowercase(mip) == "cmip6"
+            member_id = string(member_id, "_", grid)
+        end
+        new(fn, path, variable, tableid, model, experiment, variant, grid, mip, timerange, member_id)
+    end
+end
+
+function FilenameMeta(;
+    fn::String,
+    path::String,
+    variable::SubString{String}, 
+    tableid::SubString{String}, 
+    model::SubString{String}, 
+    experiment::SubString{String}, 
+    variant::SubString{String}, 
+    grid::SubString{String}, 
+    mip::Union{Nothing, SubString{String}}, 
+    timerange::Union{Nothing, SubString{String}}
+)
+    FilenameMeta(fn, path, variable, tableid, model, experiment, variant, grid, mip, timerange)
 end
 
 
-@kwdef mutable struct ESMEnsemble
-    weights::Union{YAXArray, Nothing} 
-    variables::Dict{Union{Symbol, String}, YAXArray}
-    s::DataFrame   # styles for plotting
-    p::DataFrame   # parameters
+
+const META_FIELDS = fieldnames(FilenameMeta)
+const PreviewMap = Dict{String, Vector{FilenameMeta}}
+
+# Constraint has the same fields as FileNameMeta
+
+@kwdef struct Constraint
+    fn::Vector{String}
+    path::Vector{String}
+    variable::Vector{String}
+    tableid::Vector{String}
+    model::Vector{String}
+    experiment::Vector{String}
+    variant::Vector{String}
+    grid::Vector{String} # in CMIP standard only given for CMIP6, not CMIP5
+    mip::Vector{String} # in CMIP standard only given for CMIP5, not CMIP6
+    timerange::Vector{String} # only given in filenames of CMIP standard
 end
+
+
+function Constraint(constraint::Dict{Symbol, <:AbstractArray{String}})
+    names = fieldnames(FilenameMeta)
+    if any(x -> !(x in names), keys(constraint)) 
+        throw(ArgumentError("Allowed keys in constraint are: $names"))
+    end
+    vals = values(constraint)
+    if all(isempty, vals)
+        throw(ArgumentError("constraint dict is empty!"))
+    end
+    Constraint(
+        fn = get(constraint, :fn, String[]),
+        path = get(constraint, :path, String[]),
+        variable = get(constraint, :variable, String[]),
+        tableid = get(constraint, :tableid, String[]),
+        model = get(constraint, :model, String[]),
+        experiment = get(constraint, :experiment, String[]),
+        variant = get(constraint, :variant, String[]),
+        grid = get(constraint, :grid, String[]),
+        mip = get(constraint, :mip, String[]),
+        timerange = get(constraint, :timerange, String[])
+    )
+end
+
 
 # ::MIME"text/plain" : for REPL output
-function Base.show(io::IO, ::MIME"text/plain", x::Dict{String, YAXArray})
+function Base.show(io::IO, ::MIME"text/plain", x::DataMap) #Dict{String, YAXArray})
     println(io, "::DataMap")
+    for (k, v) in x
+        println(io, "$k: $(size(v))")
+    end
+end
+
+function Base.show(io::IO, ::MIME"text/plain", x::PreviewMap)
+    println(io, "::PreviewMap")
     for (k, v) in x
         println(io, "$k: $(size(v))")
     end
@@ -168,7 +267,7 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", x::Union{MetaData, FilenameMeta})
     fields = map(f -> (f, getfield(x, f)), fieldnames(typeof(x)))
-    fields = filter(x -> !isnothing(x[2]), fields)
+    fields = filter(field -> !isnothing(field[2]), fields)
     map(f -> println(io, f), fields)
 end
 
@@ -179,9 +278,5 @@ include("helper-functions.jl")
 include("diagnostics.jl")
 
 
-function resetTimer()
-    TimerOutputs.reset_timer!(TO)
-    @info "Timer reset."
-end
 
 end

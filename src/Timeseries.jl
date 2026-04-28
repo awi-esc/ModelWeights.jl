@@ -114,7 +114,7 @@ function filterTimeseries(
                 @warn "No data without any missing values!"
                 return nothing
             end
-            models_missing = Data.getByIdxModel(models_missing_vals, dim_symbol, indices_missing)
+            models_missing = Data.getByIdxModel(models_missing_vals, indices_missing)
             models_missing = DimensionalData.dims(models_missing, dim_symbol).val
             df = dim_symbol == :model ? df[model = Where(x -> !(x in models_missing))] :
                 df[member = Where(x -> !(x in models_missing))]

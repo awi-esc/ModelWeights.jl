@@ -35,25 +35,29 @@ end
 """
     getAtModel(data::YAXArray, dimension::Symbol, model::String)
 
-Return `data` where `dimension` (member or model) has value `model`.
+Return `data` where model dimension (:member or :model) has value `model`. No checks if `model` actually contained (TODO).
 """
-function getAtModel(data::YAXArray, dimension::Symbol, model::String)
-    throwErrorIfDimMissing(data, dimension)
-    return dimension == :model ? data[model=At(model)] : data[member=At(model)]
+function getAtModel(data::YAXArray, model::String)
+    dimension = modelDim(data)
+    return dimension == :model ? data[model = At(model)] : data[member = At(model)]
 end
 
 
 """
-    getByIdxModel(data::YAXArray, dimension::Symbol, indices::Vector)
+    getByIdxModel(data::YAXArray, indices::AbstractVector{Int})
 
-Return `data` where `dimension` (member or model) has value `model`.
+Return `data` at model dimension (:member or :model) at `indices`.
 """
-function getByIdxModel(data::YAXArray, dimension::Symbol, indices::Vector)
-    throwErrorIfDimMissing(data, dimension)
+function getByIdxModel(data::YAXArray, indices::AbstractVector{Int})
+   dimension = modelDim(data)
+    n = size(data, dimension)
+    if maximum(indices) > n
+        throw(ArgumentError("$dimension dimension only has $n elements."))
+    end
     return dimension == :model ? data[model=indices] : data[member=indices]
 end
 
-
+# TODO: recheck this function
 """
     indexModel(data::YAXArray, model_dims::Tuple{Symbol}, indices::Vector{Int})
 
@@ -77,16 +81,16 @@ end
 
 
 """ 
-    putAtModel!(data::YAXArray, dimension::Symbol, model::String, input)
+    putAtModel!(data::YAXArray, model::String, input)
 """
-function putAtModel!(data::YAXArray, dimension::Symbol, model::String, input)
-    throwErrorIfDimMissing(data, dimension)
+function putAtModel!(data::YAXArray, model::String, input)
+    dimension = modelDim(data)
     if dimension == :model
         data[model = At(model)] = input
     else
         data[member = At(model)] = input
     end
-    return nothing
+    return data
 end
 
 
@@ -112,13 +116,12 @@ end
 
 """
     combineModelsFromMultipleFiles(
-        data::Vector{AbstractArray}; 
-        model_names::Vector{String} = Vector{String}(),
+        data::AbstractVector{AbstractArray{<:YAXArray}}; 
+        model_names::Vector{String} = String[],
         meta::Union{Dict{String, T}, Nothing} = nothing,
-        dtype::String = "undef",
         new_dim::Symbol = :model,
         sorted::Bool = true
-) where T <: Any
+) where T
 
 Combine `data` from different files into a single YAXArray. 
 The meta data of the returned YAXArray is a combination of all values from all datasets 
@@ -139,24 +142,26 @@ vector entries in the metadata dictionary of the returned array are also sorted 
 """
 function combineModelsFromMultipleFiles(
     data::AbstractVector{<:YAXArray}; 
-    model_names::Vector{String} = Vector{String}(),
-    meta::Union{Dict{String, T}, Nothing} = nothing,
+    model_names::Vector{String} = String[],
+    meta::Union{Dict{String, String}, Nothing} = nothing,
     new_dim::Symbol = :model,
     sorted::Bool = true
-) where T <: Any
+)
     if isempty(data)
-        @warn "Data vector is empty!"
-        return nothing
+        #@warn "Data vector is empty!"
+        return data
     end
-    data_sizes = unique(map(size, data))
-    if length(data_sizes) != 1
+    #data_sizes = unique(size.(data)), the following is much faster and far less allocations!
+    first_size = size(data[1])
+    same_size = all(x -> size(x) == first_size, data)
+
+    if !same_size
         # dimensions must be identical except for time
-        if !all(map(x -> hasdim(x, :time), data))
-            msg = "Data is not defined on the same grid across all models, sizes are: $(data_sizes)"
-            throw(ArgumentError(msg))
+        if !all(x -> hasdim(x, :time), data)
+            throw(ArgumentError("Data is not defined on the same grid across all models!"))
         else
             # if difference only in time, use maximal possible timeseries and add missing values
-            alignTimeseries!(data)
+            data = alignTimeseries(data)
             #overlapTimeseries!(data)
         end
     end
@@ -184,17 +189,19 @@ function combineModelsFromMultipleFiles(
     end
     dimData = YAXArray(dimData.axes, dimData, meta_dict)
     if length(model_names) != length(unique(model_names))
-        duplicates = unique([m for m in model_names if sum(model_names .== m) > 1])
+        counts = countMap(model_names)
+        duplicates = [k for (k,v) in counts if v > 1]
         # handle duplicates
-        indices_remove = []
+        indices_remove = Int[]
         models = collect(lookup(dimData, new_dim))
         for m in duplicates
             indices = findall(x -> x == m, models)
             push!(indices_remove, indices[2:end]...)
         end
-        indices_keep = filter(x -> !(x in indices_remove), collect(1:length(models)))
+        indices_keep = [i for i in eachindex(models) if !(i in indices_remove)]
+        
         # TODO: fix to do this also with arbitrary new_dim name!
-        dimData = getByIdxModel(dimData, new_dim, indices_keep)
+        dimData = getByIdxModel(dimData, indices_keep)
     end
     return dimData
 end
@@ -231,9 +238,9 @@ Return a string of the form modelname#memberID[_grid] that identifies the corres
 
 For CMIP6 models the abbreviation of the grid is added to the model name.
 """
-function memberIDFromFilenameMeta(fn_meta::FilenameMeta, mip_era::String)
+function memberIDFromFilenameMeta(fn_meta::FilenameMeta)
     id = join([fn_meta.model, fn_meta.variant], MODEL_MEMBER_DELIM)
-    if lowercase(mip_era) == "cmip6"
+    if lowercase(fn_meta.mip) == "cmip6"
         id = join([id, fn_meta.grid], "_")
     end
     return id
@@ -270,7 +277,7 @@ end
     filterPathsSharedModels(
         paths::Vector{String}, 
         shared_models::Vector{String}, 
-        fn_format::Union{Symbol, String}
+        fn_format::Symbol
     )
 
 Every vector of paths in `all_paths` is filtered s.t. it only contains models or model 
@@ -280,47 +287,45 @@ members given in `shared_models`.
 - `paths`: contains paths to data files
 """
 function filterPathsSharedModels(
-    paths::Vector{String}, shared_models::Vector{String}, fn_format::Union{Symbol, String}
+    paths::AbstractVector{String}, 
+    shared_models::AbstractVector{String}, 
+    fn_format::FilenameFormat
 )
     if isempty(shared_models)
         @warn "No models shared across data!"
-        return Vector{String}()
+        return String[]
     end
-    constraint = Dict("models" => shared_models)
+    #constraint = Dict{String, Vector{String}}("models" => shared_models)
     mask = maskFileConstraints(paths, fn_format, constraint)
+
     return paths[mask]
 end
 
 """
     filterPathsSharedModels(
-        all_paths::Vector{Vector{String}}, 
-        level_shared::Level, 
-        fn_format::Union{Symbol, String}
+        all_paths::Vector{Vector{String}}, level_shared::Level, fn_format::Symbol
     )
 
 # Arguments:
 - `all_paths`: every entry refers to the paths to data files for the respective dataset
 """
 function filterPathsSharedModels(
-    all_paths::Vector{Vector{String}}, 
-    level_shared::Level,
-    fn_format::Union{Symbol, String}
+    all_paths::AbstractVector{<:AbstractVector{String}}, level::Level, fn_format::FilenameFormat
 )
-    shared = sharedModels(all_paths, level_shared, fn_format)
-    return map(paths -> filterPathsSharedModels(paths, shared, fn_format), all_paths)
+    shared = sharedModelsFromPaths(all_paths, level, fn_format)
+    return [filterPathsSharedModels(paths, shared, fn_format) for paths in all_paths]
 end
 
-function filterPathsSharedModels(
-    all_paths::Vector{Vector{String}},
-    level_shared::Union{String, Symbol}, 
-    fn_format::Union{Symbol, String}
-)
-    return filterPathsSharedModels(all_paths, getLevel(level_shared), fn_format)
-end
+
+# function filterPathsSharedModels(
+#     all_paths::AbstractVector{<:AbstractVector{String}}, level_shared::Symbol, fn_format::Symbol
+# )
+#     return filterPathsSharedModels(all_paths, level_shared, fn_format)
+# end
 
 
 function modelsFromMemberIDs(members::AbstractVector{<:AbstractString}; uniq::Bool=false)
-    models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), members)
+    models = [String(first(split(x, MODEL_MEMBER_DELIM))) for x in members]
     return uniq ? unique(models) : models
 end
 
@@ -333,9 +338,9 @@ end
 function membersFromMemberIDs(data::YAXArray)
     throwErrorIfDimMissing(data, :member)
     ids = lookup(data, :member)
-    members = map(x -> String(split(x, MODEL_MEMBER_DELIM)[2]), ids)
+    members = [String(split(x, MODEL_MEMBER_DELIM)[2]) for x in ids]
     # remove added grid 
-    members = map(x -> String(split(x, "_")[1]), members)
+    members = [first(String(split(x, "_"))) for x in members]
     return members
 end
 
@@ -355,7 +360,7 @@ have same length as `latitudes`.
 """
 function areaWeightMatrix(
     latitudes::AbstractVector{T}, mask::AbstractArray{Bool}
-) where T<:Number #where {T <: Union{Missing, Bool}}
+) where T <: Number #where {T <: Union{Missing, Bool}}
     if size(mask, 2) != length(latitudes)
         throw(ArgumentError("Second dimension of mask must be lat and equal $(length(latitudes)), found:$(size(mask))"))
     end
@@ -379,26 +384,26 @@ function checkDataStructure(path_data::String, dir_per_var::Bool)
 end
 
 
-"""
-    checkConstraint(constraint::Union{Dict, Nothing})
+# """
+#     checkConstraint(constraint::Union{Dict, Nothing})
 
-Throw error if entries (except for level_shared) do not map to a vector of Strings.
+# Throw error if entries (except for level_shared) do not map to a vector of Strings.
 
-Used to provide specific error messages of values that were not specified correctly.
-"""
-function checkConstraint(constraint::Union{Dict, Nothing})
-    if !isnothing(constraint)
-        for (k, v) in constraint
-            if !(k in ["level_shared", "timeseries"]) && !isa(v, Vector{String})
-                throw(ArgumentError("Constraint must map to a vector of Strings for key $k, found: $(typeof(v))"))
-            end
-            if k == "timeseries" && !isa(v, Dict)
-                throw(ArgumentError("Constraint timeseries must map to a Dictionary!"))
-            end
-        end
-    end
-    return nothing
-end
+# Used to provide specific error messages of values that were not specified correctly.
+# """
+# function checkConstraint(constraint::Union{Dict, Nothing})
+#     if !isnothing(constraint)
+#         for (k, v) in constraint
+#             if !(k in ["level_shared", "timeseries"]) && !isa(v, Vector{String})
+#                 throw(ArgumentError("Constraint must map to a vector of Strings for key $k, found: $(typeof(v))"))
+#             end
+#             if k == "timeseries" && !isa(v, Dict)
+#                 throw(ArgumentError("Constraint timeseries must map to a Dictionary!"))
+#             end
+#         end
+#     end
+#     return nothing
+# end
 
 
 """
@@ -691,29 +696,36 @@ function structToDict(data)
 end
 
 
-function alignTimeseries!(data::Vector{<:YAXArray})
-    if length(unique(map(x -> size(otherdims(x, :time)), data))) != 1
+function alignTimeseries(data::Vector{<:YAXArray})
+    isempty(data) && return data
+    T = mapreduce(eltype, promote_type, data)  # finds a common type across all arrays
+
+    none_time_dims = otherdims(first(data), :time)
+    ref_size = size(none_time_dims)
+    if !all(x -> size(otherdims(x, :time)) == ref_size, data)
         throw(ArgumentError("Dimension sizes must be identical across data to align timeseries!"))
     end
-    if !all(map(x -> hasdim(x, :time), data))
+    if !all(x -> hasdim(x, :time), data)
         throw(ArgumentError("All datasets must have time dimension to align timeseries!"))
     end
+    year_min = minimum(map(x -> first(dims(x, :time)), data))
+    year_max = maximum(map(x -> last(dims(x, :time)), data))
     
-    year_min = minimum(map(x -> minimum(map(Dates.year, dims(x, :time))), data))
-    year_max = maximum(map(x -> maximum(map(Dates.year, dims(x, :time))), data))
     nb_years = year_max - year_min + 1
-    timerange = DateTime(year_min):Year(1):DateTime(year_max)
+    timerange = year_min:year_max
     
-    none_time_dims = otherdims(data[1], :time)
-    s = map(length, none_time_dims)
-    T = Union{Missing, Float32}
+    time_axis = Dim{:time}(timerange)
+    data_new = Vector{YAXArray}(undef, length(data))
+    full_axes = (none_time_dims..., time_axis)
     for (i, ds) in enumerate(data)
         # if ds allows missing values, undef is initialized with missing
-        dat = Array{T}(undef, s..., nb_years)
-        ds_extended = YAXArray((none_time_dims..., Dim{:time}(timerange)), dat, ds.properties)
-        ds_extended[time = Where(x -> Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds
-        data[i] = ds_extended    
+        dat = Array{T}(undef, ref_size..., nb_years)
+        ds_extended = YAXArray(full_axes, dat, ds.properties)        
+        time_idx = findall(in(dims(ds, :time)), timerange)
+        ds_extended[time = time_idx] = ds
+        data_new[i] = ds_extended    
     end
+    return data_new
 end
 
 
@@ -830,7 +842,7 @@ function resolvePathsFromMetaData(
         end
         if has_constraint
             bps = copy(base_paths)
-            constrainSubdirs!(base_paths, get(constraint, "base_subdirs", Vector{String}()))
+            constrainSubdirs!(base_paths, get(constraint, "base_subdirs", String[]))
             if isempty(base_paths)
                 throw(ArgumentError("$(bps) dont match with constraint base_subdirs: $(constraint["base_subdirs"])!"))
             end
@@ -849,101 +861,107 @@ function resolvePathsFromMetaData(
     return vcat(paths_to_files...)
 end
 
+
+# function getTimerange(path::String, variable::SubString{String})
+#     NCDatasets.Dataset(path, "r") do ds
+#         if !haskey(ds, variable)
+#             throw(ArgumentError("Variable $variable not found in $path"))
+#         end
+#         if !("time" in dimnames(ds[variable]))
+#             return (0,0)
+#         end
+#         times = ds["time"]
+#         return (Dates.year(first(times)), Dates.year(last(times)))
+#     end
+# end
+
+
+
 """
-    parseFilename(filename::String, format::String)
+    _parseFilename(filename::String, format_string::String)
 
 Retrieve information from `filename` and return it as an object of type FilenameMeta.
+
+# Arguments:
+- `filename::String`: can be just filename or enitre path to filename, e.g. mydir/subdir/my_file.nc, my_file.nc
+- `format_string::String`:
 """
-function parseFilename(filename::String, format::String)
-    parts_format = split(format, "_")
-    parts_fn = split(basename(splitext(filename)[1]) , "_")
-    if length(parts_format) != length(parts_fn)
-        throw(ArgumentError("File $filename doesn't align with format $format !"))
+function _parseFilename(filename::String, path::String, field_indices::Dict{Symbol, Int})
+    parts_fn = split(filename, "_")
+    if length(field_indices) != length(parts_fn)
+        throw(ArgumentError("File $filename doesn't align with given format!"))
     end
-    d = Dict{Symbol, String}()
-    for k in fieldnames(FilenameMeta)
-        indices = findall(x -> Symbol(lowercase(x)) == k, parts_format)
-        if length(indices) > 1
-            throw(ArgumentError("Invalid filename format: $format, $x appears more than once!"))
-        elseif !isempty(indices)
-            d[k] = parts_fn[indices[1]]
-        end
+    function field_to_val_in_fn(field::Symbol) 
+        idx = get(field_indices, field, nothing)
+        return isnothing(idx) ? nothing : parts_fn[idx]
     end
     return FilenameMeta(
-        variable = get(d, :variable, ""),
-        tableid = get(d, :tableid, ""),
-        model =  get(d, :model, ""),
-        experiment = get(d, :experiment, ""),
-        variant = get(d, :variant, ""),
         fn = filename,
-        grid = get(d, :grid, ""),
-        timerange = get(d, :timerange, ""),
-        mip = get(d, :mip, "")
+        path = path,
+        variable = field_to_val_in_fn(:variable),
+        tableid = field_to_val_in_fn(:tableid),
+        model =  field_to_val_in_fn(:model),
+        experiment = field_to_val_in_fn(:experiment),
+        variant = field_to_val_in_fn(:variant),
+        grid = field_to_val_in_fn(:grid),
+        mip = field_to_val_in_fn(:mip),
+        timerange = field_to_val_in_fn(:timerange)
     )
 end
 
-function parseFilename(filename::String, format::Symbol)
-    if format == :esmvaltool
-        n = length(split(filename, "_"))
-        format = n == length(split(ESMVT_FORMAT_CMIP5, "_")) ? :esmvaltool_cmip5 : :esmvaltool_cmip6
+
+function parsePath(path::String, fn_format::T
+) where {T <: AbstractFnFormat}
+    filename = first(splitext(basename(path)))
+    if isa(fn_format, FilenameFormat)
+        isa(fn_format, FF_ESMVT_CMIP6) && return _parseFilename(filename, path, CMIP6_FIELD_INDICES)
+        isa(fn_format, FF_ESMVT_CMIP5) && return _parseFilename(filename, path, CMIP5_FIELD_INDICES)
+        return _parseFilename(filename, path, CMIP_FIELD_INDICES)
+    else
+        # only other option is ESMVT, which must be differentiated between cmip5 and cmip6
+        format_dict = length(split(filename, "_")) == 7 ? CMIP6_FIELD_INDICES : CMIP5_FIELD_INDICES
+        return _parseFilename(filename, path, format_dict)
     end
-    err_msg = "Only filename formats $(keys(FILENAME_FORMATS)) and :esmvaltool are defined. Found: $format."
-    fn_format = get(() -> throw(ArgumentError(err_msg)), FILENAME_FORMATS, format)
-    return parseFilename(filename, fn_format)
 end
 
 
-function isRetained(fn_meta::FilenameMeta, constraint::Dict)
-    fn_err(k::Symbol) = throw(ArgumentError("$k is not a valid metadata key for filenames. Allowed are: $(fieldnames(FilenameMeta))"))
-    isOk(meta::Dict, key_meta::Symbol, constraint_vals::Vector{String}) = begin
-        keep = true
-        if !isempty(constraint_vals)
-            value = get(() -> fn_err(key_meta), meta, key_meta)
-            grid_val = get(() -> fn_err(:grid), meta, :grid)
-            variant_val = get(() -> fn_err(:variant), meta, :variant)
-            if isempty(value)
-                keep = true
-            else
-                # Model constraint can refer to model or member (given as model#variant)
-                if key_meta == :model
-                    constraint_mms = map(x -> string.(split(x, MODEL_MEMBER_DELIM)), constraint_vals)
-                    constraint_models = map(x -> x[1], constraint_mms)
-                    constraint_members = map(constraint_mms) do x
-                        length(x) == 2 ? string.(split(x[2], "_")) : [nothing]
-                    end
-                    constraint_variants = map(x -> x[1], constraint_members)
-                    # for cmip6 models we added the grids to the member id (model#variant_grid)
-                    constraint_grids = map(constraint_members) do x
-                        length(x) == 2 ? x[2] : nothing
-                    end
-                    values_ok = map(constraint_models, constraint_variants, constraint_grids) do model, variant, grid
-                        value == model && (absent(variant) || variant_val == variant) && (absent(grid) || grid_val == grid)
-                    end
-                    keep = any(values_ok)
-                elseif key_meta == :fn
-                    keep = any(map(x -> occursin(x, value), constraint_vals))
-                else
-                    keep = value in constraint_vals
-                end
-            end
-        end
-        if !keep
-            @debug "File with meta info $fn_meta excluded due to constraint $key_meta ($constraint_vals)"
-        end
-        return keep
+function isRetained(fn_meta::FilenameMeta, constraint::Constraint)
+    # handle :model, TODO: if refers to members
+    allowed_models = getfield(constraint, :model)
+    if !isempty(allowed_models)
+        !(fn_meta.model in allowed_models) && return false
     end
-    meta = structToDict(fn_meta)
-    return isOk(meta, :variable, get(constraint, "variables", Vector{String}())) &&
-        isOk(meta, :model, get(constraint, "models", Vector{String}())) &&
-        isOk(meta, :variant, get(constraint, "variants", Vector{String}())) &&
-        isOk(meta, :experiment, get(constraint, "experiments", Vector{String}())) &&
-        isOk(meta, :mip, get(constraint, "mips", Vector{String}())) &&
-        isOk(meta, :timerange, get(constraint, "timeranges", Vector{String}())) &&
-        isOk(meta, :grid, get(constraint, "grids", Vector{String}())) &&
-        isOk(meta, :tableid, get(constraint, "table_ids", Vector{String}())) &&
-        isOk(meta, :fn, get(constraint, "filenames", Vector{String}()))
+    for field in META_FIELDS
+        field in [:fn, :model] && continue # handled separately
+        allowed_vals = String[]
+        try 
+            allowed_vals = getfield(constraint, field)
+        catch e 
+        end
+        isempty(allowed_vals) && continue # if empty, all are allowed
+        val = getfield(fn_meta, field)
+        !(val in allowed_vals) && return false
+    end
+    # handle filename (:fn) # TODO: really necessary?
+    # elements_in_fn = getfield(constraint, :fn)
+    # if !isempty(elements_in_fn)
+    #     # keep = any(map(x -> occursin(x, value), constraint_vals))
+    # end
+    return true
 end
 
+# function isRetainedTimeseries(fn_meta::FilenameMeta, constraint_ts::Dict{String, Int})
+#     ds = open_dataset(fn_meta.path)
+#     ds_var = ds[Symbol(fn_meta.variable)]
+#     if !(:time in dimNames(ds_var))
+#         return true
+#     else
+#         # NOTE: just YEAR and MONTH are saved in the time dimension
+#         times = [DateTime(Dates.year(x), Dates.month(x)) for x in lookup(ds_var, :time)]
+#         indices_time = indicesTimeseries(times, constraint_ts)
+#         return !isempty(indices_time)
+#     end 
+# end
 
 function collectNCFilePaths(path_data_dir::String)
     if !isdir(path_data_dir)
@@ -968,8 +986,8 @@ in `constraint` remain.
 must be present for an id to be retained.
 """
 function constrainMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict)
-    timerange_constraints = get(constraint, "timeranges", Vector{String}())
-    alias_constraints = get(constraint, "aliases", Vector{String}())
+    timerange_constraints = get(constraint, "timeranges", String[])
+    alias_constraints = get(constraint, "aliases", String[])
     timerangeOk(attrib::MetaData) = any(x -> attrib.timerange == x, timerange_constraints)
     aliasOk(attrib::MetaData) = any(x -> attrib.alias == x, alias_constraints)
 
@@ -985,8 +1003,8 @@ function constrainMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict)
     elseif !isempty(alias_constraints)
         filter!(aliasOk, meta_attributes)
     end
-    stats_constraints = get(constraint, "statistics", Vector{String}())
-    vars_constraints = get(constraint, "variables", Vector{String}())
+    stats_constraints = get(constraint, "statistics", String[])
+    vars_constraints = get(constraint, "variables", String[])
     stats_ok(attrib::MetaData) = isempty(stats_constraints) || any(x -> attrib.statistic == x, stats_constraints)
     vars_ok(attrib::MetaData) = isempty(vars_constraints) || any(x -> attrib.variable == x, vars_constraints)
     filter!(stats_ok, meta_attributes)
@@ -1535,26 +1553,35 @@ end
 
 
 """
-    metaDataChecksCMIP(meta::Dict, path::String)
+    checkFnMetaInconsistenciesCMIP(meta::Dict, path::String)
 
 Check model names as retrieved from the metadata for potential inconsistencies wrt filename.
 """
-function metaDataChecksCMIP(meta::Dict{String, T}, path::String) where T <: Any
-    name = meta[getCMIPModelsKey(Dict(meta))]
-    if !occursin(name, basename(path)) && !(name in keys(MODEL_NAME_FIXES))
-        @warn "model name as read from metadata of stored .nc file ($name) and used as dimension name is not identical to name appearing in filename $(basename(path))."
+function fixModelNameInconsistenciesCMIP(props::Dict, fn_meta::FilenameMeta)
+    model_from_file_properties = props[getCMIPModelsKey(props)]
+    if occursin(model_from_file_properties, fn_meta.model)
+        return fn_meta.member_id
+    else
+        # names differ between what is inferred from filename and what is inside stored meta data
+        name = get(MODEL_NAME_FIXES, fn_meta.model, nothing)
+        if isnothing(name)
+            # not known yet
+            throw(KeyError("model name as read from metadata of stored .nc file ($model_from_file_properties) and used as dimension name is not identical to name inferred from filename ($(fn_meta.model))."))
+        else
+            return replace(fn_meta.member_id, fn_meta.model => name)
+        end
     end 
-    return nothing
 end
 
 
-function maskFileConstraints(
-    paths::Vector{String}, fn_format::Union{Symbol, String}, constraint::Dict
-)
-    filenames = first.(splitext.(basename.(paths)))
-    filenames_meta = parseFilename.(filenames, fn_format)
-    return isRetained.(filenames_meta, fill(constraint, length(filenames_meta)))
-end
+# function maskFileConstraints(
+#     paths::Vector{String}, fn_format::FilenameFormat, constraint::Constraint
+# )
+#     filenames = first.(splitext.(basename.(paths)))
+#     filenames_meta = [parseFilename(fn, fn_format) for fn in filenames]
+#     #return isRetained.(filenames_meta, fill(constraint, length(filenames_meta)))
+#     return isRetained.(filenames_meta, constraint)
+# end
 
 
 """
@@ -1600,8 +1627,8 @@ function apply!(
     dm::DataMap,
     fn::Function,
     args...; 
-    ids::AbstractVector{T} = Vector{String}(),
-    ids_new::AbstractVector{T} = Vector{String}(),
+    ids::AbstractVector{T} = String[],
+    ids_new::AbstractVector{T} = String[],
     kwargs...
 ) where T <: Union{String, Symbol}
 
@@ -1619,8 +1646,8 @@ end
         dm::DataMap,
         fn::Function,
         args...; 
-        ids::AbstractVector{T} = Vector{String}(),
-        ids_new::AbstractVector{T} = Vector{String}(),
+        ids::AbstractVector{T} = String[],
+        ids_new::AbstractVector{T} = String[],
         kwargs...
     )
 
@@ -1633,16 +1660,16 @@ same keys as in `dm` are used.
 - `dm::DataMap`: data.
 - `fn::Function`: function to be applied.
 - `args...`: positional arguments for `fn`.
-- `ids::AbstractVector{T}=Vector{String}()`: keys for data on which `fn` is applied; if empty all keys of `dm` are used.
-- `ids_new::AbstractVector{T}=Vector{String}()`: keys used in new datamap; if empty `ids` are used instead.
+- `ids::AbstractVector{T}=String[]`: keys for data on which `fn` is applied; if empty all keys of `dm` are used.
+- `ids_new::AbstractVector{T}=String[]`: keys used in new datamap; if empty `ids` are used instead.
 - `kwargs...`: keyword arguments for `fn`.
 """
 function apply(
     dm::DataMap,
     fn::Function,
     args...; 
-    ids::AbstractVector{T} = Vector{String}(),
-    ids_new::AbstractVector{T} = Vector{String}(),
+    ids::AbstractVector{T} = String[],
+    ids_new::AbstractVector{T} = String[],
     kwargs...
 ) where T <: Union{String, Symbol}
 
@@ -1657,20 +1684,27 @@ end
 
 
 """
-    indicesTimeseries(times::Vector, constraint_ts::Dict)
+    indicesTimeseries(times::Vector, constraint_ts::Dict{String, Int})
 
 Get indices of `times` that are exactly aligned with `start_y` and `end_y` given in `constraint_ts`.
 If no values are given, return indices for entire vector `times`.
 
 """
-function indicesTimeseries(times::Vector{DateTime}, constraint_ts::Dict)
-    start_y = get(constraint_ts, "start_y", -Inf)
-    end_y = get(constraint_ts, "end_y", Inf)
-    indices_time = findall(t -> Dates.year(t) >= start_y && Dates.year(t) <= end_y, times)
+function indicesTimeseries(
+    #times::Vector{DateTime}, 
+    times::Vector{<:Integer},
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}
+)
+    start_y = constraint_ts.start_year
+    end_y = constraint_ts.end_year
+    #indices_time = findall(t -> Dates.year(t) >= start_y && Dates.year(t) <= end_y, times)
+    indices_time = searchsortedfirst(times, start_y) : searchsortedlast(times, end_y)
     times = times[indices_time]
     # only use data that's exactly from start to end!
-    start_wrong = start_y != -Inf && (!isempty(times) && start_y != minimum(map(Dates.year, times)))
-    end_wrong   = end_y != Inf && (!isempty(times) && end_y != maximum(map(Dates.year, times)))
+    # start_wrong = start_y != typemin(Int) && (!isempty(times) && start_y != minimum(map(Dates.year, times)))
+    # end_wrong   = end_y != typemax(Int) && (!isempty(times) && end_y != maximum(map(Dates.year, times)))
+    start_wrong = start_y != typemin(Int) && (!isempty(times) && start_y != minimum(times))
+    end_wrong   = end_y != typemax(Int) && (!isempty(times) && end_y != maximum(times))
     return (isempty(times) || start_wrong || end_wrong) ? [] : indices_time
 end
 
@@ -1786,8 +1820,7 @@ function initYAX(dimensions)
 end
 
 function emptyYAX(arr::YAXArray)
-    #return all(ismissing.(arr))
-    return all(ismissing, arr) # does not allocate!
+    return all(ismissing, arr) # does not allocate! compare to: all(ismissing.(arr))
 end
 
 
@@ -1856,7 +1889,7 @@ end
 #     loaded_data::DataMap, 
 #     ids::Vector{String}
 # )
-#     model_constraints = map(x -> get(x, "models", Vector{String}()), constraints)
+#     model_constraints = map(x -> get(x, "models", String[]), constraints)
 #     if length(unique(model_constraints)) == 1 && !isempty(model_constraints[1]) 
 #         model_constraints = model_constraints[1:1]
 #     end

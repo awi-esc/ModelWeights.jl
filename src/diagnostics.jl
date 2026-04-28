@@ -17,14 +17,12 @@ function globalMeans(data::YAXArray)
     throwErrorIfNotLonLat(data)
     latitudes = collect(lookup(data, :lat))
 
-    @timeit TO "build mask" begin 
-        spatial = [1,2]
-        other = filter(x -> !(x in spatial), 1:ndims(data))
-        mask = falses(size(data)...)
-        for I in CartesianIndices(axes(data)[other])
-            indices = (:,:,I.I...)
-            @views mask[indices...] .= ismissing.(@views data[indices...])
-        end
+    spatial = [1,2]
+    other = filter(x -> !(x in spatial), 1:ndims(data))
+    mask = falses(size(data)...)
+    for I in CartesianIndices(axes(data)[other])
+        indices = (:,:,I.I...)
+        @views mask[indices...] .= ismissing.(@views data[indices...])
     end
     aw_mat = areaWeightMatrix(latitudes, Array(mask)) # is normalized, lon x lat
     # make sure that, if provided, units are identical across models 
@@ -37,7 +35,7 @@ function globalMeans(data::YAXArray)
     end
 
     temp = aw_mat .* Array(data)
-    gms = @timeit TO "last step" dropdims(mapslices(x -> sum(skipmissing(x)), temp; dims=(1, 2)); dims=(1,2))
+    gms = dropdims(mapslices(x -> sum(skipmissing(x)), temp; dims=(1, 2)); dims=(1,2))
     return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), deepcopy(data.properties))
 end
 

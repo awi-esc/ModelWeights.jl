@@ -46,7 +46,7 @@ the same models (MODEL_LEVEL) or members (MEMBER_LEVEL).
 If no models are shared across datasets, return the input `datamap`.
 """
 function subsetModelData(
-    dm::DataMap, level::Level = MEMBER_LEVEL; ids::Vector{String}=Vector{String}()
+    dm::DataMap, level::Symbol = :member; ids::Vector{String}=Vector{String}()
 )
     shared_models = sharedModels(dm, level)
     if isempty(shared_models)
@@ -63,14 +63,12 @@ function subsetModelData(
     return subset
 end
 
-function subsetModelData(
-    dm::DataMap, level::Union{String, Symbol}; ids::Vector{String}=Vector{String}()
-)
-    subsetModelData(dm, getLevel(level); ids)
-end
+# function subsetModelData(dm::DataMap, level::Symbol; ids::Vector{String}=Vector{String}())
+#     subsetModelData(dm, getLevel(level); ids)
+# end
 
 function subsetModelData!(
-    dm::DataMap, level::Level = MEMBER_LEVEL; ids::Vector{String}=Vector{String}()
+    dm::DataMap, level::Symbol = :member; ids::Vector{String} = Vector{String}()
 )
     shared_models = sharedModels(dm, level)
     if isempty(shared_models)
@@ -86,51 +84,86 @@ function subsetModelData!(
     return nothing
 end
 
-function subsetModelData!(
-    dm::DataMap, level::Union{String, Symbol}; ids::Vector{String}=Vector{String}()
-)
-    subsetModelData!(dm, getLevel(level); ids)
-end
+# function subsetModelData!(dm::DataMap, level::Symbol; ids::Vector{String}=Vector{String}())
+#     subsetModelData!(dm, getLevel(level); ids)
+# end
 
 
 function sharedModels(data::DataMap, level::Level)
-    return level == MEMBER_LEVEL ? sharedLevelMembers(data) : sharedLevelModels(data)
+    return isa(level, LevMember) ? sharedLevelMembers(data) : sharedLevelModels(data)
 end
 
-function sharedModels(data::DataMap, level::Union{String, Symbol})
-    return sharedModels(data, getLevel(level))
-end
+# function sharedModels(data::DataMap, level::Symbol)
+#     return sharedModels(data, getLevel(level))
+# end
 
-"""
-    sharedModels(
-        all_paths::Vector{Vector{String}},
-        level_shared::Level,
-        fn_format::Union{Symbol, String}
-    )
+# """
+#     sharedModels(
+#         all_paths::Vector{Vector{String}},
+#         level_shared::Level,
+#         fn_format::Symbol
+#     )
 
-# Arguments:
-- `all_paths`: every entry refers to the paths to data files for the respective dataset
-"""
-function sharedModels(
-    all_paths::Vector{Vector{String}}, 
-    level_shared::Level, 
-    fn_format::Union{Symbol, String}
+# # Arguments:
+# - `all_paths`: every entry refers to the paths to data files for the respective dataset
+# """
+# function sharedModelsFromPaths(
+#     all_paths::Vector{Vector{String}}, level::Level, fn_format::FilenameFormat
+# )
+#     filenames_all_ds = map(paths -> first.(splitext.(basename.(paths))), all_paths)
+#     filenames_meta_all_ds = map(names -> parseFilename.(names, fn_format), filenames_all_ds)
+#     models_all = map(meta_data -> map(x -> x.model, meta_data), filenames_meta_all_ds)
+#     if isa(level, LevMember)
+#         variants_all = map(meta_data -> map(x -> x.variant, meta_data), filenames_meta_all_ds)
+#         grids_all = map(meta_data -> map(x -> x.grid, meta_data), filenames_meta_all_ds)
+#         models_all = map(models_all, variants_all, grids_all) do models, variants, grids
+#             map(models, variants, grids) do m, v, g
+#                 member = join([m, v], MODEL_MEMBER_DELIM)
+#                 member = !isnothing(g) ? join([member, g], "_") : member
+#             end
+#         end
+#     end
+#     return reduce(intersect, models_all)
+# end
+
+function sharedModelsFromPaths(
+    all_paths::Vector{Vector{String}}, level::Level, fn_format::AbstractFnFormat
 )
-    filenames_all_ds = map(paths -> first.(splitext.(basename.(paths))), all_paths)
-    filenames_meta_all_ds = map(names -> parseFilename.(names, fn_format), filenames_all_ds)
-    models_all = map(meta_data -> map(x -> x.model, meta_data), filenames_meta_all_ds)
-    if level_shared == MEMBER_LEVEL
-        variants_all = map(meta_data -> map(x -> x.variant, meta_data), filenames_meta_all_ds)
-        grids_all = map(meta_data -> map(x -> x.grid, meta_data), filenames_meta_all_ds)
-        models_all = map(models_all, variants_all, grids_all) do models, variants, grids
-            map(models, variants, grids) do m, v, g
-                member = join([m, v], MODEL_MEMBER_DELIM)
-                member = !isnothing(g) ? join([member, g], "_") : member
-            end
+    models_all = Vector{Set{String}}(undef, length(all_paths))
+    @inbounds for (i,paths) in pairs(all_paths)
+        models = Set{String}()
+        @inbounds for p in paths
+            #name = first(splitext(basename(p)))
+            meta = parseFilename(p, fn_format)
+            push!(models, _model_key(meta, level))
         end
+        models_all[i] = models
     end
-    return reduce(intersect, models_all)
+    return collect(reduce(intersect, models_all))
 end
+
+# dispatch instead of if/isa branching
+_model_key(meta, ::LevModel) = meta.model
+
+function _model_key(meta, ::LevMember)
+    key = string(meta.model, MODEL_MEMBER_DELIM, meta.variant)
+    return isnothing(meta.grid) ? key : string(key, "_", meta.grid)
+end
+
+
+function sharedModelsFromMeta(meta_data::Vector{Vector{FilenameMeta}}, level::Level)
+    models_per_dataset = Vector{Set{String}}(undef, length(meta_data))
+    @inbounds for (i, meta_data_files) in pairs(meta_data)
+        models = Set{String}()
+        @inbounds for meta in meta_data_files            
+            push!(models, _model_key(meta, level))
+        end
+        models_per_dataset[i] = models
+    end
+    return collect(reduce(intersect, models_per_dataset))
+end
+
+
 
 
 """
@@ -375,7 +408,6 @@ end
 
 function listModels(data::YAXArray)
     model_dim = modelDim(data)
-
     if model_dim == :member
         models = modelsFromMemberIDs(data; uniq=false)
         members = membersFromMemberIDs(data)
@@ -386,20 +418,19 @@ function listModels(data::YAXArray)
     return DataFrame(model = collect(models), run = members)
 end
 
-
 ### ----------------------------------------------------------------------------------------
 ###                                LOADING DATA                                           
 ### ----------------------------------------------------------------------------------------
 """
     loadPreprocData(
         paths::Vector{String},
-        filename_format::Union{Symbol, String};
+        filename_format::Symbol;
         sorted::Bool = true, 
         dtype::String = "cmip",
-        names::Vector{String} = Vector{String}(),
-        meta_info::Union{Dict{String, T}, Nothing} = nothing,
-        constraint_ts::Union{Dict, Nothing} = nothing
-    ) where T <: Any
+        model_names::Vector{String} = Vector{String}(),
+        meta_info::Union{Dict{String, String}, Nothing} = nothing,
+        constraint_ts::Dict{String, Int} = Dict{String, Int}()
+    )
 
 Return data loaded from `paths` as single YAXArray. 
 
@@ -409,226 +440,333 @@ is inferred from the filenames (in `paths`), or if `meta_info` has key 'variable
 respective value is used.
 """
 function loadPreprocData(
-    paths::Vector{String},
-    filename_format::Union{Symbol, String};
-    sorted::Bool = true, 
+    meta_data::Vector{FilenameMeta};
+    #filename_format::AbstractFnFormat;
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     dtype::String = "cmip",
-    model_names::Vector{String} = Vector{String}(),
-    meta_info::Union{Dict{String, T}, Nothing} = nothing,
-    constraint_ts::Union{Dict, Nothing} = nothing
-) where T <: Any
-    is_cmip = lowercase(dtype) == "cmip"
-    data = Vector{YAXArray}(undef, length(paths))
-    if isempty(model_names) && is_cmip
-        model_names = Vector{String}(undef, length(paths))
-    end
-    new_dim = is_cmip ? :member : :model
-    filenames = first.(splitext.(basename.(paths)))
-    filenames_meta = parseFilename.(filenames, filename_format)
+    sorted::Bool = true,
+    meta_info::Union{Dict{String, String}, Nothing} = nothing
+)
+    data = YAXArray[]
+    model_names = String[]
+    new_dim = dtype == "cmip" ? :member : :model
     
-    for (i, (path, meta)) in enumerate(zip(paths, filenames_meta))
-        @debug "processing file.." * path
-        ds = open_dataset(path)
-        clim_var = !isnothing(meta_info) ? get(meta_info, "variable", meta.variable) : meta.variable
-        ds_var = nothing
-        try 
-            ds_var = ds[clim_var]
+    # iterate over meta data for each file
+    @inbounds for (i, meta) in enumerate(meta_data)
+        @debug "processing file $(meta.path) ..."
+        ds = open_dataset(meta.path)
+        #clim_var = !isnothing(meta_info) ? get(meta_info, "variable", meta.variable) : meta.variable
+        ds_var = try
+            ds[Symbol(meta.variable)]
         catch e
-            @error "Variable '$clim_var' according to filename format '$(string(filename_format))' not found in $path !"
-            throw(e)
+            if e isa KeyError
+                throw(ArgumentError("Variable $(meta.variable) not found in $(meta.path)!"))
+            else
+                rethrow()
+            end
         end
         # if clim_var == "amoc"
         #     ds_var = ds["msftmz"]
-        # end
-        props = Dict{String, Any}(ds_var.properties) # metadata just for this file!
-        if clim_var == "msftmz"
-            sector = get(ds, "sector", nothing)
-            if !isnothing(sector)
-                merge!(props, sector.properties)
-            end
-        end
-        props["path"] = path 
-        if is_cmip
-            metaDataChecksCMIP(ds.properties, path)
-            mip = get(ds.properties, "project_id", nothing) # for CMIP5
-            mip = isnothing(mip) ? get(ds.properties, "mip_era", nothing) : mip # for CMIP6
-            if isnothing(mip)
-                msg = "dtype set to $(dtype). Only CMIP5+CMIP6 supported, yet neither project_id nor mip_era found in data at $path !"
-                @warn msg
-            else
-                member_id_temp = memberIDFromFilenameMeta(meta, mip)
-                model_id_temp = String(split(member_id_temp, MODEL_MEMBER_DELIM)[1])
-                model_id = fixModelNameMetadata(model_id_temp)
-                model_names[i] = replace(member_id_temp, model_id_temp => model_id)
-                props["mip_era"] = mip
-            end
-        end
+        # end        
+        # apply timeseries constraint
         dimension_names = dimNames(ds_var)
-        #dimensions = dims(ds_var)
-        #dimension_names = dimnames(ds_var)
 
-        dimensions = Vector(undef, length(dimension_names))
+        ndim = length(dimension_names)
+        dimensions = Vector(undef, ndim)
         for (idx_dim, d) in enumerate(dimension_names)
-            if d == :time
-                continue
-            end
+            if d != :time
             # if d in ["bnds", "string21", "time"]
             #     continue
             # end
-            dimensions[idx_dim] = Dim{d}(Array(dims(ds_var, d)))
-            #dimensions[idx_dim] = Dim{Symbol(d)}(collect(ds_var[d][:]))
+                dimensions[idx_dim] = Dim{d}(Array(dims(ds_var, d)))
+                #dimensions[idx_dim] = Dim{Symbol(d)}(collect(ds_var[d][:]))
+            end
         end
-        
+
         exclude_file = false
-        if :time in dimension_names # with NCDataset "time"
-            # NOTE: just YEAR and MONTH are saved in the time dimension
-            times = collect(lookup(ds_var, :time))
-            times = map(x -> DateTime(Dates.year(x), Dates.month(x)), times) 
-            #times = map(x -> DateTime(Dates.year(x), Dates.month(x)), ds_var["time"][:])
-            #add meta data for time
-            props["time-meta"] = Dict()
-            for t in (:year, :month)
-                if hasproperty(ds, t)
-                    var = ds[t]
-                    for (k,v) in var.properties
-                        props["time-meta"][k] = v
-                    end
-                end
-            end
-            
-            if absent(constraint_ts) 
-                @debug "There were no start and end year for timeseries provided!"
-                constraint_ts = Dict()
-            end
+        if :time in dimension_names
+            # NOTE: just YEAR is saved in the time dimension
+            times = [Dates.year(x) for x in lookup(ds_var, :time)]
+            #add meta data for time (necessary?)
+            # time_meta = Dict{String, Any}()
+            # props["time-meta"] = time_meta
+            # for t in (:year, :month)
+            #     if hasproperty(ds, t)
+            #         var = ds[t]
+            #         for (k,v) in var.properties
+            #             props["time-meta"][k] = v
+            #         end
+            #     end
+            # end
             indices_time = indicesTimeseries(times, constraint_ts)
             if isempty(indices_time)
                 exclude_file = true
-                @info "excluded $path because of missing time indices!"
             else
-                idx_time = findfirst(dimension_names .== :time)
-                #idx_time = findfirst(dimension_names .== "time")
-                indices = Vector(undef, length(dimension_names))
-                for i in 1:length(dimension_names)
-                    indices[i] = i == idx_time ? indices_time : Colon()
-                end
+                idx_time = findfirst(==( :time ), dimension_names)
+                indices = ntuple(i -> i == idx_time ? indices_time : Colon(), length(dimension_names))
                 ds_var = ds_var[indices...]
                 dimensions[idx_time] = Dim{:time}(collect(times[indices_time]))
             end
         end
-        fv = get(props, "_FillValue", missing)
-        ds_var = map(x -> x == fv  ? missing : x, ds_var)
-        data[i] = exclude_file ? initYAX(dimensions) : YAXArray(Tuple(dimensions), allowmissing(ds_var), props)
-        # replace missing values by NaN?
-        # data[i] = YAXArray(Tuple(dimensions), coalesce.(Array(ds_var), NaN), props)
-        @debug "$(basename(path)) is excluded: $(isempty(data[i]))"
+        #TODO: This is apparently not used!!!!
+        # fv = get(props, "_FillValue", missing)
+        # ds_var = map(x -> x == fv  ? missing : x, ds_var)
+        # raw = Array(ds_var)
+        # if haskey(props, "_FillValue")
+        #     fv = props["_FillValue"]
+        #     #raw = Array(ds_var)
+        #     Td = eltype(raw)
+        #     ds_var_out = Array{Union{Missing, Td}}(undef, size(raw))
+        #     @inbounds for i in eachindex(raw)
+        #         x = raw[i]
+        #         ds_var_out[i] = isequal(x, fv) ? missing : x
+        #     end
+        #     raw = ds_var_out
+        # end                
+        if !exclude_file
+            props = copy(ds_var.properties) # metadata just for this file!
+            if meta.variable == "msftmz"
+                sector = get(ds, "sector", nothing)
+                if !isnothing(sector)
+                    merge!(props, sector.properties)
+                end
+            end
+            props["path"] = meta.path
+            props["mip_era"] = meta.mip
+            if dtype == "cmip"
+                # returns member name
+                push!(model_names, fixModelNameInconsistenciesCMIP(ds.properties, meta))
+            end
+            push!(data, YAXArray(Tuple(dimensions), allowmissing(ds_var), props))
+        end
     end
-    indices = findall(x -> !emptyYAX(x), data)
-    if !isempty(model_names)
-        model_names = model_names[indices]
-    end
-    result =  isempty(indices) ? 
-        nothing : 
-        combineModelsFromMultipleFiles(data[indices]; model_names, new_dim, sorted, meta=meta_info)
-    return result
+    return isempty(data) ? nothing : 
+        combineModelsFromMultipleFiles(data; model_names, new_dim, sorted, meta=meta_info)
 end
 
 
-"""
-    loadDataMapCore(
-        all_paths::Vector{Vector{String}},
-        ids::Vector{String},
-        constraints::Vector{Dict};
-        dtype::String = "cmip",
-        filename_format::Union{Symbol, String} = :cmip,
-        sorted::Bool = true,
-        preview::Bool = false,
-        meta_data::Union{Vector{Dict{String, T}}, Nothing} = nothing
-    ) where T <: Any
 
-Load a DataMap instance with keys `ids` that map to data at `all_paths`, where every 
-subvector refers the the paths of the data of a single dataset. 
-
-"""
-function loadDataMapCore(
-    all_paths::Vector{Vector{String}},
-    ids::Vector{String},
-    constraints::Vector{<:Dict{<:Any, <:Any}};
-    dtype::String = "cmip",
-    filename_format::Union{Symbol, String} = :cmip,
-    sorted::Bool = true,
-    preview::Bool = false,
-    meta_data::Union{Vector{<:Dict{String, <:Any}}, Nothing} = nothing
-)
-    checkConstraint.(constraints)
+function checkInput(
+    all_paths::Vector{T}, 
+    ids::Vector{String};
+    meta_data::Vector{Dict{String, String}} = Dict{String, String}[]
+) where {T}
     if !absent(meta_data) && (length(all_paths) != length(meta_data))
         throw(ArgumentError("size of paths vector and meta data must be equal. Found: paths: $(length(all_paths)), meta_data: $(length(meta_data))"))
     end
-    np, ni, nc = length.([all_paths, ids, constraints])
-    if np != ni != nc
-        msg = "size of paths vector, ids and constraints must all be equal. Found: "
-        throw(ArgumentError(msg * "paths: $(length(all_paths)), ids: $(length(ids)), constraints: $(length(constraints))"))
-    end
-
-    all_meta = absent(meta_data) ? fill(nothing, length(all_paths)) : meta_data
-    data = map(all_paths, all_meta, constraints)  do paths, meta, constraint
-        # if provided, do the filtering
-        # TODO: constraint cannot be nothing...!
-        mask = isnothing(constraint) ? 
-            fill(true, length(paths)) :
-            maskFileConstraints(paths, filename_format, constraint)
-        constraint_ts = isnothing(constraint) ? nothing : get(constraint, "timeseries", nothing)        
-        preview ? paths[mask] :
-            loadPreprocData(
-                paths[mask], filename_format; sorted, dtype, constraint_ts, meta_info = meta 
-            )
-    end
-    # Last step: apply constraint agument level_shared to be applied on every dataset
-    levels = map(c -> get(c, "level_shared", nothing), constraints)
-    have_shared_level = length(unique(levels)) == 1 && !isnothing(levels[1])
-    shared_level = have_shared_level ? getLevel(constraints[1]["level_shared"]) : nothing
-    if preview
-        if have_shared_level && dtype == "cmip"
-            data = filterPathsSharedModels(data, shared_level, filename_format)
-        end
-        return data
-    else
-        found_data = map(!isnothing, data)
-        if any(x -> x==0, found_data)
-            @warn "no data found for ids: $(ids[.!found_data])"
-            filter!(!isnothing, data)
-            data = YAXArray.(data) # why needed?
-        end
-        if isempty(data)
-            return nothing
-        end
-        if have_shared_level && dtype == "cmip"
-            models = shared_level == MODEL_LEVEL ?  
-                modelsFromMemberIDs.(data; uniq=true) :
-                Array.(lookup.(data, :member))
-            shared_models = reduce(intersect, models)
-            data = map(ds -> subsetModelData(ds, shared_models), data)
-        end
-        return defineDataMap(data, ids[found_data])
+    np, ni = length.([all_paths, ids])
+    if np != ni
+        throw(ArgumentError("'all_paths' and 'ids' must have the same length, found: ($(length(all_paths)) vs. $(length(ids)))."))
     end
 end
 
-function loadDataMapCore(
-    all_paths::Vector{Vector{String}},
-    ids::Vector{String},
-    constraint::Union{<:Dict{String, <:Any}, Nothing};
-    dtype::String = "cmip",
-    filename_format::Union{Symbol, String} = :cmip,
-    sorted::Bool = true,
-    preview::Bool = false,
-    meta_data::Union{Vector{<:Dict{String, <:Any}}, Nothing} = nothing
+
+function _previewDataMapCore(
+    meta_data::Vector{Vector{FilenameMeta}}, ids::AbstractArray{String}
 )
-    constraint = isnothing(constraint) ? Dict{String, Any}() : constraint
-    constraints = repeat([constraint], length(all_paths))
-    return loadDataMapCore(
-        all_paths, ids, constraints; dtype, filename_format, sorted, preview, meta_data
-    )
+    preview_map = PreviewMap()
+    for i in eachindex(ids)
+        preview_map[ids[i]] = meta_data[i] 
+    end
+    return preview_map
 end
 
+function _loadDataMapCore(
+    meta_data_per_dataset::Vector{Vector{FilenameMeta}},
+    ids::Vector{String};
+    dtype::String = "cmip",
+    fn_format::AbstractFnFormat = FF_CMIP(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::AbstractLevel = NoLevel(),
+    sorted::Bool = true,
+    #meta_info::Vector{Dict{String, String}} = Dict{String, String}[]
+)
+    # TODO: handle meta info
+    data = Vector{YAXArray}(undef, length(meta_data_per_dataset))
+    indices_found = Int[];
+    for (i, meta_data) in enumerate(meta_data_per_dataset)
+        df = loadPreprocData(
+            meta_data;
+            #fn_format;
+            constraint_ts, 
+            dtype, 
+            sorted, 
+            #meta_info = meta_info  
+        )
+        if !isnothing(df)
+            data[i] = df
+            push!(indices_found, i)
+        end
+    end
+    data = data[indices_found]
+    # no_data_found = emptyYAX.(data)
+    # data_found = .!no_data_found
+    # if any(no_data_found)
+    #     #@warn "no data found for ids: $(ids[.!found_data])"
+    #     #filter!(!isnothing, data)
+    #     data = data[data_found]
+    #     #data = YAXArray.(data) # why needed?
+    # end
+    if isempty(data)
+        # no data was found at all
+        return nothing # TODO: better to return an empty array?!
+    end
+    # if isa(level, Level) && dtype == "cmip"
+    #     models = isa(level, LevModel) ?  modelsFromMemberIDs.(data; uniq=true) : Array.(lookup.(data, :member))
+    #     shared_models = reduce(intersect, models)
+    #     data = map(ds -> subsetModelData(ds, shared_models), data)
+    # end
+    #ids_filtered = ids[data_found]
+    ids_filtered = ids[indices_found]
+    return defineDataMap(data, ids_filtered)
+end
+
+# previous:
+# """
+#     _loadDataMapCore(
+#         all_paths::Vector{Vector{String}},
+#         ids::Vector{String},
+#         constraint::Union{Dict{String, <:AbstractArray{String}}, Nothing} = nothing,
+#         constraint_ts::Dict{String, Int} = Dict{String, Int}(),
+#         level::Union{Symbol, Nothing} = nothing,
+#         dtype::String = "cmip",
+#         filename_format::Symbol = :cmip,
+#         sorted::Bool = true,
+#         meta_data::Union{Vector{Dict{String, String}}, Nothing} = nothing
+#     )
+
+# Load a DataMap instance with keys `ids` that map to data at `all_paths`, where every 
+# subvector refers the paths of the data of a single dataset. 
+
+
+# # Arguments:
+# - `all_paths`: each subvector should contain paths to directories that store data for the same experiment and variable.
+# """
+# function _loadDataMapCore(
+#     all_paths::Vector{Vector{String}},
+#     ids::Vector{String};
+#     constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
+#     constraint_ts::Dict{String, Int} = Dict{String, Int}(),
+#     level::AbstractLevel = LevNone(),
+#     dtype::String = "cmip",
+#     fn_format::AbstractFnFormat = FF_CMIP(),
+#     sorted::Bool = true,
+#     meta_data::Vector{Dict{String, String}} = Dict{String, String}[]
+# )
+#     #checkConstraint.(constraints)
+#     #checkInput(all_paths, ids; meta_data)
+
+#     all_meta = absent(meta_data) ? fill(nothing, length(all_paths)) : meta_data
+#     #@info "length(all_paths): $(length(all_paths)); length(all_paths[1]): $(length(all_paths[1]))"
+#     # TODO: add possibility to have one constraint per dataset 
+#     #data = Vector{Vector{YAXArray}}(undef, length(all_paths))
+#     data = Vector{YAXArray}(undef, length(all_paths))
+#     for (i, (paths, meta)) in enumerate(zip(all_paths, all_meta))
+#         data[i] = loadPreprocData(
+#             paths, 
+#             fn_format; 
+#             constraint_ts, 
+#             dtype, 
+#             sorted, 
+#             meta_info = meta 
+#         )
+#     end
+#     no_data_found = emptyYAX.(data)
+#     data_found = .!no_data_found
+#     if any(no_data_found)
+#         #@warn "no data found for ids: $(ids[.!found_data])"
+#         #filter!(!isnothing, data)
+#         data = data[data_found]
+#         #data = YAXArray.(data) # why needed?
+#     end
+#     if isempty(data)
+#         # no data was found at all
+#         return nothing # TODO: better to return an empty array?!
+#     end
+#     # if isa(level, Level) && dtype == "cmip"
+#     #     models = isa(level, LevModel) ?  modelsFromMemberIDs.(data; uniq=true) : Array.(lookup.(data, :member))
+#     #     shared_models = reduce(intersect, models)
+#     #     data = map(ds -> subsetModelData(ds, shared_models), data)
+#     # end
+#     ids_filtered = ids[data_found]
+#     # return defineDataMap(data, ids_filtered)
+#     return defineDataMap(data, ids_filtered)
+# end
+
+# function loadDataMapCore(
+#     all_paths::Vector{Vector{String}},
+#     ids::Vector{String},
+#     constraint::Union{Dict{String, T}, Nothing};
+#     dtype::String = "cmip",
+#     filename_format::Symbol = :cmip,
+#     sorted::Bool = true,
+#     preview::Bool = false,
+#     meta_data::Union{Vector{Dict{String, String}}, Nothing} = nothing
+# ) where T <: AbstractArray{String}
+#     constraint = isnothing(constraint) ? Dict{String, Vector{String}}() : constraint
+#     constraints = repeat([constraint], length(all_paths))
+#     return loadDataMapCore(
+#         all_paths, ids, constraints; dtype, filename_format, sorted, preview, meta_data
+#     )
+# end
+
+# function _applySharedLevel(
+#     all_paths::AbstractVector{<:AbstractVector{String}}, level::Level, fn_format::FilenameFormat
+# )
+#     return filterPathsSharedModels(all_paths, level, fn_format)
+# end
+
+function _applyLevel!(
+    meta_data_per_dataset::AbstractVector{<:AbstractVector{FilenameMeta}}, level::Level
+)
+    shared = sharedModelsFromMeta(meta_data_per_dataset, level)
+    indices_members = findall(x -> occursin(MODEL_MEMBER_DELIM, x), shared)
+    indices_models = [i for i in 1:length(shared) if !(i in indices_members)]
+    #shared_members = shared[indices_members] # TODO
+    shared_models = shared[indices_models]
+    for (i, meta_files) in enumerate(meta_data_per_dataset)
+        # handle members TODO
+        #handle models
+        mask = [meta.model in shared_models for meta in meta_files]
+        meta_data_per_dataset[i] = meta_files[mask]
+    end
+    return nothing
+end
+
+function _applyConstraint!(
+    meta_data_per_dataset::AbstractVector{<:AbstractVector{FilenameMeta}},
+    constraint::Constraint
+)
+    for (i, meta_files) in enumerate(meta_data_per_dataset)
+        mask = [isRetained(meta, constraint) for meta in meta_files]
+        meta_data_per_dataset[i] = meta_files[mask]
+    end
+    return nothing
+end
+
+function _applyConstraintTS!(
+    meta_data_per_dataset::AbstractVector{<:AbstractVector{FilenameMeta}},
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}
+)
+    start_cs = constraint_ts.start_year
+    end_cs = constraint_ts.end_year
+    if end_cs < start_cs
+        throw(ArgumentError("End of timseries must be after start!"))
+    end
+
+    for (i, meta_files) in enumerate(meta_data_per_dataset)
+        mask = Vector{Bool}(undef, length(meta_files))
+        for (j, meta) in enumerate(meta_files)
+            # timerange given as string, e.g. 185001-185012
+            start_file = parse(Int, meta.timerange[1:4])
+            end_file = parse(Int, meta.timerange[8:11])
+            mask[j] = (start_file >= start_cs && start_file <= end_cs) ||
+                (end_file >= start_cs && end_file <= end_cs)
+        end
+        meta_data_per_dataset[i] = meta_files[mask]
+    end
+    return nothing
+end
 
 
 """
@@ -636,9 +774,11 @@ end
         path_data::String,
         path_recipes::String;
         dir_per_var::Bool = true,
-        constraint::Union{Dict, Nothing} = nothing,
+        constraint::Union{Dict{String, <:AbstractArray{String}}, Nothing} = nothing,
         preview::Bool = false,
-        sorted::Bool = true
+        sorted::Bool = true,
+        dtype::String = "cmip",
+        filename_format::Symbol = :esmvaltool
     )
 
 Load the data from the ESMValTool recipes at `path_recipes` or, if `preview` is true, load
@@ -658,38 +798,46 @@ function loadDataFromESMValToolRecipes(
     path_data::String,
     path_recipes::String;
     dir_per_var::Bool = true,
-    constraint::Union{Dict, Nothing} = nothing,
-    preview::Bool = false,
-    sorted::Bool = true, 
+    constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
+    constraint_ts::Dict{String, Int} = Dict{String, Int}(),
+    level::AbstractLevel = NoLevel(),
     dtype::String = "cmip",
-    filename_format::Union{Symbol, String} = :esmvaltool
+    fn_format::AbstractFnFormat = ESMVTFormat(),
+    sorted::Bool = true,
+    preview::Bool = false
 )
     checkDataStructure(path_data, dir_per_var)
     meta_data = metaDataFromESMValToolRecipes(path_recipes; constraint)
     paths = resolvePathsFromMetaData.(meta_data, path_data, dir_per_var; constraint)
-    if !isnothing(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
-        paths = filterPathsSharedModels(paths, constraint["level_shared"], filename_format)
+    if !isnothing(level)       
+        paths = filterPathsSharedModels(paths, level, fn_format)
     end
-    return loadDataMapCore(
+    # if preview
+    #     return _previewDataMapCore(paths; constraint, level, dtype, filename_format)
+    # else
+    return _loadDataMapCore(
         paths,
-        map(x -> x.id, meta_data),
-        constraint;
+        getfield.(meta_data, :id);
+        constraint,
+        constraint_ts,
+        level,
         dtype,
-        filename_format,
+        fn_format,
         sorted,
-        preview, 
         meta_data = metadataToDict.(meta_data)
     )
+    # end
 end
 
 
 """
     loadDataFromYAML(
         yaml_content::Dict;
-        constraint::Union{Dict, Nothing} = nothing,
+        constraint::Union{Dict{String, <:AbstractArray{String}}, Nothing} = nothing,
         preview::Bool = false,
         sorted::Bool = true,
-        dtype::String = "cmip"
+        dtype::String = "cmip",
+        filename_format::Symbol = :esmvaltool
     )
 
 Return a DataMap-instance that contains the data specified in `yaml_content`, potentially 
@@ -703,11 +851,13 @@ actually loading any data.
 """
 function loadDataFromYAML(
     yaml_content::Dict;
-    constraint::Union{Dict, Nothing} = nothing,
-    preview::Bool = false,
-    sorted::Bool = true, 
+    constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
+    constraint_ts::Dict{String, Int} = Dict{String, Int}(),
+    level::AbstractLevel = NoLevel(),
     dtype::String = "cmip",
-    filename_format::Union{Symbol, String} = :esmvaltool
+    fn_format::AbstractFnFormat = ESMVTFormat(),
+    sorted::Bool = true, 
+    preview::Bool = false
 )
     fn_err(x) = throw(ArgumentError("$(x) must be provided in config yaml file!"))
     datasets = get(() -> fn_err("datasets"), yaml_content, "datasets")
@@ -726,129 +876,184 @@ function loadDataFromYAML(
             warn_duplicates = "identical subset keys: arg constraint has precedence over constraint in yaml file!"
             ds_constraint = joinDicts(ds_constraint, constraint; warn_msg = warn_duplicates) 
         end
+        # TODO: constraint_ts now just possible via argument, not inside yaml, should be done here also for timeseries constraints
+
         meta_data = metaDataFromYAML(ds)
         paths = resolvePathsFromMetaData.(meta_data, path_data, dir_per_var; constraint=ds_constraint)
-        if !isnothing(get(ds_constraint, "level_shared", nothing))        
-            msg = "'level_shared' in constraint argument must be one of: $(keys(LEVEL_LOOKUP)), found: $(ds_constraint["level_shared"])."
-            level = get(() -> throw(ArgumentError(msg)), LEVEL_LOOKUP, ds_constraint["level_shared"])
-            paths = filterPathsSharedModels(paths, level, filename_format)
+        if isa(level, Level)        
+            paths = filterPathsSharedModels(paths, level, fn_format)
         end
         all_paths[i] = paths 
         all_meta[i] = meta_data
         # paths and meta_data are vectors! In one loop, several datasets can be loaded (for different variables)
-        all_constraints[i] = repeat([ds_constraint], length(paths))
+        #all_constraints[i] = repeat([ds_constraint], length(paths))
+        all_constraints[i] = ds_constraint
     end
     meta_data = vcat(all_meta...)
-    return loadDataMapCore(
+
+    # if preview 
+    #     return _previewDataMapCore(vcat(all_paths...); constraint, level, dtype, filename_format)
+    # else 
+    return _loadDataMapCore(
         vcat(all_paths...), 
-        map(x -> x.id, meta_data),
-        vcat(all_constraints...); 
+        getfield.(meta_data, :id);
+        constraint = constraint, #all_constraints, # TODO: now only defined for single constraint! former: #vcat(all_constraints...), 
+        constraint_ts,
+        level,
         dtype, 
-        filename_format, 
+        fn_format, 
         sorted, 
-        preview, 
         meta_data = metadataToDict.(meta_data)
     )
+    # end
 end
 
-function defineDataMap(
-    yaml_content::Dict;
-    constraint::Union{Dict,Nothing} = nothing,
-    preview::Bool = false,
-    sorted::Bool = true,
-    dtype::String = "cmip",
-    filename_format::Union{Symbol, String} = :esmvaltool
-)
-    return loadDataFromYAML(yaml_content; constraint, preview, sorted, dtype, filename_format)
-end
+# function defineDataMap(
+#     yaml_content::Dict;
+#     constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
+#     constraint_ts::Dict{String, Int} = Dict{String, Int}(),
+#     level::Symbol = :none,
+#     dtype::String = "cmip",
+#     filename_format::Symbol = :esmvaltool,
+#     sorted::Bool = true,
+#     preview::Bool = false
+# )
+#     level = toLevel(Val(level))
+#     fn_format = toFF(Val(filename_format))
+#     return loadDataFromYAML(
+#         yaml_content; 
+#         constraint, 
+#         constraint_ts, 
+#         level, 
+#         dtype, 
+#         fn_format, 
+#         sorted, 
+#         preview
+#     )
+# end
 
 
-function defineDataMap(
-    path_config::String;
-    constraint::Union{Dict,Nothing} = nothing,
-    preview::Bool = false,
-    sorted::Bool = true,
-    dtype::String = "cmip",
-    filename_format::Union{Symbol, String} = :esmvaltool
-)
-    return loadDataFromYAML(
-        YAML.load_file(path_config); constraint, preview, sorted, dtype, filename_format
-    )
-end
+# function defineDataMap(
+#     path_config::String;
+#     constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
+#     constraint_ts::Dict{String, Int} = Dict{String, Int}(),
+#     level::Symbol = :none,
+#     dtype::String = "cmip",
+#     filename_format::Symbol = :esmvaltool,
+#     sorted::Bool = true,
+#     preview::Bool = false
+# )
+#     level = toLevel(Val(level))
+#     fn_format = toFF(Val(filename_format))
+#     return loadDataFromYAML(
+#         YAML.load_file(path_config); 
+#         constraint, 
+#         constraint_ts,
+#         level,
+#         dtype, 
+#         fn_format, 
+#         sorted,
+#         preview
+#     )
+# end
 
 
-function defineDataMap(
-    path_data::String,
-    path_recipes::String,
-    source::Symbol;
-    dir_per_var::Bool = true,
-    constraint::Union{Dict, Nothing} = nothing,
-    preview::Bool = false,
-    sorted::Bool = true, 
-    dtype::String = "cmip",
-    filename_format::Union{Symbol, String} = :esmvaltool
-)
-    if source != :esmvaltool_recipes
-        throw(ArgumentError("To load data from esmvaltool recipes, set source argument to :esmvaltool_recipes, found: $(source)."))
-    end
-    return loadDataFromESMValToolRecipes(
-        path_data, path_recipes; dir_per_var, constraint, preview, sorted, dtype, filename_format
-    )
-end
+# function defineDataMap(
+#     path_data::String,
+#     path_recipes::String,
+#     source::Symbol;
+#     dir_per_var::Bool = true,
+#     constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
+#     constraint_ts::Dict{String, Int} = Dict{String, Int}(),
+#     level::Symbol = :none,
+#     dtype::String = "cmip",
+#     filename_format::Symbol = :esmvaltool,
+#     sorted::Bool = true,
+#     preview::Bool = false
+# )
+#     if source != :esmvaltool_recipes
+#         throw(ArgumentError("To load data from esmvaltool recipes, set source argument to :esmvaltool_recipes, found: $(source)."))
+#     end
+#     level = toLevel(Val(level))
+#     fn_format = toFF(Val(filename_format))
+    
+#     return loadDataFromESMValToolRecipes(
+#         path_data, 
+#         path_recipes; 
+#         dir_per_var, 
+#         constraint, 
+#         constraint_ts, 
+#         level, 
+#         dtype, 
+#         fn_format, 
+#         sorted, 
+#         preview
+#     )
+# end
 
 
-# Loading data directly from given directories
-"""
-    defineDataMap(
-        path_data_dir::String, 
-        id::String;
-        meta_data::Dict{String, T} = Dict{String, Any}(),
-        constraint::Union{Dict, Nothing} = nothing,
-        sorted::Bool = true, 
-        dtype::String = "cmip",
-        filename_format::Union{Symbol, String} = :cmip
-    ) where T <: Any
+# # Loading data directly from given directories
+# """
+#     defineDataMap(
+#         paths::Vector{String}, 
+#         id::String;
+#         meta_data::Dict{String, String} = Dict{String, String}(),
+#         constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
+#         filename_format::Symbol = :cmip
+#         dtype::String = "cmip",
+#         preview::Bool = false,
+#         sorted::Bool = true,
+#     )
 
-Return DataMap with entry `id` with the data (model and/or obs depending on `dtype`) from 
-all .nc files in `paths` and all .nc files in all directories in `paths`, possibly 
-constraint by `constraint`.
-"""
-function defineDataMap(
-    paths::Vector{String}, 
-    id::String;
-    meta_data::Dict{String, T} = Dict{String, Any}(),
-    constraint::Union{Dict, Nothing} = nothing,
-    filename_format::Union{Symbol, String} = :cmip,
-    dtype::String = "cmip",
-    preview::Bool = false,
-    sorted::Bool = true
-) where T <: Any
-    paths_dirs = filter(x -> isdir(x), paths)
-    paths_ncfiles = filter(x -> isfile(x) && endswith(x, ".nc"), paths)
-    paths_to_files = vcat(collectNCFilePaths.(paths_dirs)..., paths_ncfiles)
-    return loadDataMapCore(
-        [paths_to_files], 
-        [id],
-        constraint;
-        dtype, 
-        filename_format,
-        sorted,
-        preview,
-        meta_data = [meta_data]
-    ) 
-end
+# Return DataMap with entry `id` with the data (model and/or obs depending on `dtype`) from 
+# all .nc files in `paths` and all .nc files in all directories in `paths`, possibly 
+# constraint by `constraint`.
+# """
+# function defineDataMap(
+#     paths::Vector{String}, 
+#     id::String;
+#     constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
+#     constraint_ts::Dict{String, Int} = Dict{String, Int}(),
+#     level::Symbol = :none,
+#     dtype::String = "cmip",
+#     filename_format::Symbol = :cmip,
+#     sorted::Bool = true,
+#     meta_data::Dict{String, String} = Dict{String, String}()
+# )
+#     level = toLevel(Val(level))
+#     fn_format = toFF(Val(filename_format))
+
+#     paths_dirs = filter(x -> isdir(x), paths)
+#     paths_ncfiles = filter(x -> isfile(x) && endswith(x, ".nc"), paths)
+#     paths_to_files = vcat(collectNCFilePaths.(paths_dirs)..., paths_ncfiles)
+
+#     paths_to_files = _applyConstraint(paths_to_files, constraint; level, dtype, fn_format)
+
+#     return _loadDataMapCore(
+#         [paths_to_files], 
+#         [id];
+#         constraint,
+#         constraint_ts,
+#         level,
+#         dtype, 
+#         fn_format,
+#         sorted,
+#         meta_data = [meta_data]
+#     )
+# end
 
 
 """
     defineDataMap(
         paths_data_dirs::Vector{String}, 
         data_ids::Vector{String};
-        meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
-        constraint::Union{Dict, Nothing} = nothing,
-        sorted::Bool = true, 
+        meta_data::Vector{Dict{String, String}} = Vector{Dict{String, String}}(),
+        constraint::Union{Dict{String, <:AbstractArray{String}}, Nothing} = nothing,
+        filename_format::Symbol = :cmip
         dtype::String = "cmip",
-        filename_format::Union{Symbol, String} = :cmip
-    ) where T <: Any
+        preview::Bool = false,
+        sorted::Bool = true
+    )
 
 Return DataMap with entries `data_ids` with the data (model and/or obs depending on `dtype`) 
 from all .nc files in all directories in `paths_data_dirs`, possibly constraint by `constraint`.
@@ -856,29 +1061,59 @@ from all .nc files in all directories in `paths_data_dirs`, possibly constraint 
 function defineDataMap(
     paths_data_dirs::Vector{String}, 
     data_ids::Vector{String};
-    meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
-    constraint::Union{Dict, Nothing} = nothing,
-    filename_format::Union{Symbol, String} = :cmip,
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
     dtype::String = "cmip",
-    preview::Bool = false,
+    filename_format::Symbol = :cmip,
     sorted::Bool = true,
-) where T <: Any
-    paths_to_files = collectNCFilePaths.(paths_data_dirs)
-    if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
-        paths_to_files = filterPathsSharedModels(
-            paths_to_files, constraint["level_shared"], filename_format
-        )
+    #meta_info::Vector{Dict{String, String}} = Dict{String, String}[]
+)
+    if length(paths_data_dirs) != length(data_ids)
+        throw(ArgumentError("'all_paths' and 'ids' must have the same length!"))
     end
-    return loadDataMapCore(
-        paths_to_files, 
-        data_ids,
-        constraint; 
-        dtype, 
-        filename_format, 
-        sorted, 
-        preview,
-        meta_data
+    # checkInput with meta_info
+    level = toLevel(Val(level))
+    fn_format = toFF(Val(filename_format))
+
+    meta_data = _getFilteredMetaData(
+        paths_data_dirs, constraint, constraint_ts; level, dtype, fn_format
     )
+    _loadDataMapCore(
+        meta_data, 
+        data_ids;
+        constraint_ts,
+        level, 
+        dtype, 
+        fn_format, 
+        sorted
+        #meta_info
+    )
+end
+
+function previewDataMap(
+    paths_data_dirs::Vector{String}, 
+    data_ids::Vector{String};
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    dtype::String = "cmip",
+    filename_format::Symbol = :cmip
+)
+    if length(paths_data_dirs) != length(data_ids)
+        throw(ArgumentError("'all_paths' and 'ids' must have the same length!"))
+    end
+    level = toLevel(Val(level))
+    fn_format = toFF(Val(filename_format))
+
+    meta_data = _getFilteredMetaData(
+        paths_data_dirs, constraint, constraint_ts; level, dtype, fn_format
+    )
+    if !isa(fn_format, FF_CMIP)
+        # if fn type does not have timerange in filename, constraint_ts cannot be applied in preview!
+        @info "timeseries constraint not applied for preview when filename format is not :cmip!"
+    end
+    _previewDataMapCore(meta_data, data_ids)
 end
 
 
@@ -886,46 +1121,91 @@ end
     defineDataMap(
         paths_data_dirs::Vector{String}, 
         data_ids::Vector{String};
-        meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
-        constraint::Union{Dict, Nothing} = nothing,
-        sorted::Bool = true, 
+        meta_data::Vector{Dict{String, String}} = Vector{Dict{String, String}}(),
+        constraint::Union{Dict{String, <:AbstractArray{String}}, Nothing} = nothing,
+        filename_format::Symbol = :cmip
         dtype::String = "cmip",
-        filename_format::Union{Symbol, String} = :cmip
-    ) where T <: Any
+        preview::Bool = false,
+        sorted::Bool = true
+    )
 
 Return DataMap with entries `data_ids` with the data (model and/or obs depending on `dtype`) 
 from all .nc files in all directories in `paths_dirs`, possibly constraint by `constraint`.
 
 For every loaded dataset (entry in built DataMap), files are loaded from several directories;
-each entry in `paths_data_dirs` points the the vector of data directories from where data 
+each entry in `paths_data_dirs` points to the vector of data directories from where data 
 is loaded for that dataset.
 """
 function defineDataMap(
     paths_data_dirs::Vector{Vector{String}}, 
     data_ids::Vector{String};
-    meta_data::Vector{Dict{String, T}} = Vector{Dict{String, Any}}(),
-    constraint::Union{Dict, Nothing} = nothing,
-    filename_format::Union{Symbol, String} = :cmip,
+    constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
+    constraint_ts::Dict{String, Int} = Dict{String, Int}(),
+    level::Symbol = :none,
     dtype::String = "cmip",
-    preview::Bool = false,
-    sorted::Bool = true
-) where T <: Any
+    filename_format::Symbol = :cmip,
+    sorted::Bool = true,
+    meta_data::Vector{Dict{String, String}} = Vector{Dict{String, String}}()
+)
+    level = toLevel(Val(level))
+    fn_format = toFF(Val(filename_format))
+    checkInput(paths_data_dirs, data_ids; meta_data)
+    
     paths_to_files = map(paths_data_dirs) do paths 
         vcat(collectNCFilePaths.(paths)...)
     end
-    if !isnothing(constraint) && !isempty(constraint) && !isnothing(get(constraint, "level_shared", nothing))        
-        paths_to_files = filterPathsSharedModels(
-            paths_to_files, constraint["level_shared"], filename_format
-        )
-    end
-    return loadDataMapCore(
+    # if !isnothing(level)        
+    #     paths_to_files = filterPathsSharedModels(paths_to_files, level, filename_format)
+    # end
+    paths_to_files = _applyConstraint(paths_to_files, constraint; level, dtype, fn_format)
+
+    return _loadDataMapCore(
         paths_to_files, 
-        data_ids,
-        constraint; 
+        data_ids;
+        constraint,
+        constraint_ts,
+        level,
         dtype, 
-        filename_format, 
+        fn_format, 
         sorted, 
-        preview,
         meta_data
     )
+end
+
+
+function _getFilteredMetaData(
+    paths_data_dirs::Vector{String},
+    constraint::Dict{Symbol, <:AbstractArray{String}},
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}};
+    level::AbstractLevel = NoLevel(),
+    dtype::String = "cmip",
+    fn_format::AbstractFnFormat = FF_CMIP()
+)
+    paths_to_files = collectNCFilePaths.(paths_data_dirs)    
+    # TODO: add possibility to have one constraint per dataset
+    # first get all the metadata
+    meta_data_per_dataset = Vector{Vector{FilenameMeta}}(undef, length(paths_to_files))
+    for (i, paths) in enumerate(paths_to_files)
+        paths = paths_to_files[i]
+        meta = Vector{FilenameMeta}(undef, length(paths))
+        for j in eachindex(paths)
+            meta[j] = parsePath(paths[j], fn_format)
+        end
+        meta_data_per_dataset[i] = meta
+    end
+    # then apply the constraints (TODO: might be done all in once, instead of 2 steps)
+    if !isempty(constraint) && any(v -> !isempty(v), values(constraint))
+        constraint = Constraint(constraint)
+        _applyConstraint!(meta_data_per_dataset, constraint)
+    end
+    if constraint_ts.start_year != typemin(Int) || constraint_ts.end_year != typemax(Int)
+        if isa(fn_format, FF_CMIP)
+            # if fn type has timerange in filename, constraint_ts can already be applied!
+            _applyConstraintTS!(meta_data_per_dataset, constraint_ts)
+        end
+    end
+    if !isa(level, NoLevel) && dtype == "cmip" # (level doesnt apply to observational data)
+        _applyLevel!(meta_data_per_dataset, level)
+    end
+    return meta_data_per_dataset
 end
