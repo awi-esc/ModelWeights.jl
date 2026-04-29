@@ -37,18 +37,18 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
 end
 
 """
-    subsetModelData(dm::DataMap, level::Level=MEMBER_LEVEL; ids::Vector{String}=Vector{String}())
+    subsetModelData(dm::DataMap, level::Symbol=:member; ids::Vector{String}=Vector{String}())
 
-For those datasets in `datamap` that specify data on the level `level` (i.e. have dimension 
+For those datasets in `dm` that specify data on the level `level` (i.e. have dimension 
 :member or :model), return a new DataMap with subset of data s.t. the new datasets all have 
-the same models (MODEL_LEVEL) or members (MEMBER_LEVEL).
+the same models or members.
 
-If no models are shared across datasets, return the input `datamap`.
+If no models are shared across datasets, return the input `dm`.
 """
 function subsetModelData(
     dm::DataMap, level::Symbol = :member; ids::Vector{String}=Vector{String}()
 )
-    shared_models = sharedModels(dm, level)
+    shared_models = sharedModels(dm, toLevel(Val(level)))
     if isempty(shared_models)
         @warn "no shared models in input datamap!"
         return dm
@@ -67,10 +67,14 @@ end
 #     subsetModelData(dm, getLevel(level); ids)
 # end
 
+
+"""
+    Subset all entries in dm to the shared set of models on 'level' among all entries.
+"""
 function subsetModelData!(
     dm::DataMap, level::Symbol = :member; ids::Vector{String} = Vector{String}()
 )
-    shared_models = sharedModels(dm, level)
+    shared_models = sharedModels(dm, toLevel(Val(level)))
     if isempty(shared_models)
         @warn "no shared models in input datamap!"
         return dm
@@ -486,7 +490,7 @@ function loadPreprocData(
         exclude_file = false
         if :time in dimension_names
             # NOTE: just YEAR is saved in the time dimension
-            times = [Dates.year(x) for x in lookup(ds_var, :time)]
+            times = [DateTime(Dates.year(x), Dates.month(x)) for x in lookup(ds_var, :time)]
             #add meta data for time (necessary?)
             # time_meta = Dict{String, Any}()
             # props["time-meta"] = time_meta

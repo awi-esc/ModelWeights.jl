@@ -340,7 +340,7 @@ function membersFromMemberIDs(data::YAXArray)
     ids = lookup(data, :member)
     members = [String(split(x, MODEL_MEMBER_DELIM)[2]) for x in ids]
     # remove added grid 
-    members = [first(String(split(x, "_"))) for x in members]
+    members = map(x -> String(split(x, "_")[1]), members)
     return members
 end
 
@@ -708,11 +708,11 @@ function alignTimeseries(data::Vector{<:YAXArray})
     if !all(x -> hasdim(x, :time), data)
         throw(ArgumentError("All datasets must have time dimension to align timeseries!"))
     end
-    year_min = minimum(map(x -> first(dims(x, :time)), data))
-    year_max = maximum(map(x -> last(dims(x, :time)), data))
+    year_min = minimum(map(x -> first(Dates.year.(dims(x, :time))), data))
+    year_max = maximum(map(x -> last(Dates.year.(dims(x, :time))), data))
     
     nb_years = year_max - year_min + 1
-    timerange = year_min:year_max
+    timerange = DateTime(year_min): Year(1) : DateTime(year_max)
     
     time_axis = Dim{:time}(timerange)
     data_new = Vector{YAXArray}(undef, length(data))
@@ -720,9 +720,12 @@ function alignTimeseries(data::Vector{<:YAXArray})
     for (i, ds) in enumerate(data)
         # if ds allows missing values, undef is initialized with missing
         dat = Array{T}(undef, ref_size..., nb_years)
-        ds_extended = YAXArray(full_axes, dat, ds.properties)        
-        time_idx = findall(in(dims(ds, :time)), timerange)
-        ds_extended[time = time_idx] = ds
+        ds_extended = YAXArray(full_axes, dat, ds.properties)
+
+        # indexing would be faster
+        # time_idx = findall(in(dims(ds, :time)), timerange)
+        # ds_extended[time = time_idx] = ds
+        ds_extended[time = Where(x -> Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds
         data_new[i] = ds_extended    
     end
     return data_new
@@ -1691,20 +1694,16 @@ If no values are given, return indices for entire vector `times`.
 
 """
 function indicesTimeseries(
-    #times::Vector{DateTime}, 
-    times::Vector{<:Integer},
+    times::Vector{DateTime}, 
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}
 )
     start_y = constraint_ts.start_year
     end_y = constraint_ts.end_year
-    #indices_time = findall(t -> Dates.year(t) >= start_y && Dates.year(t) <= end_y, times)
-    indices_time = searchsortedfirst(times, start_y) : searchsortedlast(times, end_y)
+    indices_time = searchsortedfirst(Dates.year.(times), start_y) : searchsortedlast(Dates.year.(times), end_y)
     times = times[indices_time]
     # only use data that's exactly from start to end!
-    # start_wrong = start_y != typemin(Int) && (!isempty(times) && start_y != minimum(map(Dates.year, times)))
-    # end_wrong   = end_y != typemax(Int) && (!isempty(times) && end_y != maximum(map(Dates.year, times)))
-    start_wrong = start_y != typemin(Int) && (!isempty(times) && start_y != minimum(times))
-    end_wrong   = end_y != typemax(Int) && (!isempty(times) && end_y != maximum(times))
+    start_wrong = start_y != typemin(Int) && (!isempty(times) && start_y != minimum(map(Dates.year, times)))
+    end_wrong   = end_y != typemax(Int) && (!isempty(times) && end_y != maximum(map(Dates.year, times)))
     return (isempty(times) || start_wrong || end_wrong) ? [] : indices_time
 end
 

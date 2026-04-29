@@ -86,8 +86,8 @@ end
 """
 function filterTimeseries(
     data::YAXArray,
-    start_year::Number,
-    end_year::Number;
+    start_year::Int,
+    end_year::Int;
     only_models_non_missing_vals::Bool = true
 )
     Data.throwErrorIfDimMissing(data, :time)
