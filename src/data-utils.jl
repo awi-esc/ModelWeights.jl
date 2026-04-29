@@ -913,8 +913,7 @@ function _parseFilename(filename::String, path::String, field_indices::Dict{Symb
 end
 
 
-function parsePath(path::String, fn_format::T
-) where {T <: AbstractFnFormat}
+function parsePath(path::String, fn_format::T) where {T <: AbstractFnFormat}
     filename = first(splitext(basename(path)))
     if isa(fn_format, FilenameFormat)
         isa(fn_format, FF_ESMVT_CMIP6) && return _parseFilename(filename, path, CMIP6_FIELD_INDICES)
