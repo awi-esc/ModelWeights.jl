@@ -312,7 +312,7 @@ The returned YAXArray has dimension :model (instead of :member).
 """
 function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
     throwErrorIfDimMissing(data, :member)
-    data = setLookupsFromMemberToModel(data, ["member"])
+    data = setLookupsFromMemberToModel(data, [:member])
     models = Array(dims(data, :model))
     models_uniq = unique(models)
     n_models = length(models_uniq)
@@ -355,7 +355,7 @@ Set to false if vectors refer to different variables for instance.
 """
 function summarizeMembersMatrix(data::YAXArray, updateMeta::Bool; fn::Function=Statistics.mean)
     throwErrorIfDimMissing(data, [:member1, :member2])
-    data = setLookupsFromMemberToModel(data, ["member1", "member2"])
+    data = setLookupsFromMemberToModel(data, [:member1, :member2])
     models_all = collect(dims(data, :model1))
     models = unique(models_all)
     other_dims = otherdims(data, (:model1, :model2))

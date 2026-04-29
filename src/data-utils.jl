@@ -5,7 +5,7 @@ Return a dictionary mapping from models in `data` to the number of its members.
 """
 function nbModelMembers(data::YAXArray)
     throwErrorIfDimMissing(data, :member)
-    data = setLookupsFromMemberToModel(data, ["member"])
+    data = setLookupsFromMemberToModel(data, [:member])
     models = collect(lookup(data, :model))
     return countMap(models)
 end
@@ -482,7 +482,7 @@ end
 
 
 """
-    setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
+    setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{Symbol})
 
 Change the lookup values for the dimension 'member' to refer to the models, i.e.
 they are not unique anymore. This is done in preparation to group the data by
@@ -490,16 +490,16 @@ the different models.
 
 # Arguments:
 - `data::YAXArray`: has at least dimensions in `dim_names`.
-- `dim_names::Vector{String}`: names of dimensions to be changed, e.g. 'member', 
-'member1' (would be changed to 'model', 'model1').
+- `dim_names::AbstractVector{Symbol}`: names of dimensions to be changed, e.g. :member, 
+:member1 (would be changed to :model, :model1).
 """
-function setLookupsFromMemberToModel(data::YAXArray, dim_names::Vector{String})
+function setLookupsFromMemberToModel(data::YAXArray, dim_names::AbstractVector{Symbol})
     # TODO: add checks for dim names!
     n_dims = length(dim_names)
     for (i, dim) in enumerate(dim_names)
-        unique_members = Array(dims(data, Symbol(dim)))
+        unique_members = Array(dims(data, dim))
         models = map(x -> String.(split(x, MODEL_MEMBER_DELIM)[1]), unique_members)
-        new_dim_name = n_dims > 1 ? "model" * string(i) : "model"
+        new_dim_name = n_dims > 1 ? Symbol("model" * string(i)) : :model
         data = setDim(data, dim, new_dim_name, models)
     end
     return data

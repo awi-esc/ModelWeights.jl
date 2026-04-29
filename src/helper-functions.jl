@@ -203,7 +203,7 @@ function setDim(
     data::YAXArray, dim::Symbol, dim_name::Symbol, dim_vals::AbstractVector{T}
 ) where T
     data = setDim(data, dim, dim_name)
-    return setDim(data, dim, dim_vals)
+    return setDim(data, dim_name, dim_vals)
 end
 
 

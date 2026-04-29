@@ -212,7 +212,7 @@ function plotEnsembleSpread(
         throw(ArgumentError(msg))
     end
     members = collect(lookup(data, :member))
-    df = Data.setLookupsFromMemberToModel(data, ["member"]) 
+    df = Data.setLookupsFromMemberToModel(data, [:member]) 
     models = collect(lookup(df, :model))
     model_labels = unique(models)
     model_ints  = collect(1:length(members))
