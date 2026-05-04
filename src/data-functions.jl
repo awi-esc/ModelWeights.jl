@@ -155,7 +155,7 @@ function _model_key(meta, ::LevMember)
 end
 
 
-function sharedModelsFromMeta(meta_data::Vector{Vector{FilenameMeta}}, level::Level)
+function sharedModelsFromMeta(meta_data::Vector{Vector{ModelMeta}}, level::Level)
     models_per_dataset = Vector{Set{String}}(undef, length(meta_data))
     @inbounds for (i, meta_data_files) in pairs(meta_data)
         models = Set{String}()
@@ -444,13 +444,13 @@ is inferred from the filenames (in `paths`), or if `meta_info` has key 'variable
 respective value is used.
 """
 function loadPreprocData(
-    meta_data::Vector{FilenameMeta};
+    meta_data::Vector{T};
     #filename_format::AbstractFnFormat;
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     dtype::String = "cmip",
     sorted::Bool = true,
     meta_info::Union{Dict{String, String}, Nothing} = nothing
-)
+) where T <: AbstractMeta
     data = YAXArray[]
     model_names = String[]
     new_dim = dtype == "cmip" ? :member : :model
@@ -536,7 +536,9 @@ function loadPreprocData(
                 end
             end
             props["path"] = meta.path
-            props["mip_era"] = meta.mip
+            if hasfield(T, :mip) 
+                props["mip_era"] = meta.mip
+            end
             if dtype == "cmip"
                 # returns member name
                 push!(model_names, fixModelNameInconsistenciesCMIP(ds.properties, meta))
@@ -566,17 +568,19 @@ end
 
 
 function _previewDataMapCore(
-    meta_data::Vector{Vector{FilenameMeta}}, ids::AbstractArray{String}
-)
+    meta_data::Vector{Vector{T}}, ids::AbstractArray{String}
+) where T <: AbstractMeta
     preview_map = PreviewMap()
     for i in eachindex(ids)
-        preview_map[ids[i]] = meta_data[i] 
+        if !isempty(meta_data[i])
+            preview_map[ids[i]] = meta_data[i] 
+        end
     end
     return preview_map
 end
 
 function _loadDataMapCore(
-    meta_data_per_dataset::Vector{Vector{FilenameMeta}},
+    meta_data_per_dataset::Vector{Vector{T}},
     ids::Vector{String};
     dtype::String = "cmip",
     fn_format::AbstractFnFormat = FF_CMIP(),
@@ -584,7 +588,7 @@ function _loadDataMapCore(
     level::AbstractLevel = NoLevel(),
     sorted::Bool = true,
     #meta_info::Vector{Dict{String, String}} = Dict{String, String}[]
-)
+) where T <: AbstractMeta
     # TODO: handle meta info
     data = Vector{YAXArray}(undef, length(meta_data_per_dataset))
     indices_found = Int[];
@@ -611,10 +615,12 @@ function _loadDataMapCore(
     #     data = data[data_found]
     #     #data = YAXArray.(data) # why needed?
     # end
-    if isempty(data)
-        # no data was found at all
-        return nothing # TODO: better to return an empty array?!
-    end
+
+    # if isempty(data)
+    #     # no data was found at all
+    #     return nothing # TODO: better to return an empty array?!
+    # end
+
     # if isa(level, Level) && dtype == "cmip"
     #     models = isa(level, LevModel) ?  modelsFromMemberIDs.(data; uniq=true) : Array.(lookup.(data, :member))
     #     shared_models = reduce(intersect, models)
@@ -721,7 +727,7 @@ end
 # end
 
 function _applyLevel!(
-    meta_data_per_dataset::AbstractVector{<:AbstractVector{FilenameMeta}}, level::Level
+    meta_data_per_dataset::AbstractVector{<:AbstractVector{ModelMeta}}, level::Level
 )
     shared = sharedModelsFromMeta(meta_data_per_dataset, level)
     indices_members = findall(x -> occursin(MODEL_MEMBER_DELIM, x), shared)
@@ -738,7 +744,7 @@ function _applyLevel!(
 end
 
 function _applyConstraint!(
-    meta_data_per_dataset::AbstractVector{<:AbstractVector{FilenameMeta}},
+    meta_data_per_dataset::AbstractVector{<:AbstractVector{<:AbstractMeta}},
     constraint::Constraint
 )
     for (i, meta_files) in enumerate(meta_data_per_dataset)
@@ -748,8 +754,9 @@ function _applyConstraint!(
     return nothing
 end
 
+# TODO: check constraintTS!
 function _applyConstraintTS!(
-    meta_data_per_dataset::AbstractVector{<:AbstractVector{FilenameMeta}},
+    meta_data_per_dataset::AbstractVector{<:AbstractVector{ModelMeta}},
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}
 )
     start_cs = constraint_ts.start_year
@@ -1188,10 +1195,10 @@ function _getFilteredMetaData(
     paths_to_files = collectNCFilePaths.(paths_data_dirs)    
     # TODO: add possibility to have one constraint per dataset
     # first get all the metadata
-    meta_data_per_dataset = Vector{Vector{FilenameMeta}}(undef, length(paths_to_files))
+    T = dtype == "observations" ? ObsMeta : ModelMeta
+    meta_data_per_dataset = Vector{Vector{T}}(undef, length(paths_to_files))
     for (i, paths) in enumerate(paths_to_files)
-        paths = paths_to_files[i]
-        meta = Vector{FilenameMeta}(undef, length(paths))
+        meta = Vector{T}(undef, length(paths))
         for j in eachindex(paths)
             meta[j] = parsePath(paths[j], fn_format)
         end

@@ -232,13 +232,13 @@ end
 
 
 """
-    memberIDFromFilenameMeta(fn_meta::FilenameMeta)
+    memberIDFromModelMeta(fn_meta::ModelMeta)
 
 Return a string of the form modelname#memberID[_grid] that identifies the corresponding model member.
 
 For CMIP6 models the abbreviation of the grid is added to the model name.
 """
-function memberIDFromFilenameMeta(fn_meta::FilenameMeta)
+function memberIDFromModelMeta(fn_meta::ModelMeta)
     id = join([fn_meta.model, fn_meta.variant], MODEL_MEMBER_DELIM)
     if lowercase(fn_meta.mip) == "cmip6"
         id = join([id, fn_meta.grid], "_")
@@ -881,15 +881,16 @@ end
 
 
 """
-    _parseFilename(filename::String, format_string::String)
+    _parseFilenameObs(filename::String, path::String, field_indices::Dict{Symbol, Int})
 
-Retrieve information from `filename` and return it as an object of type FilenameMeta.
+Retrieve information from `filename` and return it as an object of type ObsMeta.
 
 # Arguments:
-- `filename::String`: can be just filename or enitre path to filename, e.g. mydir/subdir/my_file.nc, my_file.nc
-- `format_string::String`:
+- `filename::String`:
+- `path::String`:
+- `field_indices::Dict{Symbol, Int}`:
 """
-function _parseFilename(filename::String, path::String, field_indices::Dict{Symbol, Int})
+function _parseFilenameObs(filename::String, path::String, field_indices::Dict{Symbol, Int})
     parts_fn = split(filename, "_")
     if length(field_indices) != length(parts_fn)
         throw(ArgumentError("File $filename doesn't align with given format!"))
@@ -898,7 +899,40 @@ function _parseFilename(filename::String, path::String, field_indices::Dict{Symb
         idx = get(field_indices, field, nothing)
         return isnothing(idx) ? nothing : parts_fn[idx]
     end
-    return FilenameMeta(
+    return ObsMeta(
+        fn = filename,
+        path = path,
+        grid = field_to_val_in_fn(:grid),
+        model =  field_to_val_in_fn(:model),
+        type = field_to_val_in_fn(:type),
+        version = field_to_val_in_fn(:version),
+        tableid = field_to_val_in_fn(:tableid),
+        variable = field_to_val_in_fn(:variable)
+    )
+end
+
+
+
+"""
+    _parseFilenameModel(filename::String, path::String, field_indices::Dict{Symbol, Int})
+
+Retrieve information from `filename` and return it as an object of type ModelMeta.
+
+# Arguments:
+- `filename::String`:
+- `path::String`:
+- `field_indices::Dict{Symbol, Int}`:
+"""
+function _parseFilenameModel(filename::String, path::String, field_indices::Dict{Symbol, Int})
+    parts_fn = split(filename, "_")
+    if length(field_indices) != length(parts_fn)
+        throw(ArgumentError("File $filename doesn't align with given format!"))
+    end
+    function field_to_val_in_fn(field::Symbol) 
+        idx = get(field_indices, field, nothing)
+        return isnothing(idx) ? nothing : parts_fn[idx]
+    end
+    return ModelMeta(
         fn = filename,
         path = path,
         variable = field_to_val_in_fn(:variable),
@@ -913,38 +947,47 @@ function _parseFilename(filename::String, path::String, field_indices::Dict{Symb
 end
 
 
-function parsePath(path::String, fn_format::T) where {T <: AbstractFnFormat}
+function parsePath(path::String, ::FF_ESMVT_OBS)::ObsMeta
     filename = first(splitext(basename(path)))
-    if isa(fn_format, FilenameFormat)
-        isa(fn_format, FF_ESMVT_CMIP6) && return _parseFilename(filename, path, CMIP6_FIELD_INDICES)
-        isa(fn_format, FF_ESMVT_CMIP5) && return _parseFilename(filename, path, CMIP5_FIELD_INDICES)
-        return _parseFilename(filename, path, CMIP_FIELD_INDICES)
-    else
-        # only other option is ESMVT, which must be differentiated between cmip5 and cmip6
-        format_dict = length(split(filename, "_")) == 7 ? CMIP6_FIELD_INDICES : CMIP5_FIELD_INDICES
-        return _parseFilename(filename, path, format_dict)
-    end
+    _parseFilenameObs(filename, path, OBS_FIELD_INDICES)
 end
 
+function parsePath(path::String, ::FF_ESMVT)::ModelMeta
+    filename = first(splitext(basename(path)))
+    format_dict = length(split(filename, "_")) == 7 ? CMIP6_FIELD_INDICES : CMIP5_FIELD_INDICES
+    _parseFilenameModel(filename, path, format_dict)
+end
 
-function isRetained(fn_meta::FilenameMeta, constraint::Constraint)
+function parsePath(path::String, ::FF_ESMVT_CMIP6)::ModelMeta
+    filename = first(splitext(basename(path)))
+    _parseFilenameModel(filename, path, CMIP6_FIELD_INDICES)
+end
+
+function parsePath(path::String, ::FF_ESMVT_CMIP5)::ModelMeta
+    filename = first(splitext(basename(path)))
+    _parseFilenameModel(filename, path, CMIP5_FIELD_INDICES)
+end
+
+function parsePath(path::String, ::FF_CMIP)::ModelMeta
+    filename = first(splitext(basename(path)))
+    _parseFilenameModel(filename, path, CMIP_FIELD_INDICES)
+end
+
+function isRetained(fn_meta::T, constraint::Constraint) where {T <: AbstractMeta}
     # handle :model, TODO: if refers to members
-    allowed_models = getfield(constraint, :model)
+    allowed_models = getfield(constraint, :models)
     if !isempty(allowed_models)
         !(fn_meta.model in allowed_models) && return false
     end
-    for field in META_FIELDS
-        field in [:fn, :model] && continue # handled separately
-        allowed_vals = String[]
-        try 
-            allowed_vals = getfield(constraint, field)
-        catch e 
-        end
+
+    for field in keys(CONSTRAINTS_TO_META)#CONSTRAINT_FIELDS #META_FIELDS
+        field in [:filenames, :models] && continue # handled separately
+        allowed_vals = getfield(constraint, field)
         isempty(allowed_vals) && continue # if empty, all are allowed
-        val = getfield(fn_meta, field)
+        val = getfield(fn_meta, CONSTRAINTS_TO_META[field])
         !(val in allowed_vals) && return false
     end
-    # handle filename (:fn) # TODO: really necessary?
+    # handle filename really necessary?
     # elements_in_fn = getfield(constraint, :fn)
     # if !isempty(elements_in_fn)
     #     # keep = any(map(x -> occursin(x, value), constraint_vals))
@@ -952,7 +995,7 @@ function isRetained(fn_meta::FilenameMeta, constraint::Constraint)
     return true
 end
 
-# function isRetainedTimeseries(fn_meta::FilenameMeta, constraint_ts::Dict{String, Int})
+# function isRetainedTimeseries(fn_meta::ModelMeta, constraint_ts::Dict{String, Int})
 #     ds = open_dataset(fn_meta.path)
 #     ds_var = ds[Symbol(fn_meta.variable)]
 #     if !(:time in dimNames(ds_var))
@@ -1559,7 +1602,7 @@ end
 
 Check model names as retrieved from the metadata for potential inconsistencies wrt filename.
 """
-function fixModelNameInconsistenciesCMIP(props::Dict, fn_meta::FilenameMeta)
+function fixModelNameInconsistenciesCMIP(props::Dict, fn_meta::ModelMeta)
     model_from_file_properties = props[getCMIPModelsKey(props)]
     if occursin(model_from_file_properties, fn_meta.model)
         return fn_meta.member_id

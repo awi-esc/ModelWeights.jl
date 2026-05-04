@@ -134,6 +134,7 @@ abstract type ESMVTFormat <: AbstractFnFormat end
 struct FF_CMIP <: FilenameFormat end
 struct FF_ESMVT_CMIP5 <: FilenameFormat end
 struct FF_ESMVT_CMIP6 <: FilenameFormat end
+struct FF_ESMVT_OBS <: FilenameFormat end
 struct FF_ESMVT <: ESMVTFormat end
 
 # Internal conversion
@@ -141,12 +142,14 @@ toFF(::Val{:cmip}) = FF_CMIP()
 toFF(::Val{:esmvaltool_cmip5})  = FF_ESMVT_CMIP5()
 toFF(::Val{:esmvaltool_cmip6}) = FF_ESMVT_CMIP6()
 toFF(::Val{:esmvaltool}) = FF_ESMVT()
+toFF(::Val{:esmvaltool_obs}) = FF_ESMVT_OBS()
 toFF(f::AbstractFnFormat) = f 
-toFF(::Val{f}) where {f} = throw(ArgumentError("invalid filename format :$f, expected one of: :cmip, :esmvaltool, :esmvaltool_cmip5, :esmvaltool_cmip6"))
+toFF(::Val{f}) where {f} = throw(ArgumentError("invalid filename format :$f, expected one of: :cmip, :esmvaltool, :esmvaltool_cmip5, :esmvaltool_cmip6, :esmvaltool_obs"))
 
 formatString(::FF_CMIP) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
 formatString(::FF_ESMVT_CMIP5) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
 formatString(::FF_ESMVT_CMIP6) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
+formatString(::FF_ESMVT_OBS) = "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
 
 function _parseFormat(format_string::String)
     parts = split(format_string, "_")
@@ -156,8 +159,11 @@ end
 const CMIP5_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP5()))
 const CMIP6_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP6()))
 const CMIP_FIELD_INDICES = _parseFormat(formatString(FF_CMIP()))
+const OBS_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_OBS()))
 
-struct FilenameMeta
+
+abstract type AbstractMeta end
+struct ModelMeta <: AbstractMeta
     fn::String
     path::String
     variable::SubString{String}
@@ -170,7 +176,7 @@ struct FilenameMeta
     timerange::Union{Nothing, SubString{String}}# only given in filenames of CMIP standard
     member_id::String
     
-    function FilenameMeta(
+    function ModelMeta(
         fn::String, 
         path::String,
         variable::SubString{String}, 
@@ -190,7 +196,7 @@ struct FilenameMeta
     end
 end
 
-function FilenameMeta(;
+function ModelMeta(;
     fn::String,
     path::String,
     variable::SubString{String}, 
@@ -202,52 +208,111 @@ function FilenameMeta(;
     mip::Union{Nothing, SubString{String}}, 
     timerange::Union{Nothing, SubString{String}}
 )
-    FilenameMeta(fn, path, variable, tableid, model, experiment, variant, grid, mip, timerange)
+    ModelMeta(fn, path, variable, tableid, model, experiment, variant, grid, mip, timerange)
 end
 
+struct ObsMeta <: AbstractMeta
+    fn::String
+    path::String
+    variable::SubString{String}
+    tableid::SubString{String} 
+    model::SubString{String}
+    grid::SubString{String}
+    type::SubString{String} 
+    version::SubString{String} 
+end
+
+function ObsMeta(;
+    fn::String, 
+    path::String,
+    variable::SubString{String},
+    tableid::SubString{String}, 
+    model::SubString{String}, 
+    grid::SubString{String}, 
+    type::SubString{String}, 
+    version::SubString{String}
+)
+    ObsMeta(fn, path, variable, tableid, model, grid, type, version)
+end
+
+# joint fieldnames between models and observations
+metaFilename(meta::AbstractMeta) = meta.fn
+metaPath(meta::AbstractMeta) = meta.path
+metaVariable(meta::AbstractMeta) = meta.variable
+metaModel(meta::AbstractMeta) = meta.model
 
 
-const META_FIELDS = fieldnames(FilenameMeta)
-const PreviewMap = Dict{String, Vector{FilenameMeta}}
 
-# Constraint has the same fields as FileNameMeta
+const META_FIELDS = fieldnames(ModelMeta)
+const PreviewMap = Dict{String, Vector{AbstractMeta}}
+
+# Constraint has the same fields as ModelMeta
 
 @kwdef struct Constraint
-    fn::Vector{String}
-    path::Vector{String}
-    variable::Vector{String}
-    tableid::Vector{String}
-    model::Vector{String}
-    experiment::Vector{String}
-    variant::Vector{String}
-    grid::Vector{String} # in CMIP standard only given for CMIP6, not CMIP5
-    mip::Vector{String} # in CMIP standard only given for CMIP5, not CMIP6
-    timerange::Vector{String} # only given in filenames of CMIP standard
+    filenames::Vector{String}
+    variables::Vector{String}
+    tableids::Vector{String}
+    models::Vector{String}
+    experiments::Vector{String}
+    variants::Vector{String}
+    grids::Vector{String} # in CMIP standard only given for CMIP6, not CMIP5
+    mips::Vector{String} # in CMIP standard only given for CMIP5, not CMIP6
+    #start_y::Int
+    #end_y::Int
+    #timerange::Vector{String} # only given in filenames of CMIP standard
 end
 
 
-function Constraint(constraint::Dict{Symbol, <:AbstractArray{String}})
-    names = fieldnames(FilenameMeta)
-    if any(x -> !(x in names), keys(constraint)) 
-        throw(ArgumentError("Allowed keys in constraint are: $names"))
-    end
-    vals = values(constraint)
-    if all(isempty, vals)
-        throw(ArgumentError("constraint dict is empty!"))
-    end
+function Constraint(constraint::Dict{Symbol, Vector{String}})
+    # names = fieldnames(ModelMeta)
+    # if any(x -> !(x in names), keys(constraint)) 
+    #     throw(ArgumentError("Allowed keys in constraint are: $names"))
+    # end
+    # vals = values(constraint)
+    # if all(isempty, vals)
+    #     throw(ArgumentError("constraint dict is empty!"))
+    # end
     Constraint(
-        fn = get(constraint, :fn, String[]),
-        path = get(constraint, :path, String[]),
-        variable = get(constraint, :variable, String[]),
-        tableid = get(constraint, :tableid, String[]),
-        model = get(constraint, :model, String[]),
-        experiment = get(constraint, :experiment, String[]),
-        variant = get(constraint, :variant, String[]),
-        grid = get(constraint, :grid, String[]),
-        mip = get(constraint, :mip, String[]),
-        timerange = get(constraint, :timerange, String[])
+        filenames = get(constraint, :filenames, String[]),
+        #path = get(constraint, :path, String[]),
+        variables = get(constraint, :variables, String[]),
+        tableids = get(constraint, :tableids, String[]),
+        models = get(constraint, :models, String[]),
+        experiments = get(constraint, :experiments, String[]),
+        variants = get(constraint, :variants, String[]),
+        grids = get(constraint, :grids, String[]),
+        mips = get(constraint, :mips, String[]),
+        #start_y = get(constraint, :start_y, typemin(Int)),
+        #end_y = get(constraint, :end_y, typemax(Int))
+        #timerange = get(constraint, :timerange, String[]) # [start_y, end_y]
     )
 end
+
+# @kwdef struct ConstraintTS
+#     start_y::Int
+#     end_y::Int
+# end
+
+# function ConstraintTS(constraint::Dict{Symbol, Int})
+#     ConstraintTS(
+#         get(constraint, :start_year, typemin(Int)), 
+#         get(constraint, :end_year, typemax(Int))
+#     )
+# end
+
+const CONSTRAINT_FIELDS = fieldnames(Constraint)
+
+const CONSTRAINTS_TO_META = Dict(
+    :filenames => :fn,
+    :variables => :variable,
+    :tableids => :tableid,
+    :models => :model,
+    :experiments => :experiment,
+    :variants => :variant,
+    :grids => :grid, 
+    :mips => :mip
+)
+
 
 
 # ::MIME"text/plain" : for REPL output
@@ -265,7 +330,7 @@ function Base.show(io::IO, ::MIME"text/plain", x::PreviewMap)
     end
 end
 
-function Base.show(io::IO, ::MIME"text/plain", x::Union{MetaData, FilenameMeta})
+function Base.show(io::IO, ::MIME"text/plain", x::Union{MetaData, AbstractMeta})
     fields = map(f -> (f, getfield(x, f)), fieldnames(typeof(x)))
     fields = filter(field -> !isnothing(field[2]), fields)
     map(f -> println(io, f), fields)
