@@ -1608,7 +1608,7 @@ function fixModelNameInconsistenciesCMIP(props::Dict, fn_meta::ModelMeta)
         return fn_meta.member_id
     else
         # names differ between what is inferred from filename and what is inside stored meta data
-        name = get(MODEL_NAME_FIXES, fn_meta.model, nothing)
+        name = get(MODEL_NAME_FIXES, model_from_file_properties, nothing)
         if isnothing(name)
             # not known yet
             throw(KeyError("model name as read from metadata of stored .nc file ($model_from_file_properties) and used as dimension name is not identical to name inferred from filename ($(fn_meta.model))."))
@@ -1900,6 +1900,41 @@ function mergeYAX(
         end
         return merged
     end
+end
+
+"""
+    mergeYAX(df1::T, df2::T, dim::Symbol; sorted::Bool=true) where T <: YAXArray
+
+Combine two YAXArrays with identical dimensions into one with extended dimension 'dim'.  
+
+# Arguments:
+- `df1::T`: first YAXArray
+- `df2::T`: second YAXArray
+- `dim::Symbol`: dimension which is merged
+- `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(), 
+otherwise, lookup type is Unordered()
+"""
+function mergeYAX(
+    df1::T, df2::T, dim::Symbol; sorted::Bool=true
+) where T <: YAXArray
+    new_vals = vcat(val(dims(df1, dim)), val(dims(df2, dim)))
+    if sorted
+        merged = cat(
+            df1, df2; dims = Dim{dim}(Lookups.Sampled(new_vals; order=Lookups.Unordered()))
+        )
+        idx = dimnum(df1, dim)
+        perm = sortperm(new_vals)
+        indices = map(x -> x == idx ? perm : Colon(), 1:ndims(merged))
+        merged = merged[indices...] # already applies to dimension names and content!
+        # set type of Lookup values to ForwardOrdered()
+        merged = DimensionalData.set(merged, dim => Lookups.Sampled(new_vals[perm]; order = Lookups.ForwardOrdered()))
+        # instead of new_vals[perm], val(dims(merged, dim)) could also be used
+    else    
+        merged = cat(
+            df1, df2; dims = Dim{dim}(Lookups.Sampled(new_vals; order=Lookups.Unordered()))
+        )
+    end
+    return merged
 end
 
 

@@ -116,15 +116,23 @@ end
 
 const DataMap = Dict{String, YAXArray}
 
-function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String})
+function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String}; sorted::Bool = true)
     if length(data) != length(ids)
         throw(ArgumentError("data and ids must have same size to build up DataMap"))
     end
-    datamap = DataMap()
+    dm = DataMap()
     for (d, id) in zip(data, ids)
-        datamap[id] = d
+        if haskey(dm, id) # merge on model dimension
+            model_dim = modelDim(d)
+            if modelDim(dm[id]) != model_dim
+                throw(ArgumentError("Cant join two identical ids, with :member and :model dimension."))
+            end
+            dm[id] = mergeYAX(dm[id], d, model_dim)
+        else
+            dm[id] = d
+        end
     end
-    return datamap
+    return dm
 end
 
 abstract type AbstractFnFormat end
@@ -171,7 +179,7 @@ struct ModelMeta <: AbstractMeta
     model::SubString{String}
     experiment::SubString{String}
     variant::SubString{String}
-    grid::SubString{String} # in CMIP standard only given for CMIP6, not CMIP5
+    grid::Union{Nothing, SubString{String}} # in CMIP standard only given for CMIP6, not CMIP5
     mip::Union{Nothing, SubString{String}} # in CMIP standard only given for CMIP5, not CMIP6
     timerange::Union{Nothing, SubString{String}}# only given in filenames of CMIP standard
     member_id::String
@@ -184,7 +192,7 @@ struct ModelMeta <: AbstractMeta
         model::SubString{String}, 
         experiment::SubString{String}, 
         variant::SubString{String}, 
-        grid::SubString{String}, 
+        grid::Union{Nothing, SubString{String}}, 
         mip::Union{Nothing, SubString{String}}, 
         timerange::Union{Nothing, SubString{String}}
     )
@@ -204,7 +212,7 @@ function ModelMeta(;
     model::SubString{String}, 
     experiment::SubString{String}, 
     variant::SubString{String}, 
-    grid::SubString{String}, 
+    grid::Union{Nothing, SubString{String}}, 
     mip::Union{Nothing, SubString{String}}, 
     timerange::Union{Nothing, SubString{String}}
 )
