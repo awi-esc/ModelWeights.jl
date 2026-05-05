@@ -198,7 +198,7 @@ lgm_cmip6_tas = mw.defineDataMap(
 
 # several directory paths for every dataset; returns DataMap with 2 entries
 paths_lgm = [paths_lgm_tos, paths_lgm_tas];
-lgm = mwd.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool)
+lgm = mwd.defineDataMap(paths_lgm, ["tos", "tas"]; filename_format=:esmvaltool)
 
 lgm_cmip = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool) # without constraint
 lgm_cmip5 = mw.defineDataMap(
