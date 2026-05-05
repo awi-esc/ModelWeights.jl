@@ -97,38 +97,10 @@ function sharedModels(data::DataMap, level::Level)
     return isa(level, LevMember) ? sharedLevelMembers(data) : sharedLevelModels(data)
 end
 
-# function sharedModels(data::DataMap, level::Symbol)
-#     return sharedModels(data, getLevel(level))
-# end
+function sharedModels(data::DataMap, level::Symbol)
+    return sharedModels(data, toLevel(Val(level)))
+end
 
-# """
-#     sharedModels(
-#         all_paths::Vector{Vector{String}},
-#         level_shared::Level,
-#         fn_format::Symbol
-#     )
-
-# # Arguments:
-# - `all_paths`: every entry refers to the paths to data files for the respective dataset
-# """
-# function sharedModelsFromPaths(
-#     all_paths::Vector{Vector{String}}, level::Level, fn_format::FilenameFormat
-# )
-#     filenames_all_ds = map(paths -> first.(splitext.(basename.(paths))), all_paths)
-#     filenames_meta_all_ds = map(names -> parseFilename.(names, fn_format), filenames_all_ds)
-#     models_all = map(meta_data -> map(x -> x.model, meta_data), filenames_meta_all_ds)
-#     if isa(level, LevMember)
-#         variants_all = map(meta_data -> map(x -> x.variant, meta_data), filenames_meta_all_ds)
-#         grids_all = map(meta_data -> map(x -> x.grid, meta_data), filenames_meta_all_ds)
-#         models_all = map(models_all, variants_all, grids_all) do models, variants, grids
-#             map(models, variants, grids) do m, v, g
-#                 member = join([m, v], MODEL_MEMBER_DELIM)
-#                 member = !isnothing(g) ? join([member, g], "_") : member
-#             end
-#         end
-#     end
-#     return reduce(intersect, models_all)
-# end
 
 function sharedModelsFromPaths(
     all_paths::Vector{Vector{String}}, level::Level, fn_format::AbstractFnFormat
