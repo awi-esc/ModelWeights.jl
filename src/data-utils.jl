@@ -1874,7 +1874,8 @@ function mergeYAX(
    df::AbstractArray{<:YAXArray}, new_dim::Symbol, new_dim_vals::AbstractArray{String}
 )
     try 
-        return cat(df..., dims=Dim{new_dim}(new_dim_vals))
+        merged = cat(df..., dims=Dim{new_dim}(new_dim_vals))
+        return _sortYAX(merged, new_dim)
     catch e
         @warn "input arrays do not all have identical dimensions, missing values will be added!"
         # dimension names need to be identical
@@ -1898,7 +1899,8 @@ function mergeYAX(
             inds = NamedTuple{Tuple(names)}(Tuple(axes(dat, d) for d in names))
             merged[inds..., i] .= dat
         end
-        return merged
+        # make sure that Lookup is of type ForwardOrdered
+        return _sortYAX(merged, new_dim)
     end
 end
 
@@ -1917,33 +1919,37 @@ otherwise, lookup type is Unordered()
 function mergeYAX(
     df1::T, df2::T, dim::Symbol; sorted::Bool=true
 ) where T <: YAXArray
+    if otherdims(df1, dim) != otherdims(df2, dim)
+        throw(ArgumentError("Dimensions must be identical to be merged by extending an existing dimension."))
+    end
     new_vals = vcat(val(dims(df1, dim)), val(dims(df2, dim)))
+    dim_lookup = DimensionalData.lookup(df1, dim)
+    new_lookup = isa(dim_lookup, DimensionalData.Lookups.Categorical) ?
+        Lookups.Categorical(new_vals; order = Lookups.Unordered()) : 
+        Lookups.Sampled(new_vals; order = Lookups.Unordered())
+
+    merged = cat(df1, df2; dims = Dim{dim}(new_lookup))
     if sorted
-        merged = cat(
-            df1, df2; dims = Dim{dim}(Lookups.Sampled(new_vals; order=Lookups.Unordered()))
-        )
-        idx = dimnum(df1, dim)
-        perm = sortperm(new_vals)
-        indices = map(x -> x == idx ? perm : Colon(), 1:ndims(merged))
-        merged = merged[indices...] # already applies to dimension names and content!
-        # set type of Lookup values to ForwardOrdered()
-        merged = DimensionalData.set(merged, dim => Lookups.Sampled(new_vals[perm]; order = Lookups.ForwardOrdered()))
-        # instead of new_vals[perm], val(dims(merged, dim)) could also be used
-    else    
-        merged = cat(
-            df1, df2; dims = Dim{dim}(Lookups.Sampled(new_vals; order=Lookups.Unordered()))
-        )
+        merged = _sortYAX(merged, dim)
     end
     return merged
 end
 
 
-
-# TODO
-# function mergeYAX(df::AbstractArray{<:YAXArray}, dimension::Symbol)
-#     set dimension to be combined to unordered
-#     w2 = set(w2, :weight => DimensionalData.Lookups.ForwardOrdered())
-# end
+function _sortYAX(df::T, dim::Symbol) where T <: YAXArray
+    idx = dimnum(df, dim)
+    vals = DimensionalData.lookup(df, dim)
+    perm = sortperm(vals)
+    indices = map(x -> x == idx ? perm : Colon(), 1:ndims(df))
+    df = df[indices...] # already applies to dimension names and content!
+    # but set type of Lookup values to ForwardOrdered():
+    dim_lookup = DimensionalData.lookup(df, dim)
+    new_lookup = isa(dim_lookup, DimensionalData.Lookups.Categorical) ?
+        Lookups.Categorical(val(dims(df, dim)); order = Lookups.ForwardOrdered()) : 
+        Lookups.Sampled(val(dims(df, dim)); order = Lookups.ForwardOrdered())
+    df = DimensionalData.set(df, dim => new_lookup)
+    return df
+end
 
 
 function limitMap(data::YAXArray, lat::Tuple, lon::Tuple)

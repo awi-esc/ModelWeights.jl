@@ -146,7 +146,7 @@ v2 = YAXArray((Dim{:lat}(latitudes), Dim{:lon}(longitudes)), rand(7, 9))
 
 variables = mw.defineDataMap([v1, v2], ["ESM1", "ESM2"])
 
-# 2. Load from data directories
+# 2. Load from data directories (defineDataMap(Vector{Vector{String}}, String))
 base = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool" 
 
 # 2.1 just CMIP5, single dataset
@@ -181,7 +181,7 @@ preview_tos = mwd.previewDataMap(paths_lgm_tos, "tos"; filename_format=:esmvalto
 tos = mwd.defineDataMap(paths_lgm_tos, "tos"; filename_format=:esmvaltool) 
 
 
-# 2.4 one directory path for every dataset
+# 2.4 one directory path for every dataset (defineDataMap(Vector{String}, Vector{String}))
 paths_lgm_cmip6 = [joinpath(base, "LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM"), joinpath(base, "LGM/recipe_cmip6_lgm_tas_20241114_150706/preproc/lgm/tas_CLIM")]
 preview_lgm_cmip6 = mwd.previewDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool_cmip6)
 lgm_cmip6 = mw.defineDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool_cmip6)
@@ -197,14 +197,7 @@ preview_lgm_cmip5 = mwd.previewDataMap(paths_lgm_cmip5, ["tos_lgm", "tas_lgm"]; 
 lgm_cmip5 = mw.defineDataMap(paths_lgm_cmip5, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool_cmip5)
 lgm_cmip5 = mw.defineDataMap(paths_lgm_cmip5, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool)
 
-
-# Adding constraints
-constraint = Dict(:variables => ["tas"])
-lgm_cmip6_tas = mw.defineDataMap(
-    paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool_cmip6, constraint
-)
-
-# several directory paths for every dataset; returns DataMap with 2 entries
+# several directory paths for every dataset; returns DataMap with 2 entries (defineDataMap(Vector{Vector{String}}, Vector{String}))
 paths_lgm = [paths_lgm_tas, paths_lgm_tos];
 preview_lgm = mwd.previewDataMap(paths_lgm, ["tas", "tos"]; filename_format=:esmvaltool)
 lgm_cmip = mwd.defineDataMap(paths_lgm, ["tas", "tos"]; filename_format=:esmvaltool)
@@ -228,21 +221,40 @@ model_members_lgm = Array(dims(lgm["tas"], :member))
 model_names =  mwd.modelsFromMemberIDs(model_members_lgm; uniq = true)
 model_names =  mwd.modelsFromMemberIDs(model_members_lgm; uniq = false)
 
+# Adding constraints
+constraint = Dict(:variables => ["tas"])
+lgm_cmip6_tas = mw.defineDataMap(
+    paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool_cmip6, constraint
+)
+
+
+
+
+
 # Historical Data
 paths_historical_tas = [
     joinpath(base, "historical/recipe_cmip5_historical_tas_20250211_094633/preproc/historical/tas_CLIM"), 
-    #joinpath(base, "historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM")
+    joinpath(base, "historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM")
 ];
 paths_historical_tos = [
     joinpath(base, "historical/recipe_cmip5_historical_tos_20250211_094633/preproc/historical/tos_CLIM"),
-    #joinpath(base, "historical/recipe_cmip6_historical_tos_20250209_144722/preproc/historical/tos_CLIM")
+    joinpath(base, "historical/recipe_cmip6_historical_tos_20250209_144722/preproc/historical/tos_CLIM")
 ];
+
+# TODO: fix constraints -> if just a single dataset, level should not have an influence!
 paths_historical = [paths_historical_tas, paths_historical_tos];
 constraint = Dict(:models => model_members_lgm)
+preview_historical = mwd.previewDataMap(
+    paths_historical_tas, 
+    "tas"; 
+    #level = :member, 
+    filename_format = :esmvaltool,
+    constraint
+)
 historical = mwd.defineDataMap(
-    paths_historical, 
-    ["tas_historical", "tos_historical"];
-    level = :model, 
+    paths_historical_tos, 
+    "tos"; 
+    level = :member, 
     filename_format = :esmvaltool, 
     #constraint
 )
