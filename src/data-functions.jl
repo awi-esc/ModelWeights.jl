@@ -602,15 +602,14 @@ end
 function _applyLevel!(
     meta_data_per_dataset::AbstractVector{<:AbstractVector{ModelMeta}}, level::Level
 )
-    shared = sharedModelsFromMeta(meta_data_per_dataset, level)
-    indices_members = findall(x -> occursin(MODEL_MEMBER_DELIM, x), shared)
-    indices_models = [i for i in 1:length(shared) if !(i in indices_members)]
-    #shared_members = shared[indices_members] # TODO
-    shared_models = shared[indices_models]
+    # either contains models or members, depending on level:
+    shared = sharedModelsFromMeta(meta_data_per_dataset, level) 
     for (i, meta_files) in enumerate(meta_data_per_dataset)
-        # handle members TODO
-        #handle models
-        mask = [meta.model in shared_models for meta in meta_files]
+        if isa(level, LevModel)
+            mask = [meta.model in shared for meta in meta_files]
+        else
+            mask = [meta.member_id in shared for meta in meta_files]
+        end
         meta_data_per_dataset[i] = meta_files[mask]
     end
     return nothing
