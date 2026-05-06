@@ -94,3 +94,60 @@ end
     counts = ModelWeights.Data.countMap(data2)
     @test counts[7] == 1 && counts[10] == 1 && counts[17] == 2 && counts[91] == 2 && counts[910] == 1
 end
+
+
+@testset "Test mergeYAX new dimension" begin
+    longitudes =  [12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5]
+    latitudes = [-77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5]
+    dimensions = (
+        Dim{:lat}(latitudes),
+        Dim{:lon}(longitudes), 
+        Dim{:member}(["ESM1#r1i1p1f1", "ESM2#r1i1p1f1", "ESM2#r1i1p1f2"])
+    )
+    arr1 = YAXArray(dimensions, zeros(7, 9, 3))
+    arr2 = YAXArray(dimensions, ones(7, 9, 3))
+    mergeYAX([arr1, arr2], :var, ["tos", "tas"])
+    #TODO: add Test
+end
+
+
+@testset "Test mergeYAX extend dimension sorted" begin
+    longitudes =  [12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5]
+    latitudes = [-77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5]
+    dims1 = (Dim{:lat}(latitudes),Dim{:lon}(longitudes), Dim{:model}(["ESM1", "ESM2", "ESM5"]))
+    dims2 = (Dim{:lat}(latitudes),Dim{:lon}(longitudes), Dim{:model}(["ESM3", "ESM4"]))
+    arr1 = YAXArray(dims1, zeros(7, 9, 3))
+    arr2 = YAXArray(dims2, ones(7, 9, 2))
+    df = mergeYAX(arr1, arr2, :model)
+
+    @test sum(df[model = At("ESM3")]) == 7*9
+    @test sum(df[model = 3]) == 7*9
+
+    @test sum(df[model = At("ESM5")]) == 0
+    @test sum(df[model = 5]) == 0
+
+    @test val(dims(df, :model)) == ["ESM1", "ESM2", "ESM3", "ESM4", "ESM5"]
+
+    # TODO: test if ForwardOrdered
+end
+
+
+@testset "Test mergeYAX extend dimension unsorted" begin
+    longitudes =  [12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5]
+    latitudes = [-77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5]
+    dims1 = (Dim{:lat}(latitudes),Dim{:lon}(longitudes), Dim{:model}(["ESM1", "ESM2", "ESM5"]))
+    dims2 = (Dim{:lat}(latitudes),Dim{:lon}(longitudes), Dim{:model}(["ESM3", "ESM4"]))
+    arr1 = YAXArray(dims1, zeros(7, 9, 3))
+    arr2 = YAXArray(dims2, ones(7, 9, 2))
+    df = mergeYAX(arr1, arr2, :model; sorted = false)
+
+    @test sum(df[model = At("ESM3")]) == 7*9
+    @test sum(df[model = 4]) == 7*9
+
+    @test sum(df[model = At("ESM5")]) == 0
+    @test sum(df[model = 3]) == 0
+
+    @test val(dims(df, :model)) == ["ESM1", "ESM2", "ESM5", "ESM3", "ESM4"]
+
+    # TODO: test if UnOrdered
+end
