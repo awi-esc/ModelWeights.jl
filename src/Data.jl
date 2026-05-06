@@ -27,10 +27,12 @@ using YAML
 using YAXArrays
 
 const MODEL_MEMBER_DELIM = "#"
+# maps from file name as retrieved from metadata to name in the filename itself
 const MODEL_NAME_FIXES = Dict(
     "FGOALS_g2" => "FGOALS-g2", 
     "ACCESS1.3" => "ACCESS1-3",
-    "fio-esm" => "FIO-ESM"
+    "FIO-ESM" => "fio-esm"
+    #"fio-esm" => "FIO-ESM"
 )
 
 abstract type AbstractLevel end

@@ -523,7 +523,6 @@ function loadPreprocData(
 end
 
 
-
 function checkInput(
     all_paths::Vector{T}, 
     ids::Vector{String};
@@ -545,7 +544,12 @@ function _previewDataMapCore(
     preview_map = PreviewMap()
     for i in eachindex(ids)
         if !isempty(meta_data[i])
-            preview_map[ids[i]] = meta_data[i] 
+            id = ids[i]
+            if haskey(preview_map, id) # concatenate
+                preview_map[id] = vcat(preview_map[id], meta_data[i])
+            else
+                preview_map[id] = meta_data[i]
+            end
         end
     end
     return preview_map
@@ -556,21 +560,14 @@ function _loadDataMapCore(
     ids::Vector{String};
     dtype::String = "cmip",
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-    sorted::Bool = true,
+    sorted::Bool = true
     #meta_info::Vector{Dict{String, String}} = Dict{String, String}[]
 ) where T <: AbstractMeta
     # TODO: handle meta info
     data = Vector{YAXArray}(undef, length(meta_data_per_dataset))
     indices_found = Int[];
     for (i, meta_data) in enumerate(meta_data_per_dataset)
-        df = loadPreprocData(
-            meta_data;
-            #fn_format;
-            constraint_ts, 
-            dtype, 
-            sorted, 
-            #meta_info = meta_info  
-        )
+        df = loadPreprocData(meta_data; constraint_ts, dtype, sorted) #, meta_info = meta_info  
         if !isnothing(df)
             data[i] = df
             push!(indices_found, i)
@@ -601,100 +598,6 @@ function _loadDataMapCore(
     return defineDataMap(data, ids_filtered)
 end
 
-# previous:
-# """
-#     _loadDataMapCore(
-#         all_paths::Vector{Vector{String}},
-#         ids::Vector{String},
-#         constraint::Union{Dict{String, <:AbstractArray{String}}, Nothing} = nothing,
-#         constraint_ts::Dict{String, Int} = Dict{String, Int}(),
-#         level::Union{Symbol, Nothing} = nothing,
-#         dtype::String = "cmip",
-#         filename_format::Symbol = :cmip,
-#         sorted::Bool = true,
-#         meta_data::Union{Vector{Dict{String, String}}, Nothing} = nothing
-#     )
-
-# Load a DataMap instance with keys `ids` that map to data at `all_paths`, where every 
-# subvector refers the paths of the data of a single dataset. 
-
-
-# # Arguments:
-# - `all_paths`: each subvector should contain paths to directories that store data for the same experiment and variable.
-# """
-# function _loadDataMapCore(
-#     all_paths::Vector{Vector{String}},
-#     ids::Vector{String};
-#     constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
-#     constraint_ts::Dict{String, Int} = Dict{String, Int}(),
-#     level::AbstractLevel = LevNone(),
-#     dtype::String = "cmip",
-#     fn_format::AbstractFnFormat = FF_CMIP(),
-#     sorted::Bool = true,
-#     meta_data::Vector{Dict{String, String}} = Dict{String, String}[]
-# )
-#     #checkConstraint.(constraints)
-#     #checkInput(all_paths, ids; meta_data)
-
-#     all_meta = absent(meta_data) ? fill(nothing, length(all_paths)) : meta_data
-#     #@info "length(all_paths): $(length(all_paths)); length(all_paths[1]): $(length(all_paths[1]))"
-#     # TODO: add possibility to have one constraint per dataset 
-#     #data = Vector{Vector{YAXArray}}(undef, length(all_paths))
-#     data = Vector{YAXArray}(undef, length(all_paths))
-#     for (i, (paths, meta)) in enumerate(zip(all_paths, all_meta))
-#         data[i] = loadPreprocData(
-#             paths, 
-#             fn_format; 
-#             constraint_ts, 
-#             dtype, 
-#             sorted, 
-#             meta_info = meta 
-#         )
-#     end
-#     no_data_found = emptyYAX.(data)
-#     data_found = .!no_data_found
-#     if any(no_data_found)
-#         #@warn "no data found for ids: $(ids[.!found_data])"
-#         #filter!(!isnothing, data)
-#         data = data[data_found]
-#         #data = YAXArray.(data) # why needed?
-#     end
-#     if isempty(data)
-#         # no data was found at all
-#         return nothing # TODO: better to return an empty array?!
-#     end
-#     # if isa(level, Level) && dtype == "cmip"
-#     #     models = isa(level, LevModel) ?  modelsFromMemberIDs.(data; uniq=true) : Array.(lookup.(data, :member))
-#     #     shared_models = reduce(intersect, models)
-#     #     data = map(ds -> subsetModelData(ds, shared_models), data)
-#     # end
-#     ids_filtered = ids[data_found]
-#     # return defineDataMap(data, ids_filtered)
-#     return defineDataMap(data, ids_filtered)
-# end
-
-# function loadDataMapCore(
-#     all_paths::Vector{Vector{String}},
-#     ids::Vector{String},
-#     constraint::Union{Dict{String, T}, Nothing};
-#     dtype::String = "cmip",
-#     filename_format::Symbol = :cmip,
-#     sorted::Bool = true,
-#     preview::Bool = false,
-#     meta_data::Union{Vector{Dict{String, String}}, Nothing} = nothing
-# ) where T <: AbstractArray{String}
-#     constraint = isnothing(constraint) ? Dict{String, Vector{String}}() : constraint
-#     constraints = repeat([constraint], length(all_paths))
-#     return loadDataMapCore(
-#         all_paths, ids, constraints; dtype, filename_format, sorted, preview, meta_data
-#     )
-# end
-
-# function _applySharedLevel(
-#     all_paths::AbstractVector{<:AbstractVector{String}}, level::Level, fn_format::FilenameFormat
-# )
-#     return filterPathsSharedModels(all_paths, level, fn_format)
-# end
 
 function _applyLevel!(
     meta_data_per_dataset::AbstractVector{<:AbstractVector{ModelMeta}}, level::Level
@@ -972,8 +875,27 @@ end
 #     )
 # end
 
-
 # Loading data directly from given directories
+function previewDataMap(
+    paths_data_dirs::Vector{String}, 
+    id::String;
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    dtype::String = "cmip",
+    filename_format::Symbol = :cmip
+)
+    meta_data = _prepareMetaData(
+        paths_data_dirs; constraint, constraint_ts, level, dtype, filename_format
+    )
+    is_constraint_ts = constraint_ts.start_year != typemin(Int) || constraint_ts.end_year != typemax(Int)
+    if filename_format != :cmip && is_constraint_ts
+        @info "Timeseries constraint not applied for preview when filename format is not :cmip!"
+    end
+    _previewDataMapCore(meta_data, fill(id, length(meta_data)))
+end
+
+
 """
     defineDataMap(
         paths::Vector{String}, 
@@ -999,77 +921,19 @@ function defineDataMap(
     level::Symbol = :none,
     dtype::String = "cmip",
     filename_format::Symbol = :cmip,
-    sorted::Bool = true,
+    sorted::Bool = true
     #meta_info::Dict{String, String} = Dict{String, String}()
 )
-    level = toLevel(Val(level))
-    fn_format = toFF(Val(filename_format))
-    paths_dirs = filter(x -> isdir(x), paths)
-    paths_to_files = collectNCFilePaths.(paths_dirs)   
+    meta_data = _prepareMetaData(
+        paths; constraint, constraint_ts, level, dtype, filename_format
+    )
+    _loadDataMapCore(meta_data, fill(id, length(meta_data)); constraint_ts, dtype, sorted)#meta_info
     # TODO: do we want to include single nc files besides directories?
-    #paths_ncfiles = filter(x -> isfile(x) && endswith(x, ".nc"), paths)
-    #paths_to_files = vcat(collectNCFilePaths.(paths_dirs)..., paths_ncfiles)
-
-    meta_data = _getFilteredMetaData(
-        paths_to_files, constraint, constraint_ts; level, dtype, fn_format
-    )
-    _loadDataMapCore(
-        meta_data, fill(id, length(meta_data)); constraint_ts, dtype, sorted, #[meta_info]
-    )
 end
 
-
-"""
-    defineDataMap(
-        paths_data_dirs::Vector{String}, 
-        data_ids::Vector{String};
-        constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
-        constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-        level::Symbol = :none,
-        dtype::String = "cmip",
-        filename_format::Symbol = :cmip,
-        sorted::Bool = true,
-        #meta_info::Vector{Dict{String, String}} = Dict{String, String}[]
-    )
-
-Return DataMap with entries `data_ids` with the data (model or observations depending on `filename_format`) 
-from all .nc files in all directories in `paths_data_dirs`, possibly constraint by 
-`constraint` and `constraint_ts`.
-"""
-function defineDataMap(
-    paths_data_dirs::Vector{String}, 
-    data_ids::Vector{String};
-    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
-    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-    level::Symbol = :none,
-    dtype::String = "cmip",
-    filename_format::Symbol = :cmip,
-    sorted::Bool = true,
-    #meta_info::Vector{Dict{String, String}} = Dict{String, String}[]
-)
-    if length(paths_data_dirs) != length(data_ids)
-        throw(ArgumentError("'all_paths' and 'ids' must have the same length!"))
-    end
-    # checkInput with meta_info
-    level = toLevel(Val(level))
-    fn_format = toFF(Val(filename_format))
-    paths_dirs = filter(x -> isdir(x), paths_data_dirs)
-    paths_to_files = collectNCFilePaths.(paths_dirs)
-    meta_data = _getFilteredMetaData(
-        paths_to_files, constraint, constraint_ts; level, dtype, fn_format
-    )
-    _loadDataMapCore(
-        meta_data, 
-        data_ids;
-        constraint_ts,
-        dtype, 
-        sorted
-        #meta_info
-    )
-end
 
 function previewDataMap(
-    paths_data_dirs::Vector{String}, 
+    paths_data_dirs::Union{Vector{String}, Vector{Vector{String}}}, 
     data_ids::Vector{String};
     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
@@ -1080,16 +944,12 @@ function previewDataMap(
     if length(paths_data_dirs) != length(data_ids)
         throw(ArgumentError("'all_paths' and 'ids' must have the same length!"))
     end
-    level = toLevel(Val(level))
-    fn_format = toFF(Val(filename_format))
-    paths_dirs = filter(x -> isdir(x), paths_data_dirs)
-    paths_to_files = collectNCFilePaths.(paths_dirs)
-    meta_data = _getFilteredMetaData(
-        paths_to_files, constraint, constraint_ts; level, dtype, fn_format
+    meta_data = _prepareMetaData(
+        paths_data_dirs; constraint, constraint_ts, level, dtype, filename_format
     )
-    if !isa(fn_format, FF_CMIP)
-        # if fn type does not have timerange in filename, constraint_ts cannot be applied in preview!
-        @info "timeseries constraint not applied for preview when filename format is not :cmip!"
+    is_constraint_ts = constraint_ts.start_year != typemin(Int) || constraint_ts.end_year != typemax(Int)
+    if filename_format != :cmip && is_constraint_ts
+        @info "Timeseries constraint not applied for preview when filename format is not :cmip!"
     end
     _previewDataMapCore(meta_data, data_ids)
 end
@@ -1116,7 +976,7 @@ each entry in `paths_data_dirs` points to the vector of data directories from wh
 is loaded for that dataset.
 """
 function defineDataMap(
-    paths_data_dirs::Vector{Vector{String}}, 
+    paths_data_dirs::Union{Vector{String}, Vector{Vector{String}}}, 
     data_ids::Vector{String};
     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
@@ -1130,24 +990,41 @@ function defineDataMap(
         throw(ArgumentError("'all_paths' and 'ids' must have the same length!"))
     end
     # checkInput with meta_info checkInput(paths_data_dirs, data_ids; meta_info)
-    level = toLevel(Val(level))
-    fn_format = toFF(Val(filename_format))
-    # no check if each entry refers to a directory done here for now
-    paths_to_files = map(paths_data_dirs) do paths 
-        vcat(collectNCFilePaths.(paths)...)
-    end
-    meta_data = _getFilteredMetaData(
-        paths_to_files, constraint, constraint_ts; level, dtype, fn_format
+    meta_data = _prepareMetaData(
+        paths_data_dirs; constraint, constraint_ts, level, dtype, filename_format
     )
-    _loadDataMapCore(
-        meta_data, 
-        data_ids;
-        constraint_ts,
-        dtype, 
-        sorted
-        #meta_info
-    )
+    _loadDataMapCore(meta_data, data_ids; constraint_ts, dtype, sorted)#meta_info
 end
+
+
+function _prepareMetaData(
+    paths::Union{Vector{String}, Vector{Vector{String}}};
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    dtype::String = "cmip",
+    filename_format::Symbol = :cmip
+)
+    level_resolved = toLevel(Val(level))
+    fn_format = toFF(Val(filename_format))
+    paths_to_files = _collectPaths(paths)
+    meta_data = _getFilteredMetaData(
+        paths_to_files, constraint, constraint_ts; level = level_resolved, dtype, fn_format
+    )
+    return meta_data
+end
+
+function _collectPaths(paths_dirs::Vector{String})
+    collectNCFilePaths.(filter(isdir, paths_dirs))
+end
+
+
+function _collectPaths(paths_data_dirs::Vector{Vector{String}})
+    map(paths_data_dirs) do paths 
+        vcat(collectNCFilePaths.(filter(isdir, paths))...)
+    end
+end
+
 
 """
     function _getFilteredMetaData(

@@ -137,7 +137,7 @@ end
 
 
 # --------- Load the model data Version 3: completely independent of ESMValTool recipes --------- #
-# most basic case, where some available data (YAXArrays) are loaded into a DataMap
+# 1. most basic case, where some available data (YAXArrays) are loaded into a DataMap
 longitudes =  [12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5]
 latitudes = [-77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5]
 
@@ -146,27 +146,26 @@ v2 = YAXArray((Dim{:lat}(latitudes), Dim{:lon}(longitudes)), rand(7, 9))
 
 variables = mw.defineDataMap([v1, v2], ["ESM1", "ESM2"])
 
-
-
+# 2. Load from data directories
 base = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool" 
 
-# just CMIP5
-filename_format = :esmvaltool_cmip5;
+# 2.1 just CMIP5, single dataset
 paths_lgm_tos = [
     joinpath(base, "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM")
 ];
+preview_tos = mwd.previewDataMap(paths_lgm_tos, "tos"; filename_format = :esmvaltool_cmip5)
 tos = mwd.defineDataMap(paths_lgm_tos, "tos"; filename_format = :esmvaltool_cmip5)
 
-# just CMIP6
+# 2.2 just CMIP6, single dataset
 paths_lgm_tas = [
     joinpath(base, "LGM/recipe_cmip6_lgm_tas_20241114_150706/preproc/lgm/tas_CLIM")
 ];
+preview_tas = mwd.previewDataMap(paths_lgm_tas, "tas"; filename_format = :esmvaltool_cmip6)
 tas = mwd.defineDataMap(paths_lgm_tas, "tas"; filename_format = :esmvaltool_cmip6)
 # also works with filename_format = :esmvaltool:
 tas = mwd.defineDataMap(paths_lgm_tas, "tas"; filename_format = :esmvaltool)
 
-
-# CMIP5 and CMIP6
+# 2.3 single dataset, but for each CMIP5 and CMIP6 data is loaded
 paths_lgm_tos = [
     joinpath(base, "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM"),
     joinpath(base, "LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM")
@@ -176,74 +175,80 @@ paths_lgm_tas = [
     joinpath(base, "LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM")
 ];
 # each returns a DataMap with 1 entry
-tas = mwd.defineDataMap(paths_lgm_tos, "tas"; filename_format=:esmvaltool)
-tos = mw.defineDataMap(paths_lgm_tos, "tos"; filename_format=:esmvaltool) 
+preview_tas = mwd.previewDataMap(paths_lgm_tas, "tas"; filename_format=:esmvaltool)
+tas = mwd.defineDataMap(paths_lgm_tas, "tas"; filename_format=:esmvaltool)
+preview_tos = mwd.previewDataMap(paths_lgm_tos, "tos"; filename_format=:esmvaltool)
+tos = mwd.defineDataMap(paths_lgm_tos, "tos"; filename_format=:esmvaltool) 
 
-# one directory path for every dataset
+
+# 2.4 one directory path for every dataset
 paths_lgm_cmip6 = [joinpath(base, "LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM"), joinpath(base, "LGM/recipe_cmip6_lgm_tas_20241114_150706/preproc/lgm/tas_CLIM")]
+preview_lgm_cmip6 = mwd.previewDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool_cmip6)
 lgm_cmip6 = mw.defineDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool_cmip6)
+# also works for (less specific) filename_format=:esmvaltool
 lgm_cmip6 = mw.defineDataMap(paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool)
 
+# same with cmip5
 paths_lgm_cmip5 = [
     joinpath(base,"LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM"), 
     joinpath(base, "LGM/recipe_cmip5_lgm_tas_20241114_145900/preproc/lgm/tas_CLIM")
 ]
+preview_lgm_cmip5 = mwd.previewDataMap(paths_lgm_cmip5, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool_cmip5)
 lgm_cmip5 = mw.defineDataMap(paths_lgm_cmip5, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool_cmip5)
+lgm_cmip5 = mw.defineDataMap(paths_lgm_cmip5, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool)
 
 
+# Adding constraints
 constraint = Dict(:variables => ["tas"])
 lgm_cmip6_tas = mw.defineDataMap(
     paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool_cmip6, constraint
 )
 
 # several directory paths for every dataset; returns DataMap with 2 entries
-paths_lgm = [paths_lgm_tos, paths_lgm_tas];
-lgm = mwd.defineDataMap(paths_lgm, ["tos", "tas"]; filename_format=:esmvaltool)
-
-lgm_cmip = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool) # without constraint
+paths_lgm = [paths_lgm_tas, paths_lgm_tos];
+preview_lgm = mwd.previewDataMap(paths_lgm, ["tas", "tos"]; filename_format=:esmvaltool)
+lgm_cmip = mwd.defineDataMap(paths_lgm, ["tas", "tos"]; filename_format=:esmvaltool)
+# add constraints
+preview_lgm_cmip5 = mwd.previewDataMap(
+    paths_lgm, ["tas", "tos"]; filename_format=:esmvaltool, constraint = Dict(:mips => ["CMIP5"])
+)
 lgm_cmip5 = mw.defineDataMap(
-    paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool, constraint = Dict(:mips => ["CMIP5"])
-) # with constraint
+    paths_lgm, ["tas", "tos"]; filename_format=:esmvaltool, constraint = Dict(:mips => ["CMIP5"])
+) 
+preview_lgm_cmip6 = mwd.previewDataMap(
+    paths_lgm, ["tas", "tos"]; filename_format=:esmvaltool, constraint = Dict(:mips => ["CMIP6"])
+)
 lgm_cmip6 = mw.defineDataMap(
-    paths_lgm, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool, constraint = Dict(:mips => ["CMIP6"])
-) # with constraint
+    paths_lgm, ["tas", "tos"]; filename_format=:esmvaltool, constraint = Dict(:mips => ["CMIP6"])
+)
 
-
-
-
-
-shared_models = mwd.sharedModels(lgm, :model);
-shared_members = mwd.sharedModels(lgm, "member");
-constraint = Dict{String, Union{Vector{String}, String}}(
-    "level_shared" => "member"
-);
-lgm = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint, filename_format)
-lgm = mw.defineDataMap(paths_lgm, ["tos_lgm", "tas_lgm"]; constraint, dtype, filename_format)
-
-
-model_members_lgm = Array(dims(lgm["tas_lgm"], :member));
+shared_models = mwd.sharedModels(lgm, :model)
+shared_members = mwd.sharedModels(lgm, :member)
+model_members_lgm = Array(dims(lgm["tas"], :member))
 model_names =  mwd.modelsFromMemberIDs(model_members_lgm; uniq = true)
+model_names =  mwd.modelsFromMemberIDs(model_members_lgm; uniq = false)
 
+# Historical Data
 paths_historical_tas = [
     joinpath(base, "historical/recipe_cmip5_historical_tas_20250211_094633/preproc/historical/tas_CLIM"), 
-    joinpath(base, "historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM")
+    #joinpath(base, "historical/recipe_cmip6_historical_tas_20250207_080843/preproc/historical/tas_CLIM")
 ];
 paths_historical_tos = [
     joinpath(base, "historical/recipe_cmip5_historical_tos_20250211_094633/preproc/historical/tos_CLIM"),
-    joinpath(base, "historical/recipe_cmip6_historical_tos_20250209_144722/preproc/historical/tos_CLIM")
+    #joinpath(base, "historical/recipe_cmip6_historical_tos_20250209_144722/preproc/historical/tos_CLIM")
 ];
 paths_historical = [paths_historical_tas, paths_historical_tos];
-constraint = Dict{String, Union{Vector{String}, Symbol}}(
-    "models" => model_members_lgm,
-    "level_shared" => :member # applies to every variable
-);
+constraint = Dict(:models => model_members_lgm)
 historical = mwd.defineDataMap(
     paths_historical, 
-    ["tas_historical", "tos_historical"]; 
-    dtype, 
-    filename_format, 
-    constraint
+    ["tas_historical", "tos_historical"];
+    level = :model, 
+    filename_format = :esmvaltool, 
+    #constraint
 )
+
+
+
 
 # to load data as YAXArrays from files directly (not from all files within directories), use loadPreprocData
 paths_tas = vcat(mwd.collectNCFilePaths.(paths_lgm_tas)...)
