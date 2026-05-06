@@ -383,7 +383,7 @@ function plotTimeseries(
             end
         end
         Legend(
-            f[2,1], plots, Array(dims(data)[idx_other_dim]), framevisible=false, 
+            f[2,1], plots, string.(Array(dims(data)[idx_other_dim])), framevisible=false, 
             orientation=:horizontal, nbanks = div(n,4) +1, 
             labelsize=10
         )
