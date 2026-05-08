@@ -974,13 +974,15 @@ function parsePath(path::String, ::FF_CMIP)::ModelMeta
 end
 
 function isRetained(fn_meta::T, constraint::Constraint) where {T <: AbstractMeta}
-    # handle :model, TODO: if refers to members
     allowed_models = getfield(constraint, :models)
     if !isempty(allowed_models)
         !(fn_meta.model in allowed_models) && return false
     end
+    # handle :model, TODO: if refers to members
+    allowed_members = getfield(constraint, :members)
+    # TODO: hier weiter
 
-    for field in keys(CONSTRAINTS_TO_META)#CONSTRAINT_FIELDS #META_FIELDS
+    for field in keys(CONSTRAINTS_TO_META)
         field in [:filenames, :models] && continue # handled separately
         allowed_vals = getfield(constraint, field)
         isempty(allowed_vals) && continue # if empty, all are allowed
@@ -1871,8 +1873,8 @@ end
    Merge two YAXArrays with identical dimensions into one with additional dimension 'new_dim'.
 """
 function mergeYAX(
-   df::AbstractArray{<:YAXArray}, new_dim::Symbol, new_dim_vals::AbstractArray{String}
-)
+   df::AbstractArray{<:YAXArray}, new_dim::Symbol, new_dim_vals::T
+) where T <: AbstractArray
     try 
         merged = cat(df..., dims=Dim{new_dim}(new_dim_vals))
         return _sortYAX(merged, new_dim)

@@ -251,12 +251,7 @@ metaPath(meta::AbstractMeta) = meta.path
 metaVariable(meta::AbstractMeta) = meta.variable
 metaModel(meta::AbstractMeta) = meta.model
 
-
-
-const META_FIELDS = fieldnames(ModelMeta)
 const PreviewMap = Dict{String, Vector{AbstractMeta}}
-
-# Constraint has the same fields as ModelMeta
 
 @kwdef struct Constraint
     filenames::Vector{String}
@@ -267,24 +262,19 @@ const PreviewMap = Dict{String, Vector{AbstractMeta}}
     variants::Vector{String}
     grids::Vector{String} # in CMIP standard only given for CMIP6, not CMIP5
     mips::Vector{String} # in CMIP standard only given for CMIP5, not CMIP6
-    #start_y::Int
-    #end_y::Int
-    #timerange::Vector{String} # only given in filenames of CMIP standard
+    members::Vector{String} # only applicable to model data, not observations
 end
 
+const CONSTRAINT_FIELDS = fieldnames(Constraint)
 
 function Constraint(constraint::Dict{Symbol, Vector{String}})
-    # names = fieldnames(ModelMeta)
-    # if any(x -> !(x in names), keys(constraint)) 
-    #     throw(ArgumentError("Allowed keys in constraint are: $names"))
-    # end
-    # vals = values(constraint)
-    # if all(isempty, vals)
-    #     throw(ArgumentError("constraint dict is empty!"))
-    # end
+    all_keys = keys(constraint)
+    irrelevant_keys = filter(x -> !(x in CONSTRAINT_FIELDS), all_keys)
+    if !isempty(irrelevant_keys)
+        @warn "The following entries in constraints are not valid and are not taken into account: $irrelevant_keys.\nValid keys are: $CONSTRAINT_FIELDS"
+    end
     Constraint(
         filenames = get(constraint, :filenames, String[]),
-        #path = get(constraint, :path, String[]),
         variables = get(constraint, :variables, String[]),
         tableids = get(constraint, :tableids, String[]),
         models = get(constraint, :models, String[]),
@@ -292,25 +282,10 @@ function Constraint(constraint::Dict{Symbol, Vector{String}})
         variants = get(constraint, :variants, String[]),
         grids = get(constraint, :grids, String[]),
         mips = get(constraint, :mips, String[]),
-        #start_y = get(constraint, :start_y, typemin(Int)),
-        #end_y = get(constraint, :end_y, typemax(Int))
-        #timerange = get(constraint, :timerange, String[]) # [start_y, end_y]
+        members = get(constraint, :members, String[])
     )
 end
 
-# @kwdef struct ConstraintTS
-#     start_y::Int
-#     end_y::Int
-# end
-
-# function ConstraintTS(constraint::Dict{Symbol, Int})
-#     ConstraintTS(
-#         get(constraint, :start_year, typemin(Int)), 
-#         get(constraint, :end_year, typemax(Int))
-#     )
-# end
-
-const CONSTRAINT_FIELDS = fieldnames(Constraint)
 
 const CONSTRAINTS_TO_META = Dict(
     :filenames => :fn,

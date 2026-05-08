@@ -18,8 +18,8 @@
 end
 
 
-@testset "Test individuatePath" begin
-end
+# @testset "Test individuatePath" begin
+# end
 
 
 @testset "Test renameDict" begin
@@ -67,7 +67,7 @@ end
     dimensions = (Dim{:lon}([0, 100]), Dim{:lat}([-10, 0, 10]), Dim{:model}(["m1", "m2", "m3", "m4"]))
     
     data = YAXArray(dimensions, mat)
-    df = ModelWeights.Data.setDim(data, :model, "mymodel", nothing)
+    df = ModelWeights.Data.setDim(data, :model, :mymodel)
     dimensions_data = ModelWeights.Data.dimNames(data)
     dimensions_df = ModelWeights.Data.dimNames(df)
 
@@ -79,7 +79,7 @@ end
 
     # test dimension values
     data = YAXArray(dimensions, mat)
-    df = ModelWeights.Data.setDim(data, :model, "MODEL", ["M1", "M2", "M3", "M4"])
+    df = ModelWeights.Data.setDim(data, :model, :MODEL, ["M1", "M2", "M3", "M4"])
     @test lookup(df, :MODEL) == ["M1", "M2", "M3", "M4"]
     @test lookup(data, :model) == ["m1", "m2", "m3", "m4"]
 end
@@ -106,7 +106,7 @@ end
     )
     arr1 = YAXArray(dimensions, zeros(7, 9, 3))
     arr2 = YAXArray(dimensions, ones(7, 9, 3))
-    mergeYAX([arr1, arr2], :var, ["tos", "tas"])
+    ModelWeights.Data.mergeYAX([arr1, arr2], :var, ["tos", "tas"])
     #TODO: add Test
 end
 
@@ -118,7 +118,7 @@ end
     dims2 = (Dim{:lat}(latitudes),Dim{:lon}(longitudes), Dim{:model}(["ESM3", "ESM4"]))
     arr1 = YAXArray(dims1, zeros(7, 9, 3))
     arr2 = YAXArray(dims2, ones(7, 9, 2))
-    df = mergeYAX(arr1, arr2, :model)
+    df = ModelWeights.Data.mergeYAX(arr1, arr2, :model)
 
     @test sum(df[model = At("ESM3")]) == 7*9
     @test sum(df[model = 3]) == 7*9
@@ -126,7 +126,7 @@ end
     @test sum(df[model = At("ESM5")]) == 0
     @test sum(df[model = 5]) == 0
 
-    @test val(dims(df, :model)) == ["ESM1", "ESM2", "ESM3", "ESM4", "ESM5"]
+    @test lookup(df, :model) == ["ESM1", "ESM2", "ESM3", "ESM4", "ESM5"]
 
     # TODO: test if ForwardOrdered
 end
@@ -139,7 +139,7 @@ end
     dims2 = (Dim{:lat}(latitudes),Dim{:lon}(longitudes), Dim{:model}(["ESM3", "ESM4"]))
     arr1 = YAXArray(dims1, zeros(7, 9, 3))
     arr2 = YAXArray(dims2, ones(7, 9, 2))
-    df = mergeYAX(arr1, arr2, :model; sorted = false)
+    df = ModelWeights.Data.mergeYAX(arr1, arr2, :model; sorted = false)
 
     @test sum(df[model = At("ESM3")]) == 7*9
     @test sum(df[model = 4]) == 7*9
@@ -147,7 +147,7 @@ end
     @test sum(df[model = At("ESM5")]) == 0
     @test sum(df[model = 3]) == 0
 
-    @test val(dims(df, :model)) == ["ESM1", "ESM2", "ESM5", "ESM3", "ESM4"]
+    @test lookup(df, :model) == ["ESM1", "ESM2", "ESM5", "ESM3", "ESM4"]
 
     # TODO: test if UnOrdered
 end

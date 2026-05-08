@@ -152,16 +152,19 @@ end
 function kelvinToCelsius!(data::YAXArray)
     units = data.properties["units"]
     if isa(units, String) && units == "K"
-        data = data .- 273.15
+        df = parent(data)
+        data .= df .- 273.15
         data.properties["units"] = "degC"
     elseif isa(units, Vector)
         indices = findall(units .== "K")
         if !isempty(indices)
             model_dim = modelDim(data)
             if model_dim == :member
-                data[member = indices] .= data[member = indices] .- 273.15
+                df = parent(data[member = indices])
+                data[member = indices] .= df .- 273.15
             else
-                data[model = indices] .= data[model = indices] .- 273.15
+                df = parent(data[model = indices])
+                data[model = indices] .= df .- 273.15
             end
             units[indices] .= "degC"
         end
