@@ -217,15 +217,35 @@ lgm_cmip6 = mw.defineDataMap(
 
 shared_models = mwd.sharedModels(lgm, :model)
 shared_members = mwd.sharedModels(lgm, :member)
-model_members_lgm = Array(dims(lgm["tas"], :member))
-model_names =  mwd.modelsFromMemberIDs(model_members_lgm; uniq = true)
-model_names =  mwd.modelsFromMemberIDs(model_members_lgm; uniq = false)
+members_lgm = Array(dims(lgm["tas"], :member))
+models_lgm =  mwd.modelsFromMemberIDs(members_lgm; uniq = false)
+models_lgm =  mwd.modelsFromMemberIDs(members_lgm; uniq = true)
 
 # Adding constraints
 constraint = Dict(:variables => ["tas"])
 lgm_cmip6_tas = mw.defineDataMap(
-    paths_lgm_cmip6, ["tos_lgm", "tas_lgm"]; filename_format=:esmvaltool_cmip6, constraint
+    paths_lgm_cmip6, ["tos", "tas"]; filename_format=:esmvaltool_cmip6, constraint
 )
+constraint = Dict(:mips => ["CMIP6"])
+lgm_cmip6 = mw.defineDataMap(
+    paths_lgm, ["tas", "tos"]; filename_format = :esmvaltool, constraint
+)
+# add level = :member 
+lgm_cmip6 = mw.defineDataMap(
+    paths_lgm, ["tas", "tos"]; filename_format = :esmvaltool, constraint, level=:member
+)
+lgm_cmip6 = mw.defineDataMap(
+    paths_lgm, ["tas", "tos"]; filename_format = :esmvaltool, constraint, level=:model
+)
+
+# single dataset
+paths_lgm_tos = [
+    joinpath(base, "LGM/recipe_cmip5_lgm_tos_20241114_150049/preproc/lgm/tos_CLIM"),
+    joinpath(base, "LGM/recipe_cmip6_lgm_tos_20241114_151009/preproc/lgm/tos_CLIM")
+];
+preview_lgm_tos = mwd.previewDataMap(paths_lgm_tos, "tos"; filename_format = :esmvaltool)
+lgm_tos = mw.defineDataMap(paths_lgm_tos, "tos"; filename_format = :esmvaltool)
+
 
 
 
@@ -240,27 +260,48 @@ paths_historical_tos = [
     joinpath(base, "historical/recipe_cmip5_historical_tos_20250211_094633/preproc/historical/tos_CLIM"),
     joinpath(base, "historical/recipe_cmip6_historical_tos_20250209_144722/preproc/historical/tos_CLIM")
 ];
-
-# TODO: fix constraints -> if just a single dataset, level should not have an influence!
 paths_historical = [paths_historical_tas, paths_historical_tos];
-constraint = Dict(:models => model_members_lgm)
+
+# constraint mips
+preview1 = mwd.previewDataMap(
+    paths_historical_tas, "tas"; filename_format = :esmvaltool, constraint = Dict(:mips => ["CMIP5"])
+)
+preview2 = mwd.previewDataMap(
+    paths_historical_tas, "tas"; filename_format = :esmvaltool, constraint = Dict(:mips => ["CMIP6"])
+)
+preview3 = mwd.previewDataMap(paths_historical_tas, "tas"; filename_format = :esmvaltool)
+historical_tas = mwd.defineDataMap(paths_historical_tas, "tas"; filename_format = :esmvaltool)
+
+# constraint :models
+constraint = Dict(:models => models_lgm)
+preview_historical_tas = mwd.previewDataMap(
+    paths_historical_tas, "tas"; filename_format = :esmvaltool, constraint
+)
+historical_tas = mwd.defineDataMap(
+    paths_historical_tas, "tas"; filename_format = :esmvaltool, constraint
+)
+
 preview_historical = mwd.previewDataMap(
-    paths_historical_tas, 
-    "tas"; 
-    #level = :member, 
-    filename_format = :esmvaltool,
-    constraint
+    paths_historical, ["tas", "tos"]; filename_format = :esmvaltool, constraint, level=:member
+)
+preview_historical = mwd.previewDataMap(
+    paths_historical, ["tas", "tos"]; filename_format = :esmvaltool, constraint
 )
 historical = mwd.defineDataMap(
-    paths_historical_tos, 
-    "tos"; 
-    level = :member, 
-    filename_format = :esmvaltool, 
-    #constraint
+    paths_historical, ["tas", "tos"]; filename_format = :esmvaltool, constraint
 )
 
+# example invalid constraint
+constraint = Dict(:members => members_lgm)
+preview_historical_tas = mwd.previewDataMap(
+    paths_historical_tas, "tas"; filename_format = :esmvaltool, constraint
+)
 
-
+# TODO models in constraint refer to members
+constraint = Dict(:models => members_lgm)
+preview_historical = mwd.previewDataMap(
+    paths_historical, ["tas", "tos"]; filename_format = :esmvaltool, constraint
+)
 
 # to load data as YAXArrays from files directly (not from all files within directories), use loadPreprocData
 paths_tas = vcat(mwd.collectNCFilePaths.(paths_lgm_tas)...)

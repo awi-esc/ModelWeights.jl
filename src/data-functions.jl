@@ -880,12 +880,11 @@ function previewDataMap(
     id::String;
     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-    level::Symbol = :none,
     dtype::String = "cmip",
     filename_format::Symbol = :cmip
 )
     meta_data = _prepareMetaData(
-        paths_data_dirs; constraint, constraint_ts, level, dtype, filename_format
+        paths_data_dirs; constraint, constraint_ts, level = :none, dtype, filename_format
     )
     is_constraint_ts = constraint_ts.start_year != typemin(Int) || constraint_ts.end_year != typemax(Int)
     if filename_format != :cmip && is_constraint_ts
@@ -901,7 +900,6 @@ end
         id::String;
         constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
         constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-        level::Symbol = :none,
         dtype::String = "cmip",
         filename_format::Symbol = :cmip,
         sorted::Bool = true,
@@ -909,22 +907,20 @@ end
     )
 
 Return DataMap with entry `id` with the data (model or observations depending on `filename_format`)
-from all .nc files in `paths` and all .nc files in all directories in `paths`, possibly 
-constraint by `constraint` and `constraint_ts`.
+from all .nc files in all directories in `paths`, possibly constraint by `constraint` and `constraint_ts`.
 """
 function defineDataMap(
     paths::Vector{String}, 
     id::String;
     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-    level::Symbol = :none,
     dtype::String = "cmip",
     filename_format::Symbol = :cmip,
     sorted::Bool = true
     #meta_info::Dict{String, String} = Dict{String, String}()
 )
     meta_data = _prepareMetaData(
-        paths; constraint, constraint_ts, level, dtype, filename_format
+        paths; constraint, constraint_ts, level = :none, dtype, filename_format
     )
     _loadDataMapCore(meta_data, fill(id, length(meta_data)); constraint_ts, dtype, sorted)#meta_info
     # TODO: do we want to include single nc files besides directories?
