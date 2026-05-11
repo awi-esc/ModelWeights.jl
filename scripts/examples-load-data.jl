@@ -19,23 +19,20 @@ mips = ["CMIP5", "CMIP6"];
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
 path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/lgm-cmip5-cmip6";
 
-constraint = Dict{String, Union{Vector{String}, String}}(
-    "statistics" => statistics, 
-    "variables" => variables,
-    "mips" => mips,
-    "aliases" => ["lgm"], 
-    "level_shared" => "member",
-    "base_subdirs" => ["20241114"]
-);
-lgm_meta = mw.defineDataMap(
-    path_data, path_recipes, :esmvaltool_recipes; constraint, preview = true
-) 
-lgm_data = mw.defineDataMap(
-    path_data, path_recipes, :esmvaltool_recipes; constraint, dtype = "cmip"
+constraint = Dict(
+    :statistics => statistics, 
+    :variables => variables,
+    :mips => mips,
+    :aliases => ["lgm"], 
+    :base_subdirs => ["20241114"]
+)
+lgm_data = mwd.loadDataFromESMValToolRecipes(
+    path_data, path_recipes; dir_per_var, constraint
+)
+lgm_data = mwd.loadDataFromESMValToolRecipes(
+    path_data, path_recipes; dir_per_var, constraint, level = :member
 )
 
-# we set level_shared to mw.MEMBER, so model members are identical for 
-# every loaded data set (variable)
 model_members_lgm = Array(dims(lgm_data["tas_CLIM_lgm"], :member));
 models_lgm = mwd.modelsFromMemberIDs(model_members_lgm; uniq = true)
 

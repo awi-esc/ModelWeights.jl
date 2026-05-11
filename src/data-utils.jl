@@ -834,20 +834,19 @@ function resolvePathsFromMetaData(
     meta::MetaData, 
     base_path::String, 
     dir_per_var::Bool;
-    constraint::Union{Dict, Nothing} = nothing
+    constraint::Dict = Dict{Symbol, Vector{String}}()
 )
-    has_constraint = !isnothing(constraint) && !isempty(constraint)
     if dir_per_var
         base_paths = filter(isdir, readdir(base_path, join = true)) # all subdirectories
         filter!(x -> occursin("_" * meta.variable, x), base_paths) # just subdirs for variable
         if isempty(base_paths)
             throw(ArgumentError("$(base_path) doesnt contain directories for variable $(meta.variable)!"))
         end
-        if has_constraint
+        if !isempty(constraint)
             bps = copy(base_paths)
-            constrainSubdirs!(base_paths, get(constraint, "base_subdirs", String[]))
+            constrainSubdirs!(base_paths, get(constraint, :base_subdirs, String[]))
             if isempty(base_paths)
-                throw(ArgumentError("$(bps) dont match with constraint base_subdirs: $(constraint["base_subdirs"])!"))
+                throw(ArgumentError("$(bps) dont match with constraint base_subdirs: $(constraint[:base_subdirs])!"))
             end
         end
     else
@@ -978,9 +977,8 @@ function isRetained(fn_meta::T, constraint::Constraint) where {T <: AbstractMeta
     if !isempty(allowed_models)
         !(fn_meta.model in allowed_models) && return false
     end
-    # handle :model, TODO: if refers to members
-    allowed_members = getfield(constraint, :members)
-    # TODO: hier weiter
+    # TODO: handle members
+    #allowed_members = getfield(constraint, :members)
 
     for field in keys(CONSTRAINTS_TO_META)
         field in [:filenames, :models] && continue # handled separately
@@ -1032,9 +1030,9 @@ in `constraint` remain.
 - `constraint::Dict`: Mapping to vector specifiying the properties of which at least one 
 must be present for an id to be retained.
 """
-function constrainMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict)
-    timerange_constraints = get(constraint, "timeranges", String[])
-    alias_constraints = get(constraint, "aliases", String[])
+function constrainMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict{Symbol, Vector{String}})
+    timerange_constraints = get(constraint, :timeranges, String[])
+    alias_constraints = get(constraint, :aliases, String[])
     timerangeOk(attrib::MetaData) = any(x -> attrib.timerange == x, timerange_constraints)
     aliasOk(attrib::MetaData) = any(x -> attrib.alias == x, alias_constraints)
 
@@ -1050,8 +1048,8 @@ function constrainMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict)
     elseif !isempty(alias_constraints)
         filter!(aliasOk, meta_attributes)
     end
-    stats_constraints = get(constraint, "statistics", String[])
-    vars_constraints = get(constraint, "variables", String[])
+    stats_constraints = get(constraint, :statistics, String[])
+    vars_constraints = get(constraint, :variables, String[])
     stats_ok(attrib::MetaData) = isempty(stats_constraints) || any(x -> attrib.statistic == x, stats_constraints)
     vars_ok(attrib::MetaData) = isempty(vars_constraints) || any(x -> attrib.variable == x, vars_constraints)
     filter!(stats_ok, meta_attributes)
@@ -1967,7 +1965,6 @@ function limitLon(data::YAXArray, lon::Tuple)
 end
 
 
-# TODO
 # function warnIfModelConstraintNotFulfilled(
 #     constraints::Vector{<:Dict{<:Any, <:Any}}, 
 #     loaded_data::DataMap, 

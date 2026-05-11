@@ -245,12 +245,6 @@ function ObsMeta(;
     ObsMeta(fn, path, variable, tableid, model, grid, type, version)
 end
 
-# joint fieldnames between models and observations
-metaFilename(meta::AbstractMeta) = meta.fn
-metaPath(meta::AbstractMeta) = meta.path
-metaVariable(meta::AbstractMeta) = meta.variable
-metaModel(meta::AbstractMeta) = meta.model
-
 const PreviewMap = Dict{String, Vector{AbstractMeta}}
 
 @kwdef struct Constraint
@@ -267,10 +261,10 @@ end
 
 const CONSTRAINT_FIELDS = fieldnames(Constraint)
 
-function Constraint(constraint::Dict{Symbol, Vector{String}})
+function Constraint(constraint::Dict{Symbol, Vector{String}}; warn::Bool=true)
     all_keys = keys(constraint)
     irrelevant_keys = filter(x -> !(x in CONSTRAINT_FIELDS), all_keys)
-    if !isempty(irrelevant_keys)
+    if !isempty(irrelevant_keys) && warn
         @warn "The following entries in constraints are not valid and are not taken into account: $irrelevant_keys.\nValid keys are: $CONSTRAINT_FIELDS"
     end
     Constraint(
