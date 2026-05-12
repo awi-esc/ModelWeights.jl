@@ -41,7 +41,7 @@ preview = mwd.previewDataMap(
     level = :model,
     dtype = "cmip",
     filename_format = :cmip,
-    constraint_ts = (start_year = 2015, end_year = 2017) # for filename_format=:cmip, constraint_ts can be applied already for preview
+    constraint_ts = (start_year = 1950, end_year = 2014) # for filename_format=:cmip, constraint_ts can be applied already for preview
 )
 
 # ---------------------------------- Load Model Data ------------------------------------- #
@@ -50,7 +50,7 @@ data_hist_proj_members = mwd.defineDataMap(
     data_ids; 
     level = :model,
     filename_format = :esmvaltool_cmip6,
-    constraint = Dict(:models => ["AWI-CM-1-1-MR"]),
+    #constraint = Dict(:models => ["AWI-CM-1-1-MR"]),
     constraint_ts = (start_year = 1950, end_year = 2014)
 )
 
@@ -97,14 +97,6 @@ data_hist_proj_members = mwd.defineDataMap(
 df = mwd.loadPreprocData(meta_data; constraint_ts, dtype = "cmip")
 ProfileSVG.@profview mwd.loadPreprocData(meta_data; constraint_ts, dtype = "cmip")
 
-
-@btime data_hist_proj_members = mwd.defineDataMap(
-    paths_data, 
-    ["tas_annual_historical"], #, "tas_annual_ssp585"],# "psl_annual_historical"]; 
-    level = :model,
-    filename_format = :esmvaltool_cmip6,
-    #constraint = Dict(:model => ["AWI-CM-1-1-MR"])
-)
 
 
 

@@ -123,7 +123,7 @@ _model_key(meta, ::LevModel) = meta.model
 
 function _model_key(meta, ::LevMember)
     key = string(meta.model, MODEL_MEMBER_DELIM, meta.variant)
-    return isnothing(meta.grid) ? key : string(key, "_", meta.grid)
+    isnothing(meta.grid) ? key : string(key, "_", meta.grid)
 end
 
 

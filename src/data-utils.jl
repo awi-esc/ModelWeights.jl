@@ -953,7 +953,14 @@ end
 
 function parsePath(path::String, ::FF_ESMVT)::ModelMeta
     filename = first(splitext(basename(path)))
-    format_dict = length(split(filename, "_")) == 7 ? CMIP6_FIELD_INDICES : CMIP5_FIELD_INDICES
+    parts = split(filename, "_")
+    if parts[1] == "CMIP5"
+        format_dict = length(parts) == 6 ? CMIP5_FIELD_INDICES : CMIP5_FIELD_INDICES_TR
+    elseif parts[1] == "CMIP6"
+        format_dict = length(parts) == 7 ? CMIP6_FIELD_INDICES : CMIP6_FIELD_INDICES_TR
+    else
+        throw(ErrorException("Not implemented: only CMIP5 + CMIP6 implemented. Found: $(parts[1])"))
+    end
     _parseFilenameModel(filename, path, format_dict)
 end
 
@@ -962,9 +969,19 @@ function parsePath(path::String, ::FF_ESMVT_CMIP6)::ModelMeta
     _parseFilenameModel(filename, path, CMIP6_FIELD_INDICES)
 end
 
+function parsePath(path::String, ::FF_ESMVT_CMIP6_TR)::ModelMeta
+    filename = first(splitext(basename(path)))
+    _parseFilenameModel(filename, path, CMIP6_FIELD_INDICES_TR)
+end
+
 function parsePath(path::String, ::FF_ESMVT_CMIP5)::ModelMeta
     filename = first(splitext(basename(path)))
     _parseFilenameModel(filename, path, CMIP5_FIELD_INDICES)
+end
+
+function parsePath(path::String, ::FF_ESMVT_CMIP5_TR)::ModelMeta
+    filename = first(splitext(basename(path)))
+    _parseFilenameModel(filename, path, CMIP5_FIELD_INDICES_TR)
 end
 
 function parsePath(path::String, ::FF_CMIP)::ModelMeta
@@ -973,15 +990,13 @@ function parsePath(path::String, ::FF_CMIP)::ModelMeta
 end
 
 function isRetained(fn_meta::T, constraint::Constraint) where {T <: AbstractMeta}
-    allowed_models = getfield(constraint, :models)
-    if !isempty(allowed_models)
-        !(fn_meta.model in allowed_models) && return false
+    allowed_members = getfield(constraint, :members)
+    if !isempty(allowed_members)
+        !(_model_key(fn_meta, LevMember()) in allowed_members) && return false
     end
-    # TODO: handle members
-    #allowed_members = getfield(constraint, :members)
-
+    
     for field in keys(CONSTRAINTS_TO_META)
-        field in [:filenames, :models] && continue # handled separately
+        #TODO: handle filenames separately (see below)? to include just part of the given constraint, e.g. all filenames must contain 'xy'
         allowed_vals = getfield(constraint, field)
         isempty(allowed_vals) && continue # if empty, all are allowed
         val = getfield(fn_meta, CONSTRAINTS_TO_META[field])

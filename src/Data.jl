@@ -142,8 +142,12 @@ abstract type FilenameFormat <: AbstractFnFormat end
 abstract type ESMVTFormat <: AbstractFnFormat end
 
 struct FF_CMIP <: FilenameFormat end
+
 struct FF_ESMVT_CMIP5 <: FilenameFormat end
+struct FF_ESMVT_CMIP5_TR <: FilenameFormat end
 struct FF_ESMVT_CMIP6 <: FilenameFormat end
+struct FF_ESMVT_CMIP6_TR <: FilenameFormat end
+
 struct FF_ESMVT_OBS <: FilenameFormat end
 struct FF_ESMVT <: ESMVTFormat end
 
@@ -157,8 +161,13 @@ toFF(f::AbstractFnFormat) = f
 toFF(::Val{f}) where {f} = throw(ArgumentError("invalid filename format :$f, expected one of: :cmip, :esmvaltool, :esmvaltool_cmip5, :esmvaltool_cmip6, :esmvaltool_obs"))
 
 formatString(::FF_CMIP) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
+
 formatString(::FF_ESMVT_CMIP5) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
+formatString(::FF_ESMVT_CMIP5_TR) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE"
+
 formatString(::FF_ESMVT_CMIP6) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
+formatString(::FF_ESMVT_CMIP6_TR) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE"
+
 formatString(::FF_ESMVT_OBS) = "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
 
 function _parseFormat(format_string::String)
@@ -167,7 +176,11 @@ function _parseFormat(format_string::String)
 end
 # # precomputed at definition time
 const CMIP5_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP5()))
+const CMIP5_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_CMIP5_TR()))
+
 const CMIP6_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP6()))
+const CMIP6_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_CMIP6_TR()))
+
 const CMIP_FIELD_INDICES = _parseFormat(formatString(FF_CMIP()))
 const OBS_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_OBS()))
 
@@ -295,7 +308,7 @@ const CONSTRAINTS_TO_META = Dict(
 
 
 # ::MIME"text/plain" : for REPL output
-function Base.show(io::IO, ::MIME"text/plain", x::DataMap) #Dict{String, YAXArray})
+function Base.show(io::IO, ::MIME"text/plain", x::DataMap)
     println(io, "::DataMap")
     for (k, v) in x
         println(io, "$k: $(size(v))")
@@ -309,7 +322,7 @@ function Base.show(io::IO, ::MIME"text/plain", x::PreviewMap)
     end
 end
 
-function Base.show(io::IO, ::MIME"text/plain", x::Union{MetaData, AbstractMeta})
+function Base.show(io::IO, ::MIME"text/plain", x::Union{MetaData, AbstractMeta, Constraint})
     fields = map(f -> (f, getfield(x, f)), fieldnames(typeof(x)))
     fields = filter(field -> !isnothing(field[2]), fields)
     map(f -> println(io, f), fields)

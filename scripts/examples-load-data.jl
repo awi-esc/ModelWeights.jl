@@ -44,17 +44,16 @@ models_lgm = mwd.modelsFromMemberIDs(model_members_lgm; uniq = true)
 # are loaded (level_shared set to mw.MEMBER) since we want the exact 
 # same simulations for all variables when computing weights
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/historical";
-path_recipes = "./configs/historical";
-historical_data_lgm = mw.defineDataMap(
+path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/historical";
+historical_data_lgm = mwd.loadDataFromESMValToolRecipes(
     path_data, 
-    path_recipes,
-    :esmvaltool_recipes;
+    path_recipes;
     constraint = Dict(
-        "statistics" => statistics, 
-        "variables" => variables, 
-        "mips" => mips,
-        "aliases" => ["historical"],
-        "models" => models_lgm
+        :statistics => statistics, 
+        :variables => variables, 
+        :mips => mips,
+        :aliases => ["historical"],
+        :models => models_lgm
     ),
     dtype = "cmip"
 )
@@ -67,23 +66,22 @@ models_historical = mwd.modelsFromMemberIDs(
 
 # function to join two DataMaps into one
 data = mwd.joinDataMaps(lgm_data, historical_data_lgm)
-data_members = mwd.subsetModelData(data, "member")
+data_members = mwd.subsetModelData(data, :member)
 
-# 2.2 Or directly load historical data of the same model MEMBERS as for lgm 
+# 2.2 Or directly load historical data of the same model members as for lgm 
 # (may be less than in 2.1, since the exact simulations now have to match with
 # the lgm models, not only the models)
 begin
-    historical_data_lgm_members = mwd.defineDataMap(
+    historical_data_lgm_members = mwd.loadDataFromESMValToolRecipes(
         path_data, 
-        path_recipes,
-        :esmvaltool_recipes;
+        path_recipes;
         constraint = Dict(
-            "statistics" => statistics, 
-            "variables" => variables, 
-            "mips" => mips,
-            "timeranges" => ["full"], 
-            "base_subdirs" =>   ["20250211", "20250207", "20250209"],
-            "models" => model_members_lgm
+            :statistics => statistics, 
+            :variables => variables, 
+            :mips => mips,
+            :timeranges => ["full"], 
+            :base_subdirs =>   ["20250211", "20250207", "20250209"],
+            :members => model_members_lgm
         ),
         dtype = "cmip"
     )
