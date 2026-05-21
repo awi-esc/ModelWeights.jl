@@ -315,6 +315,7 @@ function plotTimeseries(
     xlabel = "time",
     ylabel = "",
     title = "",
+    legend_title = "",
     colors::AbstractArray=[],
     n_step::Int = 10,
     uncertainties::Union{YAXArray, Nothing} = nothing
@@ -383,7 +384,8 @@ function plotTimeseries(
             end
         end
         Legend(
-            f[2,1], plots, string.(Array(dims(data)[idx_other_dim])), framevisible=false, 
+            f[2,1], plots, string.(Array(dims(data)[idx_other_dim])), legend_title; 
+            framevisible=false, 
             orientation=:horizontal, nbanks = div(n,4) +1, 
             labelsize=10
         )
