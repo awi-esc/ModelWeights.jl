@@ -950,6 +950,11 @@ function parsePath(path::String, ::FF_ESMVT_OBS)::ObsMeta
     _parseFilenameObs(filename, path, OBS_FIELD_INDICES)
 end
 
+function parsePath(path::String, ::FF_ESMVT_OBS_TR)::ObsMeta
+    filename = first(splitext(basename(path)))
+    _parseFilenameObs(filename, path, OBS_FIELD_INDICES_TR)
+end
+
 function parsePath(path::String, ::FF_ESMVT)::ModelMeta
     filename = first(splitext(basename(path)))
     parts = split(filename, "_")
@@ -957,13 +962,23 @@ function parsePath(path::String, ::FF_ESMVT)::ModelMeta
         format_dict = length(parts) == 6 ? CMIP5_FIELD_INDICES : CMIP5_FIELD_INDICES_TR
     elseif parts[1] == "CMIP6"
         format_dict = length(parts) == 7 ? CMIP6_FIELD_INDICES : CMIP6_FIELD_INDICES_TR
-    elseif parts[1] == "native6"
-        format_dict = OBS_FIELD_INDICES
     else
-        throw(ErrorException("Not implemented: only CMIP5 + CMIP6 implemented. Found: $(parts[1])"))
+        throw(ErrorException("Not implemented: only CMIP5 + CMIP6 for models implemented. Found: $(parts[1]). For observational data use :esmvaltool_obs"))
     end
     _parseFilenameModel(filename, path, format_dict)
 end
+
+function parsePath(path::String, ::FF_ESMVT_OBS)::ObsMeta
+    filename = first(splitext(basename(path)))
+    parts = split(filename, "_")
+    if parts[1] == "native6"
+        format_dict = length(parts) == 6 ? OBS_FIELD_INDICES : OBS_FIELD_INDICES_TR
+    else
+        throw(ErrorException("Not implemented: only native6 implemented for observations. Found: $(parts[1])"))
+    end
+    _parseFilenameObs(filename, path, format_dict)
+end
+
 
 function parsePath(path::String, ::FF_ESMVT_CMIP6)::ModelMeta
     filename = first(splitext(basename(path)))

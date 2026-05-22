@@ -5,10 +5,6 @@ using DimensionalData
 using NCDatasets
 using YAXArrays
 
-# --------------------------- Set general configurations --------------------------- #
-filename_format = :esmvaltool;
-dtype = "cmip"
-
 # --------- Load the model data Version 1: from ESMValTool recipes --------- #
 dir_per_var = true;
 statistics = ["CLIM"];
@@ -107,16 +103,17 @@ end
 
 # -------------------- Load the observational data -------------------------- #
 begin
-    base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/obs/ERA5/recipe_ERA5_tas_tos_pr_20250307_174538"
-    config_path = "/albedo/home/brgrus001/ModelWeights/configs/obs"
+    path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/obs/ERA5/recipe_ERA5_tas_tos_pr_20250307_174538"
+    path_recipes = "/albedo/home/brgrus001/ModelWeights/configs/obs"
 
     # aliases and timeranges don't have to match, all data will be loaded that 
     # corresponds either to aliases or to timeranges!
     obs_data = mwd.loadDataFromESMValToolRecipes(
-        base_path, 
-        config_path;
+        path_data, 
+        path_recipes;
         dir_per_var = false,
         dtype = "observations",
+        filename_format = :esmvaltool_obs,
         constraint = Dict(
             :statistics => statistics,
             :variables => variables,
@@ -205,9 +202,9 @@ lgm_cmip6 = mw.defineDataMap(
     paths_lgm, ["tas", "tos"]; filename_format=:esmvaltool, constraint = Dict(:mips => ["CMIP6"])
 )
 
-shared_models = mwd.sharedModels(lgm, :model)
-shared_members = mwd.sharedModels(lgm, :member)
-members_lgm = Array(dims(lgm["tas"], :member))
+shared_models = mwd.sharedModels(lgm_cmip, :model)
+shared_members = mwd.sharedModels(lgm_cmip, :member)
+members_lgm = Array(dims(lgm_cmip["tas"], :member))
 models_lgm =  mwd.modelsFromMemberIDs(members_lgm; uniq = false)
 models_lgm =  mwd.modelsFromMemberIDs(members_lgm; uniq = true)
 

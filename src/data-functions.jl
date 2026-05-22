@@ -693,7 +693,7 @@ function loadDataFromESMValToolRecipes(
 )
     checkDataStructure(path_data, dir_per_var)
     esmvt_meta_data = metaDataFromESMValToolRecipes(path_recipes; constraint)
-    paths = resolvePathsFromMetaData.(
+    paths_to_files = resolvePathsFromMetaData.(
         esmvt_meta_data, path_data, dir_per_var; 
         base_subdirs = get(constraint, :base_subdirs, String[])
     )
@@ -701,7 +701,7 @@ function loadDataFromESMValToolRecipes(
     fn_format = toFF(Val(filename_format))
     
     meta_data = _getFilteredMetaData(
-        paths, constraint, constraint_ts; level = level_resolved, dtype, fn_format
+        paths_to_files, constraint, constraint_ts; level = level_resolved, dtype, fn_format
     )
     return _loadDataMapCore(
         meta_data,

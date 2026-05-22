@@ -141,14 +141,15 @@ abstract type AbstractFnFormat end
 abstract type FilenameFormat <: AbstractFnFormat end
 abstract type ESMVTFormat <: AbstractFnFormat end
 
+# These are just for the formatString functions
 struct FF_CMIP <: FilenameFormat end
-
 struct FF_ESMVT_CMIP5 <: FilenameFormat end
 struct FF_ESMVT_CMIP5_TR <: FilenameFormat end
 struct FF_ESMVT_CMIP6 <: FilenameFormat end
 struct FF_ESMVT_CMIP6_TR <: FilenameFormat end
-
 struct FF_ESMVT_OBS <: FilenameFormat end
+struct FF_ESMVT_OBS_TR <: FilenameFormat end
+
 struct FF_ESMVT <: ESMVTFormat end
 
 # Internal conversion
@@ -169,6 +170,7 @@ formatString(::FF_ESMVT_CMIP6) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_
 formatString(::FF_ESMVT_CMIP6_TR) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE"
 
 formatString(::FF_ESMVT_OBS) = "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
+formatString(::FF_ESMVT_OBS_TR) = "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE"
 
 function _parseFormat(format_string::String)
     parts = split(format_string, "_")
@@ -183,6 +185,7 @@ const CMIP6_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_CMIP6_TR()))
 
 const CMIP_FIELD_INDICES = _parseFormat(formatString(FF_CMIP()))
 const OBS_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_OBS()))
+const OBS_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_OBS_TR()))
 
 
 abstract type AbstractMeta end
