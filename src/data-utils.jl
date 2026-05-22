@@ -623,7 +623,7 @@ values.
 """
 function metaDataFromESMValToolRecipes(
     base_path_configs::String;
-    constraint::Union{Dict, Nothing} = nothing 
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}() 
 )
     paths_configs = filter(
         x -> isfile(x) && endswith(x, ".yml"),
@@ -668,7 +668,7 @@ function metaDataFromESMValToolRecipes(
             end
         end
     end
-    if !isnothing(constraint)
+    if !isempty(constraint)
         constrainMetaData!(meta_attribs, constraint)
     end
     return meta_attribs
@@ -809,44 +809,43 @@ end
         meta::MetaData,
         base_path::String,
         dir_per_var::Bool;
-        constraint::Union{Dict, Nothing} = nothing
-    )
+        base_subdirs::T = String[]
+    ) where T <: AbstractArray{String}
 
 Return paths to data files for data specified in `meta`, possibly constraint by values in 
-`constraint`. The paths were the data is stored is expected to follow the following 
+`base_subdirs`. The paths were the data is stored is expected to follow the following 
 structure (corresponding to the output from ESMValTool used for preprocessing the data):
 
 `base_path` is the top-level directory. If `dir_per_var` is true, `base_path` is assumed to 
 have a (or several) subdirectory for each climate variable with _VAR as part of the 
 subdirectory's name (e.g. _tas, cmip5_tas, etc.). These subdirectories may be constraint by 
-containing at least one of the values in `constraint["base_subdirs"]`. 
+containing at least one of the values in `base_subdirs`. 
 
 Let BASE refer to `base_path`, or respectively, to the subdirectories for the climate 
 variables. Then the following structure is: BASE/preproc/meta.alias/meta.subdir. 
 In ESMValTool, `meta.alias` corresponds to the (self-chosen) name under the section 
 'diagnostics' and `meta.subdir` to the (self-chosen) name under the section 'variables'.
 
-The returned paths are the paths to all files within this directory, possibly constraint by 
-the filenames containig at least one string in `constraint["projects"]` and respectively 
-at least one string in `constraint["models"]`. 
+The returned paths are the paths to all files within this directory.
 """
 function resolvePathsFromMetaData(
     meta::MetaData, 
     base_path::String, 
     dir_per_var::Bool;
-    constraint::Dict = Dict{Symbol, Vector{String}}()
-)
+    base_subdirs::T = String[],
+    #constraint::Dict = Dict{Symbol, Vector{String}}()
+) where T <: AbstractArray{String}
     if dir_per_var
         base_paths = filter(isdir, readdir(base_path, join = true)) # all subdirectories
         filter!(x -> occursin("_" * meta.variable, x), base_paths) # just subdirs for variable
         if isempty(base_paths)
             throw(ArgumentError("$(base_path) doesnt contain directories for variable $(meta.variable)!"))
         end
-        if !isempty(constraint)
+        if !isempty(base_subdirs)
             bps = copy(base_paths)
-            constrainSubdirs!(base_paths, get(constraint, :base_subdirs, String[]))
+            constrainSubdirs!(base_paths, base_subdirs)
             if isempty(base_paths)
-                throw(ArgumentError("$(bps) dont match with constraint base_subdirs: $(constraint[:base_subdirs])!"))
+                throw(ArgumentError("$(bps) dont match with constraint base_subdirs: $base_subdirs!"))
             end
         end
     else
@@ -958,6 +957,8 @@ function parsePath(path::String, ::FF_ESMVT)::ModelMeta
         format_dict = length(parts) == 6 ? CMIP5_FIELD_INDICES : CMIP5_FIELD_INDICES_TR
     elseif parts[1] == "CMIP6"
         format_dict = length(parts) == 7 ? CMIP6_FIELD_INDICES : CMIP6_FIELD_INDICES_TR
+    elseif parts[1] == "native6"
+        format_dict = OBS_FIELD_INDICES
     else
         throw(ErrorException("Not implemented: only CMIP5 + CMIP6 implemented. Found: $(parts[1])"))
     end

@@ -693,8 +693,10 @@ function loadDataFromESMValToolRecipes(
 )
     checkDataStructure(path_data, dir_per_var)
     esmvt_meta_data = metaDataFromESMValToolRecipes(path_recipes; constraint)
-    paths = resolvePathsFromMetaData.(esmvt_meta_data, path_data, dir_per_var; constraint)
-    
+    paths = resolvePathsFromMetaData.(
+        esmvt_meta_data, path_data, dir_per_var; 
+        base_subdirs = get(constraint, :base_subdirs, String[])
+    )
     level_resolved = toLevel(Val(level))
     fn_format = toFF(Val(filename_format))
     
@@ -707,15 +709,29 @@ function loadDataFromESMValToolRecipes(
         dtype,
         constraint_ts,
         sorted
-        #meta_info = metadataToDict.(meta_data)
+        #meta_info = metadataToDict.(esmvt_meta_data)
     )
 end
 
+function loadDataFromYAML(
+    path_config::String;
+    constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    dtype::String = "cmip",
+    filename_format::Symbol = :esmvaltool,
+    sorted::Bool = true
+)
+    loadDataFromYAML(
+        YAML.load_file(path_config);
+        constraint, constraint_ts, level, dtype, filename_format, sorted
+    )
+end
 
 """
     loadDataFromYAML(
         yaml_content::Dict;
-        constraint::Union{Dict{String, <:AbstractArray{String}}, Nothing} = nothing,
+        constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
         level::Abstractlevel = NoLevel(),
         dtype::String = "cmip",
         fn_format::Symbol = :esmvaltool
@@ -726,117 +742,64 @@ Return a DataMap-instance that contains the data specified in `yaml_content`, po
 constraint by values in `constraint`.
 
 # Arguments:
-- `preview::Bool`: if true (default: false), return metadata and corresponding paths without 
-actually loading any data.
 - `sorted::Bool`: if true (default), model dimension is sorted alphabetically.
 - `dtype::String`: if set to "cmip", model dimension of returned data have model names as values.
 """
 function loadDataFromYAML(
     yaml_content::Dict;
     constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
-    constraint_ts::Dict{String, Int} = Dict{String, Int}(),
-    level::AbstractLevel = NoLevel(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
     dtype::String = "cmip",
-    fn_format::AbstractFnFormat = ESMVTFormat(),
+    filename_format::Symbol = :esmvaltool,
     sorted::Bool = true
 )
+    fn_format = toFF(Val(filename_format))
     fn_err(x) = throw(ArgumentError("$(x) must be provided in config yaml file!"))
     datasets = get(() -> fn_err("datasets"), yaml_content, "datasets")
     base_path = get(() -> fn_err("base_path_data"), yaml_content, "base_path_data")
 
-    all_meta = Vector{}(undef, length(datasets))
-    all_paths = Vector{}(undef, length(datasets))
-    all_constraints = Vector{}(undef, length(datasets))
-    for (i, ds) in enumerate(datasets)
+    all_ids = String[]
+    all_meta = []
+    for (_, ds) in enumerate(datasets)
         dir_per_var = get(ds, "dir_per_var", true)
         path_data = joinpath(base_path, get(() -> fn_err("base_dir"), ds, "base_dir"))
         checkDataStructure(path_data, dir_per_var)
-        # merge; constraint has precedence over constraints defined for individual datasets in the config file
+        # merge - constraint has precedence over constraints defined for individual datasets in the config file
         ds_constraint = get(ds, "subset", Dict())
-        if !isnothing(constraint)
+        if !isempty(constraint)
             warn_duplicates = "identical subset keys: arg constraint has precedence over constraint in yaml file!"
             ds_constraint = joinDicts(ds_constraint, constraint; warn_msg = warn_duplicates) 
         end
         # TODO: constraint_ts now just possible via argument, not inside yaml, should be done here also for timeseries constraints
-
-        meta_data = metaDataFromYAML(ds)
-        paths = resolvePathsFromMetaData.(meta_data, path_data, dir_per_var; constraint=ds_constraint)
-        if isa(level, Level)        
-            paths = filterPathsSharedModels(paths, level, fn_format)
-        end
-        all_paths[i] = paths 
-        all_meta[i] = meta_data
-        # paths and meta_data are vectors! In one loop, several datasets can be loaded (for different variables)
-        #all_constraints[i] = repeat([ds_constraint], length(paths))
-        all_constraints[i] = ds_constraint
+        esmvt_meta_data = metaDataFromYAML(ds)
+        paths = resolvePathsFromMetaData.(
+            esmvt_meta_data, path_data, dir_per_var; 
+            base_subdirs = get(constraint, "base_subdirs", String[])
+        )
+        ds_level = level == :none ? Symbol(get(ds_constraint, "level_shared", "none")) : level
+        level_resolved = toLevel(Val(ds_level)) # argument has precedence over what is in config file
+        meta_data = _getFilteredMetaData(
+            paths, 
+            convertESMVTConstraint(ds_constraint), 
+            constraint_ts;
+            level = level_resolved, 
+            dtype, 
+            fn_format
+        )
+        push!(all_meta, meta_data)
+        append!(all_ids, getfield.(esmvt_meta_data, :id))
     end
     meta_data = vcat(all_meta...)
 
-    # if preview 
-    #     return _previewDataMapCore(vcat(all_paths...); constraint, level, dtype, filename_format)
-    # else 
-    return _loadDataMapCore(
-        vcat(all_paths...), 
-        getfield.(meta_data, :id);
-        constraint = constraint, #all_constraints, # TODO: now only defined for single constraint! former: #vcat(all_constraints...), 
-        constraint_ts,
-        level,
-        dtype, 
-        fn_format, 
-        sorted, 
-        meta_data = metadataToDict.(meta_data)
-    )
-    # end
+    datamap =  _loadDataMapCore(meta_data, all_ids; dtype, constraint_ts, sorted)
+    # apply level also across all datasets
+    if level != :none
+        datamap = subsetModelData(datamap, level)
+    end
+    return datamap
 end
 
-# function defineDataMap(
-#     yaml_content::Dict;
-#     constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
-#     constraint_ts::Dict{String, Int} = Dict{String, Int}(),
-#     level::Symbol = :none,
-#     dtype::String = "cmip",
-#     filename_format::Symbol = :esmvaltool,
-#     sorted::Bool = true,
-#     preview::Bool = false
-# )
-#     level = toLevel(Val(level))
-#     fn_format = toFF(Val(filename_format))
-#     return loadDataFromYAML(
-#         yaml_content; 
-#         constraint, 
-#         constraint_ts, 
-#         level, 
-#         dtype, 
-#         fn_format, 
-#         sorted, 
-#         preview
-#     )
-# end
-
-
-# function defineDataMap(
-#     path_config::String;
-#     constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
-#     constraint_ts::Dict{String, Int} = Dict{String, Int}(),
-#     level::Symbol = :none,
-#     dtype::String = "cmip",
-#     filename_format::Symbol = :esmvaltool,
-#     sorted::Bool = true,
-#     preview::Bool = false
-# )
-#     level = toLevel(Val(level))
-#     fn_format = toFF(Val(filename_format))
-#     return loadDataFromYAML(
-#         YAML.load_file(path_config); 
-#         constraint, 
-#         constraint_ts,
-#         level,
-#         dtype, 
-#         fn_format, 
-#         sorted,
-#         preview
-#     )
-# end
 
 # Loading data directly from given directories
 function previewDataMap(

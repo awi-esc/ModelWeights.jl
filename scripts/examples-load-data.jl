@@ -99,34 +99,29 @@ filter(x -> !(x in members_historical), model_members_lgm)
 # 3. Load model data for experiment lgm and historical in one run from new config file
 begin
     # yaml config file already contains basic constraints for subset as defined above.
-    path_config = "./configs/examples/example-lgm-historical.yml";
-    constraint = Dict{String, Union{Vector{String}, Symbol}}(
-        "models" => model_members_lgm,
-        "level_shared" => :member # applies to every variable
-    );
-    meta_lgm_v2 =  mw.defineDataMap(path_config; constraint, preview=true)
-    data_lgm_v2 = mw.defineDataMap(path_config; constraint)
+    path_config = "/albedo/home/brgrus001/ModelWeights/configs/examples/example-lgm-historical.yml";
+    constraint = Dict("members" => model_members_lgm);
+    data_lgm_v2 = mwd.loadDataFromYAML(path_config; constraint, level = :member) # level applies to every variable
 end
 
 
 # -------------------- Load the observational data -------------------------- #
 begin
     base_path = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/obs/ERA5/recipe_ERA5_tas_tos_pr_20250307_174538"
-    config_path = "./configs/obs"
+    config_path = "/albedo/home/brgrus001/ModelWeights/configs/obs"
 
     # aliases and timeranges don't have to match, all data will be loaded that 
     # corresponds either to aliases or to timeranges!
-    obs_data = mw.defineDataMap(
+    obs_data = mwd.loadDataFromESMValToolRecipes(
         base_path, 
-        config_path,
-        :esmvaltool_recipes;
+        config_path;
         dir_per_var = false,
+        dtype = "observations",
         constraint = Dict(
-            "statistics" => statistics, 
-            "variables" => variables,
-            "timeranges" => ["full", "1961-1990"]
-        ),
-        preview = false
+            :statistics => statistics,
+            :variables => variables,
+            :timeranges => ["full", "1961-1990"]
+        )
     )
 end
 

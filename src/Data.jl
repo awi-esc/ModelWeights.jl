@@ -293,6 +293,21 @@ function Constraint(constraint::Dict{Symbol, Vector{String}}; warn::Bool=true)
     )
 end
 
+function convertESMVTConstraint(constraint::Dict)
+    Dict(
+        :filenames => get(constraint, "filenames", String[]),
+        :variables => get(constraint, "variables", String[]),
+        :tableids => get(constraint, "tableids", String[]),
+        :models => get(constraint, "models", String[]),
+        :experiments => get(constraint, "experiments", String[]),
+        :variants => get(constraint, "variants", String[]),
+        :grids => get(constraint, "grids", String[]),
+        :mips => get(constraint, "mips", String[]),
+        :members => get(constraint, "members", String[])
+    )
+end
+
+
 
 const CONSTRAINTS_TO_META = Dict(
     :filenames => :fn,
