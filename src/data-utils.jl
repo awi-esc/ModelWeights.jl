@@ -275,9 +275,9 @@ end
 
 """
     filterPathsSharedModels(
-        paths::Vector{String}, 
-        shared_models::Vector{String}, 
-        fn_format::Symbol
+        paths::AbstractVector{String}, 
+        shared_models::AbstractVector{String}, 
+        fn_format::AbstractFnFormat
     )
 
 Every vector of paths in `all_paths` is filtered s.t. it only contains models or model 
@@ -289,7 +289,7 @@ members given in `shared_models`.
 function filterPathsSharedModels(
     paths::AbstractVector{String}, 
     shared_models::AbstractVector{String}, 
-    fn_format::FilenameFormat
+    fn_format::AbstractFnFormat
 )
     if isempty(shared_models)
         @warn "No models shared across data!"
@@ -303,14 +303,18 @@ end
 
 """
     filterPathsSharedModels(
-        all_paths::Vector{Vector{String}}, level_shared::Level, fn_format::Symbol
+        all_paths::AbstractVector{<:AbstractVector{String}}, 
+        level::Level,
+        fn_format::AbstractFnFormat
     )
 
 # Arguments:
 - `all_paths`: every entry refers to the paths to data files for the respective dataset
 """
 function filterPathsSharedModels(
-    all_paths::AbstractVector{<:AbstractVector{String}}, level::Level, fn_format::FilenameFormat
+    all_paths::AbstractVector{<:AbstractVector{String}},
+    level::Level,
+    fn_format::AbstractFnFormat
 )
     shared = sharedModelsFromPaths(all_paths, level, fn_format)
     return [filterPathsSharedModels(paths, shared, fn_format) for paths in all_paths]
@@ -944,18 +948,22 @@ function _parseFilenameModel(filename::String, path::String, field_indices::Dict
     )
 end
 
-
-function parsePath(path::String, ::FF_ESMVT_OBS)::ObsMeta
+function parsePath(path::String, ::FF_ESMVT)
     filename = first(splitext(basename(path)))
-    _parseFilenameObs(filename, path, OBS_FIELD_INDICES)
+    parts = split(filename, "_")
+    if parts[1] == "CMIP5"
+        format_dict = length(parts) == 6 ? CMIP5_FIELD_INDICES : CMIP5_FIELD_INDICES_TR
+    elseif parts[1] == "CMIP6"
+        format_dict = length(parts) == 7 ? CMIP6_FIELD_INDICES : CMIP6_FIELD_INDICES_TR
+    elseif parts[1] == "native6"
+        format_dict = length(parts) == 6 ? OBS_FIELD_INDICES : OBS_FIELD_INDICES_TR
+    else
+        throw(ErrorException("Not implemented: only CMIP5 + CMIP6 for models implemented and only native6 for observations. Found: $(parts[1])."))
+    end
+    _parseFilenameModel(filename, path, format_dict)
 end
 
-function parsePath(path::String, ::FF_ESMVT_OBS_TR)::ObsMeta
-    filename = first(splitext(basename(path)))
-    _parseFilenameObs(filename, path, OBS_FIELD_INDICES_TR)
-end
-
-function parsePath(path::String, ::FF_ESMVT)::ModelMeta
+function parsePath(path::String, ::ESMVTModelFormat)::ModelMeta
     filename = first(splitext(basename(path)))
     parts = split(filename, "_")
     if parts[1] == "CMIP5"
@@ -968,7 +976,7 @@ function parsePath(path::String, ::FF_ESMVT)::ModelMeta
     _parseFilenameModel(filename, path, format_dict)
 end
 
-function parsePath(path::String, ::FF_ESMVT_OBS)::ObsMeta
+function parsePath(path::String, ::ESMVTObsFormat)::ObsMeta
     filename = first(splitext(basename(path)))
     parts = split(filename, "_")
     if parts[1] == "native6"
@@ -979,6 +987,15 @@ function parsePath(path::String, ::FF_ESMVT_OBS)::ObsMeta
     _parseFilenameObs(filename, path, format_dict)
 end
 
+function parsePath(path::String, ::FF_ESMVT_OBS)::ObsMeta
+    filename = first(splitext(basename(path)))
+    _parseFilenameObs(filename, path, OBS_FIELD_INDICES)
+end
+
+function parsePath(path::String, ::FF_ESMVT_OBS_TR)::ObsMeta
+    filename = first(splitext(basename(path)))
+    _parseFilenameObs(filename, path, OBS_FIELD_INDICES_TR)
+end
 
 function parsePath(path::String, ::FF_ESMVT_CMIP6)::ModelMeta
     filename = first(splitext(basename(path)))

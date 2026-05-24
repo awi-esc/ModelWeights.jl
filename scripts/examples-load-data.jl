@@ -234,10 +234,6 @@ preview_lgm_tos = mwd.previewDataMap(paths_lgm_tos, "tos"; filename_format = :es
 lgm_tos = mw.defineDataMap(paths_lgm_tos, "tos"; filename_format = :esmvaltool)
 
 
-
-
-
-
 # Historical Data
 paths_historical_tas = [
     joinpath(base, "historical/recipe_cmip5_historical_tas_20250211_094633/preproc/historical/tas_CLIM"), 
@@ -278,22 +274,21 @@ historical = mwd.defineDataMap(
     paths_historical, ["tas", "tos"]; filename_format = :esmvaltool, constraint
 )
 
-# example invalid constraint
 constraint = Dict(:members => members_lgm)
 preview_historical_tas = mwd.previewDataMap(
     paths_historical_tas, "tas"; filename_format = :esmvaltool, constraint
 )
-
-# TODO models in constraint refer to members
+# models in constraint refer to members -> nothing loaded (use :members)
 constraint = Dict(:models => members_lgm)
 preview_historical = mwd.previewDataMap(
     paths_historical, ["tas", "tos"]; filename_format = :esmvaltool, constraint
 )
 
+# TODO: go through
 # to load data as YAXArrays from files directly (not from all files within directories), use loadPreprocData
 paths_tas = vcat(mwd.collectNCFilePaths.(paths_lgm_tas)...)
 paths_tos = vcat(mwd.collectNCFilePaths.(paths_lgm_tos)...)
-data = mwd.loadPreprocData(paths_tas, filename_format; dtype="cmip")
+data = mwd.loadPreprocData(paths_tas; dtype="cmip")
 # when cmip is not defined, default names are used for models
 data = mwd.loadPreprocData(paths_tas, filename_format)
 # same data but a DataMap instance is returned

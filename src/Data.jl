@@ -138,28 +138,37 @@ function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String}; sorted::Bo
 end
 
 abstract type AbstractFnFormat end
-abstract type FilenameFormat <: AbstractFnFormat end
 abstract type ESMVTFormat <: AbstractFnFormat end
-
-# These are just for the formatString functions
-struct FF_CMIP <: FilenameFormat end
-struct FF_ESMVT_CMIP5 <: FilenameFormat end
-struct FF_ESMVT_CMIP5_TR <: FilenameFormat end
-struct FF_ESMVT_CMIP6 <: FilenameFormat end
-struct FF_ESMVT_CMIP6_TR <: FilenameFormat end
-struct FF_ESMVT_OBS <: FilenameFormat end
-struct FF_ESMVT_OBS_TR <: FilenameFormat end
-
+    abstract type ESMVTModelFormat <: ESMVTFormat end
+    abstract type ESMVTObsFormat   <: ESMVTFormat end
+    
 struct FF_ESMVT <: ESMVTFormat end
+struct FF_CMIP <: AbstractFnFormat end    
+    
+# These are just for the formatString functions
+struct FF_ESMVT_CMIP5    <: ESMVTModelFormat end
+struct FF_ESMVT_CMIP5_TR <: ESMVTModelFormat end
+struct FF_ESMVT_CMIP6    <: ESMVTModelFormat end
+struct FF_ESMVT_CMIP6_TR <: ESMVTModelFormat end
+
+struct FF_ESMVT_OBS      <: ESMVTObsFormat end
+struct FF_ESMVT_OBS_TR   <: ESMVTObsFormat end
+
 
 # Internal conversion
 toFF(::Val{:cmip}) = FF_CMIP()
 toFF(::Val{:esmvaltool_cmip5})  = FF_ESMVT_CMIP5()
+toFF(::Val{:esmvaltool_cmip5_tr})  = FF_ESMVT_CMIP5_TR()
+
 toFF(::Val{:esmvaltool_cmip6}) = FF_ESMVT_CMIP6()
+toFF(::Val{:esmvaltool_cmip6_tr}) = FF_ESMVT_CMIP6_TR()
+
 toFF(::Val{:esmvaltool}) = FF_ESMVT()
 toFF(::Val{:esmvaltool_obs}) = FF_ESMVT_OBS()
+toFF(::Val{:esmvaltool_obs_tr}) = FF_ESMVT_OBS_TR()
+
 toFF(f::AbstractFnFormat) = f 
-toFF(::Val{f}) where {f} = throw(ArgumentError("invalid filename format :$f, expected one of: :cmip, :esmvaltool, :esmvaltool_cmip5, :esmvaltool_cmip6, :esmvaltool_obs"))
+toFF(::Val{f}) where {f} = throw(ArgumentError("invalid filename format :$f, expected one of: :cmip, :esmvaltool, :esmvaltool_cmip5, :esmvaltool_cmip5_tr, :esmvaltool_cmip6, :esmvaltool_cmip6_tr, :esmvaltool_obs, :esmvaltool_obs_tr"))
 
 formatString(::FF_CMIP) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
 
