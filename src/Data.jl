@@ -254,7 +254,8 @@ struct ObsMeta <: AbstractMeta
     model::SubString{String}
     grid::SubString{String}
     type::SubString{String} 
-    version::SubString{String} 
+    version::SubString{String}
+    timerange::Union{Nothing, SubString{String}}
 end
 
 function ObsMeta(;
@@ -265,9 +266,10 @@ function ObsMeta(;
     model::SubString{String}, 
     grid::SubString{String}, 
     type::SubString{String}, 
-    version::SubString{String}
+    version::SubString{String},
+    timerange::Union{Nothing, SubString{String}}
 )
-    ObsMeta(fn, path, variable, tableid, model, grid, type, version)
+    ObsMeta(fn, path, variable, tableid, model, grid, type, version, timerange)
 end
 
 const PreviewMap = Dict{String, Vector{AbstractMeta}}

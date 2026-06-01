@@ -8,6 +8,7 @@ using CairoMakie
 using YAXArrays
 
 dtype = "cmip"
+# TODO: update use is_cmip
 
 path_config = "./configs/projection-plots.yml";
 meta_data = mw.defineDataMap(path_config; preview=true)

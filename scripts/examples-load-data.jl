@@ -51,7 +51,7 @@ historical_data_lgm = mwd.loadDataFromESMValToolRecipes(
         :aliases => ["historical"],
         :models => models_lgm
     ),
-    dtype = "cmip"
+    is_cmip = true
 )
 
 # sanity check: for all lgm models, historical experiment is loaded
@@ -78,8 +78,7 @@ begin
             :timeranges => ["full"], 
             :base_subdirs =>   ["20250211", "20250207", "20250209"],
             :members => model_members_lgm
-        ),
-        dtype = "cmip"
+        )
     )
 end
 
@@ -112,11 +111,11 @@ begin
         path_data, 
         path_recipes;
         dir_per_var = false,
-        dtype = "observations",
-        filename_format = :esmvaltool_obs,
+        is_cmip = false,
+        filename_format = :esmvaltool,
         constraint = Dict(
-            :statistics => statistics,
-            :variables => variables,
+            :statistics => ["CLIM"],
+            :variables => ["tas", "tos"],
             :timeranges => ["full", "1961-1990"]
         )
     )
@@ -284,24 +283,29 @@ preview_historical = mwd.previewDataMap(
     paths_historical, ["tas", "tos"]; filename_format = :esmvaltool, constraint
 )
 
-# TODO: go through
-# to load data as YAXArrays from files directly (not from all files within directories), use loadPreprocData
+# it's also possible to load data as YAXArrays from files directly (instead of providing paths to directories)
 paths_tas = vcat(mwd.collectNCFilePaths.(paths_lgm_tas)...)
 paths_tos = vcat(mwd.collectNCFilePaths.(paths_lgm_tos)...)
-data = mwd.loadPreprocData(paths_tas; dtype="cmip")
-# when cmip is not defined, default names are used for models
-data = mwd.loadPreprocData(paths_tas, filename_format)
-# same data but a DataMap instance is returned
-data = mwd.loadDataMapCore([paths_tas], ["tas"]; filename_format)
 
-# load different variables from same model (TODO: dimension should be adapble too)
-data = mwd.loadPreprocData([paths_tas[end-6], paths_tos[3]], filename_format; dtype="cmip")
+data = mwd.defineDataMap(paths_tas, "tas"; filename_format = :esmvaltool)
+# TODO: fix when is_cmip is false, now it is assumed that its observational data, but it can still be model data,
+# default names model1, model2, etc. should be used when is_cmip is false
+data = mwd.defineDataMap(paths_tas, "tas"; filename_format = :esmvaltool, is_cmip = false)
+
+# load different variables from same model
+data = mwd.defineDataMap([paths_tas[end-6], paths_tos[3]], ["tas", "tos"]; filename_format = :esmvaltool)
 
 
-# TODO: merge same models (on exisitng dimension) not yet implemented
+# one model two different timeseries, merge
 base = "/albedo/work/projects/p_pool_clim_data/CMIP6/CMIP/AWI/AWI-ESM-1-1-LR/historical/r1i1p1f1/Amon/pr/gn/v20200212/"
 paths = [
     joinpath(base, "pr_Amon_AWI-ESM-1-1-LR_historical_r1i1p1f1_gn_185001-185012.nc"),
+]
+df1 = mwd.defineDataMap(paths, "pr"; filename_format = :cmip)
+
+paths = [
     joinpath(base, "pr_Amon_AWI-ESM-1-1-LR_historical_r1i1p1f1_gn_185101-185112.nc")
 ]
-# data = mw.loadPreprocData(paths, :cmip)
+df2 = mwd.defineDataMap(paths, "pr"; filename_format = :cmip)
+
+df = mwd.mergeYAX(df1["pr"], df2["pr"], :time)

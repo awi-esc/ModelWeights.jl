@@ -18,6 +18,7 @@ path_recipes = "./configs/climwip_config";
 
 plot_dir = "reproduce-climwip-figs"
 
+# TODO: go through use of is_cmip instead of dtype
 model_data = mw.defineDataMap(
     path_data, 
     path_recipes, 

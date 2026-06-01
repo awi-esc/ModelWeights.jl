@@ -909,7 +909,8 @@ function _parseFilenameObs(filename::String, path::String, field_indices::Dict{S
         type = field_to_val_in_fn(:type),
         version = field_to_val_in_fn(:version),
         tableid = field_to_val_in_fn(:tableid),
-        variable = field_to_val_in_fn(:variable)
+        variable = field_to_val_in_fn(:variable),
+        timerange = field_to_val_in_fn(:timerange)
     )
 end
 
@@ -951,16 +952,18 @@ end
 function parsePath(path::String, ::FF_ESMVT)
     filename = first(splitext(basename(path)))
     parts = split(filename, "_")
+    is_obs = false
     if parts[1] == "CMIP5"
         format_dict = length(parts) == 6 ? CMIP5_FIELD_INDICES : CMIP5_FIELD_INDICES_TR
     elseif parts[1] == "CMIP6"
         format_dict = length(parts) == 7 ? CMIP6_FIELD_INDICES : CMIP6_FIELD_INDICES_TR
     elseif parts[1] == "native6"
         format_dict = length(parts) == 6 ? OBS_FIELD_INDICES : OBS_FIELD_INDICES_TR
+        is_obs = true
     else
         throw(ErrorException("Not implemented: only CMIP5 + CMIP6 for models implemented and only native6 for observations. Found: $(parts[1])."))
     end
-    _parseFilenameModel(filename, path, format_dict)
+    is_obs ? _parseFilenameObs(filename, path, format_dict) : _parseFilenameModel(filename, path, format_dict)
 end
 
 function parsePath(path::String, ::ESMVTModelFormat)::ModelMeta
@@ -1021,6 +1024,7 @@ function parsePath(path::String, ::FF_CMIP)::ModelMeta
     filename = first(splitext(basename(path)))
     _parseFilenameModel(filename, path, CMIP_FIELD_INDICES)
 end
+
 
 function isRetained(fn_meta::T, constraint::Constraint) where {T <: AbstractMeta}
     allowed_members = getfield(constraint, :members)
