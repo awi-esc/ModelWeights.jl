@@ -399,13 +399,11 @@ end
 ### ----------------------------------------------------------------------------------------
 """
     loadPreprocData(
-        paths::Vector{String},
-        filename_format::Symbol;
+        meta_data::Vector{T};
+        constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+        is_cmip::Bool = true,
         sorted::Bool = true, 
-        dtype::String = "cmip",
-        model_names::Vector{String} = Vector{String}(),
-        meta_info::Union{Dict{String, String}, Nothing} = nothing,
-        constraint_ts::Dict{String, Int} = Dict{String, Int}()
+        meta_info::Union{Dict{String, String}, Nothing} = nothing
     )
 
 Return data loaded from `paths` as single YAXArray. 
@@ -417,15 +415,14 @@ respective value is used.
 """
 function loadPreprocData(
     meta_data::Vector{T};
-    #filename_format::AbstractFnFormat;
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-    dtype::String = "cmip",
+    is_cmip::Bool = true,
     sorted::Bool = true,
     meta_info::Union{Dict{String, String}, Nothing} = nothing
 ) where T <: AbstractMeta
     data = YAXArray[]
     model_names = String[]
-    new_dim = dtype == "cmip" ? :member : :model
+    new_dim = is_cmip ? :member : :model
     
     # iterate over meta data for each file
     @inbounds for (i, meta) in enumerate(meta_data)
@@ -484,7 +481,7 @@ function loadPreprocData(
                 dimensions[idx_time] = Dim{:time}(collect(times[indices_time]))
             end
         end
-        #TODO: This is apparently not used!!!!
+        #TODO: This is apparently not used!!!! (and super slow)
         # fv = get(props, "_FillValue", missing)
         # ds_var = map(x -> x == fv  ? missing : x, ds_var)
         # raw = Array(ds_var)
@@ -511,7 +508,7 @@ function loadPreprocData(
             if hasfield(T, :mip) 
                 props["mip_era"] = meta.mip
             end
-            if dtype == "cmip"
+            if is_cmip
                 # returns member name
                 push!(model_names, fixModelNameInconsistenciesCMIP(ds.properties, meta))
             end
@@ -538,9 +535,7 @@ function checkInput(
 end
 
 
-function _previewDataMapCore(
-    meta_data::Vector{Vector{T}}, ids::AbstractArray{String}
-) where T <: AbstractMeta
+function _previewDataMapCore(meta_data::Vector{Vector{T}}, ids::AbstractArray{String}) where T <: AbstractMeta
     preview_map = PreviewMap()
     for i in eachindex(ids)
         if !isempty(meta_data[i])
@@ -558,7 +553,7 @@ end
 function _loadDataMapCore(
     meta_data_per_dataset::Vector{Vector{T}},
     ids::Vector{String};
-    dtype::String = "cmip",
+    is_cmip::Bool = true,
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     sorted::Bool = true
     #meta_info::Vector{Dict{String, String}} = Dict{String, String}[]
@@ -567,7 +562,7 @@ function _loadDataMapCore(
     data = Vector{YAXArray}(undef, length(meta_data_per_dataset))
     indices_found = Int[];
     for (i, meta_data) in enumerate(meta_data_per_dataset)
-        df = loadPreprocData(meta_data; constraint_ts, dtype, sorted) #, meta_info = meta_info  
+        df = loadPreprocData(meta_data; constraint_ts, is_cmip, sorted) #, meta_info = meta_info  
         if !isnothing(df)
             data[i] = df
             push!(indices_found, i)
@@ -588,7 +583,7 @@ function _loadDataMapCore(
     #     return nothing # TODO: better to return an empty array?!
     # end
 
-    # if isa(level, Level) && dtype == "cmip"
+    # if isa(level, Level) && is_cmip
     #     models = isa(level, LevModel) ?  modelsFromMemberIDs.(data; uniq=true) : Array.(lookup.(data, :member))
     #     shared_models = reduce(intersect, models)
     #     data = map(ds -> subsetModelData(ds, shared_models), data)
@@ -660,7 +655,7 @@ end
         constraint::Dict{Symbol, <:AbstractArray{String}}  = Dict{Symbol, Vector{String}}(),
         constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
         level::Symbol = :none,
-        dtype::String = "cmip",
+        is_cmip::Bool = true,
         filename_format::Symbol = :esmvaltool,
         sorted::Bool = true
     )
@@ -676,7 +671,7 @@ climate variable to be loaded.
 - `constraint`: 
 - `constraint_ts`:
 - `level`:
-- `dtype`:
+- `is_cmip`:
 - `filename_format`: 
 - `sorted`: if true (default), the data is sorted alphabetically wrt model names.
 """
@@ -687,7 +682,7 @@ function loadDataFromESMValToolRecipes(
     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     level::Symbol = :none,
-    dtype::String = "cmip",
+    is_cmip::Bool = true,
     filename_format::Symbol = :esmvaltool,
     sorted::Bool = true
 )
@@ -701,12 +696,12 @@ function loadDataFromESMValToolRecipes(
     fn_format = toFF(Val(filename_format))
     
     meta_data = _getFilteredMetaData(
-        paths_to_files, constraint, constraint_ts; level = level_resolved, dtype, fn_format
+        paths_to_files, constraint, constraint_ts; level = level_resolved, is_cmip, fn_format
     )
     return _loadDataMapCore(
         meta_data,
         getfield.(esmvt_meta_data, :id);
-        dtype,
+        is_cmip,
         constraint_ts,
         sorted
         #meta_info = metadataToDict.(esmvt_meta_data)
@@ -718,13 +713,13 @@ function loadDataFromYAML(
     constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     level::Symbol = :none,
-    dtype::String = "cmip",
+    is_cmip::Bool = true,
     filename_format::Symbol = :esmvaltool,
     sorted::Bool = true
 )
     loadDataFromYAML(
         YAML.load_file(path_config);
-        constraint, constraint_ts, level, dtype, filename_format, sorted
+        constraint, constraint_ts, level, is_cmip, filename_format, sorted
     )
 end
 
@@ -733,7 +728,7 @@ end
         yaml_content::Dict;
         constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
         level::Abstractlevel = NoLevel(),
-        dtype::String = "cmip",
+        is_cmip::Bool = true,
         fn_format::Symbol = :esmvaltool
         sorted::Bool = true
     )
@@ -743,14 +738,14 @@ constraint by values in `constraint`.
 
 # Arguments:
 - `sorted::Bool`: if true (default), model dimension is sorted alphabetically.
-- `dtype::String`: if set to "cmip", model dimension of returned data have model names as values.
+- `is_cmip::Bool`: if true, model dimension of returned data have model members' names as values.
 """
 function loadDataFromYAML(
     yaml_content::Dict;
     constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     level::Symbol = :none,
-    dtype::String = "cmip",
+    is_cmip::Bool = true,
     filename_format::Symbol = :esmvaltool,
     sorted::Bool = true
 )
@@ -784,7 +779,7 @@ function loadDataFromYAML(
             convertESMVTConstraint(ds_constraint), 
             constraint_ts;
             level = level_resolved, 
-            dtype, 
+            is_cmip, 
             fn_format
         )
         push!(all_meta, meta_data)
@@ -792,7 +787,7 @@ function loadDataFromYAML(
     end
     meta_data = vcat(all_meta...)
 
-    datamap =  _loadDataMapCore(meta_data, all_ids; dtype, constraint_ts, sorted)
+    datamap =  _loadDataMapCore(meta_data, all_ids; is_cmip, constraint_ts, sorted)
     # apply level also across all datasets
     if level != :none
         datamap = subsetModelData(datamap, level)
@@ -801,24 +796,47 @@ function loadDataFromYAML(
 end
 
 
-# Loading data directly from given directories
-function previewDataMap(
-    paths_data_dirs::Vector{String}, 
-    id::String;
-    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
-    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-    dtype::String = "cmip",
-    filename_format::Symbol = :cmip
-)
-    meta_data = _prepareMetaData(
-        paths_data_dirs; constraint, constraint_ts, level = :none, dtype, filename_format
-    )
-    is_constraint_ts = constraint_ts.start_year != typemin(Int) || constraint_ts.end_year != typemax(Int)
-    if filename_format != :cmip && is_constraint_ts
-        @info "Timeseries constraint not applied for preview when filename format is not :cmip!"
-    end
-    _previewDataMapCore(meta_data, fill(id, length(meta_data)))
-end
+# # Loading data directly from given directories
+# function previewDataMap(
+#     paths_data_dirs::Vector{String}, 
+#     id::String;
+#     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+#     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+#     is_cmip::Bool = true,
+#     filename_format::Symbol = :cmip
+# )
+#     meta_data = _prepareMetaData(
+#         paths_data_dirs; constraint, constraint_ts, level = :none, is_cmip, filename_format
+#     )
+#     is_constraint_ts = constraint_ts.start_year != typemin(Int) || constraint_ts.end_year != typemax(Int)
+#     if filename_format != :cmip && is_constraint_ts
+#         @info "Timeseries constraint not applied for preview when filename format is not :cmip!"
+#     end
+#     _previewDataMapCore(meta_data, fill(id, length(meta_data)))
+# end
+
+
+# function previewDataMap(
+#     paths_data_dirs::Union{Vector{String}, Vector{Vector{String}}}, 
+#     data_ids::Vector{String};
+#     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+#     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+#     level::Symbol = :none,
+#     is_cmip::Bool = true,
+#     filename_format::Symbol = :cmip
+# )
+#     if length(paths_data_dirs) != length(data_ids)
+#         throw(ArgumentError("'all_paths' and 'ids' must have the same length!"))
+#     end
+#     meta_data = _prepareMetaData(
+#         paths_data_dirs; constraint, constraint_ts, level, is_cmip, filename_format
+#     )
+#     is_constraint_ts = constraint_ts.start_year != typemin(Int) || constraint_ts.end_year != typemax(Int)
+#     if filename_format != :cmip && is_constraint_ts
+#         @info "Timeseries constraint not applied for preview when filename format is not :cmip!"
+#     end
+#     _previewDataMapCore(meta_data, data_ids)
+# end
 
 
 """
@@ -827,124 +845,232 @@ end
         id::String;
         constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
         constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-        dtype::String = "cmip",
+        is_cmip::Bool = true,
         filename_format::Symbol = :cmip,
         sorted::Bool = true
     )
 
 Return DataMap with entry `id` with the data (model or observations depending on `filename_format`)
 from all .nc files in all directories in `paths`, possibly constraint by `constraint` and `constraint_ts`.
+
+# Arguments:
+- `paths`: paths to directories that contain .nc files with data to be loaded for single dataset with name `id`
+- `id`: refers to single dataset for which data is loaded from all `paths`
 """
 function defineDataMap(
     paths::Vector{String}, 
     id::String;
     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-    dtype::String = "cmip",
+    level::Symbol = :none,
+    is_cmip::Bool = true,
     filename_format::Symbol = :cmip,
     sorted::Bool = true
     #meta_info::Dict{String, String} = Dict{String, String}()
 )
-    meta_data = _prepareMetaData(
-        paths; constraint, constraint_ts, level = :none, dtype, filename_format
-    )
-    _loadDataMapCore(meta_data, fill(id, length(meta_data)); constraint_ts, dtype, sorted)#meta_info
-    # TODO: do we want to include single nc files besides directories?
+    meta_data = _prepareMetaData(paths, id; constraint, constraint_ts, level, is_cmip, filename_format)
+    _loadDataMapCore(meta_data, [id]; constraint_ts, is_cmip, sorted)#meta_info
 end
-
 
 function previewDataMap(
-    paths_data_dirs::Union{Vector{String}, Vector{Vector{String}}}, 
-    data_ids::Vector{String};
+    paths::Vector{String}, 
+    id::String;
     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     level::Symbol = :none,
-    dtype::String = "cmip",
-    filename_format::Symbol = :cmip
-)
-    if length(paths_data_dirs) != length(data_ids)
-        throw(ArgumentError("'all_paths' and 'ids' must have the same length!"))
-    end
-    meta_data = _prepareMetaData(
-        paths_data_dirs; constraint, constraint_ts, level, dtype, filename_format
-    )
-    is_constraint_ts = constraint_ts.start_year != typemin(Int) || constraint_ts.end_year != typemax(Int)
-    if filename_format != :cmip && is_constraint_ts
-        @info "Timeseries constraint not applied for preview when filename format is not :cmip!"
-    end
-    _previewDataMapCore(meta_data, data_ids)
-end
-
-
-"""
-    defineDataMap(
-        paths_data_dirs::Union{Vector{String}, Vector{Vector{String}}}, 
-        data_ids::Vector{String};
-        constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
-        constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-        level::Symbol = :none,
-        dtype::String = "cmip",
-        filename_format::Symbol = :cmip
-        sorted::Bool = true
-    )
-
-Return DataMap with entries `data_ids` with the data from all .nc files in all directories in 
-`paths_data_dirs`, possibly constraint by `constraint` and `constraint_ts`.
-
-For every loaded dataset (entry in built DataMap), files are loaded from several directories;
-each entry in `paths_data_dirs` points to the vector of data directories from where data 
-is loaded for that dataset.
-"""
-function defineDataMap(
-    paths_data_dirs::Union{Vector{String}, Vector{Vector{String}}}, 
-    data_ids::Vector{String};
-    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
-    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-    level::Symbol = :none,
-    dtype::String = "cmip",
+    is_cmip::Bool = true,
     filename_format::Symbol = :cmip,
     sorted::Bool = true
-    #meta_info::Vector{Dict{String, String}} = Dict{String, String}[]
 )
-    if length(paths_data_dirs) != length(data_ids)
-        throw(ArgumentError("'all_paths' and 'ids' must have the same length!"))
-    end
-    # checkInput with meta_info checkInput(paths_data_dirs, data_ids; meta_info)
-    meta_data = _prepareMetaData(
-        paths_data_dirs; constraint, constraint_ts, level, dtype, filename_format
-    )
-    _loadDataMapCore(meta_data, data_ids; constraint_ts, dtype, sorted)#meta_info
+    meta_data = _prepareMetaData(paths, id; constraint, constraint_ts, level, is_cmip, filename_format)
+    _previewDataMapCore(meta_data, [id])
 end
+
+"""
+# Arguments:
+- `path`: path to directory that contain .nc files with data to be loaded for single dataset
+"""
+function defineDataMap(
+    path::String, 
+    id::String;
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    is_cmip::Bool = true,
+    filename_format::Symbol = :cmip,
+    sorted::Bool = true
+)
+    defineDataMap([path], id; constraint, constraint_ts, level, is_cmip, filename_format, sorted)
+end
+
+function previewDataMap(
+    path::String, 
+    id::String;
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    is_cmip::Bool = true,
+    filename_format::Symbol = :cmip,
+    sorted::Bool = true
+)
+    meta_data = _prepareMetaData([path], id; constraint, constraint_ts, level, is_cmip, filename_format)
+    _previewDataMapCore(meta_data, [id])
+end
+
+
+
+"""
+# Arguments:
+- `paths`: each entry refers to a single dataset (corresponding to entry in `ids`)
+- `ids`: names of datasets each entry in `paths` refers to
+"""
+function defineDataMap(
+    paths::Vector{String}, 
+    ids::Vector{String};
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    is_cmip::Bool = true,
+    filename_format::Symbol = :cmip,
+    sorted::Bool = true
+)
+    meta_data = _prepareMetaData(paths, ids; constraint, constraint_ts, level, is_cmip, filename_format)
+    _loadDataMapCore(meta_data, ids; constraint_ts, is_cmip, sorted)
+end
+
+function previewDataMap(
+    paths::Vector{String}, 
+    ids::Vector{String};
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    is_cmip::Bool = true,
+    filename_format::Symbol = :cmip,
+    sorted::Bool = true
+)
+    meta_data = _prepareMetaData(paths, ids; constraint, constraint_ts, level, is_cmip, filename_format)
+    _previewDataMapCore(meta_data, ids)
+end
+
+
+"""
+# Arguments:
+- `paths`: paths to directories that contain .nc files with data to be loaded for each dataset in `ids`
+- `ids`: each entry refers to a dataset for which data is loaded from all entries in corresponding entry in `paths`.
+"""
+function defineDataMap(
+    paths_datasets::Vector{Vector{String}}, 
+    ids::Vector{String};
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    is_cmip::Bool = true,
+    filename_format::Symbol = :cmip,
+    sorted::Bool = true
+)
+    meta_data = _prepareMetaData(paths_datasets, ids; constraint, constraint_ts, level, is_cmip, filename_format)
+    _loadDataMapCore(meta_data, ids; constraint_ts, is_cmip, sorted)
+end
+
+function previewDataMap(
+    paths_datasets::Vector{Vector{String}}, 
+    ids::Vector{String};
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    is_cmip::Bool = true,
+    filename_format::Symbol = :cmip,
+    sorted::Bool = true
+)
+    meta_data = _prepareMetaData(paths_datasets, ids; constraint, constraint_ts, level, is_cmip, filename_format)
+    _previewDataMapCore(meta_data, ids)
+end
+
 
 
 function _prepareMetaData(
-    paths::Union{Vector{String}, Vector{Vector{String}}};
+    paths_datasets::Vector{Vector{String}}, 
+    ids::Vector{String};
     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     level::Symbol = :none,
-    dtype::String = "cmip",
+    is_cmip::Bool = true,
+    filename_format::Symbol = :cmip
+)
+    if length(paths_datasets) != length(ids)
+        throw(ArgumentError("'all_paths' and 'ids' must have the same length!"))
+    end
+    level_resolved = toLevel(Val(level))
+    fn_format = toFF(Val(filename_format))
+    all_paths = Vector{Vector{String}}(undef, length(paths_datasets))
+    for (i, paths) in enumerate(paths_datasets)
+        all_paths[i] = vcat(_collectPaths.(paths)...)
+    end    
+    _getFilteredMetaData(
+        all_paths, constraint, constraint_ts; level = level_resolved, is_cmip, fn_format
+    )
+end
+
+function _prepareMetaData(
+    paths::Vector{String}, 
+    ids::Vector{String};
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    is_cmip::Bool = true,
+    filename_format::Symbol = :cmip
+)
+    if length(paths) != length(ids)
+        throw(ArgumentError("'paths' and 'ids' must have the same length!"))
+    end
+    level_resolved = toLevel(Val(level))
+    fn_format = toFF(Val(filename_format))
+    all_paths = Vector{Vector{String}}(undef, length(paths))
+    for (i,path) in enumerate(paths)
+        all_paths[i] = _collectPaths(path)
+    end    
+    _getFilteredMetaData(
+        all_paths, constraint, constraint_ts; level = level_resolved, is_cmip, fn_format
+    )
+end
+
+function _prepareMetaData(
+    paths::Vector{String}, 
+    id::String;
+    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
+    level::Symbol = :none,
+    is_cmip::Bool = true,
     filename_format::Symbol = :cmip
 )
     level_resolved = toLevel(Val(level))
     fn_format = toFF(Val(filename_format))
-    paths_to_files = _collectPaths(paths)
-    meta_data = _getFilteredMetaData(
-        paths_to_files, constraint, constraint_ts; level = level_resolved, dtype, fn_format
+    paths_to_files = vcat(_collectPaths.(paths)...)
+    _getFilteredMetaData(
+        [paths_to_files], constraint, constraint_ts; level = level_resolved, is_cmip, fn_format
     )
-    return meta_data
-end
-
-function _collectPaths(paths_dirs::Vector{String})
-    collectNCFilePaths.(filter(isdir, paths_dirs))
 end
 
 
-function _collectPaths(paths_data_dirs::Vector{Vector{String}})
-    map(paths_data_dirs) do paths 
-        vcat(collectNCFilePaths.(filter(isdir, paths))...)
+
+"""
+Return Vector{String} with .nc files in `path` if `path` is a directory, [path] if `path` 
+is a .nc file, empty String[] otherwise.
+"""
+function _collectPaths(path::String)
+    if isfile(path) && endswith(path, ".nc")
+        return [path]
+    elseif isdir(path)
+        paths_to_files = filter(x -> isfile(x) && endswith(x, ".nc"), readdir(path; join=true))
+        if isempty(paths_to_files)
+            @warn "No .nc files found in $path "
+        end
+        return paths_to_files
+    else
+        @warn "$path is neither a directory nor a .nc file!"
+        return String[]
     end
 end
-
 
 """
     function _getFilteredMetaData(
@@ -952,7 +1078,7 @@ end
         constraint::Dict{Symbol, <:AbstractArray{String}},
         constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}};
         level::AbstractLevel = NoLevel(),
-        dtype::String = "cmip",
+        is_cmip::Bool = true,
         fn_format::AbstractFnFormat = FF_CMIP()
     )
 
@@ -961,7 +1087,7 @@ end
 - `constraint::Dict{Symbol, <:AbstractArray{String}}`:
 - `constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}`:
 - `level::AbstractLevel` = NoLevel():
-- `dtype::String` = "cmip":
+- `is_cmip::Bool` = true:
 - `fn_format::AbstractFnFormat` = FF_CMIP():
 """
 function _getFilteredMetaData(
@@ -969,12 +1095,12 @@ function _getFilteredMetaData(
     constraint::Dict{Symbol, <:AbstractArray{String}},
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}};
     level::AbstractLevel = NoLevel(),
-    dtype::String = "cmip",
+    is_cmip::Bool = true,
     fn_format::AbstractFnFormat = FF_CMIP()
 )
     # TODO: add possibility to have one constraint per dataset?!
     # first get all the metadata
-    T = dtype == "observations" ? ObsMeta : ModelMeta
+    T = isa(fn_format, ESMVTObsFormat) ? ObsMeta : ModelMeta # TODO: for now just ESMVTObs, should handle others too
     meta_data_per_dataset = Vector{Vector{T}}(undef, length(paths_to_files))
     for (i, paths) in enumerate(paths_to_files)
         meta = Vector{T}(undef, length(paths))
@@ -993,7 +1119,7 @@ function _getFilteredMetaData(
             _applyConstraintTS!(meta_data_per_dataset, constraint_ts)
         end
     end
-    if !isa(level, NoLevel) && dtype == "cmip" # (level doesnt apply to observational data)
+    if !isa(level, NoLevel) && is_cmip # (level doesnt apply to observational data)
         _applyLevel!(meta_data_per_dataset, level)
     end
     return meta_data_per_dataset

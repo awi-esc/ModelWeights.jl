@@ -213,10 +213,14 @@ lgm_cmip6_tas = mw.defineDataMap(
     paths_lgm_cmip6, ["tos", "tas"]; filename_format=:esmvaltool_cmip6, constraint
 )
 constraint = Dict(:mips => ["CMIP6"])
+preview_lgm_cmip6 = mwd.previewDataMap(
+    paths_lgm, ["tas", "tos"]; filename_format = :esmvaltool, constraint
+)
 lgm_cmip6 = mw.defineDataMap(
     paths_lgm, ["tas", "tos"]; filename_format = :esmvaltool, constraint
 )
 # add level = :member 
+preview_lgm_cmip6 = mwd.previewDataMap(paths_lgm, ["tas", "tos"]; filename_format = :esmvaltool, constraint, level=:member)
 lgm_cmip6 = mw.defineDataMap(
     paths_lgm, ["tas", "tos"]; filename_format = :esmvaltool, constraint, level=:member
 )
@@ -277,7 +281,7 @@ constraint = Dict(:members => members_lgm)
 preview_historical_tas = mwd.previewDataMap(
     paths_historical_tas, "tas"; filename_format = :esmvaltool, constraint
 )
-# models in constraint refer to members -> nothing loaded (use :members)
+# models in constraint refer to members -> nothing loaded (use :members, instead of :models)
 constraint = Dict(:models => members_lgm)
 preview_historical = mwd.previewDataMap(
     paths_historical, ["tas", "tos"]; filename_format = :esmvaltool, constraint
@@ -287,13 +291,14 @@ preview_historical = mwd.previewDataMap(
 paths_tas = vcat(mwd.collectNCFilePaths.(paths_lgm_tas)...)
 paths_tos = vcat(mwd.collectNCFilePaths.(paths_lgm_tos)...)
 
+data_prev = mwd.previewDataMap(paths_tas, "tas"; filename_format = :esmvaltool)
 data = mwd.defineDataMap(paths_tas, "tas"; filename_format = :esmvaltool)
-# TODO: fix when is_cmip is false, now it is assumed that its observational data, but it can still be model data,
-# default names model1, model2, etc. should be used when is_cmip is false
+# if is_cmip is false, model names are just model1, model2, etc., no information is taken from meta data
 data = mwd.defineDataMap(paths_tas, "tas"; filename_format = :esmvaltool, is_cmip = false)
 
 # load different variables from same model
 data = mwd.defineDataMap([paths_tas[end-6], paths_tos[3]], ["tas", "tos"]; filename_format = :esmvaltool)
+
 
 
 # one model two different timeseries, merge
@@ -307,5 +312,5 @@ paths = [
     joinpath(base, "pr_Amon_AWI-ESM-1-1-LR_historical_r1i1p1f1_gn_185101-185112.nc")
 ]
 df2 = mwd.defineDataMap(paths, "pr"; filename_format = :cmip)
-
+        
 df = mwd.mergeYAX(df1["pr"], df2["pr"], :time)
