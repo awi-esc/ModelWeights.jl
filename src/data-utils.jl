@@ -273,52 +273,52 @@ function getCMIPModelsKey(meta::Dict)
 end
 
 
-"""
-    filterPathsSharedModels(
-        paths::AbstractVector{String}, 
-        shared_models::AbstractVector{String}, 
-        fn_format::AbstractFnFormat
-    )
+# """
+#     filterPathsSharedModels(
+#         paths::AbstractVector{String}, 
+#         shared_models::AbstractVector{String}, 
+#         fn_format::AbstractFnFormat
+#     )
 
-Every vector of paths in `all_paths` is filtered s.t. it only contains models or model 
-members given in `shared_models`.
+# Every vector of paths in `all_paths` is filtered s.t. it only contains models or model 
+# members given in `shared_models`.
 
-# Arguments:
-- `paths`: contains paths to data files
-"""
-function filterPathsSharedModels(
-    paths::AbstractVector{String}, 
-    shared_models::AbstractVector{String}, 
-    fn_format::AbstractFnFormat
-)
-    if isempty(shared_models)
-        @warn "No models shared across data!"
-        return String[]
-    end
-    #constraint = Dict{String, Vector{String}}("models" => shared_models)
-    mask = maskFileConstraints(paths, fn_format, constraint)
+# # Arguments:
+# - `paths`: contains paths to data files
+# """
+# function filterPathsSharedModels(
+#     paths::AbstractVector{String}, 
+#     shared_models::AbstractVector{String}, 
+#     fn_format::AbstractFnFormat
+# )
+#     if isempty(shared_models)
+#         @warn "No models shared across data!"
+#         return String[]
+#     end
+#     #constraint = Dict{String, Vector{String}}("models" => shared_models)
+#     mask = maskFileConstraints(paths, fn_format, constraint)
 
-    return paths[mask]
-end
+#     return paths[mask]
+# end
 
-"""
-    filterPathsSharedModels(
-        all_paths::AbstractVector{<:AbstractVector{String}}, 
-        level::Level,
-        fn_format::AbstractFnFormat
-    )
+# """
+#     filterPathsSharedModels(
+#         all_paths::AbstractVector{<:AbstractVector{String}}, 
+#         level::Level,
+#         fn_format::AbstractFnFormat
+#     )
 
-# Arguments:
-- `all_paths`: every entry refers to the paths to data files for the respective dataset
-"""
-function filterPathsSharedModels(
-    all_paths::AbstractVector{<:AbstractVector{String}},
-    level::Level,
-    fn_format::AbstractFnFormat
-)
-    shared = sharedModelsFromPaths(all_paths, level, fn_format)
-    return [filterPathsSharedModels(paths, shared, fn_format) for paths in all_paths]
-end
+# # Arguments:
+# - `all_paths`: every entry refers to the paths to data files for the respective dataset
+# """
+# function filterPathsSharedModels(
+#     all_paths::AbstractVector{<:AbstractVector{String}},
+#     level::Level,
+#     fn_format::AbstractFnFormat
+# )
+#     shared = sharedModelsFromPaths(all_paths, level, fn_format)
+#     return [filterPathsSharedModels(paths, shared, fn_format) for paths in all_paths]
+# end
 
 
 # function filterPathsSharedModels(
@@ -1670,15 +1670,6 @@ function fixModelNameInconsistenciesCMIP(props::Dict, fn_meta::ModelMeta)
     end 
 end
 
-
-# function maskFileConstraints(
-#     paths::Vector{String}, fn_format::FilenameFormat, constraint::Constraint
-# )
-#     filenames = first.(splitext.(basename.(paths)))
-#     filenames_meta = [parseFilename(fn, fn_format) for fn in filenames]
-#     #return isRetained.(filenames_meta, fill(constraint, length(filenames_meta)))
-#     return isRetained.(filenames_meta, constraint)
-# end
 
 
 """
