@@ -256,11 +256,15 @@ end
     plotTimeseries!(ax::Axis, vals::AbstractArray;)
 
 Plot timeseries of data vector `vals`.
+
+# Arguments:
+- `vals::AbstractArray`: must have dimension `dim_name` (default: :time)
 """
 function plotTimeseries!(
     ax::Axis,
     vals::AbstractArray;
     uncertainties::Union{AbstractArray, Nothing} = nothing,
+    dim_name::Symbol = :time,
     color_line::Symbol = :darkred,
     color_unc::Symbol = :darkred,
     label::String = "",
@@ -270,7 +274,7 @@ function plotTimeseries!(
     alpha = 0.5
 )
     plots = []
-    timesteps = Array(dims(vals, :time))
+    timesteps = Array(dims(vals, dim_name))
     if typeof(timesteps[1]) == DateTime
         timesteps = map(x -> Dates.year(x), timesteps)
     end
@@ -306,21 +310,23 @@ end
 Plot timeseries of data vector `data`.
 
 # Arguments:
-- `data::YAXArray`: must have dimension 'time' and possibly one other dimension
+- `data::YAXArray`: must have dimension `dim_name` (default: :time) and possibly one other dimension
 """
 function plotTimeseries(
     data::YAXArray;
+    uncertainties::Union{YAXArray, Nothing} = nothing,
+    dim_name::Symbol = :time,
+    n_step::Int = 10,
+    colors::AbstractArray=[],
     linestyle::Symbol = :solid,
     linewidth = 3,
     xlabel = "time",
     ylabel = "",
     title = "",
     legend_title = "",
-    colors::AbstractArray=[],
-    n_step::Int = 10,
-    uncertainties::Union{YAXArray, Nothing} = nothing
+    legend_nb_rows::Union{Int, Nothing} = nothing
 )
-    timesteps = Array(dims(data, :time))
+    timesteps = Array(dims(data, dim_name))
     nt = length(timesteps)
     timesteps = 1:nt
 
@@ -358,7 +364,7 @@ function plotTimeseries(
             )
         end
     else
-        idx_time_dim = Data.indexDim(data, :time)
+        idx_time_dim = Data.indexDim(data, dim_name)
         idx_other_dim = idx_time_dim == 1 ? 2 : 1
         n = size(data, idx_other_dim)
         plots = Vector(undef, n)
@@ -383,10 +389,12 @@ function plotTimeseries(
                 )
             end
         end
+
+        n_rows = isnothing(legend_nb_rows) ? div(n, 4) + 1 : legend_nb_rows
         Legend(
             f[2,1], plots, string.(Array(dims(data)[idx_other_dim])), legend_title; 
             framevisible=false, 
-            orientation=:horizontal, nbanks = div(n,4) +1, 
+            orientation=:horizontal, nbanks = n_rows, 
             labelsize=10
         )
     end
