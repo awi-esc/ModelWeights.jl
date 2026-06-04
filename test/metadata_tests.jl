@@ -1,11 +1,6 @@
 @testset "Test updateGroupedDataMetadata" begin
 end
 
-@testset "Test fixModelNamesMetadata" begin
-end
-
-@testset "Test uniqueMemberID" begin
-end
 
 @testset "Test getCMIPModelsKey" begin
     models = ["m1", "m2"]

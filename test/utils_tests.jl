@@ -1,3 +1,6 @@
+using DimensionalData
+using YAXArrays
+
 @testset "Test combineAll" begin
     # unequal number of entries (first more)
     v1 = ["tos", "tas"]; v2 = ["CLIM"];
@@ -106,8 +109,11 @@ end
     )
     arr1 = YAXArray(dimensions, zeros(7, 9, 3))
     arr2 = YAXArray(dimensions, ones(7, 9, 3))
-    ModelWeights.Data.mergeYAX([arr1, arr2], :var, ["tos", "tas"])
-    #TODO: add Test
+    merged = ModelWeights.Data.mergeYAX([arr1, arr2], :var, ["tos", "tas"])
+    @test size(merged) == (7,9,3,2)
+    dim_new = dims(merged,4)
+    @test name(dim_new) == :var
+    @test collect(dim_new) == ["tas", "tos"] # is always added as ForwardOrdered
 end
 
 

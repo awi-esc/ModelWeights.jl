@@ -29,8 +29,6 @@ end
 @testset "Test areaWeightedRMSE" begin
 end
 
-@testset "Test normalize" begin
-end
 
 @testset "Test summarizeMembers vectors" begin
     members = ["ACCESS-CM2#r10i1p1f1_gn", "CNRM-CM6-1#r13i1p1f2_gr", "CNRM-CM6-1#r15i1p1f2_gr", "MIROC6#r23i1p1f1_gn"]
@@ -92,11 +90,6 @@ end
 @testset "Test saveWeightsAsNCFile" begin  
 end
 
-@testset "Test saveWeightsAsJuliaObj" begin 
-end
-
-@testset "Test loadWeightsFromJLD2" begin
-end
 
 @testset "Test applyWeights" begin 
 end
