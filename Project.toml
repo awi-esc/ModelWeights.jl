@@ -1,6 +1,6 @@
 name = "ModelWeights"
 uuid = "933925d5-f025-4d5f-a75f-f973a6ce34d8"
-version = "0.1.0"
+version = "1.1.0"
 authors = ["Britta Grusdt <britta.grusdt@awi.de>"]
 
 [deps]
