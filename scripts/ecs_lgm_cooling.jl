@@ -4,7 +4,6 @@ import ModelWeights.Plots as mwp
 
 using DimensionalData
 using Statistics
-using Setfield
 using CairoMakie
 using ColorSchemes
 using NCDatasets
@@ -12,121 +11,21 @@ using Distributions
 using YAXArrays
 using Missings
 
-# Get data from piControl + historical + lgm experiments
-path_config = "./configs/ecs-lgm-cooling.yml";
-data = mw.defineDataMap(
-    path_config; 
-    constraint = Dict("level_shared" => "model"),
-    dtype = "cmip",
-    filename_format = :esmvaltool
-)
 
 
-# for the shared models, make sure that physics of piControl models are the same
-# as physics of lgm models
-mwd.apply!(
-    data, mwd.alignPhysics, Array(data["tas_CLIM_lgm"].member); 
-    ids = ["tas_CLIM_piControl"],
-    ids_new = ["tas_CLIM_piControl-lgm-members"]
-)
-mwd.summarizeMembers!(data)
-mwd.apply!(
-    data, mwd.anomalies, data["tas_CLIM_piControl"]; 
-    ids = ["tas_CLIM_lgm"],
-    ids_new = ["tas_ANOM_lgm-piControl"]
-)
+gmst_proxy = (var = "GMST", type="Proxy-only", lower=-6.8, upper=-4.4, summary_stat="median", 
+    summary_val=-5.6, ci="95%", target="plots/ecs-lgm-cooling/delta_gmst_proxy_only.png");
+gmst_da = (var = "GMST", type="Data assimilated", lower=-6.5, upper=-5.7, summary_stat="mean", 
+    summary_val=-6.1, ci="95%", target="plots/ecs-lgm-cooling/delta_gmst_DA.png");
+
+
+gsst_proxy = (var = "GSST", type="Proxy-only", lower=-3.0, upper=-2.7, summary_stat="median", 
+    summary_val=-2.9, ci="95%", target="plots/ecs-lgm-cooling/delta_gsst_proxy_only.png");
+gsst_da = (var = "GSST", type="Data assimilated", lower=-3.4, upper=-2.9, summary_stat="mean", 
+    summary_val=-3.1, ci="95%", target="plots/ecs-lgm-cooling/delta_gsst_DA.png");
 
 
 
-
-
-# NaN important for plotting! Type mustn't be Missing
-global_means_tas = coalesce.(mwd.globalMeans(data["tas_ANOM_lgm-piControl"]), NaN);
-
-
-# Assimilated data from Tierney et al. (2020)
-global_means = global_means_tas;
-tierney_data = NCDataset("/albedo/home/brgrus001/ModelWeightsPaper/work/data/Tierney-2020/Tierney2020_DA_atm.nc")
-deltaSAT = YAXArray(
-    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
-    Array(tierney_data["deltaSAT"])
-)
-errdeltaSAT = YAXArray(
-    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
-    Array(tierney_data["errdeltaSAT"])
-)
-gm_delta = mwd.globalMeans(deltaSAT)[1]
-area_weights_mat = mwd.makeAreaWeightMatrix(Array(dims(deltaSAT, :lon)), Array(dims(deltaSAT, :lat)))
-std_gm_delta = sum(area_weights_mat .* errdeltaSAT)
-
-
-# Only proxy data from Tierney et al. (2020)
-global_means = global_means_tos;
-tierney_data = NCDataset("/albedo/home/brgrus001/ModelWeightsPaper/work/data/Tierney-2020/Tierney2020_ProxyData_5x5_deltaSST.nc")
-mat = allowmissing(Array(tierney_data["deltaSST"]))
-mat[isnan.(mat)] .= missing
-deltaSST = YAXArray(
-    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
-    mat
-)
-mat = allowmissing(Array(tierney_data["std"]))
-mat[isnan.(mat)] .= missing
-errdeltaSST = YAXArray(
-    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
-    mat
-)
-gm_delta = mw.globalMeans(deltaSST)[1]
-# also adapt area weight matrix for missing values..!!?
-area_weights_mat = mw.makeAreaWeightMatrix(
-    Array(dims(deltaSST, :lon)), Array(dims(deltaSST, :lat));
-    mask=ismissing.(mat)
-)
-std_gm_delta = sum(skipmissing(area_weights_mat .* errdeltaSST))
-
-
-
-
-begin
-    CI_lower(n) = gm_delta - n * std_gm_delta;
-    CI_upper(n) = gm_delta + n * std_gm_delta; 
-
-    # 68% CI
-    l1 = CI_lower(1)
-    u1 = CI_upper(1)
-    # 95% CI
-    l2 = CI_lower(2)
-    u2 = CI_upper(2)
-end
-
-
-
-
-begin
-    f3 = Figure(size = (1000, 400))
-    t="Data assimilated reconstruction (Tierney et al., 2020)"
-    ax = Axis(f3[1,1], title = L"%$(t) $\Delta$ GMST")
-    xs = Array(global_means)
-    ys = repeat([0],length(global_means))
-    scatter!(ax, xs, ys)
-    labels = Array(dims(global_means,:model))
-    text!(ax, xs, ys.+5, text=labels, rotation=pi/2)
-    dist = Distributions.Normal(gm_delta, std_gm_delta)
-    samples = rand(dist, 1000);
-    hist!(samples)
-    vlines!(gm_delta; color=:grey, linewidth=5, label="Mean")
-    lines!([l1, u1], [0, 0]; linewidth=5, color=:red, label="68% CI")
-    lines!([l2, u2], [0, 0]; linewidth=5, color=:green, alpha=0.5, label="95% CI")
-    axislegend(ax, merge = true, position = :rt)
-    f3
-end
-save("plots/ecs-lgm-cooling/DA_GMST-lgm-cooling.png", f3)
-
-
-# values from Tierney paper, DA-reproduced (CI-interval mismatch..!)
-reconstruction = (type="proxy-only", lower=-6.8, upper=-4.4, summary_stat="median(?)", 
-    summary_val=-5.6, ci="95%", target="plots/ecs-lgm-cooling/lgm_cooling_global_mean_DA.png");
-reconstruction = (type="Data assimilated", lower=-6.5, upper=-5.7, summary_stat="mean", 
-    summary_val=-6.1, ci="95%(68%??)", target="plots/ecs-lgm-cooling/lgm_cooling_global_mean_proxy_only.png");
 
 begin
     f, ax = mwp.makeScatterPlot(collect(1:length(global_means_tas)), global_means_tas;
@@ -143,6 +42,121 @@ begin
     #save(reconstruction.target, f)
     f
 end
+
+function CI(mu, stdev, n_stdev) 
+    lower = mu - n_stdev * stdev
+    upper = mu + n_stdev * stdev
+    return [lower, upper]
+end
+
+function makeFig(data, predicted_mu, predicted_std, title::String)
+    f = Figure(size = (1000, 400))
+    ax = Axis(f[1,1], title = L"%$(title) $\Delta$ GMST")
+    xs = Array(data)
+    ys = repeat([0],length(data))
+    scatter!(ax, xs, ys)
+    labels = Array(dims(data,:model))
+    text!(ax, xs, ys.+5, text=labels, rotation=pi/2)
+    dist = Distributions.Normal(predicted_mu, predicted_std)
+    samples = rand(dist, 1000);
+    hist!(samples)
+    vlines!(predicted_mu; color=:grey, linewidth=5, label="Mean")
+    ci68 = CI(predicted_mu, predicted_std, 1)
+    ci95 = CI(predicted_mu, predicted_std, 2)
+    lines!(ci68, [0, 0]; linewidth=5, color=:red, label="68% CI")
+    lines!(ci95, [0, 0]; linewidth=5, color=:green, alpha=0.5, label="95% CI")
+    axislegend(ax, merge = true, position = :rt)
+    return f
+end
+
+
+
+
+
+# Reconstructions from Tierney et al (2020)s
+tierney_data = mwd.DataMap()
+proxies = NCDataset("/albedo/home/brgrus001/ModelWeightsPaper/work/data/Tierney-2020/Tierney2020_DA_atm.nc")
+longitudes = proxies["lon"]
+latitudes = proxies["lat"]
+tierney_data["tas-proxies"] = YAXArray(
+    (Dim{:lon}(longitudes), Dim{:lat}(latitudes)),
+    proxies["deltaSAT"],
+    Dict("statistic" => "anomaly lgm minus lh")
+)
+tierney_data["tas-proxies-err"] = YAXArray(
+    (Dim{:lon}(longitudes), Dim{:lat}(latitudes)),
+    proxies["errdeltaSAT"],
+    Dict("statistic" => "1 anomaly lgm minus lh")
+)
+
+gm = mwd.globalMeans(tierney_data["tas-proxies"])
+
+DA_data = NCDataset("/albedo/home/brgrus001/ModelWeightsPaper/work/data/Tierney-2020/Tierney2020_DA_atm.nc")
+tierney_data["tas-DA"] = YAXArray(
+    (Dim{:lon}(longitudes), Dim{:lat}(latitudes)),
+    proxies["deltaSAT"],
+    Dict("statistic" => "anomaly lgm minus lh")
+)
+tierney_data["tas-DA-err"] = YAXArray(
+    (Dim{:lon}(longitudes), Dim{:lat}(latitudes)),
+    proxies["errdeltaSAT"],
+    Dict("statistic" => "anomaly lgm minus lh")
+)
+
+
+
+
+errdeltaSAT = YAXArray(
+    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
+    Array(tierney_data["errdeltaSAT"])
+)
+gm_delta = mwd.globalMeans(deltaSAT)[1]
+area_weights_mat = mwd.makeAreaWeightMatrix(Array(dims(deltaSAT, :lon)), Array(dims(deltaSAT, :lat)))
+std_gm_delta = sum(area_weights_mat .* errdeltaSAT)
+
+
+f_assimilated_tas = makeFig(global_means_tas, gm_delta, std_gm_delta, "Data assimilated reconstruction (Tierney et al., 2020)")
+save("plots/ecs-lgm-cooling/DA_GMST-lgm-cooling.png", f_assimilated_tas)
+
+
+# Only proxy data from Tierney et al. (2020)
+tierney_data = NCDataset("/albedo/home/brgrus001/ModelWeightsPaper/work/data/Tierney-2020/Tierney2020_ProxyData_5x5_deltaSST.nc")
+mat = allowmissing(Array(tierney_data["deltaSST"]))
+mat[isnan.(mat)] .= missing
+deltaSST = YAXArray(
+    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
+    mat
+)
+mat = allowmissing(Array(tierney_data["std"]))
+mat[isnan.(mat)] .= missing
+errdeltaSST = YAXArray(
+    (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))),
+    mat
+)
+gm_delta = mwd.globalMeans(deltaSST)[1]
+# also adapt area weight matrix for missing values..!!?
+area_weights_mat = mwd.makeAreaWeightMatrix(
+    Array(dims(deltaSST, :lon)), 
+    Array(dims(deltaSST, :lat));
+    mask = YAXArray(
+        (Dim{:lon}(Array(tierney_data["lon"])), Dim{:lat}(Array(tierney_data["lat"]))), 
+        ismissing.(mat)
+    )
+)
+std_gm_delta = sum(skipmissing(area_weights_mat .* errdeltaSST))
+
+f_proxy_sst = makeFig(global_means_tos, gm_delta, std_gm_delta, "Proxy-only (Tierney et al., 2020)")
+
+
+
+
+
+
+
+
+
+
+
 
 ###############################################################################
 path_data = "/albedo/work/projects/p_forclima/preproc_data_esmvaltool/LGM";
