@@ -6,6 +6,9 @@ end
 
 function savePlot(fig, target_path::String; overwrite::Bool=false, verbose::Bool=true)
     target_path = overwrite ? target_path : Data.individuatePath(target_path)
+    if !isdir(dirname(target_path))
+        mkpath(dirname(target_path))
+    end
     save(target_path, fig)
     if verbose
         @info "saved plot to " target_path
