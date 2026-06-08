@@ -80,13 +80,12 @@ end
 Compute difference of `orig_data` and `ref_data`. Assumes that both are given in the same units.
 """
 function anomalies(orig_data::YAXArray, ref_data::YAXArray)
-    data = YAXArray(orig_data.axes, Array(orig_data.data), deepcopy(orig_data.properties))
-    dimension = modelDim(data)
+    dimension = modelDim(orig_data)
     if !hasdim(ref_data, dimension)
         err_msg = "To compute anomalies, ref data must have same model dimension as data (found data: $dimension, found ref_data: $(dims(ref_data)))"
         throw(ArgumentError(err_msg))
     end
-    dims_orig = Array(dims(data, dimension))
+    dims_orig = Array(dims(orig_data, dimension))
     dims_ref = Array(dims(ref_data, dimension))
     l = length(dims_orig) - length(dims_ref)
     if l > 0
@@ -107,7 +106,7 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray)
     #     @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
     #     return nothing
     # end
-    return data .- ref_data
+    return YAXArray(orig_data.axes, Array(orig_data.data) .- Array(ref_data.data), orig_data.properties)
 end
 
 
