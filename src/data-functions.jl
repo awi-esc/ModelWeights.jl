@@ -44,6 +44,9 @@ For those datasets in `dm` that specify data on the level `level` (i.e. have dim
 the same models or members.
 
 If no models are shared across datasets, return the input `dm`.
+
+# Arguments:
+- `ids::Vector{String}`: only applied for given ids in `dm` (default: all)
 """
 function subsetModelData(
     dm::DataMap, level::Symbol = :member; ids::Vector{String}=Vector{String}()
