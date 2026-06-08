@@ -144,7 +144,7 @@ Return a copy of `data` with values given in Kelvin covnerted into Degree Celsiu
 
 """
 function kelvinToCelsius(data::YAXArray)
-    df = YAXArray(data.axes, copy(data.data), deepcopy(data.properties))
+    df = YAXArray(data.axes, Array(data.data), deepcopy(data.properties))
     kelvinToCelsius!(df)
     return df
 end
@@ -152,19 +152,16 @@ end
 function kelvinToCelsius!(data::YAXArray)
     units = data.properties["units"]
     if isa(units, String) && units == "K"
-        df = parent(data)
-        data .= df .- 273.15
+        data .-= 273.15
         data.properties["units"] = "degC"
     elseif isa(units, Vector)
         indices = findall(units .== "K")
         if !isempty(indices)
             model_dim = modelDim(data)
             if model_dim == :member
-                df = parent(data[member = indices])
-                data[member = indices] .= df .- 273.15
+                data[member = indices] .= data[member = indices] .- 273.15
             else
-                df = parent(data[model = indices])
-                data[model = indices] .= df .- 273.15
+                data[model = indices] .= data[model = indices] .- 273.15
             end
             units[indices] .= "degC"
         end
@@ -349,7 +346,7 @@ end
 
 Arrange 'data' such that western latitudes come first, then eastern latitudes.
 """
-function sortLongitudesEast2West(data::AbstractArray)
+function sortLongitudesEast2West(data::YAXArray)
     indices = longitudesEastWest(data)
     return data[lon = vcat(indices.east, indices.west)]
 end
@@ -359,7 +356,7 @@ end
 
 Arrange 'data' such that western latitudes come first, then eastern latitudes.
 """
-function sortLongitudesWest2East(data::AbstractArray)
+function sortLongitudesWest2East(data::YAXArray)
     indices = longitudesEastWest(data)
     # east = longitudes[longitudes .< 180]
     # west = longitudes[longitudes .>= 180]
@@ -385,7 +382,7 @@ Arrange 'data' such that western latitudes come first, then eastern latitudes.
 
 Return NamedTuple with fields 'east' and 'west' pointing to vectors of indices for sorted longitudes.
 """
-function longitudesEastWest(data::AbstractArray{T}) where T <: Number
+function longitudesEastWest(data::YAXArray)
     data = lon180to360(data)
     longitudes = lookup(data, :lon)
     indices_east = findall(x -> x < 180, longitudes)
