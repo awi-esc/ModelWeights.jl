@@ -154,7 +154,7 @@ function makeSubplots(
                 pos_legend = pos_legend,
                 xlabel = xlabel,
                 ylabel = ylabel,
-                xlabel_rotate = xlabel_rotate,
+                xlabel_rotate = xlabel_rotate
             )
         else
             plotValsOnMap!(
@@ -169,7 +169,7 @@ function makeSubplots(
                 pos_legend = pos_legend,
                 xlabel = xlabel,
                 ylabel = ylabel,
-                xlabel_rotate = xlabel_rotate,
+                xlabel_rotate = xlabel_rotate
             )
         end
     end
@@ -184,4 +184,13 @@ function gradColors(values::AbstractArray; name::Symbol=:thermal, rev=true)
     norm(v) = (v - vmin) / (vmax - vmin)
     colors = [cmap[norm(v)] for v in values]
     return colors
+end
+
+
+function addMinorGrid!(ax, data_x::AbstractArray, data_y::AbstractArray; by = 0.5)
+    ax.xminorticks = floor(minimum(data_x)) : by : ceil(maximum(data_x))
+    ax.yminorticks = floor(minimum(data_y)) : by : ceil(maximum(data_y))
+    ax.xminorgridvisible = true
+    ax.yminorgridvisible = true
+    return nothing
 end
