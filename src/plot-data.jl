@@ -26,18 +26,17 @@ function plotValsOnMap!(
     yticks::Union{AbstractArray, Nothing} = nothing,
     east_west_labels::Bool = false,
     alpha::Number = 0.8,
-    fontsize::Number = 20
+    fontsize::Number = 20,
+    hidedecorations::Bool = false
 )
     means = Data.sortLongitudesWest2East(means)
     dims_lat = Array(dims(means, :lat))
     dims_lon = Data.lon360to180.(Array(dims(means, :lon)))
-
     # scaling plot 
     lon_min, lon_max = minimum(dims_lon) - 1, maximum(dims_lon) + 1
     lat_min, lat_max = minimum(dims_lat) - 1, maximum(dims_lat) + 1
     lon = range(lon_min, stop = lon_max, length = length(dims_lon))
     lat = range(lat_min, stop = lat_max, length = length(dims_lat))
-
     # axis ticks and labels
     xticks = isnothing(xticks) ? Int.(ceil.([dims_lon[1], dims_lon[end]])) : xticks
     yticks = isnothing(yticks) ? Int.(ceil.([dims_lat[1], dims_lat[end]])) : yticks
@@ -62,6 +61,9 @@ function plotValsOnMap!(
         titlefont = :regular
 
     )
+    if hidedecorations
+        hidedecorations!(ax)
+    end
     if isnothing(colors)
         colors = reverse(ColorSchemes.redblue.colors)
     end
@@ -107,7 +109,8 @@ function plotValsOnMap(
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
     east_west_labels::Bool = false,
-    alpha::Number = 0.8
+    alpha::Number = 0.8,
+    hidedecorations::Bool = false
 )
     f = Figure()
     plotValsOnMap!(
@@ -115,7 +118,7 @@ function plotValsOnMap(
         colors, color_range, 
         pos, pos_legend, orient_legend, 
         xlabel, ylabel, xlabel_rotate, east_west_labels,
-        alpha
+        alpha, hidedecorations
     )
     return f
 end
@@ -746,4 +749,49 @@ function plotExpectedECS(
         Makie.ylims!(ax, ylims...)
     end
     return f
+end
+
+
+"""
+    plotMapGrid!(fig, data_arrays, titles; nrows, ncols, shared_colorrange, kwargs...)
+
+Plot a grid of maps using `mwp.plotValsOnMap!`.
+
+# Arguments
+"""
+function plotMapGrid!(
+    fig::Figure,
+    data_arrays::Vector{<:AbstractArray},
+    titles::Vector{String};
+    nrows::Int = 2,
+    ncols::Int = 3,
+    shared_colorrange::Bool = true,
+    kwargs...
+)
+    @assert length(data_arrays) == length(titles) "data_arrays and titles must have the same length"
+    @assert length(data_arrays) <= nrows * ncols "more arrays than subplot positions"
+
+    # Compute shared color range across all panels if requested
+
+    if shared_colorrange
+        valid = filter(x -> !ismissing(x) && !isnan(x), vec(vcat(data_arrays...)))
+        color_range = (minimum(valid), maximum(valid))
+    else
+        nothing
+    end
+
+    for (i, (data, title)) in enumerate(zip(data_arrays, titles))
+        row = div(i - 1, ncols) + 1
+        col = mod(i - 1, ncols) + 1 
+        
+        pos_legend = mod(col, ncols) == 0 ? (x = row, y = col + 1) : nothing
+        
+        plotValsOnMap!(
+            fig, data, title;
+            pos = (x = row, y = col),
+            pos_legend = pos_legend,
+            color_range = color_range,
+            kwargs...
+        )
+    end
 end
