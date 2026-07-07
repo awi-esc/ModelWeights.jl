@@ -194,3 +194,37 @@ function addMinorGrid!(ax, data_x::AbstractArray, data_y::AbstractArray; by = 0.
     ax.yminorgridvisible = true
     return nothing
 end
+
+
+"""
+    splitColormapAtZero(colors_below, colors_above, range_min, range_max; n = 128)
+
+Build a colormap where `colors_below` is used for values in [range_min, 0)
+and `colors_above` is used for values in [0, range_max], with the boundary
+placed at the correct relative position (handles asymmetric ranges too).
+"""
+function splitColormapAtZero(colors_below, colors_above, range_min, range_max; n::Int = 128)
+    if range_min >= 0 || range_max <= 0
+        @warn "Range does not straddle 0; falling back to single colormap (colors_above)."
+        return cgrad(colors_above)
+    end
+
+    zero_frac = (0 - range_min) / (range_max - range_min)
+
+    below_scheme = colors_below isa ColorSchemes.ColorScheme ? colors_below : ColorSchemes.colorschemes[colors_below]
+    above_scheme = colors_above isa ColorSchemes.ColorScheme ? colors_above : ColorSchemes.colorschemes[colors_above]
+
+    below_colors = get(below_scheme, range(0, 1; length = n))
+    above_colors = get(above_scheme, range(0, 1; length = n))
+
+    combined_colors = vcat(below_colors, above_colors)
+    # stops must be strictly increasing; nudge the boundary slightly so both
+    # sides get their own stop right at zero_frac
+    stops = vcat(
+        range(0, zero_frac; length = n),
+        range(zero_frac, 1; length = n) .+ eps() .* (1:n)
+    )
+    stops = stops ./ stops[end]  # renormalize to [0, 1]
+
+    return Makie.cgrad(combined_colors, stops)
+end

@@ -15,6 +15,9 @@ function plotValsOnMap!(
     title::String;
     colors = nothing,
     color_range::Union{Nothing, Tuple} = nothing,
+    split_at_zero::Bool = false,
+    colors_below::Symbol = :Blues,
+    colors_above::Symbol = :Reds,
     pos::NamedTuple = (x = 1, y = 1),
     pos_legend::Union{Nothing, NamedTuple} = nothing,
     orient_legend::Symbol = :vertical,
@@ -27,7 +30,8 @@ function plotValsOnMap!(
     east_west_labels::Bool = false,
     alpha::Number = 0.8,
     fontsize::Number = 20,
-    hidedecorations::Bool = false
+    hidedecorations::Bool = false,
+    rounded_proj::Bool = false
 )
     means = Data.sortLongitudesWest2East(means)
     dims_lat = Array(dims(means, :lat))
@@ -44,41 +48,79 @@ function plotValsOnMap!(
     lat_labels = east_west_labels ? latitude2NorthSouth.(yticks) : map(x -> x * "°", string.(yticks))
     x_ticks_labels = (xticks, lon_labels)
     y_ticks_labels = (yticks, lat_labels)
-    ax = Axis(
-        fig[pos.x, pos.y],
-        title = title,
-        xlabel = xlabel,
-        ylabel = ylabel,
-        xticklabelrotation = xlabel_rotate,
-        xticks = x_ticks_labels,
-        yticks = y_ticks_labels,
-        limits = ((xticks[1], xticks[end]), (yticks[1], yticks[end])),
-        xticksize = 0,
-        yticksize = 0,
-        xticklabelsize = fontsize,
-        yticklabelsize = fontsize,
-        titlesize = fontsize,
-        titlefont = :regular
+    
+    if isnothing(color_range) && split_at_zero
+        vals = coalesce.(Array(means), NaN)
+        vals = filter(x -> !isnan(x), vals)
+        color_range = (minimum(vals), maximum(vals))
+    end
 
-    )
+    if isnothing(colors)
+        if split_at_zero
+            colors = splitColormapAtZero(colors_below, colors_above, color_range[1], color_range[2])
+        else
+            colors = reverse(ColorSchemes.redblue.colors)
+        end
+    end
+
+    if rounded_proj
+        ax = GeoMakie.GeoAxis(fig[pos.x, pos.y];
+            title = title,
+            titlesize = fontsize,
+            titlefont = :regular,
+            dest = "+proj=robin"
+        )
+        lon = coalesce.(Array(means.lon), NaN)
+        lat = coalesce.(Array(means.lat), NaN)
+        if isnothing(color_range)
+            hm = contourf!(
+                ax, lon, lat, coalesce.(Array(means), NaN); 
+                colormap = colors, extendlow = :auto, extendhigh = :auto
+            )
+        else
+            n = length(color_range) == 3 ? color_range[3] : 10
+            hm = contourf!(
+                ax, lon, lat, coalesce.(Array(means), NaN); 
+                colormap = colors, extendlow = :auto, extendhigh = :auto,
+                levels = range(color_range[1], color_range[2]; length = n)
+            )
+        end
+    else
+        ax = Axis(
+            fig[pos.x, pos.y],
+            title = title,
+            xlabel = xlabel,
+            ylabel = ylabel,
+            xticklabelrotation = xlabel_rotate,
+            xticks = x_ticks_labels,
+            yticks = y_ticks_labels,
+            limits = ((xticks[1], xticks[end]), (yticks[1], yticks[end])),
+            xticksize = 0,
+            yticksize = 0,
+            xticklabelsize = fontsize,
+            yticklabelsize = fontsize,
+            titlesize = fontsize,
+            titlefont = :regular
+        )
+
+        if isnothing(color_range) 
+            hm = heatmap!(ax, lon, lat, Array(means); colormap = colors, alpha = alpha)
+        else
+            high_clip = split_at_zero ? last(ColorSchemes.colorschemes[colors_above].colors) : colors[end]
+            low_clip = split_at_zero  ? first(ColorSchemes.colorschemes[colors_below].colors) : colors[1] 
+            hm = heatmap!(ax, lon, lat, coalesce.(Array(means), NaN);
+                colormap = colors, 
+                alpha = alpha,
+                colorrange = color_range, 
+                highclip = high_clip,
+                lowclip = low_clip
+            )
+        end
+    end
+
     if hidedecorations
         hidedecorations!(ax)
     end
-    if isnothing(colors)
-        colors = reverse(ColorSchemes.redblue.colors)
-    end
-    hm = isnothing(color_range) ?
-        heatmap!(lon, lat, Array(means); colormap = colors, alpha = alpha) :
-        heatmap!(
-            lon,
-            lat,
-            Array(means);
-            colormap = colors,
-            alpha = alpha,
-            colorrange = color_range,
-            highclip = colors[end],
-            lowclip = colors[1]
-        )
     lines!(GeoMakie.coastlines(); color = :black, linewidth=.8)
     if !isnothing(pos_legend)
         if orient_legend == :vertical
@@ -102,6 +144,9 @@ function plotValsOnMap(
     title::String;
     colors = nothing,
     color_range::Union{Nothing, Tuple} = nothing,
+    split_at_zero::Bool = false,
+    colors_below = :Blues,
+    colors_above = :Reds,
     pos::NamedTuple = (x = 1, y = 1),
     pos_legend::Union{Nothing, NamedTuple} = (x = 1, y = 2),
     orient_legend::Symbol = :vertical,
@@ -110,15 +155,17 @@ function plotValsOnMap(
     xlabel_rotate::Number = 0,
     east_west_labels::Bool = false,
     alpha::Number = 0.8,
-    hidedecorations::Bool = false
+    hidedecorations::Bool = false,
+    rounded_proj::Bool = false
 )
     f = Figure()
     plotValsOnMap!(
         f, means, title; 
         colors, color_range, 
+        split_at_zero, colors_below, colors_above,
         pos, pos_legend, orient_legend, 
         xlabel, ylabel, xlabel_rotate, east_west_labels,
-        alpha, hidedecorations
+        alpha, hidedecorations, rounded_proj
     )
     return f
 end
@@ -757,6 +804,7 @@ end
 
 Plot a grid of maps using `mwp.plotValsOnMap!`.
 
+Note that Colorbar is just plotted for columns 'col' where mod(col, ncols) == 0.
 # Arguments
 """
 function plotMapGrid!(
@@ -772,12 +820,11 @@ function plotMapGrid!(
     @assert length(data_arrays) <= nrows * ncols "more arrays than subplot positions"
 
     # Compute shared color range across all panels if requested
-
     if shared_colorrange
         valid = filter(x -> !ismissing(x) && !isnan(x), vec(vcat(data_arrays...)))
         color_range = (minimum(valid), maximum(valid))
     else
-        nothing
+        color_range = nothing
     end
 
     for (i, (data, title)) in enumerate(zip(data_arrays, titles))
