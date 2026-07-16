@@ -228,3 +228,26 @@ function splitColormapAtZero(colors_below, colors_above, range_min, range_max; n
 
     return Makie.cgrad(combined_colors, stops)
 end
+
+
+function addColorBar(
+    fig, hm;
+    pos_legend::Union{Nothing, NamedTuple} = nothing,
+    orient_legend::Symbol = :vertical,
+    legend_label::String = "",
+    fontsize::Number = 20
+)
+
+    if orient_legend == :vertical
+        Colorbar(fig[pos_legend.x, pos_legend.y], hm, width=5, label = legend_label, ticksvisible = false)
+    else
+        Colorbar(fig[pos_legend.x, pos_legend.y], hm, 
+            height = 5, 
+            flipaxis = false, 
+            vertical = false,
+            ticklabelsize = fontsize - 2,
+            label = legend_label,
+            ticksvisible = false
+        )
+    end
+end
