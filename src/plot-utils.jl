@@ -237,17 +237,30 @@ function addColorBar(
     legend_label::String = "",
     fontsize::Number = 20
 )
-
     if orient_legend == :vertical
-        Colorbar(fig[pos_legend.x, pos_legend.y], hm, width=5, label = legend_label, ticksvisible = false)
+        cbgrid = GridLayout(3, 1)
+        if pos_legend.x == 0
+            fig[:, pos_legend.y] = cbgrid
+        else
+            fig[pos_legend.x, pos_legend.y] = cbgrid
+        end
+        rowsize!(cbgrid, 1, Relative(0.1))
+        rowsize!(cbgrid, 2, Relative(0.8))
+        rowsize!(cbgrid, 3, Relative(0.1))
+        Colorbar(cbgrid[2, 1], hm, width=5, label=legend_label, ticksvisible=false)
     else
-        Colorbar(fig[pos_legend.x, pos_legend.y], hm, 
-            height = 5, 
-            flipaxis = false, 
-            vertical = false,
-            ticklabelsize = fontsize - 2,
-            label = legend_label,
-            ticksvisible = false
+        cbgrid = GridLayout(1, 3)
+        if pos_legend.y == 0
+            fig[pos_legend.x, :] = cbgrid
+        else
+            fig[pos_legend.x, pos_legend.y] = cbgrid
+        end
+        colsize!(cbgrid, 1, Relative(0.1))
+        colsize!(cbgrid, 2, Relative(0.8))
+        colsize!(cbgrid, 3, Relative(0.1))
+        Colorbar(
+            cbgrid[1,2], hm; height=5, flipaxis=false, vertical=false, ticksvisible=false,
+            ticklabelsize = fontsize - 2, label=legend_label
         )
     end
 end
