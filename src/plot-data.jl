@@ -123,18 +123,7 @@ function plotValsOnMap!(
     end
     lines!(GeoMakie.coastlines(); color = :black, linewidth=.8)
     if !isnothing(pos_legend)
-        if orient_legend == :vertical
-            Colorbar(fig[pos_legend.x, pos_legend.y], hm, width=5, label = legend_label, ticksvisible = false)
-        else
-            Colorbar(fig[pos_legend.x, pos_legend.y], hm, 
-                height = 5, 
-                flipaxis = false, 
-                vertical = false,
-                ticklabelsize = fontsize - 2,
-                label = legend_label,
-                ticksvisible = false
-            )
-        end
+        addColorBar(fig, hm; pos_legend, orient_legend, legend_label, fontsize)
     end
     return nothing
 end
@@ -149,6 +138,7 @@ function plotValsOnMap(
     colors_above = :Reds,
     pos::NamedTuple = (x = 1, y = 1),
     pos_legend::Union{Nothing, NamedTuple} = (x = 1, y = 2),
+    legend_label::String = "",
     orient_legend::Symbol = :vertical,
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
@@ -163,7 +153,7 @@ function plotValsOnMap(
         f, means, title; 
         colors, color_range, 
         split_at_zero, colors_below, colors_above,
-        pos, pos_legend, orient_legend, 
+        pos, pos_legend, orient_legend, legend_label,
         xlabel, ylabel, xlabel_rotate, east_west_labels,
         alpha, hidedecorations, rounded_proj
     )
@@ -802,7 +792,7 @@ end
 """
     plotMapGrid!(fig, data_arrays, titles; nrows, ncols, shared_colorrange, kwargs...)
 
-Plot a grid of maps using `mwp.plotValsOnMap!`.
+Plot a grid of maps using `mwp.plotValsOnMap!`. Data is filled rowwise.
 
 Note that Colorbar is just plotted for columns 'col' where mod(col, ncols) == 0.
 # Arguments
@@ -813,25 +803,35 @@ function plotMapGrid!(
     titles::Vector{String};
     nrows::Int = 2,
     ncols::Int = 3,
-    shared_colorrange::Bool = true,
     kwargs...
 )
     @assert length(data_arrays) == length(titles) "data_arrays and titles must have the same length"
     @assert length(data_arrays) <= nrows * ncols "more arrays than subplot positions"
-
+    
     # Compute shared color range across all panels if requested
-    if shared_colorrange
-        valid = filter(x -> !ismissing(x) && !isnan(x), vec(vcat(data_arrays...)))
-        color_range = (minimum(valid), maximum(valid))
-    else
-        color_range = nothing
-    end
+    # data is filled row-wise
+    rows = [div(i - 1, ncols) + 1 for i in eachindex(data_arrays)]
+    cols = [mod(i - 1, ncols) + 1 for i in eachindex(data_arrays)]
 
+    # color range is always the same for every subplot. 
+    valid = filter(x -> !ismissing(x) && !isnan(x), vec(vcat(data_arrays...)))
+    color_range = isempty(valid) ? nothing : (minimum(valid), maximum(valid))
+
+    indices_all_nan = all.(isnan, data_arrays)
+    last_valid_idx = findlast(!, indices_all_nan)
     for (i, (data, title)) in enumerate(zip(data_arrays, titles))
-        row = div(i - 1, ncols) + 1
-        col = mod(i - 1, ncols) + 1 
+        row = rows[i]
+        col = cols[i]
+        if all(x -> ismissing(x) || isnan(x), data) # all(isnan, data)
+            continue
+        end
         
-        pos_legend = mod(col, ncols) == 0 ? (x = row, y = col + 1) : nothing
+        if i == last_valid_idx
+            # x=0 -> plot across all rows
+            pos_legend = (x = 0, y = col + 1)
+        else
+            pos_legend = nothing
+        end
         
         plotValsOnMap!(
             fig, data, title;
@@ -840,5 +840,7 @@ function plotMapGrid!(
             color_range = color_range,
             kwargs...
         )
+        colsize!(fig.layout, col, Aspect(1, 2))  # force column to a specific aspect ratio matching your data
     end
+    resize_to_layout!(fig)
 end
