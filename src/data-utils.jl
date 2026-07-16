@@ -1506,6 +1506,43 @@ function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::Abstract
     return sqrt(areaWeightedMSE(m1, m2, aw_mat))
 end
 
+
+"""
+    areaWeightedRMSE(m1::YAXArray, m2::YAXArray)
+
+Compute the area weighted (approximated by cosine of latitudes in radians) root mean squared 
+error between `m1` and `m2`. 
+
+NaN and missing values are ignored.
+
+# Arguments:
+- `m1::YAXArray`: must have 2 dimensions 'lon', 'lat'.
+- `m2::YAXArray`: must have 2 dimensions 'lon', 'lat'.
+"""
+function areaWeightedRMSE(m1::YAXArray, m2::YAXArray)
+    if size(m1) != size(m2)
+        throw(ArgumentError("compared data must have same size!"))
+    end
+    throwErrorIfNotLonLat(m1)
+    throwErrorIfNotLonLat(m2)
+    diff = m1 .- m2
+    latitudes = collect(lookup(m1, :lat))
+    mask = falses(size(m1)...)
+    indices = (:,:)
+    
+    @views mask[indices...] .= ismissing.(diff) .|| isnan.(diff)
+    aw_mat = areaWeightMatrix(latitudes, mask) 
+    
+    m1 = allowmissing(m1); m2 = allowmissing(m2)
+    m1[mask] .= missing; m2[mask] .= missing
+
+    return areaWeightedRMSE(m1.data, m2.data, aw_mat)
+end
+
+
+
+
+
 """
     areaWeightedSquaredErr()
 
