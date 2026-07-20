@@ -29,7 +29,8 @@ function plotValsOnMap!(
     alpha::Number = 0.8,
     fontsize::Number = 20,
     hidedecorations::Bool = false,
-    rounded_proj::Bool = false
+    rounded_proj::Bool = false,
+    colorbar_size::Int = 15
 )
     means = Data.sortLongitudesWest2East(means)
     means = Data.lon360to180(means)
@@ -112,7 +113,7 @@ function plotValsOnMap!(
     end
     lines!(GeoMakie.coastlines(); color = :black, linewidth=.8)
     if !isnothing(pos_legend)
-        addColorBar(fig, hm; pos_legend, orient_legend, legend_label, fontsize)
+        addColorBar(fig, hm; pos_legend, orient_legend, legend_label, fontsize, colorbar_size)
     end
     if hidedecorations
         hidedecorations!(ax)
@@ -138,7 +139,8 @@ function plotValsOnMap(
     east_west_labels::Bool = false,
     fontsize::Number = 20,
     hidedecorations::Bool = false,
-    rounded_proj::Bool = false
+    rounded_proj::Bool = false,
+    colorbar_size::Int = 15
 )
     f = Figure()
     plotValsOnMap!(
@@ -147,7 +149,7 @@ function plotValsOnMap(
         split_at_zero,
         pos, pos_legend, orient_legend, legend_label,
         xlabel, ylabel, xlabel_rotate, xticks, yticks, east_west_labels,
-        fontsize, hidedecorations, rounded_proj
+        fontsize, hidedecorations, rounded_proj, colorbar_size
     )
     return f
 end
@@ -832,7 +834,18 @@ function plotMapGrid!(
             color_range = color_range,
             kwargs...
         )
-        colsize!(fig.layout, col, Aspect(1, 2))  # force column to a specific aspect ratio matching your data
+        #colsize!(fig.layout, col, Aspect(1, 2))  # force column to a specific aspect ratio matching your data
+    end
+
+    # make all plot columns equal width, colorbar column narrower
+    for c in 1:ncols
+        colsize!(fig.layout, c, Relative(0.9 / ncols))
+    end
+    colsize!(fig.layout, ncols + 1, Fixed(30))
+
+    # make all rows equal height
+    for r in 1:nrows
+        rowsize!(fig.layout, r, Aspect(1, 0.7))  # width:height ratio per cell
     end
     resize_to_layout!(fig)
 end

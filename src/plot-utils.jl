@@ -197,35 +197,29 @@ end
 
 
 """
-    splitColormapAtZero(colors_below, colors_above, range_min, range_max; n = 128)
+    splitColormapAtZero(range_min, range_max; n = 128)
 
-Build a colormap where `colors_below` is used for values in [range_min, 0)
-and `colors_above` is used for values in [0, range_max], with the boundary
+Build a colormap where blue colors are used for values in [range_min, 0)
+and red colors are used for values in [0, range_max], with the boundary
 placed at the correct relative position (handles asymmetric ranges too).
 """
-function splitColormapAtZero(colors_below, colors_above, range_min, range_max; n::Int = 128)
+function splitColormapAtZero(range_min, range_max; n::Int = 128)
     if range_min >= 0 || range_max <= 0
-        @warn "Range does not straddle 0; falling back to single colormap (colors_above)."
-        return cgrad(colors_above)
+        @warn "Note: range does not straddle 0."
+        #return get(ColorSchemes.colorschemes[:berlin], range(0, 1; length = n))
+        return reverse(get(ColorSchemes.colorschemes[:redblue], range(0, 1; length = n)))
     end
-
-    zero_frac = (0 - range_min) / (range_max - range_min)
-
-    below_scheme = colors_below isa ColorSchemes.ColorScheme ? colors_below : ColorSchemes.colorschemes[colors_below]
-    above_scheme = colors_above isa ColorSchemes.ColorScheme ? colors_above : ColorSchemes.colorschemes[colors_above]
-
-    below_colors = get(below_scheme, range(0, 1; length = n))
-    above_colors = get(above_scheme, range(0, 1; length = n))
-
+    below_colors = reverse(get(ColorSchemes.colorschemes[:Blues], range(0, 1; length = n)))
+    above_colors = get(ColorSchemes.colorschemes[:Reds], range(0, 1; length = n))
     combined_colors = vcat(below_colors, above_colors)
     # stops must be strictly increasing; nudge the boundary slightly so both
-    # sides get their own stop right at zero_frac
+    # sides get their own stop right at ratio_below_zero
+    ratio_below_zero = (0 - range_min) / (range_max - range_min)
     stops = vcat(
-        range(0, zero_frac; length = n),
-        range(zero_frac, 1; length = n) .+ eps() .* (1:n)
+        range(0, ratio_below_zero; length = n),
+        range(ratio_below_zero, 1; length = n) .+ eps() .* (1:n)
     )
     stops = stops ./ stops[end]  # renormalize to [0, 1]
-
     return Makie.cgrad(combined_colors, stops)
 end
 
@@ -235,7 +229,8 @@ function addColorBar(
     pos_legend::Union{Nothing, NamedTuple} = nothing,
     orient_legend::Symbol = :vertical,
     legend_label::String = "",
-    fontsize::Number = 20
+    fontsize::Int = 20,
+    colorbar_size::Int = 15
 )
     if orient_legend == :vertical
         cbgrid = GridLayout(3, 1)
@@ -247,7 +242,14 @@ function addColorBar(
         rowsize!(cbgrid, 1, Relative(0.1))
         rowsize!(cbgrid, 2, Relative(0.8))
         rowsize!(cbgrid, 3, Relative(0.1))
-        Colorbar(cbgrid[2, 1], hm, width=5, label=legend_label, ticksvisible=false)
+        Colorbar(
+            cbgrid[2, 1], hm, 
+            width = Fixed(colorbar_size),
+            labelsize = fontsize,
+            ticklabelsize = fontsize - 2, 
+            label = legend_label, 
+            ticksvisible = false
+        )
     else
         cbgrid = GridLayout(1, 3)
         if pos_legend.y == 0
@@ -259,8 +261,14 @@ function addColorBar(
         colsize!(cbgrid, 2, Relative(0.8))
         colsize!(cbgrid, 3, Relative(0.1))
         Colorbar(
-            cbgrid[1,2], hm; height=5, flipaxis=false, vertical=false, ticksvisible=false,
-            ticklabelsize = fontsize - 2, label=legend_label
+            cbgrid[1,2], hm; 
+            height = Fixed(colorbar_size),
+            flipaxis = false,
+            vertical = false,
+            ticksvisible = false,
+            labelsize = fontsize,
+            ticklabelsize = fontsize - 2, 
+            label = legend_label
         )
     end
 end
