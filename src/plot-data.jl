@@ -16,10 +16,8 @@ function plotValsOnMap!(
     colors = nothing,
     color_range::Union{Nothing, Tuple} = nothing,
     split_at_zero::Bool = false,
-    colors_below::Symbol = :Blues,
-    colors_above::Symbol = :Reds,
     pos::NamedTuple = (x = 1, y = 1),
-    pos_legend::Union{Nothing, NamedTuple} = nothing,
+    pos_legend::Union{Nothing, NamedTuple} = (x = 1, y = 2),
     orient_legend::Symbol = :vertical,
     legend_label::String = "",
     xlabel::String = "Longitude",
@@ -34,8 +32,9 @@ function plotValsOnMap!(
     rounded_proj::Bool = false
 )
     means = Data.sortLongitudesWest2East(means)
+    means = Data.lon360to180(means)
     dims_lat = Array(dims(means, :lat))
-    dims_lon = Data.lon360to180.(Array(dims(means, :lon)))
+    dims_lon = Array(dims(means, :lon))
     # scaling plot 
     lon_min, lon_max = minimum(dims_lon) - 1, maximum(dims_lon) + 1
     lat_min, lat_max = minimum(dims_lat) - 1, maximum(dims_lat) + 1
@@ -48,21 +47,19 @@ function plotValsOnMap!(
     lat_labels = east_west_labels ? latitude2NorthSouth.(yticks) : map(x -> x * "°", string.(yticks))
     x_ticks_labels = (xticks, lon_labels)
     y_ticks_labels = (yticks, lat_labels)
-    
+
     if isnothing(color_range) && split_at_zero
         vals = coalesce.(Array(means), NaN)
         vals = filter(x -> !isnan(x), vals)
         color_range = (minimum(vals), maximum(vals))
     end
-
     if isnothing(colors)
         if split_at_zero
-            colors = splitColormapAtZero(colors_below, colors_above, color_range[1], color_range[2])
+            colors = splitColormapAtZero(color_range[1], color_range[2])
         else
             colors = reverse(ColorSchemes.redblue.colors)
         end
     end
-
     if rounded_proj
         ax = GeoMakie.GeoAxis(fig[pos.x, pos.y];
             title = title,
@@ -70,17 +67,15 @@ function plotValsOnMap!(
             titlefont = :regular,
             dest = "+proj=robin"
         )
-        lon = coalesce.(Array(means.lon), NaN)
-        lat = coalesce.(Array(means.lat), NaN)
         if isnothing(color_range)
             hm = contourf!(
-                ax, lon, lat, coalesce.(Array(means), NaN); 
+                ax, dims_lon, dims_lat, coalesce.(Array(means), NaN); 
                 colormap = colors, extendlow = :auto, extendhigh = :auto
             )
         else
             n = length(color_range) == 3 ? color_range[3] : 10
             hm = contourf!(
-                ax, lon, lat, coalesce.(Array(means), NaN); 
+                ax, dims_lon, dims_lat, coalesce.(Array(means), NaN); 
                 colormap = colors, extendlow = :auto, extendhigh = :auto,
                 levels = range(color_range[1], color_range[2]; length = n)
             )
@@ -106,24 +101,21 @@ function plotValsOnMap!(
         if isnothing(color_range) 
             hm = heatmap!(ax, lon, lat, Array(means); colormap = colors, alpha = alpha)
         else
-            high_clip = split_at_zero ? last(ColorSchemes.colorschemes[colors_above].colors) : colors[end]
-            low_clip = split_at_zero  ? first(ColorSchemes.colorschemes[colors_below].colors) : colors[1] 
             hm = heatmap!(ax, lon, lat, coalesce.(Array(means), NaN);
                 colormap = colors, 
                 alpha = alpha,
                 colorrange = color_range, 
-                highclip = high_clip,
-                lowclip = low_clip
+                highclip = colors[end],
+                lowclip = colors[1]
             )
         end
-    end
-
-    if hidedecorations
-        hidedecorations!(ax)
     end
     lines!(GeoMakie.coastlines(); color = :black, linewidth=.8)
     if !isnothing(pos_legend)
         addColorBar(fig, hm; pos_legend, orient_legend, legend_label, fontsize)
+    end
+    if hidedecorations
+        hidedecorations!(ax)
     end
     return nothing
 end
@@ -134,17 +126,17 @@ function plotValsOnMap(
     colors = nothing,
     color_range::Union{Nothing, Tuple} = nothing,
     split_at_zero::Bool = false,
-    colors_below = :Blues,
-    colors_above = :Reds,
     pos::NamedTuple = (x = 1, y = 1),
     pos_legend::Union{Nothing, NamedTuple} = (x = 1, y = 2),
-    legend_label::String = "",
     orient_legend::Symbol = :vertical,
+    legend_label::String = "",
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
+    xticks::Union{AbstractArray, Nothing} = nothing,
+    yticks::Union{AbstractArray, Nothing} = nothing,
     east_west_labels::Bool = false,
-    alpha::Number = 0.8,
+    fontsize::Number = 20,
     hidedecorations::Bool = false,
     rounded_proj::Bool = false
 )
@@ -152,10 +144,10 @@ function plotValsOnMap(
     plotValsOnMap!(
         f, means, title; 
         colors, color_range, 
-        split_at_zero, colors_below, colors_above,
+        split_at_zero,
         pos, pos_legend, orient_legend, legend_label,
-        xlabel, ylabel, xlabel_rotate, east_west_labels,
-        alpha, hidedecorations, rounded_proj
+        xlabel, ylabel, xlabel_rotate, xticks, yticks, east_west_labels,
+        fontsize, hidedecorations, rounded_proj
     )
     return f
 end
@@ -813,9 +805,11 @@ function plotMapGrid!(
     rows = [div(i - 1, ncols) + 1 for i in eachindex(data_arrays)]
     cols = [mod(i - 1, ncols) + 1 for i in eachindex(data_arrays)]
 
-    # color range is always the same for every subplot. 
-    valid = filter(x -> !ismissing(x) && !isnan(x), vec(vcat(data_arrays...)))
-    color_range = isempty(valid) ? nothing : (minimum(valid), maximum(valid))
+    # color range must always be the same for every subplot, to get a meaningful shared colorbar
+    # vcat(data_arrays...) might throw a warning because the merged data wont be ForwardOrdered anymore (here we dont care)
+    #valid = filter(x -> !ismissing(x) && !isnan(x), vec(vcat(data_arrays...)))
+    valid = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays))))
+    color_range = isempty(valid) ? nothing : extrema(valid)
 
     indices_all_nan = all.(isnan, data_arrays)
     last_valid_idx = findlast(!, indices_all_nan)
@@ -825,14 +819,12 @@ function plotMapGrid!(
         if all(x -> ismissing(x) || isnan(x), data) # all(isnan, data)
             continue
         end
-        
         if i == last_valid_idx
             # x=0 -> plot across all rows
             pos_legend = (x = 0, y = col + 1)
         else
             pos_legend = nothing
         end
-        
         plotValsOnMap!(
             fig, data, title;
             pos = (x = row, y = col),
