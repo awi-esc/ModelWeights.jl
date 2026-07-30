@@ -412,6 +412,8 @@ end
 
 """
     joinDicts(v::Dict...; warn_msg::String="")
+
+    Merge two dictionaries into one. Warn if the dictionaries have shared keys. In that case, the value of the last dictionary is taken.
 """
 function joinDicts(v::Dict...; warn_msg::String="")
     result = typeof(v[1])()
