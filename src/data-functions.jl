@@ -547,7 +547,9 @@ end
 function replaceFillValues(data::YAXArray, fill_val::T) where T <: Real
     arr = Array(data.data)  # materialize from disk first
     arr = Array{Union{Missing, eltype(arr)}}(arr)  # widen type to allow missing
-    arr[arr .== fill_val] .= missing
+    # Note: logical indexing (arr[arr .== fill_val] .= missing) errors for 0-dimensional
+    # arrays (e.g. a scalar timeseries value); broadcasting handles all dimensionalities.
+    arr .= ifelse.(arr .== fill_val, missing, arr)
     return YAXArray(data.axes, arr, deepcopy(data.properties))
 end
 
