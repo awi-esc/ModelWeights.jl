@@ -782,7 +782,7 @@ function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
         ds_extended = YAXArray(full_axes, dat, ds.properties)
 
         if model_times
-            # ds's own time values are arbitrary (not real calendar dates), so
+            # the models own time values are arbitrary (not real calendar dates), so
             # matching on year/month is meaningless -> align by position instead,
             # anchored at the start of the combined axis
             n = length(dims(ds, :time))
