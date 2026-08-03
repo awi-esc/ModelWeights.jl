@@ -118,7 +118,7 @@ function plotValsOnMap!(
     if hidedecorations
         hidedecorations!(ax)
     end
-    return nothing
+    return ax
 end
 
 function plotValsOnMap(    
@@ -339,7 +339,7 @@ end
 
 
 """
-    plotTimeseries(ax::Axis, vals::AbstractArray;)
+    plotTimeseries(data::YAXArray;)
 
 Plot timeseries of data vector `data`.
 
@@ -815,6 +815,7 @@ function plotMapGrid!(
 
     indices_all_nan = all.(isnan, data_arrays)
     last_valid_idx = findlast(!, indices_all_nan)
+    axes = Vector(undef, length(data_arrays))
     for (i, (data, title)) in enumerate(zip(data_arrays, titles))
         row = rows[i]
         col = cols[i]
@@ -827,16 +828,16 @@ function plotMapGrid!(
         else
             pos_legend = nothing
         end
-        plotValsOnMap!(
+        ax = plotValsOnMap!(
             fig, data, title;
             pos = (x = row, y = col),
             pos_legend = pos_legend,
             color_range = color_range,
             kwargs...
         )
+        axes[i] = ax
         #colsize!(fig.layout, col, Aspect(1, 2))  # force column to a specific aspect ratio matching your data
     end
-
     # make all plot columns equal width, colorbar column narrower
     for c in 1:ncols
         colsize!(fig.layout, c, Relative(0.9 / ncols))
@@ -848,4 +849,5 @@ function plotMapGrid!(
         rowsize!(fig.layout, r, Aspect(1, 0.7))  # width:height ratio per cell
     end
     resize_to_layout!(fig)
+    return axes
 end
