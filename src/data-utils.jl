@@ -2051,20 +2051,20 @@ function mergeYAX(
 end
 
 """
-    mergeYAX(df1::T, df2::T, dim::Symbol; sorted::Bool=true) where T <: YAXArray
+    mergeYAX(df1::YAXArray, df2::YAXArray, dim::Symbol; sorted::Bool=true)
 
-Combine two YAXArrays with identical dimensions into one with extended dimension 'dim'.  
+Combine two YAXArrays with identical dimensions into one with extended dimension 'dim'.
 
 # Arguments:
-- `df1::T`: first YAXArray
-- `df2::T`: second YAXArray
+- `df1::YAXArray`: first YAXArray
+- `df2::YAXArray`: second YAXArray
 - `dim::Symbol`: dimension which is merged
-- `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(), 
+- `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(),
 otherwise, lookup type is Unordered()
 """
 function mergeYAX(
-    df1::T, df2::T, dim::Symbol; sorted::Bool=true
-) where T <: YAXArray
+    df1::YAXArray, df2::YAXArray, dim::Symbol; sorted::Bool=true
+)
     if otherdims(df1, dim) != otherdims(df2, dim)
         throw(ArgumentError("Dimensions must be identical to be merged by extending an existing dimension."))
     end
@@ -2080,6 +2080,12 @@ function mergeYAX(
     end
     return merged
 end
+
+# TODO: add for DataMap
+function mergeYAX(dm::DataMap, dim::Symbol; sorted::Bool = true)
+end
+
+
 
 
 function _sortYAX(df::T, dim::Symbol) where T <: YAXArray
