@@ -421,7 +421,8 @@ function loadPreprocData(
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     is_cmip::Bool = true,
     sorted::Bool = true,
-    meta_info::Union{Dict{String, String}, Nothing} = nothing
+    meta_info::Union{Dict{String, String}, Nothing} = nothing,
+    model_times::Bool = false
 ) where T <: AbstractMeta
     data = YAXArray[]
     model_names = String[]
@@ -523,7 +524,7 @@ function loadPreprocData(
         end
     end
     return isempty(data) ? nothing : 
-        combineModelsFromMultipleFiles(data; model_names, new_dim, sorted, meta=meta_info)
+        combineModelsFromMultipleFiles(data; model_names, new_dim, sorted, meta=meta_info, model_times)
 end
 
 
@@ -587,14 +588,15 @@ function _loadDataMapCore(
     ids::Vector{String};
     is_cmip::Bool = true,
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-    sorted::Bool = true
+    sorted::Bool = true,
+    model_times::Bool = false
     #meta_info::Vector{Dict{String, String}} = Dict{String, String}[]
 ) where T <: AbstractMeta
     # TODO: handle meta info
     data = Vector{YAXArray}(undef, length(meta_data_per_dataset))
     indices_found = Int[];
     for (i, meta_data) in enumerate(meta_data_per_dataset)
-        df = loadPreprocData(meta_data; constraint_ts, is_cmip, sorted) #, meta_info = meta_info  
+        df = loadPreprocData(meta_data; constraint_ts, is_cmip, sorted, model_times) #, meta_info = meta_info  
         if !isnothing(df)
             data[i] = df
             push!(indices_found, i)
@@ -716,7 +718,8 @@ function loadDataFromESMValToolRecipes(
     level::Symbol = :none,
     is_cmip::Bool = true,
     filename_format::Symbol = :esmvaltool,
-    sorted::Bool = true
+    sorted::Bool = true,
+    model_times::Bool = false
 )
     checkDataStructure(path_data, dir_per_var)
     esmvt_meta_data = metaDataFromESMValToolRecipes(path_recipes; constraint)
@@ -735,7 +738,8 @@ function loadDataFromESMValToolRecipes(
         getfield.(esmvt_meta_data, :id);
         is_cmip,
         constraint_ts,
-        sorted
+        sorted,
+        model_times
         #meta_info = metadataToDict.(esmvt_meta_data)
     )
 end
@@ -779,7 +783,8 @@ function loadDataFromYAML(
     level::Symbol = :none,
     is_cmip::Bool = true,
     filename_format::Symbol = :esmvaltool,
-    sorted::Bool = true
+    sorted::Bool = true, 
+    model_times::Bool = false
 )
     fn_format = toFF(Val(filename_format))
     fn_err(x) = throw(ArgumentError("$(x) must be provided in config yaml file!"))
@@ -819,7 +824,7 @@ function loadDataFromYAML(
     end
     meta_data = vcat(all_meta...)
 
-    datamap =  _loadDataMapCore(meta_data, all_ids; is_cmip, constraint_ts, sorted)
+    datamap =  _loadDataMapCore(meta_data, all_ids; is_cmip, constraint_ts, sorted, model_times)
     # apply level also across all datasets
     if level != :none
         datamap = subsetModelData(datamap, level)
@@ -897,11 +902,12 @@ function defineDataMap(
     level::Symbol = :none,
     is_cmip::Bool = true,
     filename_format::Symbol = :cmip,
-    sorted::Bool = true
+    sorted::Bool = true,
+    model_times::Bool = false
     #meta_info::Dict{String, String} = Dict{String, String}()
 )
     meta_data = _prepareMetaData(paths, id; constraint, constraint_ts, level, is_cmip, filename_format)
-    _loadDataMapCore(meta_data, [id]; constraint_ts, is_cmip, sorted)#meta_info
+    _loadDataMapCore(meta_data, [id]; constraint_ts, is_cmip, sorted, model_times)#meta_info
 end
 
 
@@ -965,10 +971,11 @@ function defineDataMap(
     level::Symbol = :none,
     is_cmip::Bool = true,
     filename_format::Symbol = :cmip,
-    sorted::Bool = true
+    sorted::Bool = true,
+    model_times::Bool = false
 )
     meta_data = _prepareMetaData(paths, ids; constraint, constraint_ts, level, is_cmip, filename_format)
-    _loadDataMapCore(meta_data, ids; constraint_ts, is_cmip, sorted)
+    _loadDataMapCore(meta_data, ids; constraint_ts, is_cmip, sorted, model_times)
 end
 
 function previewDataMap(
@@ -999,10 +1006,11 @@ function defineDataMap(
     level::Symbol = :none,
     is_cmip::Bool = true,
     filename_format::Symbol = :cmip,
-    sorted::Bool = true
+    sorted::Bool = true,
+    model_times::Bool = false
 )
     meta_data = _prepareMetaData(paths_datasets, ids; constraint, constraint_ts, level, is_cmip, filename_format)
-    _loadDataMapCore(meta_data, ids; constraint_ts, is_cmip, sorted)
+    _loadDataMapCore(meta_data, ids; constraint_ts, is_cmip, sorted, model_times)
 end
 
 function previewDataMap(

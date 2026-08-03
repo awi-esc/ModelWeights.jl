@@ -145,7 +145,8 @@ function combineModelsFromMultipleFiles(
     model_names::Vector{String} = String[],
     meta::Union{Dict{String, String}, Nothing} = nothing,
     new_dim::Symbol = :model,
-    sorted::Bool = true
+    sorted::Bool = true,
+    model_times::Bool = false
 )
     if isempty(data)
         #@warn "Data vector is empty!"
@@ -161,7 +162,7 @@ function combineModelsFromMultipleFiles(
             throw(ArgumentError("Data is not defined on the same grid across all models!"))
         else
             # if difference only in time, use maximal possible timeseries and add missing values
-            data = alignTimeseries(data)
+            data = alignTimeseries(data; model_times)
             #overlapTimeseries!(data)
         end
     end
@@ -702,37 +703,100 @@ function structToDict(data)
 end
 
 
-function alignTimeseries(data::Vector{<:YAXArray})
+"""
+    inferTimeResolution(ds::YAXArray)
+
+Infer whether the time axis of `ds` is annual or monthly from the actual timestamps,
+rather than trusting a (possibly missing or stale) 'frequency' property -- e.g. data
+preprocessed with esmvaltool may be labelled 'mon' even though it has already been
+reduced to annual means. Returns :annual or :monthly.
+"""
+function inferTimeResolution(ds::YAXArray)
+    years = Dates.year.(dims(ds, :time))
+    counts = countMap(years)
+    # boundary years (first/last) may be truncated, e.g. only a few months of data;
+    # ignore them when there are interior years to fall back on
+    uniq_years = sort(collect(keys(counts)))
+    interior_years = length(uniq_years) > 2 ? uniq_years[2:end-1] : uniq_years
+    max_count = maximum(counts[y] for y in interior_years)
+
+    if max_count == 1
+        return :annual
+    elseif max_count == 12
+        return :monthly
+    else
+        throw(ErrorException("time resolution could not be inferred from data, only annual and monthly implemented. Found $max_count timesteps within a year (expected 1 for annual or 12 for monthly)"))
+    end
+end
+
+
+function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
     isempty(data) && return data
     T = mapreduce(eltype, promote_type, data)  # finds a common type across all arrays
 
     none_time_dims = otherdims(first(data), :time)
-    ref_size = size(none_time_dims)
-    if !all(x -> size(otherdims(x, :time)) == ref_size, data)
+    ref_size = isempty(none_time_dims) ? nothing : size(none_time_dims)
+    if !isnothing(ref_size) && !all(x -> size(otherdims(x, :time)) == ref_size, data)
         throw(ArgumentError("Dimension sizes must be identical across data to align timeseries!"))
     end
     if !all(x -> hasdim(x, :time), data)
         throw(ArgumentError("All datasets must have time dimension to align timeseries!"))
     end
-    year_min = minimum(map(x -> first(Dates.year.(dims(x, :time))), data))
-    year_max = maximum(map(x -> last(Dates.year.(dims(x, :time))), data))
-    
+
+    resolutions = map(inferTimeResolution, data)
+    uniq_resolutions = unique(resolutions)
+    if length(uniq_resolutions) != 1
+        throw(ArgumentError("All datasets must have the same time resolution. Found: $uniq_resolutions"))
+    end
+    resolution = uniq_resolutions[1]
+    if model_times
+        # calendar years are meaningless here (e.g. lgm simulations just count
+        # model years) -> ignore the actual timestamps, align every dataset to
+        # start at year 1, and stretch the combined axis to the longest series
+        year_min = 1
+        nb_years_per_ds = if resolution == :monthly
+            map(x -> cld(length(dims(x, :time)), 12), data)
+        else
+            map(x -> length(dims(x, :time)), data)
+        end
+        year_max = maximum(nb_years_per_ds)
+    else
+        year_min = minimum(map(x -> first(Dates.year.(dims(x, :time))), data))
+        year_max = maximum(map(x -> last(Dates.year.(dims(x, :time))), data))
+    end
     nb_years = year_max - year_min + 1
-    timerange = DateTime(year_min): Year(1) : DateTime(year_max)
-    
+    if resolution == :monthly
+        timerange = DateTime(year_min, 1) : Month(1) : DateTime(year_max, 12)
+        nb_timesteps = nb_years * 12
+    else # :annual (otherwise error in inferTimeResolution)
+        timerange = DateTime(year_min): Year(1) : DateTime(year_max)
+        nb_timesteps = nb_years
+    end
+
     time_axis = Dim{:time}(timerange)
     data_new = Vector{YAXArray}(undef, length(data))
     full_axes = (none_time_dims..., time_axis)
     for (i, ds) in enumerate(data)
         # if ds allows missing values, undef is initialized with missing
-        dat = Array{T}(undef, ref_size..., nb_years)
+        dat = isnothing(ref_size) ? Array{T}(undef, nb_timesteps) : Array{T}(undef, ref_size..., nb_timesteps)
         ds_extended = YAXArray(full_axes, dat, ds.properties)
 
-        # indexing would be faster
-        # time_idx = findall(in(dims(ds, :time)), timerange)
-        # ds_extended[time = time_idx] = ds
-        ds_extended[time = Where(x -> Dates.year(x) in map(Dates.year, dims(ds, :time)))] = ds
-        data_new[i] = ds_extended    
+        if model_times
+            # ds's own time values are arbitrary (not real calendar dates), so
+            # matching on year/month is meaningless -> align by position instead,
+            # anchored at the start of the combined axis
+            n = length(dims(ds, :time))
+            ds_extended[time = 1:n] = ds
+        else
+            # indexing would be faster
+            # time_idx = findall(in(dims(ds, :time)), timerange)
+            # ds_extended[time = time_idx] = ds
+            # matched on (year, month) rather than year alone, so a dataset missing
+            # individual months within a year doesn't get misaligned into the wrong slots
+            ds_yearmonths = Dates.yearmonth.(dims(ds, :time))
+            ds_extended[time = Where(x -> Dates.yearmonth(x) in ds_yearmonths)] = ds
+        end
+        data_new[i] = ds_extended
     end
     return data_new
 end
