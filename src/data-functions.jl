@@ -305,6 +305,7 @@ function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
 
     idx_model = indexDim(data, :model)
     for (i, m) in enumerate(models_uniq)
+        # @info "$m (i=$i)"
         #dat = data[model = model_indices[m]]
         dat = selectdim(data, idx_model, model_indices[m]) # this is more than 2x better in terms of allocations
 
@@ -312,7 +313,7 @@ function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
         #summarized = selectdim(fn(dat; dims = (:model,)), idx_model, 1)
 
         meta = subsetMeta(deepcopy(data.properties), model_indices[m]; simplify = true)
-        summarized_data_all[i] = YAXArray(dims(summarized), summarized.data, meta)
+        summarized_data_all[i] = YAXArray(DimensionalData.dims(summarized), summarized.data, meta)
     end
     summarized_data = combineModelsFromMultipleFiles(
         summarized_data_all; model_names = models_uniq
