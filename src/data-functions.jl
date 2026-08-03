@@ -461,7 +461,6 @@ function loadPreprocData(
 
         exclude_file = false
         if :time in dimension_names
-            # NOTE: just YEAR is saved in the time dimension
             times = [DateTime(Dates.year(x), Dates.month(x)) for x in lookup(ds_var, :time)]
             #add meta data for time (necessary?)
             # time_meta = Dict{String, Any}()
@@ -501,6 +500,11 @@ function loadPreprocData(
         # end                
         if !exclude_file
             props = copy(ds_var.properties) # metadata just for this file!
+            fv = get(props, "_FillValue", nothing)
+            #@info "FillValue: $fv"
+            if !isnothing(fv) 
+                ds_var = replaceFillValues(ds_var, fv)
+            end
             if meta.variable == "msftmz"
                 sector = get(ds, "sector", nothing)
                 if !isnothing(sector)
@@ -521,6 +525,31 @@ function loadPreprocData(
     return isempty(data) ? nothing : 
         combineModelsFromMultipleFiles(data; model_names, new_dim, sorted, meta=meta_info)
 end
+
+
+# """
+#     replaceFillValues!(data::YAXArray)
+
+# Replace fill values (defined in `data.properties["_FillValue"]`) with `missing` in-place.
+# """
+# function replaceFillValues!(data::YAXArray, fill_val::T) where T <:Real
+#     # if isnothing(fill_val)
+#     #     fill_val = get(data.properties, "_FillValue", nothing)
+#     #     if isnothing(fill_val)
+#     #         throw(ArgumentError("no fill value provided and _FillValue not in metadata."))
+#     #     end
+#     # end
+#     data.data[data.data .== fill_val] .= missing
+#     return nothing
+# end
+
+function replaceFillValues(data::YAXArray, fill_val::T) where T <: Real
+    arr = Array(data.data)  # materialize from disk first
+    arr = Array{Union{Missing, eltype(arr)}}(arr)  # widen type to allow missing
+    arr[arr .== fill_val] .= missing
+    return YAXArray(data.axes, arr, deepcopy(data.properties))
+end
+
 
 
 function checkInput(
@@ -875,6 +904,7 @@ function defineDataMap(
     _loadDataMapCore(meta_data, [id]; constraint_ts, is_cmip, sorted)#meta_info
 end
 
+
 function previewDataMap(
     paths::Vector{String}, 
     id::String;
@@ -883,10 +913,10 @@ function previewDataMap(
     level::Symbol = :none,
     is_cmip::Bool = true,
     filename_format::Symbol = :cmip,
-    sorted::Bool = true
+    return_meta_data::Bool = false
 )
     meta_data = _prepareMetaData(paths, id; constraint, constraint_ts, level, is_cmip, filename_format)
-    _previewDataMapCore(meta_data, [id])
+    return return_meta_data ? meta_data : _previewDataMapCore(meta_data, [id])
 end
 
 """
@@ -914,10 +944,10 @@ function previewDataMap(
     level::Symbol = :none,
     is_cmip::Bool = true,
     filename_format::Symbol = :cmip,
-    sorted::Bool = true
+    return_meta_data::Bool = false
 )
     meta_data = _prepareMetaData([path], id; constraint, constraint_ts, level, is_cmip, filename_format)
-    _previewDataMapCore(meta_data, [id])
+    return return_meta_data ? meta_data : _previewDataMapCore(meta_data, [id])
 end
 
 
@@ -949,10 +979,10 @@ function previewDataMap(
     level::Symbol = :none,
     is_cmip::Bool = true,
     filename_format::Symbol = :cmip,
-    sorted::Bool = true
+    return_meta_data::Bool = false
 )
     meta_data = _prepareMetaData(paths, ids; constraint, constraint_ts, level, is_cmip, filename_format)
-    _previewDataMapCore(meta_data, ids)
+    return return_meta_data ? meta_data : _previewDataMapCore(meta_data, ids)
 end
 
 
@@ -983,10 +1013,10 @@ function previewDataMap(
     level::Symbol = :none,
     is_cmip::Bool = true,
     filename_format::Symbol = :cmip,
-    sorted::Bool = true
+    return_meta_data::Bool = false
 )
     meta_data = _prepareMetaData(paths_datasets, ids; constraint, constraint_ts, level, is_cmip, filename_format)
-    _previewDataMapCore(meta_data, ids)
+    return return_meta_data ? meta_data : _previewDataMapCore(meta_data, ids)
 end
 
 
