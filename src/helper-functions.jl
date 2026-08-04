@@ -150,9 +150,6 @@ function kelvinToCelsius(data::YAXArray)
 end
 
 function kelvinToCelsius!(data::YAXArray)
-    if !(data.data isa Array)
-        throw(ArgumentError("kelvinToCelsius! requires data backed by a plain, in-memory Array (got $(typeof(data.data))). Use kelvinToCelsius(data) instead, which materializes a copy first."))
-    end
     units = data.properties["units"]
     if isa(units, String) && units == "K"
         data .-= 273.15
@@ -191,15 +188,8 @@ end
     convertToSv!(data::YAXArray)
 
 Mutate `data` in place, converting from kg/s into Sv (m3 s-1), assuming sea water.
-Requires `data` to be backed by a plain, in-memory `Array` -- a lazy or disk-backed
-array cannot be converted in place (that would require replacing its backing array,
-which changes its type and so cannot be done through mutation). Use `convertToSv`
-instead if `data` may be lazy/disk-backed.
 """
 function convertToSv!(data::YAXArray)
-    if !(data.data isa Array)
-        throw(ArgumentError("convertToSv! requires data backed by a plain, in-memory Array (got $(typeof(data.data))). Use convertToSv(data) instead, which materializes a copy first."))
-    end
     data .= data ./ (1.025 * 10^9)
     m = modelDim(data)
     n = length(DimensionalData.dims(data, m))
