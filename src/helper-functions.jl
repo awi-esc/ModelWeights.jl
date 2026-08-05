@@ -159,9 +159,11 @@ function kelvinToCelsius!(data::YAXArray)
         if !isempty(indices)
             model_dim = modelDim(data)
             if model_dim == :member
-                data[member = indices] .= data[member = indices] .- 273.15
+                temp = Array(data[member = indices])
+                data[member = indices] .= temp .- 273.15
             else
-                data[model = indices] .= data[model = indices] .- 273.15
+                temp = Array(data[model = indices])
+                data[model = indices] .= temp .- 273.15
             end
             units[indices] .= "degC"
         end
@@ -190,7 +192,8 @@ end
 Mutate `data` in place, converting from kg/s into Sv (m3 s-1), assuming sea water.
 """
 function convertToSv!(data::YAXArray)
-    data .= data ./ (1.025 * 10^9)
+    temp = Array(data)
+    data .= temp ./ (1.025 * 10^9)
     m = modelDim(data)
     n = length(DimensionalData.dims(data, m))
     units = get(data.properties, "units", Vector(undef, n))
