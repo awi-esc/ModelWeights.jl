@@ -185,11 +185,16 @@ different models. Set to false if vectors refer to different variables.
 - `fn::Function`: Function to be applied on data
 """
 function summarizeMembers(data::YAXArray; fn::Function = Statistics.mean)
-    return hasdim(data, :member) ? summarizeMembersVector(data; fn) :
-        (hasdim(data, :member1) && hasdim(data, :member2) ? 
-        summarizeMembersMatrix(data, true; fn) :
+    df = if hasdim(data, :member) 
+        summarizeMembersVector(data; fn)
+    elseif hasdim(data, :member1) && hasdim(data, :member2)
+        summarizeMembersMatrix(data, true; fn)
+    elseif !(hasdim(data, :model) || (hasdim(data, :model1) && hasdim(data, :model2)))
         throw(ArgumentError("Data must have dimension :member or :member1 and :member2. Found: $(dims(data))"))
-        )
+    else
+        data
+    end
+    return df
 end
 
 
