@@ -202,6 +202,26 @@ function convertToSv!(data::YAXArray)
 end
 
 
+function m2ToKm2(data::YAXArray; scale=1)
+    df = YAXArray(data.axes, Array(data.data), deepcopy(data.properties))
+    m2ToKm2!(df; scale)
+    return df
+end
+
+function m2ToKm2!(data::YAXArray; scale=1)
+    temp = Array(data)
+    data .= temp ./ (10^6 * scale)
+    m = modelDim(data)
+    n = length(DimensionalData.dims(data, m))
+    units = get(() -> fill("", n), data.properties, "units")    
+    if any(x -> x != "m2" && x != "", units)
+        @warn "When converting m2 to km2, some metadata was not 'm2'. "
+    end
+    units .= scale != 1 ? "$scale km2" : "km2"
+    return nothing
+end
+
+
 function absent(x::AbstractArray)
     isempty(x) || all(absent, x)
 end
