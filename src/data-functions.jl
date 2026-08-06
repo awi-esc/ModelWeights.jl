@@ -912,7 +912,8 @@ function defineDataMap(
     filename_format::Symbol = :cmip,
     sorted::Bool = true,
     model_times::Bool = false, 
-    one_entry_per_file::Bool = false
+    one_entry_per_file::Bool = false,
+    supplementary_var::String = ""
     #meta_info::Dict{String, String} = Dict{String, String}()
 )
     # _prepareMetaData returns a Vector{Vector{ModelMeta}} where each top level entry will be one entry in the DataMap
@@ -924,7 +925,8 @@ function defineDataMap(
         new_meta = Vector{Vector{ModelMeta}}(undef, n)
         for (i, meta) in enumerate(meta_data[1])
             ids[i] = "$(meta.model)_$id" # TODO: check for observational data!
-            new_meta[i] = [meta]
+            meta_updated = isempty(supplementary_var) ? meta : copy(meta; variable = SubString(supplementary_var)) # MetaData expects a SubString for :variable
+            new_meta[i] = [meta_updated]
         end
         dm = _loadDataMapCore(new_meta, ids; constraint_ts, is_cmip, sorted, model_times)#meta_info
     else
@@ -963,11 +965,12 @@ function defineDataMap(
     filename_format::Symbol = :cmip,
     sorted::Bool = true,
     model_times::Bool = false,
-    one_entry_per_file::Bool = false
+    one_entry_per_file::Bool = false,
+    supplementary_var::String = ""
 )
     defineDataMap(
         [path], id; 
-        constraint, constraint_ts, level, is_cmip, filename_format, sorted, model_times, one_entry_per_file
+        constraint, constraint_ts, level, is_cmip, filename_format, sorted, model_times, one_entry_per_file, supplementary_var
     )
 end
 

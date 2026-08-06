@@ -357,6 +357,27 @@ function Base.show(io::IO, ::MIME"text/plain", x::Union{MetaData, AbstractMeta, 
     map(f -> println(io, f), fields)
 end
 
+"""
+# Usage:
+m2 = copy(m; variable = SubString("siconc")) # this will use all fields of m except for :variable which is set to "siconc", it maps 
+to a SubString, since that's the type that is expected in struct MetaData.
+"""
+function Base.copy(m::ModelMeta; kwargs...)
+    grid = isnothing(m.grid) ? nothing :  get(kwargs, :grid, m.grid)
+    mip = isnothing(m.mip) ? nothing : get(kwargs, :mip, m.mip)
+    ModelMeta(;
+        fn = get(kwargs, :fn, m.fn),
+        path = get(kwargs, :path, m.path),
+        variable = get(kwargs, :variable, m.variable),
+        tableid = get(kwargs, :tableid, m.tableid),
+        model = get(kwargs, :model, m.model),
+        experiment = get(kwargs, :experiment, m.experiment),
+        variant = get(kwargs, :variant, m.variant),
+        grid = grid,
+        mip = mip,
+        timerange = get(kwargs, :timerange, m.timerange),
+    )
+end
 
 include("data-utils.jl")
 include("data-functions.jl")
