@@ -911,11 +911,26 @@ function defineDataMap(
     is_cmip::Bool = true,
     filename_format::Symbol = :cmip,
     sorted::Bool = true,
-    model_times::Bool = false
+    model_times::Bool = false, 
+    one_entry_per_file::Bool = false
     #meta_info::Dict{String, String} = Dict{String, String}()
 )
-    meta_data = _prepareMetaData(paths, id; constraint, constraint_ts, level, is_cmip, filename_format)
-    _loadDataMapCore(meta_data, [id]; constraint_ts, is_cmip, sorted, model_times)#meta_info
+    # _prepareMetaData returns a Vector{Vector{ModelMeta}} where each top level entry will be one entry in the DataMap
+    # (here it always returns a 1-D array, so one entry in the DataMap)
+    meta_data = _prepareMetaData(paths; constraint, constraint_ts, level, is_cmip, filename_format)
+    if one_entry_per_file
+        n = length(meta_data[1])   
+        ids = Vector{String}(undef, n)
+        new_meta = Vector{Vector{ModelMeta}}(undef, n)
+        for (i, meta) in enumerate(meta_data[1])
+            ids[i] = "$(meta.model)_$id" # TODO: check for observational data!
+            new_meta[i] = [meta]
+        end
+        dm = _loadDataMapCore(new_meta, ids; constraint_ts, is_cmip, sorted, model_times)#meta_info
+    else
+        dm = _loadDataMapCore(meta_data, [id]; constraint_ts, is_cmip, sorted, model_times)#meta_info
+    end
+    return dm
 end
 
 
@@ -929,9 +944,10 @@ function previewDataMap(
     filename_format::Symbol = :cmip,
     return_meta_data::Bool = false
 )
-    meta_data = _prepareMetaData(paths, id; constraint, constraint_ts, level, is_cmip, filename_format)
+    meta_data = _prepareMetaData(paths; constraint, constraint_ts, level, is_cmip, filename_format)
     return return_meta_data ? meta_data : _previewDataMapCore(meta_data, [id])
 end
+
 
 """
 # Arguments:
@@ -945,9 +961,14 @@ function defineDataMap(
     level::Symbol = :none,
     is_cmip::Bool = true,
     filename_format::Symbol = :cmip,
-    sorted::Bool = true
+    sorted::Bool = true,
+    model_times::Bool = false,
+    one_entry_per_file::Bool = false
 )
-    defineDataMap([path], id; constraint, constraint_ts, level, is_cmip, filename_format, sorted)
+    defineDataMap(
+        [path], id; 
+        constraint, constraint_ts, level, is_cmip, filename_format, sorted, model_times, one_entry_per_file
+    )
 end
 
 function previewDataMap(
@@ -1036,7 +1057,11 @@ function previewDataMap(
 end
 
 
+"""
+    _prepareMetaData(paths_datasets, ids; constraint, constraint_ts, level, is_cmip, filename_format)
 
+    Return a vector of length `length(ids)` where each entry contains a Vector of MetaData.
+"""
 function _prepareMetaData(
     paths_datasets::Vector{Vector{String}}, 
     ids::Vector{String};
@@ -1060,6 +1085,11 @@ function _prepareMetaData(
     )
 end
 
+"""
+    _prepareMetaData(paths, ids; constraint, constraint_ts, level, is_cmip, filename_format)
+
+    Return a vector of length `length(ids)` where each entry contains a Vector of MetaData.
+"""
 function _prepareMetaData(
     paths::Vector{String}, 
     ids::Vector{String};
@@ -1083,9 +1113,13 @@ function _prepareMetaData(
     )
 end
 
+"""
+    _prepareMetaData(paths; constraint, constraint_ts, level, is_cmip, filename_format)
+
+    Return a vector of length 1 whose single entry contains a Vector of MetaData.
+"""
 function _prepareMetaData(
-    paths::Vector{String}, 
-    id::String;
+    paths::Vector{String};
     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     level::Symbol = :none,
