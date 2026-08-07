@@ -2169,6 +2169,109 @@ function limitLon(data::YAXArray, lon::Tuple)
     return data[lon = Where(x -> x > lon[1] && x < lon[2])]
 end
 
+
+"""
+    getSiextentMask(sic::YAXArray; north::Bool = true, south::Bool = true)
+
+Return a boolean mask that is `true` where sea ice concentration (`sic`, in percent) is
+above 15 and the grid cell lies in the requested hemisphere(s).
+
+Use this method for regular grids whose dimension coordinates correspond to true longitudes/latitudes.
+
+# Arguments:
+- `sic::YAXArray`: sea ice concentration (percent).
+- `north::Bool = true`: include grid cells in the northern hemisphere.
+- `south::Bool = true`: include grid cells in the southern hemisphere.
+"""
+function getSiextentMask(sic::YAXArray; north::Bool = true, south::Bool = true)
+    mask = Array(sic.data) .> 15
+    mask = YAXArray(dims(sic), coalesce.(mask, false))
+    if !north
+        mask[lat = Where(x -> x > 0)] .= false
+    end
+    if !south
+        mask[lat = Where(x -> x < 0)] .= false
+    end
+    return mask
+end
+
+
+"""
+    getSiextentMask(sic::YAXArray, lat::YAXArray; north::Bool = true, south::Bool = true)
+
+Return a boolean mask that is `true` where sea ice concentration (`sic`, in percent) is
+above 15 and the grid cell lies in the requested hemisphere(s), determined from the actual
+per-cell latitude values in `lat`.
+
+Use this method for native/curvilinear ocean grids whose dimension coordinates are cell indices or rotated-pole 
+coordinates rather than true latitude.
+
+# Arguments:
+- `sic::YAXArray`: sea ice concentration (percent).
+- `lat::YAXArray`: real latitude values (degrees north) on the same spatial dims as `sic`. E.g. loaded with 
+supplementary_var=:areacello from the same file as the sea ice concentration data.
+- `north::Bool = true`: include grid cells in the northern hemisphere.
+- `south::Bool = true`: include grid cells in the southern hemisphere.
+"""
+function getSiextentMask(sic::YAXArray, lat::YAXArray; north::Bool = true, south::Bool = true)
+    dim1, dim2 = dimNames(sic)[1:2]
+    function maskSlice(xout, siconc_slice, lat_slice)
+        ice = coalesce.(siconc_slice .> 15, false)
+        hemisphere = if north && south
+            trues(size(lat_slice))
+        elseif north
+            coalesce.(lat_slice .> 0, false)
+        elseif south
+            coalesce.(lat_slice .< 0, false)
+        else
+            falses(size(lat_slice))
+            @warn "Neither north nor south hemisphere selected for computing sea ice extent mask!"
+        end
+        xout .= ice .& hemisphere
+    end
+    mask = mapCube(
+        maskSlice, (sic, lat);
+        indims = (InDims(dim1, dim2), InDims(dim1, dim2)), # we want the slices of 2D arrays with dimensions dim1, dim2
+        outdims = OutDims(dims(sic, dim1), dims(sic, dim2); outtype = Bool) # output are slice of 2D Boolean arrays with dimensions dim1, dim2
+    )
+    # mapCube's output buffer is typed Union{Missing, Bool} regardless of `outtype`; downstream
+    # boolean indexing (`array[mask]`) requires a strict Array{Bool}, so materialize it as one
+    return YAXArray(dims(mask), Array{Bool}(coalesce.(Array(mask.data), false)))
+end
+
+
+"""
+    getSiextent(masks::DataMap, data_areacello; suffix::String = "areacello")
+
+# Arguments:
+- `masks`: For every entry, first two dimensions must have names :x, :y.
+- `data_areacello`: keys are identical to keys in `masks`, possibly with added `suffix` in the end. For every entry, 
+first two dimensions must have names :x, :y.
+"""
+function getSiextent(masks::DataMap, data_areacello::DataMap; suffix::String = "_areacello")
+    # compute extent per ensemble member first, then average over members per model
+    function f(xout, area_slice, mask)
+        xout[] = sum(area_slice[mask])
+        # the [] is important, otherwise we'd get only missing values. xout is the output buffer. For every iteration
+        # in mapCube it is a 0-dimensional Array which is not the same as a scalar value. if [] is not written, the output
+        # buffer for mapCube is never touched and no values are assigned.
+    end
+
+    cmip_siextent = Vector{YAXArray}(undef, length(masks))
+    for (i, (key, mask)) in enumerate(masks)
+        @info "Processing $key ..."
+        cell_area = data_areacello["$(key)$(suffix)"]
+        siextent_per_member = mapCube(
+            f, (cell_area, mask);
+            indims = (InDims(:x, :y), InDims(:x, :y)), # we want the slices of 2D arrays, namely the dimensions :x, :y (for every member)
+            outdims = OutDims() # no arguments: the output is a scalar (0-dim)
+        )
+        cmip_siextent[i] = siextent_per_member
+    end
+    return cmip_siextent
+end
+
+
 # function warnIfModelConstraintNotFulfilled(
 #     constraints::Vector{<:Dict{<:Any, <:Any}}, 
 #     loaded_data::DataMap, 
