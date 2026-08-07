@@ -1868,10 +1868,47 @@ function apply(
     ids = isempty(ids) ? collect(keys(dm)) : ids
     ids_new = isempty(ids_new) ? ids : ids_new
     for (id, id_new) in zip(ids, ids_new)
+        @info "processing $id ...."
         dm_new[id_new] = fn(dm[id], args...; kwargs...)
     end
     return dm_new
 end
+
+
+"""
+
+    applyMap(
+        dm::DataMap,
+        fn::Function,
+        args...; 
+        ids::AbstractVector{T} = String[],
+        kwargs...
+    )
+
+Apply `fn` with positional arguments `args` and keyword arguments `kwargs` and return a Dictionary mapping from `ids` to the respective result returned by `fn`.
+
+# Arguments:
+- `dm::DataMap`: data.
+- `fn::Function`: function to be applied.
+- `args...`: positional arguments for `fn`.
+- `ids::AbstractVector{T}=String[]`: keys for data on which `fn` is applied; if empty all keys of `dm` are used.
+- `kwargs...`: keyword arguments for `fn`.
+"""
+function applyMap(
+    dm::DataMap,
+    fn::Function,
+    args...; 
+    ids::AbstractVector{T} = String[],
+    kwargs...
+) where T <: Union{String, Symbol}
+    ids = isempty(ids) ? collect(keys(dm)) : ids
+    output = Dict()
+    for id in ids
+        output[id] = fn(dm[id], args...; kwargs...)
+    end
+    return output
+end
+
 
 
 """
@@ -2062,19 +2099,38 @@ Combine two YAXArrays with identical dimensions into one with extended dimension
 - `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(),
 otherwise, lookup type is Unordered()
 """
+function mergeYAX(df1::YAXArray, df2::YAXArray, dim::Symbol; sorted::Bool=true)
+    return mergeYAX([df1, df2], dim; sorted)
+end
+
+"""
+    mergeYAX(dfs::AbstractArray{<:YAXArray}, dim::Symbol; sorted::Bool=true)
+
+Combine several YAXArrays with identical dimensions into one with extended dimension 'dim'.
+
+# Arguments:
+- `dfs::AbstractArray{<:YAXArray}`: YAXArrays to be merged
+- `dim::Symbol`: dimension which is merged
+- `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(),
+otherwise, lookup type is Unordered()
+"""
 function mergeYAX(
-    df1::YAXArray, df2::YAXArray, dim::Symbol; sorted::Bool=true
+    dfs::AbstractArray{<:YAXArray}, dim::Symbol; sorted::Bool=true
 )
-    if otherdims(df1, dim) != otherdims(df2, dim)
+    if length(dfs) < 2
+        throw(ArgumentError("at least two YAXArrays must be given to be merged."))
+    end
+    other_dims = otherdims(dfs[1], dim)
+    if any(otherdims(df, dim) != other_dims for df in dfs[2:end])
         throw(ArgumentError("Dimensions must be identical to be merged by extending an existing dimension."))
     end
-    new_vals = vcat(val(dims(df1, dim)), val(dims(df2, dim)))
-    dim_lookup = DimensionalData.lookup(df1, dim)
+    new_vals = vcat((val(dims(df, dim)) for df in dfs)...)
+    dim_lookup = DimensionalData.lookup(dfs[1], dim)
     new_lookup = isa(dim_lookup, DimensionalData.Lookups.Categorical) ?
-        Lookups.Categorical(new_vals; order = Lookups.Unordered()) : 
+        Lookups.Categorical(new_vals; order = Lookups.Unordered()) :
         Lookups.Sampled(new_vals; order = Lookups.Unordered())
 
-    merged = cat(df1, df2; dims = Dim{dim}(new_lookup))
+    merged = cat(dfs...; dims = Dim{dim}(new_lookup))
     if sorted
         merged = _sortYAX(merged, dim)
     end
@@ -2084,9 +2140,6 @@ end
 # TODO: add for DataMap
 function mergeYAX(dm::DataMap, dim::Symbol; sorted::Bool = true)
 end
-
-
-
 
 function _sortYAX(df::T, dim::Symbol) where T <: YAXArray
     idx = dimnum(df, dim)
@@ -2115,7 +2168,6 @@ end
 function limitLon(data::YAXArray, lon::Tuple)
     return data[lon = Where(x -> x > lon[1] && x < lon[2])]
 end
-
 
 # function warnIfModelConstraintNotFulfilled(
 #     constraints::Vector{<:Dict{<:Any, <:Any}}, 
