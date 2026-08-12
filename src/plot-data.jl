@@ -824,7 +824,7 @@ function plotMapGrid!(
         end
         if i == last_valid_idx
             # x=0 -> plot across all rows
-            pos_legend = (x = 0, y = col + 1)
+            pos_legend = (x = 0, y = ncols + 1)
         else
             pos_legend = nothing
         end
