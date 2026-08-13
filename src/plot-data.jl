@@ -77,7 +77,7 @@ function plotValsOnMap!(
             n = length(color_range) == 3 ? color_range[3] : 10
             hm = contourf!(
                 ax, dims_lon, dims_lat, coalesce.(Array(means), NaN); 
-                colormap = colors, extendlow = :auto, extendhigh = :auto,
+                colormap = colors, extendlow = :blue, extendhigh = :red,
                 levels = range(color_range[1], color_range[2]; length = n)
             )
         end
@@ -100,7 +100,7 @@ function plotValsOnMap!(
         )
 
         if isnothing(color_range) 
-            hm = heatmap!(ax, lon, lat, Array(means); colormap = colors, alpha = alpha)
+            hm = heatmap!(ax, lon, lat, Array(means); colormap = colors, alpha = alpha, highclip=:red, lowclip=:blue)
         else
             hm = heatmap!(ax, lon, lat, coalesce.(Array(means), NaN);
                 colormap = colors, 
