@@ -53,7 +53,14 @@ end
 Convert latitudes from -90° to 90° into 0° to 90° North/South.
 """
 function latitude2NorthSouth(lat::Number)
-    return lat < 0 ? "$(abs(lat))°S" : "$(lat)°N"
+    if lat < 0
+        val = "$(abs(lat))°S"
+    elseif lat == 0
+        val = "0°"
+    else
+        val = "$(lat)°N"
+    end
+    return val
 end
 
 
