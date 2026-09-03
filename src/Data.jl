@@ -339,7 +339,9 @@ const CONSTRAINTS_TO_META = Dict(
 # ::MIME"text/plain" : for REPL output
 function Base.show(io::IO, ::MIME"text/plain", x::DataMap)
     println(io, "::DataMap")
-    for (k, v) in x
+    names = sort(collect(keys(x)))
+    for k in names
+        v = x[k]
         println(io, "$k: $(size(v))")
     end
 end
