@@ -447,10 +447,12 @@ end
 
 
 """
-    writeDataToDisk(data, target_path::String)
+    writeDataToDisk(data, target_path::String; overwrite::Bool=false, add_hour::Bool=true)
 
 Save `data` as Julia obj if `target_path` has ending '.jld2', otherwise save as binary.
-If file at `target_path` already exists, timestamp is added if `overwrite` is false (default).
+
+If file at `target_path` already exists, timestamp is added if `overwrite` is false (default). By default the timestamp 
+includes the day and the hour. When `add_hour` is set to false, only the date is appended to the filename.
 """
 function writeDataToDisk(data, target_path::String; overwrite::Bool = false, add_hour::Bool = true)
     target_path = overwrite ? target_path : Data.individuatePath(target_path; add_hour)
