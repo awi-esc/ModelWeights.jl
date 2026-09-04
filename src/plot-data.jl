@@ -797,6 +797,7 @@ function plotMapGrid!(
     titles::Vector{String};
     nrows::Int = 2,
     ncols::Int = 3,
+    row1_sep_colorbar::Bool = false,
     kwargs...
 )
     @assert length(data_arrays) == length(titles) "data_arrays and titles must have the same length"
@@ -822,7 +823,10 @@ function plotMapGrid!(
         if all(x -> ismissing(x) || isnan(x), data) # all(isnan, data)
             continue
         end
-        if i == last_valid_idx
+        if row1_sep_colorbar && i == 1
+            # for the observations on the first row add separate colorbar
+            pos_legend = (x = 1, y = 2)
+        elseif i == last_valid_idx
             # x=0 -> plot across all rows
             pos_legend = (x = 0, y = ncols + 1)
         else
