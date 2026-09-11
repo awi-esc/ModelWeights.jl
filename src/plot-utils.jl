@@ -113,8 +113,8 @@ function makeSubplots(
     title = "",
     colors = nothing,
     color_range_limits = nothing,
-    high_clip = (1, 0, 0),
-    low_clip = (0, 0, 1),
+    # high_clip = (1, 0, 0),
+    # low_clip = (0, 0, 1),
     xlabel = "Longitude",
     ylabel = "Latitude",
     xlabel_rotate = pi / 4,
@@ -146,7 +146,7 @@ function makeSubplots(
         col_temp = idx_plot % grid.ncols
         col = col_temp == 0 ? grid.ncols : col_temp
         pos = (x = row, y = col)
-        pos_legend = idx_plot == nb_subplots ? (x = 1:row, y = grid.ncols + 1) : nothing
+        #pos_legend = idx_plot == nb_subplots ? (x = 1:row, y = grid.ncols + 1) : nothing
         model = models[idx_plot]
         if hasdim(data, :member)
             plotValsOnMap!(

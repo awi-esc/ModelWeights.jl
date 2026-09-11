@@ -1,24 +1,39 @@
-""" plotValsOnMap!(fig::Figure, means::AbstractArray, title::String;
-                    colors=nothing, color_range=nothing, high_clip=(1,0,0),
-                    low_clip=(0,0,1), pos=(x=1, y=1), pos_legend=nothing
-                    )
+""" 
+    function plotValsOnMap!(
+        gp::GridPosition, means::AbstractArray, title::String;
+        color_interval = :RdBu,
+        color_neg = :Blues,
+        color_pos = :Reds,
+        color_range::Union{Nothing, Tuple} = nothing,
+        legend_label::String = "",
+        xlabel::String = "Longitude",
+        ylabel::String = "Latitude",
+        xlabel_rotate::Number = 0,
+        xticks::Union{AbstractArray, Nothing} = nothing,
+        yticks::Union{AbstractArray, Nothing} = nothing,
+        east_west_labels::Bool = false,
+        alpha::Number = 0.8,
+        fontsize::Number = 20,
+        hidedecorations::Bool = false,
+        add_colorbar::Bool = true,
+        colorbar_pos::Symbol = :r,
+        rounded_proj::Bool = false,
+        colorbar_size::Int = 15
+    )
     
 Plot contours of world with an overlayed heatmap of the input data.
 
 # Arguments:
-- `pos::NamedTuple(x::Int,y::Int)`: position of plot in `fig`
 - `color_range::Union{Nothing, Tuple}`: Real values, outside this range, a single color is used.
 """
 function plotValsOnMap!(
-    fig::Figure,
+    gp::GridPosition,
     means::AbstractArray,
     title::String;
-    colors = nothing,
+    color_interval = :RdBu,
+    color_neg = :Blues,
+    color_pos = :Reds,
     color_range::Union{Nothing, Tuple} = nothing,
-    split_at_zero::Bool = false,
-    pos::NamedTuple = (x = 1, y = 1),
-    pos_legend::Union{Nothing, NamedTuple} = (x = 1, y = 2),
-    orient_legend::Symbol = :vertical,
     legend_label::String = "",
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
@@ -29,6 +44,8 @@ function plotValsOnMap!(
     alpha::Number = 0.8,
     fontsize::Number = 20,
     hidedecorations::Bool = false,
+    add_colorbar::Bool = true,
+    colorbar_pos::Symbol = :r,
     rounded_proj::Bool = false,
     colorbar_size::Int = 15
 )
@@ -48,42 +65,32 @@ function plotValsOnMap!(
     lat_labels = east_west_labels ? latitude2NorthSouth.(yticks) : map(x -> x * "°", string.(yticks))
     x_ticks_labels = (xticks, lon_labels)
     y_ticks_labels = (yticks, lat_labels)
-
-    if isnothing(color_range) && split_at_zero
-        vals = coalesce.(Array(means), NaN)
-        vals = filter(x -> !isnan(x), vals)
+    
+    vals = coalesce.(Array(means), NaN)
+    vals = filter(x -> !isnan(x), vals)
+    if isnothing(color_range)
         color_range = (minimum(vals), maximum(vals))
+    else
+        vals = filter(x -> x >= color_range[1] && x <= color_range[2], vals)
     end
-    if isnothing(colors)
-        if split_at_zero
-            colors = splitColormapAtZero(color_range[1], color_range[2])
-        else
-            colors = reverse(ColorSchemes.redblue.colors)
-        end
-    end
+    colormap = getColormap(vals; col_pos=color_pos, col_neg=color_neg, col_band=color_interval)
+
     if rounded_proj
-        ax = GeoMakie.GeoAxis(fig[pos.x, pos.y];
+        ax = GeoMakie.GeoAxis(gp;
             title = title,
             titlesize = fontsize,
             titlefont = :regular,
             dest = "+proj=robin"
         )
-        if isnothing(color_range)
-            hm = contourf!(
-                ax, dims_lon, dims_lat, coalesce.(Array(means), NaN); 
-                colormap = colors, extendlow = :auto, extendhigh = :auto
-            )
-        else
-            n = length(color_range) == 3 ? color_range[3] : 10
-            hm = contourf!(
-                ax, dims_lon, dims_lat, coalesce.(Array(means), NaN); 
-                colormap = colors, extendlow = :blue, extendhigh = :red,
-                levels = range(color_range[1], color_range[2]; length = n)
-            )
-        end
+        hm = contourf!(
+            ax, dims_lon, dims_lat, coalesce.(Array(means), NaN); 
+            colormap,
+            extendlow = colormap[1], 
+            extendhigh = colormap[end]
+        )
     else
         ax = Axis(
-            fig[pos.x, pos.y],
+            gp,
             title = title,
             xlabel = xlabel,
             ylabel = ylabel,
@@ -98,38 +105,35 @@ function plotValsOnMap!(
             titlesize = fontsize,
             titlefont = :regular
         )
-
-        if isnothing(color_range) 
-            hm = heatmap!(ax, lon, lat, Array(means); colormap = colors, alpha = alpha, highclip=:red, lowclip=:blue)
-        else
-            hm = heatmap!(ax, lon, lat, coalesce.(Array(means), NaN);
-                colormap = colors, 
-                alpha = alpha,
-                colorrange = color_range, 
-                highclip = colors[end],
-                lowclip = colors[1]
-            )
-        end
+        hm = heatmap!(ax, lon, lat, coalesce.(Array(means), NaN);
+            colormap, 
+            colorrange = color_range, 
+            alpha = alpha,
+            highclip = colormap[end],
+            lowclip = colormap[1],
+        )
     end
     lines!(GeoMakie.coastlines(); color = :black, linewidth=.8)
-    if !isnothing(pos_legend)
-        addColorBar(fig, hm; pos_legend, orient_legend, legend_label, fontsize, colorbar_size)
+    if add_colorbar
+        addColorBar(
+            gp, hm, colorbar_pos;
+            legend_label, 
+            fontsize, 
+            colorbar_size
+        )
     end
     if hidedecorations
         hidedecorations!(ax)
     end
-    return ax
+    return ax, hm
 end
 
 function plotValsOnMap(    
-    means::AbstractArray,
-    title::String;
-    colors = nothing,
+    means::AbstractArray, title::String;
+    color_interval = :RdBu,
+    color_neg = :Blues,
+    color_pos = :Reds,
     color_range::Union{Nothing, Tuple} = nothing,
-    split_at_zero::Bool = false,
-    pos::NamedTuple = (x = 1, y = 1),
-    pos_legend::Union{Nothing, NamedTuple} = (x = 1, y = 2),
-    orient_legend::Symbol = :vertical,
     legend_label::String = "",
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
@@ -137,19 +141,35 @@ function plotValsOnMap(
     xticks::Union{AbstractArray, Nothing} = nothing,
     yticks::Union{AbstractArray, Nothing} = nothing,
     east_west_labels::Bool = false,
+    alpha::Number = 0.8,
     fontsize::Number = 20,
     hidedecorations::Bool = false,
-    rounded_proj::Bool = false,
-    colorbar_size::Int = 15
+    add_colorbar::Bool = true,
+    colorbar_pos::Symbol = :r,
+    colorbar_size::Int = 15,
+    rounded_proj::Bool = false
 )
     f = Figure()
     plotValsOnMap!(
-        f, means, title; 
-        colors, color_range, 
-        split_at_zero,
-        pos, pos_legend, orient_legend, legend_label,
-        xlabel, ylabel, xlabel_rotate, xticks, yticks, east_west_labels,
-        fontsize, hidedecorations, rounded_proj, colorbar_size
+        f[1,1], means, title; 
+        color_interval, 
+        color_neg, 
+        color_pos,
+        color_range,
+        legend_label,
+        xlabel, 
+        ylabel,
+        xlabel_rotate,
+        xticks, 
+        yticks,
+        east_west_labels,
+        alpha,
+        fontsize,
+        hidedecorations,
+        add_colorbar,
+        colorbar_pos,
+        colorbar_size,
+        rounded_proj
     )
     return f
 end
@@ -784,7 +804,7 @@ end
 
 
 """
-    plotMapGrid!(fig, data_arrays, titles; nrows, ncols, shared_colorrange, kwargs...)
+    plotMapGrid!(fig, data_arrays, titles; nrows, ncols, row1_sep_colorbar, kwargs...)
 
 Plot a grid of maps using `mwp.plotValsOnMap!`. Data is filled rowwise.
 
@@ -798,6 +818,8 @@ function plotMapGrid!(
     nrows::Int = 2,
     ncols::Int = 3,
     row1_sep_colorbar::Bool = false,
+    fontsize::Int = 20,
+    legend_label::String = "",
     kwargs...
 )
     @assert length(data_arrays) == length(titles) "data_arrays and titles must have the same length"
@@ -812,41 +834,36 @@ function plotMapGrid!(
     # vcat(data_arrays...) might throw a warning because the merged data wont be ForwardOrdered anymore (here we dont care)
     #valid = filter(x -> !ismissing(x) && !isnan(x), vec(vcat(data_arrays...)))
     valid = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays))))
-    color_range = isempty(valid) ? nothing : extrema(valid)
-
-    indices_all_nan = all.(isnan, data_arrays)
-    last_valid_idx = findlast(!, indices_all_nan)
+    color_range = extrema(Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays)))))
+    
     axes = Vector(undef, length(data_arrays))
+    plots = Vector(undef, length(data_arrays))
     for (i, (data, title)) in enumerate(zip(data_arrays, titles))
-        row = rows[i]
-        col = cols[i]
-        if all(x -> ismissing(x) || isnan(x), data) # all(isnan, data)
+        row, col = rows[i], cols[i]
+        if all(x -> ismissing(x) || isnan(x), data)
             continue
         end
-        if row1_sep_colorbar && i == 1
-            # for the observations on the first row add separate colorbar
-            pos_legend = (x = 1, y = 2)
-        elseif i == last_valid_idx
-            # x=0 -> plot across all rows
-            pos_legend = (x = 0, y = ncols + 1)
-        else
-            pos_legend = nothing
-        end
-        ax = plotValsOnMap!(
-            fig, data, title;
-            pos = (x = row, y = col),
-            pos_legend = pos_legend,
+        # if row1_sep_colorbar && i == 1
+        #     # for the observations on the first row add separate colorbar
+        #     pos_legend = (x = 1, y = 2)
+        # end
+        ax, plt = plotValsOnMap!(
+            fig[row, col], data, title;
             color_range = color_range,
-            kwargs...
+            add_colorbar = false,
+            #kwargs...
         )
         axes[i] = ax
-        #colsize!(fig.layout, col, Aspect(1, 2))  # force column to a specific aspect ratio matching your data
+        plots[i] = plt
     end
+    # Add Colorbar(s):
+    addColorBar(fig[1:nrows,ncols+1], plots[end], :r; fontsize, legend_label)
+
     # make all plot columns equal width, colorbar column narrower
     for c in 1:ncols
         colsize!(fig.layout, c, Relative(0.9 / ncols))
     end
-    colsize!(fig.layout, ncols + 1, Fixed(30))
+    #colsize!(fig.layout, ncols + 1, Fixed(30))
 
     # make all rows equal height
     for r in 1:nrows
