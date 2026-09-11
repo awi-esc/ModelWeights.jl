@@ -150,30 +150,30 @@ function makeSubplots(
         model = models[idx_plot]
         if hasdim(data, :member)
             plotValsOnMap!(
-                fig,
+                fig[pos.x, pos.y],
                 data[member=At(model)],
                 "$model";
-                colors = colors,
-                high_clip = high_clip,
-                low_clip = low_clip,
+                # colors = colors,
+                # high_clip = high_clip,
+                # low_clip = low_clip,
                 color_range = color_range_limits,
-                pos = pos,
-                pos_legend = pos_legend,
+                #pos = pos,
+                #pos_legend = pos_legend,
                 xlabel = xlabel,
                 ylabel = ylabel,
                 xlabel_rotate = xlabel_rotate
             )
         else
             plotValsOnMap!(
-                fig,
+                fig[pos.x, pos.y],
                 data[model=At(model)],
                 "$model";
-                colors = colors,
-                high_clip = high_clip,
-                low_clip = low_clip,
+                #colors = colors,
+                # high_clip = high_clip,
+                # low_clip = low_clip,
                 color_range = color_range_limits,
-                pos = pos,
-                pos_legend = pos_legend,
+                #pos = pos,
+                #pos_legend = pos_legend,
                 xlabel = xlabel,
                 ylabel = ylabel,
                 xlabel_rotate = xlabel_rotate
@@ -203,74 +203,62 @@ function addMinorGrid!(ax, data_x::AbstractArray, data_y::AbstractArray; by = 0.
 end
 
 
-"""
-    splitColormapAtZero(range_min, range_max; n = 128)
-
-Build a colormap where blue colors are used for values in [range_min, 0)
-and red colors are used for values in [0, range_max], with the boundary
-placed at the correct relative position (handles asymmetric ranges too).
-"""
-function splitColormapAtZero(range_min, range_max; n::Int = 128)
-    if range_min >= 0 || range_max <= 0
-        @warn "Note: range does not straddle 0."
-        #return get(ColorSchemes.colorschemes[:berlin], range(0, 1; length = n))
-        return reverse(get(ColorSchemes.colorschemes[:redblue], range(0, 1; length = n)))
+function getColormap(values::AbstractArray; n::Int = 10, col_neg=:Blues, col_pos=:Reds, col_band=:RdBu, rev::Bool=true)
+    vmin, vmax = extrema(values)
+    if vmin >= 0
+        cm = cgrad(col_pos, range(0, 1, length=n))
+    elseif vmax <= 0
+        cm = cgrad(col_neg, range(0, 1, length=n))
+    else
+        len_range = vmax - vmin
+        frac_upto_0 = -vmin / len_range
+        cm = cgrad(col_band, [frac_upto_0]; rev=rev, categorical=false) # at this point btw. 0 and 1, colors are positioned 
     end
-    below_colors = reverse(get(ColorSchemes.colorschemes[:Blues], range(0, 1; length = n)))
-    above_colors = get(ColorSchemes.colorschemes[:Reds], range(0, 1; length = n))
-    combined_colors = vcat(below_colors, above_colors)
-    # stops must be strictly increasing; nudge the boundary slightly so both
-    # sides get their own stop right at ratio_below_zero
-    ratio_below_zero = (0 - range_min) / (range_max - range_min)
-    stops = vcat(
-        range(0, ratio_below_zero; length = n),
-        range(ratio_below_zero, 1; length = n) .+ eps() .* (1:n)
-    )
-    stops = stops ./ stops[end]  # renormalize to [0, 1]
-    return Makie.cgrad(combined_colors, stops)
+    return cm
+end
+
+
+function _colorbarPosition(gp::GridPosition, pos::Symbol)
+    row = first(gp.span.rows)
+    col = first(gp.span.cols)
+    if pos == :r
+        return gp.layout[row, col + 1]
+    elseif pos == :l
+        return gp.layout[row, col - 1]
+    elseif pos == :t
+        return gp.layout[row - 1, col]
+    elseif pos == :b
+        return gp.layout[row + 1, col]
+    else
+        error("'pos' must be one of :r, :l, :t, :b")
+    end
 end
 
 
 function addColorBar(
-    fig, hm;
-    pos_legend::Union{Nothing, NamedTuple} = nothing,
-    orient_legend::Symbol = :vertical,
+    gp::GridPosition, hm, pos::Symbol;
     legend_label::String = "",
     fontsize::Int = 20,
     colorbar_size::Int = 15
 )
-    if orient_legend == :vertical
-        cbgrid = GridLayout(3, 1)
-        if pos_legend.x == 0
-            fig[:, pos_legend.y] = cbgrid
-        else
-            fig[pos_legend.x, pos_legend.y] = cbgrid
-        end
-        rowsize!(cbgrid, 1, Relative(0.1))
-        rowsize!(cbgrid, 2, Relative(0.8))
-        rowsize!(cbgrid, 3, Relative(0.1))
-        Colorbar(
-            cbgrid[2, 1], hm, 
+    colorbar_gp = _colorbarPosition(gp, pos)
+    if pos in [:r, :l]  # vertical orientation: width of colorbar is fixed
+        colorbar = Colorbar(
+            colorbar_gp,
+            hm, 
             width = Fixed(colorbar_size),
+            flipaxis = pos == :r, # flipaxis=true writes the label left of the colorbar
             labelsize = fontsize,
             ticklabelsize = fontsize - 2, 
             label = legend_label, 
             ticksvisible = false
         )
-    else
-        cbgrid = GridLayout(1, 3)
-        if pos_legend.y == 0
-            fig[pos_legend.x, :] = cbgrid
-        else
-            fig[pos_legend.x, pos_legend.y] = cbgrid
-        end
-        colsize!(cbgrid, 1, Relative(0.1))
-        colsize!(cbgrid, 2, Relative(0.8))
-        colsize!(cbgrid, 3, Relative(0.1))
-        Colorbar(
-            cbgrid[1,2], hm; 
+    else # horizontal orientation: height of colorbar is fixed
+        colorbar = Colorbar(
+            colorbar_gp,
+            hm; 
             height = Fixed(colorbar_size),
-            flipaxis = false,
+            flipaxis = pos == :t, # flipaxis=true writes the label above the colorbar
             vertical = false,
             ticksvisible = false,
             labelsize = fontsize,
@@ -278,4 +266,5 @@ function addColorBar(
             label = legend_label
         )
     end
+    return colorbar
 end
