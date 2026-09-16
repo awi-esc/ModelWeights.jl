@@ -242,34 +242,26 @@ function addColorBar(
     pos::Symbol;
     legend_label::String = "",
     fontsize::Int = 20,
-    colorbar_size::Int = 15
+    colorbar_size::Int = 15,
+    clip_vals_colorbar::Bool = false
 )
     colorbar_gp = _colorbarPosition(gp, pos)
-    if pos in [:r, :l]  # vertical orientation: width of colorbar is fixed
-        colorbar = Colorbar(
-            colorbar_gp,
-            colormap = color_map,
-            colorrange = color_range, 
-            width = Fixed(colorbar_size),
-            flipaxis = pos == :r, # flipaxis=true writes the label left of the colorbar
-            labelsize = fontsize,
-            ticklabelsize = fontsize - 2, 
-            label = legend_label, 
-            ticksvisible = false
-        )
-    else # horizontal orientation: height of colorbar is fixed
-        colorbar = Colorbar(
-            colorbar_gp,
-            colormap = color_map,
-            colorrange = color_range; 
-            height = Fixed(colorbar_size),
-            flipaxis = pos == :t, # flipaxis=true writes the label above the colorbar
-            vertical = false,
-            ticksvisible = false,
-            labelsize = fontsize,
-            ticklabelsize = fontsize - 2, 
-            label = legend_label
-        )
-    end
-    return colorbar
+    clip_kwargs = clip_vals_colorbar ? (;highclip = color_map[end], lowclip = color_map[1]) : (;)
+    orientation_kwargs = pos in [:r, :l] ? 
+        (; width = Fixed(colorbar_size), flipaxis = pos == :r) :
+        (; height = Fixed(colorbar_size), flipaxis = pos == :t)
+    
+    return Colorbar(
+        colorbar_gp;
+        colormap = color_map,
+        colorrange = color_range,
+        width = Fixed(colorbar_size),
+        flipaxis = pos == :r, # flipaxis=true writes the label left of the colorbar
+        labelsize = fontsize,
+        ticklabelsize = fontsize - 2, 
+        label = legend_label, 
+        ticksvisible = false,
+        clip_kwargs...,
+        orientation_kwargs...
+    )
 end
