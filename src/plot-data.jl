@@ -815,7 +815,7 @@ end
 
 
 """
-    plotMapGrid!(fig, data_arrays, titles; nrows, ncols)
+    plotMapGrid!(fig::Figure, data_arrays::Vector{<:AbstractArray}, titlesVector{String};)
 
 Plot a grid of maps using `mwp.plotValsOnMap!`. Data is filled rowwise.
 
@@ -835,6 +835,7 @@ function plotMapGrid!(
     color_interval = :RdBu,
     color_neg = :Blues,
     color_pos = :Reds,
+    color_range = nothing,
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
@@ -858,7 +859,12 @@ function plotMapGrid!(
     # vcat(data_arrays...) might throw a warning because the merged data wont be ForwardOrdered anymore (here we dont care)
     #valid = filter(x -> !ismissing(x) && !isnan(x), vec(vcat(data_arrays...)))
     vals = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays))))
-    color_range = extrema(vals)
+    if isnothing(color_range)
+        clip_vals_colorbar = false
+        color_range = extrema(vals)
+    else
+        clip_vals_colorbar = true
+    end
     color_map = getColormap(collect(vals); col_pos=color_pos, col_neg=color_neg, col_band=color_interval)
 
     axes = Vector(undef, length(data_arrays))
@@ -868,7 +874,6 @@ function plotMapGrid!(
         if all(x -> ismissing(x) || isnan(x), data)
             continue
         end
-        print("plot number: $i")
         ax, plt = plotValsOnMap!(
             fig[row, col], data, title;
             color_range = color_range,
@@ -889,7 +894,7 @@ function plotMapGrid!(
         plots[i] = plt
     end
     # Add Colorbar(s):
-    addColorBar(fig[1:nrows,ncols+1], color_map, color_range, :r; fontsize, legend_label)
+    addColorBar(fig[1:nrows,ncols+1], color_map, color_range, :r; fontsize, legend_label, clip_vals_colorbar)
 
     # make all plot columns equal width, colorbar column narrower
     for c in 1:ncols
