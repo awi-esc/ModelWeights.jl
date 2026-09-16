@@ -236,7 +236,10 @@ end
 
 
 function addColorBar(
-    gp::GridPosition, hm, pos::Symbol;
+    gp::GridPosition, 
+    color_map,
+    color_range, 
+    pos::Symbol;
     legend_label::String = "",
     fontsize::Int = 20,
     colorbar_size::Int = 15
@@ -245,7 +248,8 @@ function addColorBar(
     if pos in [:r, :l]  # vertical orientation: width of colorbar is fixed
         colorbar = Colorbar(
             colorbar_gp,
-            hm, 
+            colormap = color_map,
+            colorrange = color_range, 
             width = Fixed(colorbar_size),
             flipaxis = pos == :r, # flipaxis=true writes the label left of the colorbar
             labelsize = fontsize,
@@ -256,7 +260,8 @@ function addColorBar(
     else # horizontal orientation: height of colorbar is fixed
         colorbar = Colorbar(
             colorbar_gp,
-            hm; 
+            colormap = color_map,
+            colorrange = color_range; 
             height = Fixed(colorbar_size),
             flipaxis = pos == :t, # flipaxis=true writes the label above the colorbar
             vertical = false,
