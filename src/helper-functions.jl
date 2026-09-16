@@ -381,8 +381,9 @@ end
 """ 
     lon180to360(lon::T) where {T <: Real}
 
-Convert longitudes measured from -180° to 180° into 0° to 360° scale. For western hemisphere 
-(negative longitudes) add 360.
+Convert longitudes measured from -180° to 180° into 0° to 360° scale. 
+
+For western hemisphere (negative longitudes) 360 is added.
 """
 function lon180to360(lon::T) where {T <: Real}
     return ifelse(lon < 0, lon + 360, lon)
@@ -394,9 +395,9 @@ end
 
 
 """
-    sortLongitudesWest2East(data::AbstractArray)
+    sortLongitudesEast2West(data::YAXArray)
 
-Arrange 'data' such that western latitudes come first, then eastern latitudes.
+Arrange 'data' such that eastern latitudes come first, then western latitudes.
 """
 function sortLongitudesEast2West(data::YAXArray)
     indices = longitudesEastWest(data)
@@ -404,7 +405,7 @@ function sortLongitudesEast2West(data::YAXArray)
 end
 
 """
-    sortLongitudesWest2East(data::AbstractArray)
+    sortLongitudesWest2East(data::YAXArray)
 
 Arrange 'data' such that western latitudes come first, then eastern latitudes.
 """
