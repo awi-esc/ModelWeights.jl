@@ -219,16 +219,16 @@ end
 
 
 function _colorbarPosition(gp::GridPosition, pos::Symbol)
-    row = first(gp.span.rows)
-    col = first(gp.span.cols)
+    rows = gp.span.rows
+    cols = gp.span.cols
     if pos == :r
-        return gp.layout[row, col + 1]
+        return gp.layout[rows, col + 1]
     elseif pos == :l
-        return gp.layout[row, col - 1]
+        return gp.layout[rows, col - 1]
     elseif pos == :t
-        return gp.layout[row - 1, col]
+        return gp.layout[rows - 1, col]
     elseif pos == :b
-        return gp.layout[row + 1, col]
+        return gp.layout[rows + 1, col]
     else
         error("'pos' must be one of :r, :l, :t, :b")
     end
@@ -245,18 +245,15 @@ function addColorBar(
     colorbar_size::Int = 15,
     clip_vals_colorbar::Bool = false
 )
-    colorbar_gp = _colorbarPosition(gp, pos)
     clip_kwargs = clip_vals_colorbar ? (;highclip = color_map[end], lowclip = color_map[1]) : (;)
     orientation_kwargs = pos in [:r, :l] ? 
-        (; width = Fixed(colorbar_size), flipaxis = pos == :r) :
-        (; height = Fixed(colorbar_size), flipaxis = pos == :t)
+        (; width = Fixed(colorbar_size), flipaxis = pos == :r, vertical = true) :
+        (; height = Fixed(colorbar_size), flipaxis = pos == :t, vertical = false)
     
     return Colorbar(
-        colorbar_gp;
+        gp;
         colormap = color_map,
         colorrange = color_range,
-        width = Fixed(colorbar_size),
-        flipaxis = pos == :r, # flipaxis=true writes the label left of the colorbar
         labelsize = fontsize,
         ticklabelsize = fontsize - 2, 
         label = legend_label, 
