@@ -815,7 +815,7 @@ end
 
 
 """
-    plotMapGrid!(fig::Figure, data_arrays::Vector{<:AbstractArray}, titlesVector{String};)
+    plotMapGrid!(fig::Figure, data_arrays::Vector{<:AbstractArray}, titlesVector{String}, nrows::Int, ncols::Int;)
 
 Plot a grid of maps using `mwp.plotValsOnMap!`. Data is filled rowwise.
 
@@ -826,10 +826,11 @@ can be specified as tuples of (row,col) in `sep_colorbar`.
 function plotMapGrid!(
     fig::Figure,
     data_arrays::Vector{<:AbstractArray},
-    titles::Vector{String};
-    nrows::Int = 2,
-    ncols::Int = 3,
-    sep_colorbar::AbstractArray = [],
+    titles::Vector{String},
+    nrows::Int,
+    ncols::Int;
+    add_sep_colorbars::Bool = false,
+    sep_colorbar::Symbol = :row,
     fontsize::Int = 20,
     legend_label::String = "",
     color_interval = :RdBu,
@@ -848,24 +849,38 @@ function plotMapGrid!(
 )
     @assert length(data_arrays) == length(titles) "data_arrays and titles must have the same length"
     @assert length(data_arrays) <= nrows * ncols "more arrays than subplot positions"
-    
+    if length(data_arrays) < nrows * ncols
+        error("The given number of rows ($nrows) and columns ($ncols) is not sufficient for given data ($(length(data_arrays)) subplots)")
+    end
     # Compute shared color range across all panels if requested
     # data is filled row-wise
     rows = [div(i - 1, ncols) + 1 for i in eachindex(data_arrays)]
     cols = [mod(i - 1, ncols) + 1 for i in eachindex(data_arrays)]
 
-    # color range must always be the same for every subplot, to get a meaningful shared colorbar
-    # similarly, the colormap must be selected once for all subplots:
-    # vcat(data_arrays...) might throw a warning because the merged data wont be ForwardOrdered anymore (here we dont care)
-    #valid = filter(x -> !ismissing(x) && !isnan(x), vec(vcat(data_arrays...)))
-    vals = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays))))
-    if isnothing(color_range)
-        clip_vals_colorbar = false
-        color_range = extrema(vals)
+    # color range must always be the same for every subplot, to get a meaningful shared colorbar (across rows, columns or all subplots)
+    # similarly, the colormap must be selected once:
+    colormaps = []
+    colorranges = []
+    if add_sep_colorbars
+        n = sep_colorbar == :col ? ncols : nrows
+        entries = sep_colorbar == :col ? cols : rows
+        for idx in 1:n
+            indices = findall(entries .== idx)
+            vals = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays[indices]))))
+            if isnothing(color_range)
+                push!(colorranges, extrema(vals))
+            else 
+                push!(colorranges, color_range)
+            end
+            push!(colormaps, getColormap(collect(vals); col_pos=color_pos, col_neg=color_neg, col_band=color_interval))
+        end
     else
-        clip_vals_colorbar = true
+        # single colorbar across all subplots
+        vals = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays))))
+        cr = isnothing(color_range) ? extrema(vals) : color_range
+        push!(colorranges, cr)
+        push!(colormaps, getColormap(collect(vals); col_pos=color_pos, col_neg=color_neg, col_band=color_interval))
     end
-    color_map = getColormap(collect(vals); col_pos=color_pos, col_neg=color_neg, col_band=color_interval)
 
     axes = Vector(undef, length(data_arrays))
     plots = Vector(undef, length(data_arrays))
@@ -874,11 +889,18 @@ function plotMapGrid!(
         if all(x -> ismissing(x) || isnan(x), data)
             continue
         end
+        if add_sep_colorbars
+            cr = sep_colorbar==:col ? colorranges[col] : colorranges[row]
+            cm = sep_colorbar==:col ? colormaps[col] : colormaps[row]
+        else
+            cr = colorranges[1]
+            cm = colormaps[1]
+        end
         ax, plt = plotValsOnMap!(
             fig[row, col], data, title;
-            color_range = color_range,
-            color_map = color_map,
-            add_colorbar = (row, col) in sep_colorbar,
+            color_range = cr,
+            color_map = cm,
+            add_colorbar = false,
             fontsize,
             xlabel,
             ylabel,
@@ -894,17 +916,33 @@ function plotMapGrid!(
         plots[i] = plt
     end
     # Add Colorbar(s):
-    addColorBar(fig[1:nrows,ncols+1], color_map, color_range, :r; fontsize, legend_label, clip_vals_colorbar)
-
-    # make all plot columns equal width, colorbar column narrower
+    clip_vals_colorbar = !isnothing(color_range)
+    if add_sep_colorbars
+        n = sep_colorbar == :col ? ncols : nrows
+        for idx in 1:n
+            if sep_colorbar == :col
+                addColorBar(fig[nrows+1,idx], colormaps[idx], colorranges[idx], :b; fontsize, legend_label, clip_vals_colorbar)
+            else
+                addColorBar(fig[idx,ncols+1], colormaps[idx], colorranges[idx], :r; fontsize, legend_label, clip_vals_colorbar)
+            end
+        end
+    else
+        addColorBar(fig[1:nrows,ncols+1], colormaps[1], colorranges[1], :r; fontsize, legend_label, clip_vals_colorbar)
+    end
+    
+    # make all plot columns equal width
     for c in 1:ncols
         colsize!(fig.layout, c, Relative(0.9 / ncols))
-    end
-    colsize!(fig.layout, ncols + 1, Fixed(30))
-
+    end 
     # make all rows equal height
     for r in 1:nrows
         rowsize!(fig.layout, r, Aspect(1, 0.7))  # width:height ratio per cell
+    end
+    # and colorbar column/row narrower
+    if !add_sep_colorbars || (add_sep_colorbars && sep_colorbar == :row)
+        colsize!(fig.layout, ncols + 1, Fixed(30))
+    else
+        rowsize!(fig.layout, nrows + 1, Fixed(30))
     end
     resize_to_layout!(fig)
     return axes
