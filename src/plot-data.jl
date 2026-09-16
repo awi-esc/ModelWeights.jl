@@ -5,6 +5,7 @@
         color_neg = :Blues,
         color_pos = :Reds,
         color_range::Union{Nothing, Tuple} = nothing,
+        color_map = nothing,
         legend_label::String = "",
         xlabel::String = "Longitude",
         ylabel::String = "Latitude",
@@ -34,6 +35,7 @@ function plotValsOnMap!(
     color_neg = :Blues,
     color_pos = :Reds,
     color_range::Union{Nothing, Tuple} = nothing,
+    color_map = nothing,
     legend_label::String = "",
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
@@ -73,10 +75,12 @@ function plotValsOnMap!(
     else
         vals = filter(x -> x >= color_range[1] && x <= color_range[2], vals)
     end
-    colormap = getColormap(vals; col_pos=color_pos, col_neg=color_neg, col_band=color_interval)
-
+    if isnothing(color_map)
+        color_map = getColormap(vals; col_pos=color_pos, col_neg=color_neg, col_band=color_interval)
+    end
     if rounded_proj
-        ax = GeoMakie.GeoAxis(gp;
+        ax = GeoMakie.GeoAxis(
+            gp;
             title = title,
             titlesize = fontsize,
             titlefont = :regular,
@@ -84,9 +88,10 @@ function plotValsOnMap!(
         )
         hm = contourf!(
             ax, dims_lon, dims_lat, coalesce.(Array(means), NaN); 
-            colormap,
-            extendlow = colormap[1], 
-            extendhigh = colormap[end]
+            colormap = color_map,
+            levels = range(color_range[1], color_range[2], length = length(color_map)),
+            extendlow = color_map[1], 
+            extendhigh = color_map[end]
         )
     else
         ax = Axis(
@@ -105,18 +110,22 @@ function plotValsOnMap!(
             titlesize = fontsize,
             titlefont = :regular
         )
+        # heatmap with colorrange maps
         hm = heatmap!(ax, lon, lat, coalesce.(Array(means), NaN);
-            colormap, 
+            colormap = color_map, 
             colorrange = color_range, 
             alpha = alpha,
-            highclip = colormap[end],
-            lowclip = colormap[1],
+            highclip = color_map[end],
+            lowclip = color_map[1],
         )
     end
     lines!(GeoMakie.coastlines(); color = :black, linewidth=.8)
     if add_colorbar
         addColorBar(
-            gp, hm, colorbar_pos;
+            gp, 
+            color_map,
+            color_range,
+            colorbar_pos;
             legend_label, 
             fontsize, 
             colorbar_size
@@ -134,6 +143,7 @@ function plotValsOnMap(
     color_neg = :Blues,
     color_pos = :Reds,
     color_range::Union{Nothing, Tuple} = nothing,
+    color_map = nothing,
     legend_label::String = "",
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
@@ -156,6 +166,7 @@ function plotValsOnMap(
         color_neg, 
         color_pos,
         color_range,
+        color_map,
         legend_label,
         xlabel, 
         ylabel,
@@ -804,11 +815,12 @@ end
 
 
 """
-    plotMapGrid!(fig, data_arrays, titles; nrows, ncols, row1_sep_colorbar, kwargs...)
+    plotMapGrid!(fig, data_arrays, titles; nrows, ncols)
 
 Plot a grid of maps using `mwp.plotValsOnMap!`. Data is filled rowwise.
 
-Note that Colorbar is just plotted for columns 'col' where mod(col, ncols) == 0.
+By default a single colorbar is added across all rows to the right of the plot. Suplots that should get extra colorbars 
+can be specified as tuples of (row,col) in `sep_colorbar`. 
 # Arguments
 """
 function plotMapGrid!(
@@ -817,10 +829,21 @@ function plotMapGrid!(
     titles::Vector{String};
     nrows::Int = 2,
     ncols::Int = 3,
-    row1_sep_colorbar::Bool = false,
+    sep_colorbar::AbstractArray = [],
     fontsize::Int = 20,
     legend_label::String = "",
-    kwargs...
+    color_interval = :RdBu,
+    color_neg = :Blues,
+    color_pos = :Reds,
+    xlabel::String = "Longitude",
+    ylabel::String = "Latitude",
+    xlabel_rotate::Number = 0,
+    xticks::Union{AbstractArray, Nothing} = nothing,
+    yticks::Union{AbstractArray, Nothing} = nothing,
+    east_west_labels::Bool = false,
+    alpha::Number = 0.8,
+    hidedecorations::Bool = false,
+    colorbar_size::Int = 15
 )
     @assert length(data_arrays) == length(titles) "data_arrays and titles must have the same length"
     @assert length(data_arrays) <= nrows * ncols "more arrays than subplot positions"
@@ -831,11 +854,13 @@ function plotMapGrid!(
     cols = [mod(i - 1, ncols) + 1 for i in eachindex(data_arrays)]
 
     # color range must always be the same for every subplot, to get a meaningful shared colorbar
+    # similarly, the colormap must be selected once for all subplots:
     # vcat(data_arrays...) might throw a warning because the merged data wont be ForwardOrdered anymore (here we dont care)
     #valid = filter(x -> !ismissing(x) && !isnan(x), vec(vcat(data_arrays...)))
-    valid = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays))))
-    color_range = extrema(Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays)))))
-    
+    vals = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays))))
+    color_range = extrema(vals)
+    color_map = getColormap(collect(vals); col_pos=color_pos, col_neg=color_neg, col_band=color_interval)
+
     axes = Vector(undef, length(data_arrays))
     plots = Vector(undef, length(data_arrays))
     for (i, (data, title)) in enumerate(zip(data_arrays, titles))
@@ -843,27 +868,34 @@ function plotMapGrid!(
         if all(x -> ismissing(x) || isnan(x), data)
             continue
         end
-        # if row1_sep_colorbar && i == 1
-        #     # for the observations on the first row add separate colorbar
-        #     pos_legend = (x = 1, y = 2)
-        # end
+        print("plot number: $i")
         ax, plt = plotValsOnMap!(
             fig[row, col], data, title;
             color_range = color_range,
-            add_colorbar = false,
-            #kwargs...
+            color_map = color_map,
+            add_colorbar = (row, col) in sep_colorbar,
+            fontsize,
+            xlabel,
+            ylabel,
+            xlabel_rotate,
+            xticks,
+            yticks,
+            east_west_labels,
+            alpha,
+            hidedecorations,
+            colorbar_size
         )
         axes[i] = ax
         plots[i] = plt
     end
     # Add Colorbar(s):
-    addColorBar(fig[1:nrows,ncols+1], plots[end], :r; fontsize, legend_label)
+    addColorBar(fig[1:nrows,ncols+1], color_map, color_range, :r; fontsize, legend_label)
 
     # make all plot columns equal width, colorbar column narrower
     for c in 1:ncols
         colsize!(fig.layout, c, Relative(0.9 / ncols))
     end
-    #colsize!(fig.layout, ncols + 1, Fixed(30))
+    colsize!(fig.layout, ncols + 1, Fixed(30))
 
     # make all rows equal height
     for r in 1:nrows
