@@ -218,17 +218,21 @@ function getColormap(values::AbstractArray; n::Int = 10, col_neg=:Blues, col_pos
 end
 
 
-function _colorbarPosition(gp::GridPosition, pos::Symbol)
-    rows = gp.span.rows
-    cols = gp.span.cols
+function _colorbarPosition(gp::GridPosition, pos::Symbol; use_span::Bool = false)
+    row = first(gp.span.rows)
+    col = first(gp.span.cols)
     if pos == :r
-        return gp.layout[rows, col + 1]
+        c = col + 1
+        return use_span ? gp.layout[1:row, c] : gp.layout[row, c]
     elseif pos == :l
-        return gp.layout[rows, col - 1]
+        c = col - 1
+        return use_span ? gp.layout[1:row, c] : gp.layout[row, c]
     elseif pos == :t
-        return gp.layout[rows - 1, col]
+        r = row - 1
+        return use_span ? gp.layout[r, 1:col] : gp.layout[r, col] 
     elseif pos == :b
-        return gp.layout[rows + 1, col]
+        r = row + 1
+        return use_span ? gp.layout[r, 1:col] : gp.layout[r, col]
     else
         error("'pos' must be one of :r, :l, :t, :b")
     end

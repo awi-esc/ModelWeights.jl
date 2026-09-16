@@ -122,7 +122,7 @@ function plotValsOnMap!(
     lines!(GeoMakie.coastlines(); color = :black, linewidth=.8)
     if add_colorbar
         addColorBar(
-            gp, 
+            _colorbarPosition(gp, colorbar_pos), 
             color_map,
             color_range,
             colorbar_pos;
