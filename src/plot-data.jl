@@ -138,7 +138,8 @@ function plotValsOnMap!(
 end
 
 function plotValsOnMap(    
-    means::AbstractArray, title::String;
+    means::AbstractArray, 
+    title::String;
     color_interval = :RdBu,
     color_neg = :Blues,
     color_pos = :Reds,
