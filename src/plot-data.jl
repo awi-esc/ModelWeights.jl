@@ -833,7 +833,7 @@ function plotMapGrid!(
     add_sep_colorbars::Bool = false,
     sep_colorbar::Symbol = :row,
     fontsize::Int = 20,
-    legend_label::String = "",
+    legend_labels::AbstractArray{String} = [""],
     color_interval = :RdBu,
     color_neg = :Blues,
     color_pos = :Reds,
@@ -921,6 +921,7 @@ function plotMapGrid!(
     if add_sep_colorbars
         n = sep_colorbar == :col ? ncols : nrows
         for idx in 1:n
+            legend_label = length(legend_labels) == 1 ? legend_labels[1] : legend_labels[idx]
             if sep_colorbar == :col
                 addColorBar(fig[nrows+1,idx], colormaps[idx], colorranges[idx], :b; fontsize, legend_label, clip_vals_colorbar)
             else
@@ -928,7 +929,7 @@ function plotMapGrid!(
             end
         end
     else
-        addColorBar(fig[1:nrows,ncols+1], colormaps[1], colorranges[1], :r; fontsize, legend_label, clip_vals_colorbar)
+        addColorBar(fig[1:nrows,ncols+1], colormaps[1], colorranges[1], :r; fontsize, legend_label = legend_labels[1], clip_vals_colorbar)
     end
     
     # make all plot columns equal width
