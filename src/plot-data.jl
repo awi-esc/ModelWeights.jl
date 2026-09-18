@@ -850,7 +850,7 @@ function plotMapGrid!(
 )
     @assert length(data_arrays) == length(titles) "data_arrays and titles must have the same length"
     @assert length(data_arrays) <= nrows * ncols "more arrays than subplot positions"
-    if length(data_arrays) < nrows * ncols
+    if length(data_arrays) > nrows * ncols
         error("The given number of rows ($nrows) and columns ($ncols) is not sufficient for given data ($(length(data_arrays)) subplots)")
     end
     # Compute shared color range across all panels if requested
