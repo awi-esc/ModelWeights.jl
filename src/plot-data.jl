@@ -832,7 +832,7 @@ function plotMapGrid!(
     ncols::Int;
     add_sep_colorbars::Bool = false,
     sep_colorbar::Symbol = :row,
-    fontsize::Int = 20,
+    fontsize::Int = 14,
     legend_labels::AbstractArray{String} = [""],
     color_interval = :RdBu,
     color_neg = :Blues,
@@ -948,4 +948,49 @@ function plotMapGrid!(
     end
     resize_to_layout!(fig)
     return axes
+end
+
+
+function plotZonalMean!(
+    ax::Axis,
+    data::YAXArray;
+    color::Union{Symbol, Number} = :blue,
+    colormap = :viridis,
+    colorrange::Union{Nothing, Tuple} = nothing,
+    label::Union{Nothing, String} = nothing
+)
+    latitudes = Array(data.lat)
+    zonal_mean = Array(dropdims(Statistics.mean(data, dims=:lon), dims=:lon))
+    Makie.scatterlines!(
+        ax, zonal_mean, latitudes;
+        color = color,
+        colormap = colormap,
+        colorrange = isnothing(colorrange) ? automatic : colorrange,
+        label = label
+    )
+    return ax
+end
+
+
+function plotZonalMean(
+    data::YAXArray, 
+    xlabel::String;
+    color::Union{Symbol, Number} = :blue,
+    colormap = :viridis,
+    colorrange::Union{Nothing, Tuple} = nothing,
+    ylabel::String = "Latitude",
+    title::String = "",
+    ticks_latitudes = -90:15:90
+)
+    latitudes_labels = latitude2NorthSouth.(ticks_latitudes)
+    f = Figure()
+    ax = Axis(
+        f[1,1], 
+        xlabel = xlabel, 
+        ylabel = ylabel, 
+        yticks = (ticks_latitudes, latitudes_labels),
+        title = title
+    )
+    plotZonalMean!(ax, data; color, colormap, colorrange)
+    return (f, ax)
 end
