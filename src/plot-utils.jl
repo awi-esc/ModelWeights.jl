@@ -245,7 +245,7 @@ function addColorBar(
     color_range, 
     pos::Symbol;
     legend_label::String = "",
-    fontsize::Int = 20,
+    fontsize::Int = 15,
     colorbar_size::Int = 15,
     clip_vals_colorbar::Bool = false
 )
