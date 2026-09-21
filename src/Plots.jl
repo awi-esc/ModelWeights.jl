@@ -9,7 +9,7 @@ using DimensionalData
 using Distributions
 using GeoMakie
 using Statistics
-using TextWrap
+#using TextWrap
 using YAXArrays
 
 CairoMakie.activate!(type = "svg")
