@@ -150,23 +150,29 @@ function kelvinToCelsius(data::YAXArray)
 end
 
 function kelvinToCelsius!(data::YAXArray)
-    units = data.properties["units"]
-    if isa(units, String) && units == "K"
-        data .-= 273.15
-        data.properties["units"] = "degC"
-    elseif isa(units, Vector)
-        indices = findall(units .== "K")
-        if !isempty(indices)
-            model_dim = modelDim(data)
-            if model_dim == :member
-                temp = Array(data[member = indices])
-                data[member = indices] .= temp .- 273.15
-            else
-                temp = Array(data[model = indices])
-                data[model = indices] .= temp .- 273.15
+    c = 273.15
+    if haskey(data.properties, "units")
+        units = data.properties["units"]
+        if isa(units, String) && units == "K"
+            data .-= c
+            data.properties["units"] = "degC"
+        elseif isa(units, Vector)
+            indices = findall(units .== "K")
+            if !isempty(indices)
+                model_dim = modelDim(data)
+                if model_dim == :member
+                    temp = Array(data[member = indices])
+                    data[member = indices] .= temp .- c
+                else
+                    temp = Array(data[model = indices])
+                    data[model = indices] .= temp .- c
+                end
+                units[indices] .= "degC"
             end
-            units[indices] .= "degC"
         end
+    else
+        @warn "Converting from Kelvin to Celsius without meta data"
+        data .-= c
     end
     return nothing
 end
