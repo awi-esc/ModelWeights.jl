@@ -1,3 +1,5 @@
+using Colors: Colorant
+
 function getFigure(figsize, fontsize)
     size_pt = 72 .* figsize
     fig = Figure(size = size_pt, fontsize = fontsize)
@@ -203,19 +205,39 @@ function addMinorGrid!(ax, data_x::AbstractArray, data_y::AbstractArray; by = 0.
 end
 
 
-function getColormap(values::AbstractArray; n::Int = 10, col_neg=:Blues, col_pos=:Reds, col_band=:RdBu, rev::Bool=true)
-    vmin, vmax = extrema(values)
-    if vmin >= 0
-        cm = cgrad(col_pos, range(0, 1, length=n))
-    elseif vmax <= 0
-        cm = cgrad(col_neg, range(0, 1, length=n))
-    else
-        len_range = vmax - vmin
-        frac_upto_0 = -vmin / len_range
-        cm = cgrad(col_band, [frac_upto_0]; rev=rev, categorical=false) # at this point btw. 0 and 1, colors are positioned 
-    end
-    return cm
+function mapValsToColorScheme(vals; rev=true, scale=nothing)
+    vmin, vmax = extrema(vals)
+    color = vmin >= 0 ? :Reds : (vmax <= 0 ? :Blues : :RdBu)
+    return cgrad(color; rev=rev, scale=scale)
 end
+
+
+function mapValsToColors(values::AbstractArray; colormap::Union{Nothing, Symbol} = nothing, scale=nothing)
+    vmin, vmax = extrema(values)
+    len_range = vmax - vmin
+    normalized = (values .- vmin) ./ len_range
+    if isnothing(colormap)
+        colormap = vmin >= 0 ? :Reds : (vmax <= 0 ? :Blues : :RdBu)
+    end
+    return get(cgrad(colormap; scale), normalized)
+end
+
+
+# function getColormap(
+#     values::AbstractArray, split_at::Number;
+#     col_name::Symbol = :RdBu, 
+#     scale::Union{Symbol, Nothing} = nothing,
+#     rev::Bool = true
+# )
+#     vmin, vmax = extrema(values)
+#     len_range = vmax - vmin
+#     if !(split_at > vmin && split_at < vmax)
+#         error("Cant split colors at $(split_at) as it is not in range of given values!")
+#     end
+#     frac_upto_x = (split_at - vmin) / len_range
+#     return cgrad(col_name, [frac_upto_x]; scale, rev) # at this point btw. 0 and 1, colors are positioned 
+# end
+
 
 
 function _colorbarPosition(gp::GridPosition, pos::Symbol; use_span::Bool = false)
