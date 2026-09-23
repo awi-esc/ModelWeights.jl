@@ -31,9 +31,6 @@ function plotValsOnMap!(
     gp::GridPosition,
     means::AbstractArray,
     title::String;
-    color_interval = :RdBu,
-    color_neg = :Blues,
-    color_pos = :Reds,
     color_range::Union{Nothing, Tuple} = nothing,
     color_map = nothing,
     legend_label::String = "",
@@ -71,12 +68,12 @@ function plotValsOnMap!(
     vals = coalesce.(Array(means), NaN)
     vals = filter(x -> !isnan(x), vals)
     if isnothing(color_range)
-        color_range = (minimum(vals), maximum(vals))
+        color_range = extrema(vals)
     else
         vals = filter(x -> x >= color_range[1] && x <= color_range[2], vals)
     end
     if isnothing(color_map)
-        color_map = getColormap(vals; col_pos=color_pos, col_neg=color_neg, col_band=color_interval)
+        color_map = mapValsToColorScheme(vals)
     end
     if rounded_proj
         ax = GeoMakie.GeoAxis(
@@ -140,9 +137,6 @@ end
 function plotValsOnMap(    
     means::AbstractArray, 
     title::String;
-    color_interval = :RdBu,
-    color_neg = :Blues,
-    color_pos = :Reds,
     color_range::Union{Nothing, Tuple} = nothing,
     color_map = nothing,
     legend_label::String = "",
@@ -163,9 +157,6 @@ function plotValsOnMap(
     f = Figure()
     plotValsOnMap!(
         f[1,1], means, title; 
-        color_interval, 
-        color_neg, 
-        color_pos,
         color_range,
         color_map,
         legend_label,
@@ -349,7 +340,7 @@ function plotTimeseries!(
         ax,
         timesteps,
         vec(coalesce.(vals, NaN)),
-        color = color_line, # color = (color_line, alpha), 
+        color = color_line,
         label = label,
         linestyle = linestyle,
         linewidth = linewidth,
@@ -383,7 +374,7 @@ function plotTimeseries(
     uncertainties::Union{YAXArray, Nothing} = nothing,
     dim_name::Symbol = :time,
     n_step::Int = 10,
-    colors::AbstractArray=[],
+    colors::Union{AbstractVector{<:Colorant}, Nothing}=nothing,
     linestyle::Symbol = :solid,
     linewidth = 3,
     xlabel = "time",
@@ -399,7 +390,6 @@ function plotTimeseries(
     if nt < n_step
         xticks = 1:nt
     else
-        # xticks = [1, (n_step : n_step : nt)...]
         indices =  [1, (n_step : n_step : nt)...]
         xticks =  timesteps[indices]
     end
@@ -820,8 +810,7 @@ end
 
 Plot a grid of maps using `mwp.plotValsOnMap!`. Data is filled rowwise.
 
-By default a single colorbar is added across all rows to the right of the plot. Suplots that should get extra colorbars 
-can be specified as tuples of (row,col) in `sep_colorbar`. 
+By default a single colorbar is added across all rows to the right of the plot.
 # Arguments
 """
 function plotMapGrid!(
@@ -834,10 +823,10 @@ function plotMapGrid!(
     sep_colorbar::Symbol = :row,
     fontsize::Int = 14,
     legend_labels::AbstractArray{String} = [""],
-    color_interval = :RdBu,
-    color_neg = :Blues,
-    color_pos = :Reds,
-    color_range = nothing,
+    colormap = nothing,
+    colorrange = nothing,
+    color_maps::Union{AbstractVector, Nothing} = nothing,
+    color_ranges::Union{AbstractVector{<:Tuple}, Nothing} = nothing,
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
@@ -859,28 +848,52 @@ function plotMapGrid!(
     cols = [mod(i - 1, ncols) + 1 for i in eachindex(data_arrays)]
 
     # color range must always be the same for every subplot, to get a meaningful shared colorbar (across rows, columns or all subplots)
-    # similarly, the colormap must be selected once:
-    colormaps = []
-    colorranges = []
+    # similarly, the colormap must be selected once across rows, columns or all subplots:
     if add_sep_colorbars
+        clip_vals_colorbar = !isnothing(color_ranges) || !isnothing(colorrange)
         n = sep_colorbar == :col ? ncols : nrows
         entries = sep_colorbar == :col ? cols : rows
-        for idx in 1:n
-            indices = findall(entries .== idx)
-            vals = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays[indices]))))
-            if isnothing(color_range)
-                push!(colorranges, extrema(vals))
-            else 
-                push!(colorranges, color_range)
+        if !isnothing(color_ranges) &&  length(color_ranges) != n
+                error("length of colorranges must be equal to number of nb. of columns (sep_colorbar == :col) or rows (sep_colorbar == :row)")
+        elseif !isnothing(colorrange)
+            color_ranges = fill(colorrange, n)
+        end
+        if !isnothing(color_maps) &&  length(color_maps) != n
+                error("length of colormaps must be equal to number of nb. of columns (sep_colorbar == :col) or rows (sep_colorbar == :row)")
+        elseif !isnothing(colormap)
+            color_maps = fill(colormap, n)
+        end
+        
+        fill_colorranges = isnothing(color_ranges)
+        fill_colormaps = isnothing(color_maps)
+        if fill_colorranges
+            color_ranges = Vector(undef, n)
+        end
+        if fill_colormaps
+            color_maps = Vector(undef, n)
+        end
+        if fill_colorranges || fill_colormaps
+            for idx in 1:n
+                indices = findall(entries .== idx)
+                vals = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays[indices]))))
+                if fill_colorranges
+                    color_ranges[idx] = extrema(vals)
+                end
+                if fill_colormaps
+                    color_maps[idx] = mapValsToColorScheme(vals)
+                end
             end
-            push!(colormaps, getColormap(collect(vals); col_pos=color_pos, col_neg=color_neg, col_band=color_interval))
         end
     else
         # single colorbar across all subplots
+        clip_vals_colorbar = !isnothing(colorrange)
         vals = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays))))
-        cr = isnothing(color_range) ? extrema(vals) : color_range
-        push!(colorranges, cr)
-        push!(colormaps, getColormap(collect(vals); col_pos=color_pos, col_neg=color_neg, col_band=color_interval))
+        if isnothing(colorrange)
+            colorrange = extrema(vals)
+        end
+        if isnothing(colormap)
+            colormap = mapValsToColorScheme(vals)
+        end
     end
 
     axes = Vector(undef, length(data_arrays))
@@ -891,11 +904,11 @@ function plotMapGrid!(
             continue
         end
         if add_sep_colorbars
-            cr = sep_colorbar==:col ? colorranges[col] : colorranges[row]
-            cm = sep_colorbar==:col ? colormaps[col] : colormaps[row]
+            cr = sep_colorbar==:col ? color_ranges[col] : color_ranges[row]
+            cm = sep_colorbar==:col ? color_maps[col] : color_maps[row]
         else
-            cr = colorranges[1]
-            cm = colormaps[1]
+            cr = colorrange
+            cm = colormap
         end
         ax, plt = plotValsOnMap!(
             fig[row, col], data, title;
@@ -917,19 +930,18 @@ function plotMapGrid!(
         plots[i] = plt
     end
     # Add Colorbar(s):
-    clip_vals_colorbar = !isnothing(color_range)
     if add_sep_colorbars
         n = sep_colorbar == :col ? ncols : nrows
         for idx in 1:n
             legend_label = length(legend_labels) == 1 ? legend_labels[1] : legend_labels[idx]
             if sep_colorbar == :col
-                addColorBar(fig[nrows+1,idx], colormaps[idx], colorranges[idx], :b; fontsize, legend_label, clip_vals_colorbar)
+                addColorBar(fig[nrows+1,idx], color_maps[idx], color_ranges[idx], :b; fontsize, legend_label, clip_vals_colorbar)
             else
-                addColorBar(fig[idx,ncols+1], colormaps[idx], colorranges[idx], :r; fontsize, legend_label, clip_vals_colorbar)
+                addColorBar(fig[idx,ncols+1], color_maps[idx], color_ranges[idx], :r; fontsize, legend_label, clip_vals_colorbar)
             end
         end
     else
-        addColorBar(fig[1:nrows,ncols+1], colormaps[1], colorranges[1], :r; fontsize, legend_label = legend_labels[1], clip_vals_colorbar)
+        addColorBar(fig[1:nrows,ncols+1], colormap, colorrange, :r; fontsize, legend_label = legend_labels[1], clip_vals_colorbar)
     end
     
     # make all plot columns equal width
@@ -957,18 +969,22 @@ function plotZonalMean!(
     color::Union{Symbol, Number} = :blue,
     colormap = :viridis,
     colorrange::Union{Nothing, Tuple} = nothing,
-    label::Union{Nothing, String} = nothing
+    label::Union{Nothing, String} = nothing,
+    lw::Number = 1.5,
+    ls::Symbol = :solid
 )
     latitudes = Array(data.lat)
     zonal_mean = Array(dropdims(Statistics.mean(data, dims=:lon), dims=:lon))
-    Makie.scatterlines!(
+    p = Makie.lines!(
         ax, zonal_mean, latitudes;
         color = color,
         colormap = colormap,
         colorrange = isnothing(colorrange) ? automatic : colorrange,
-        label = label
+        label = label, 
+        linewidth = lw,
+        linestyle = ls
     )
-    return ax
+    return p
 end
 
 
@@ -980,7 +996,9 @@ function plotZonalMean(
     colorrange::Union{Nothing, Tuple} = nothing,
     ylabel::String = "Latitude",
     title::String = "",
-    ticks_latitudes = -90:15:90
+    ticks_latitudes = -90:15:90,
+    lw::Number = 1.5,
+    ls::Symbol = :solid
 )
     latitudes_labels = latitude2NorthSouth.(ticks_latitudes)
     f = Figure()
@@ -991,6 +1009,6 @@ function plotZonalMean(
         yticks = (ticks_latitudes, latitudes_labels),
         title = title
     )
-    plotZonalMean!(ax, data; color, colormap, colorrange)
-    return (f, ax)
+    p = plotZonalMean!(ax, data; color, colormap, colorrange, lw, ls)
+    return p
 end
