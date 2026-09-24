@@ -2,7 +2,7 @@ module Plots
 
 import StatsBase.ecdf
 
-using CairoMakie
+# using CairoMakie
 using ColorSchemes
 using Dates
 using DimensionalData
@@ -12,12 +12,12 @@ using Statistics
 #using TextWrap
 using YAXArrays
 
-CairoMakie.activate!(type = "svg")
+# CairoMakie.activate!(type = "svg")
 
 
-include("plot-utils.jl")
-include("plot-data.jl")
-include("plot-weights.jl")
+# include("plot-utils.jl")
+# include("plot-data.jl")
+# include("plot-weights.jl")
 
 using ..Data
 
