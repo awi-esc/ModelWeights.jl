@@ -379,7 +379,10 @@ function lon360to180(lon::T) where {T <: Real}
     return lon > 179 ? lon - 360 : lon
 end
 
-function lon360to180(data::YAXArray)
+function lon360to180(data::YAXArray; west_to_east::Bool = false)
+    if west_to_east
+        data = sortLongitudesWest2East(data)
+    end
     return setDim(data, :lon, lon360to180.(lookup(data, :lon)))
 end
 
