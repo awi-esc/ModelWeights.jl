@@ -832,6 +832,7 @@ function plotMapGrid!(
     xlabel_rotate::Number = 0,
     xticks::Union{AbstractArray, Nothing} = nothing,
     yticks::Union{AbstractArray, Nothing} = nothing,
+    main_title::String = "",
     east_west_labels::Bool = false,
     alpha::Number = 0.8,
     hidedecorations::Bool = false,
@@ -928,6 +929,10 @@ function plotMapGrid!(
         )
         axes[i] = ax
         plots[i] = plt
+    end
+
+    if !isempty(main_title)
+        Label(fig[0, :], main_title, fontsize = fontsize)
     end
     # Add Colorbar(s):
     if add_sep_colorbars
