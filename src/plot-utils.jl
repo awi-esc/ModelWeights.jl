@@ -205,9 +205,9 @@ function addMinorGrid!(ax, data_x::AbstractArray, data_y::AbstractArray; by = 0.
 end
 
 
-function mapValsToColorScheme(vals; rev=true, scale=nothing)
+function mapValsToColorScheme(vals; col_pos= :Reds, col_neg = :Blues, col_interval = :RdBu, rev=true, scale=nothing)
     vmin, vmax = extrema(vals)
-    color = vmin >= 0 ? :Reds : (vmax <= 0 ? :Blues : :RdBu)
+    color = vmin >= 0 ? col_pos : (vmax <= 0 ? col_neg : col_interval)
     return cgrad(color; rev=rev, scale=scale)
 end
 
