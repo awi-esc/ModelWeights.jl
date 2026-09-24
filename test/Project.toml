@@ -1,5 +1,7 @@
 [deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
+GeoMakie = "db073c08-6b98-4ee5-b6a4-5efafb3259c6"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 YAXArrays = "c21b50f5-aa40-41ea-b809-c0f5e47bfa5c"

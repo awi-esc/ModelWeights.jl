@@ -13,7 +13,7 @@ import ModelWeights.Plots: savePlot, plotDistMatrices, convertKgsToSV!
 import ModelWeights.Plots: plotWeights, plotDistances, plotDistancesIndependence, plotCRPSSPseudoObs, crpssBoxPlot, boxplotMCMCWeights, densityMCMCWeights, plotCorrWeights 
 
 function __init__()
-    CairMakie.activate!(type = "svg")
+    CairoMakie.activate!(type = "svg")
 end
 
 include("plot-utils.jl")
