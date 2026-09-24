@@ -1,23 +1,39 @@
 module Plots
 
-import StatsBase.ecdf
 
-# using CairoMakie
-using ColorSchemes
-using Dates
-using DimensionalData
-using Distributions
-using GeoMakie
-using Statistics
-#using TextWrap
-using YAXArrays
+function plotValsOnMap end
+function plotValsOnMap! end
+function plotMapGrid! end
+function plotZonalMean end
+function plotZonalMean! end
+function plotAMOC end
+function plotEnsembleSpread end
+function plotTimeseries end
+function plotTimeseries! end
+function plotTempGraph end
+function makeScatterPlot end
+function plotECDF end
+function plotPDF end
+function plotExpectedECS end
 
-# CairoMakie.activate!(type = "svg")
+
+function savePlot end
+function plotDistMatrices end
+function convertKgsToSV! end
+# function makeSubplots end 
+
+function plotWeights end
+function plotDistances end
+function plotDistancesIndependence end
+function plotCRPSSPseudoObs end
+function crpssBoxPlot end
+function boxplotMCMCWeights end
+function densityMCMCWeights end
+function plotCorrWeights end
 
 
-# include("plot-utils.jl")
-# include("plot-data.jl")
-# include("plot-weights.jl")
+
+
 
 using ..Data
 
