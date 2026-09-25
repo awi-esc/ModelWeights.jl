@@ -1,6 +1,6 @@
 module Plots
 
-import StatsBase.ecdf
+import ..Data
 
 using CairoMakie
 using ColorSchemes

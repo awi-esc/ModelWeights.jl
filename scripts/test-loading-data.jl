@@ -39,7 +39,7 @@ preview = mwd.previewDataMap(
     ["/albedo/work/projects/p_pool_clim_data/CMIP6/CMIP/AWI/AWI-CM-1-1-MR/historical/r1i1p1f1/Amon/tas/gn/v20200720"], 
     ["tas_annual_historical"],
     level = :model,
-    dtype = "cmip",
+    is_cmip = true,
     filename_format = :cmip,
     constraint_ts = (start_year = 1950, end_year = 2014) # for filename_format=:cmip, constraint_ts can be applied already for preview
 )

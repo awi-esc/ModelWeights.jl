@@ -6,8 +6,7 @@ using LinearRegression
 using Missings
 using YAXArrays
 
-
-using ..Data
+import ..Data # binds only the name Data, nothing from inside
 
 """
     linearTrend(data::YAXArray; full_predictions::Bool=true)

@@ -7,30 +7,12 @@ include("Weights.jl")
 include("Plots.jl")
 
 # make submodules available in the scope of main module (ModelWeights)
-using .Data  
-using .Timeseries
-using .Weights
-using .Plots
+import .Data  
+import .Timeseries
+import .Weights
+import .Plots
 
-export climwipWeights
-
-export joinDataMaps
-export writeDataToDisk, readDataFromDisk
-
-export apply, apply!
-
-export uncertaintyRanges,
-    globalMeans,
-    anomalies,
-    anomaliesGM
-export linearTrend
-export getLandMask, getOceanMask
-
-
-export weightedAvg, applyWeights, getModelLogLikelihoods
-export equalWeights, distributeWeightsAcrossMembers
-export writeWeightsToDisk, saveWeightsAsNCFile
-
+# export statements: exported functions can be used without qualified name after running 'using ModelWeights'.
 
 
 end # module ModelWeights

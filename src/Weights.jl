@@ -1,5 +1,7 @@
 module Weights
 
+using ..Data
+
 import LinearAlgebra:Diagonal
 import StatsBase.ecdf
 
@@ -16,7 +18,6 @@ using Turing
 using YAXArrays
 
 
-using ..Data
 
 
 @kwdef struct ConfigWeights

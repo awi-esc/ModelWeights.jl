@@ -67,9 +67,9 @@ land_mask = ocean_mask .== 0;
 
 # plot masks for single model (not identical for all due to different missing values/possibly different orog values)
 f_ocean = Figure();
-mw.plotValsOnMap!(f_ocean, ocean_mask[:,:,1], "ocean mask")
+mw.plotValsOnMap!(f_ocean[1,1], ocean_mask[:,:,1], "ocean mask")
 f_land = Figure();
-mw.plotValsOnMap!(f_land, land_mask[:,:,1], "land mask")
+mw.plotValsOnMap!(f_land[1,1], land_mask[:,:,1], "land mask")
 f_ocean
 f_land
 
@@ -83,13 +83,11 @@ ocean_tas[land_mask] .= missing;
 # plot ocean data for a single model
 model = "TaiESM1#r1i1p1f1_gn"
 f1 = Figure();
-cmap = reverse(Colors.colormap("RdBu", mid=2/3));
+#cmap = reverse(Colors.colormap("RdBu", mid=2/3));
 mw.plotValsOnMap!(
-    f1, ocean_tas[member = At(model)],
-    "Ocean Anomalies 1991-2014 minus 1850-1900: $(model)";
-    colors = cmap[2:end-1],
-    color_range = (-1, 2), 
-    high_clip = cmap[end], low_clip = cmap[1]
+    f1[1,1], ocean_tas[member = At(model)], "Ocean Anomalies 1991-2014 minus 1850-1900: $(model)";
+    # color_interval = cmap[2:end-1],
+    color_range = (-1, 2)
 )
 f1
 
@@ -100,11 +98,10 @@ land_tas[ocean_mask] .= missing;
 # plot land data for a single model
 f2= Figure();
 mw.plotValsOnMap!(
-    f2, land_tas[member = At(model)],
+    f2[1,1], land_tas[member = At(model)],
     "Land Anomalies 1991-2014 minus 1850-1900: $(model)";
-    colors = cmap[2:end-1],
-    color_range = (-1, 2), 
-    high_clip = cmap[end], low_clip = cmap[1]
+    #color_interval = cmap[2:end-1],
+    color_range = (-1, 2)
 )
 f2
 

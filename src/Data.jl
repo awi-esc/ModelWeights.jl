@@ -1,12 +1,12 @@
 module Data
 
-export Level, MODEL_MEMBER_DELIM
 export DataMap
 
-export subsetModelData, sharedModels
+export defineDataMap
 export summarizeMembers, summarizeMembers!
-export alignPhysics, addMasks!
-export defineDataMap, loadPreprocData
+export subsetModelData, sharedModels
+
+export MODEL_MEMBER_DELIM
 
 import StatsBase
 import Missings:allowmissing

@@ -22,7 +22,7 @@ lgm_data = mwd.loadDataFromESMValToolRecipes(
         "variables" => ["tas", "psl"],
         "projects" => ["CMIP5", "CMIP6"], 
         "aliases" => ["lgm"],
-        "level_shared" => mwd.MEMBER
+        "level_shared" => :member
     ),
     preview = false
 )
@@ -70,12 +70,12 @@ weights_dir = "/albedo/work/projects/p_pool_clim_data/britta/weights/";
 
 obs_avg = obs_data["tas_CLIM_historical"][model=1]
 f = Figure();
-cmap = reverse(Colors.colormap("RdBu", mid=35/80));
+#cmap = reverse(Colors.colormap("RdBu", mid=35/80));
 mwp.plotValsOnMap!(
-    f, obs_data["tas_CLIM_historical"][model=1], "Climatology ERA5";
-    colors = cmap[2:end-1],
+    f[1,1], obs_data["tas_CLIM_historical"][model=1], "Climatology ERA5";
+    #color_interval = cmap[2:end-1],
     color_range = (-45, 35), 
-    high_clip = cmap[end], low_clip = cmap[1], xlabel_rotate=0
+    xlabel_rotate = 0
 )
 f
 save("plots/lgm/climatology-observations.png", f)
@@ -103,14 +103,12 @@ df = deepcopy(historical_data);
 mwd.summarizeMembers!(df)
 weighted_avg_hist = mw.applyWeights(df["tas_CLIM_historical"], weights.w);
 f2 = Figure();
-cmap = reverse(Colors.colormap("RdBu", mid=25/70));
+#cmap = reverse(Colors.colormap("RdBu", mid=25/70));
 title = "Weighted avg lgm-models historical tas\n (weights based on historical performance)"
-mw.plotValsOnMap!(f2, weighted_avg_hist, title; 
-    colors = cmap[2:end-1],
+mw.plotValsOnMap!(f2[1,1], weighted_avg_hist, title; 
+    # color_interval = cmap[2:end-1],
     color_range = (-45, 25), 
-    high_clip = cmap[end], 
-    low_clip = cmap[1], 
-    xlabel_rotate=0
+    xlabel_rotate = 0
 )
 f2
 save("plots/lgm/weighted-avg-historical-tas-based-on-historical.png", f2)
@@ -190,14 +188,14 @@ mw.summarizeMembers!(df)
 weighted_avg_lgm = mw.applyWeights(df["tas_CLIM_historical"], weights.w);
 f5 = Figure();
 title = "Weighted avg historical tas\n(based on lgm-cooling)";
-mw.plotValsOnMap!(f5, weighted_avg_lgm, title)
+mw.plotValsOnMap!(f5[1,1], weighted_avg_lgm, title)
 f5
 save("plots/lgm/weighted-avg-historical-tas-based-on-lgm-cooling.png", f5)
 
 # plot difference
 f6 = Figure();
 title = "tas historical\n Weighted avg based on hist minus weighted avg based on lgm";
-mw.plotValsOnMap!(f6, weighted_avg_hist .- weighted_avg_lgm, title)
+mw.plotValsOnMap!(f6[1,1], weighted_avg_hist .- weighted_avg_lgm, title)
 f6
 save("plots/lgm/weighted-avg-diff.png", f6)
 
@@ -206,19 +204,19 @@ unweighted_avg = mw.weightedAvg(
     df["tas_CLIM_historical"]; use_members_equal_weights = false
 );
 f7 = Figure();
-mw.plotValsOnMap!(f7, unweighted_avg, "tas historical\n Unweighted avg")
+mw.plotValsOnMap!(f7[1,1], unweighted_avg, "tas historical\n Unweighted avg")
 f7
 save("plots/lgm/unweighted-avg.png", f7)
 
 # diff unweighted and weighted
 f8 = Figure();
 title = "tas historical\n Unweighted minus weighted based on lgm";
-mw.plotValsOnMap!(f8, unweighted_avg .- weighted_avg_lgm, title)
+mw.plotValsOnMap!(f8[1,1], unweighted_avg .- weighted_avg_lgm, title)
 f8
 save("plots/lgm/diff_unweighted-minus-weighted-based-on-lgm.png", f8)
 f9 = Figure(); 
 title = "tas historical\n Unweighted minus weighted based on historical";
-mw.plotValsOnMap!(f9, unweighted_avg .- weighted_avg_hist, title)
+mw.plotValsOnMap!(f9[1,1], unweighted_avg .- weighted_avg_hist, title)
 f9
 save("plots/lgm/diff_unweighted-minus-weighted-based-on-historical.png", f9)
 
@@ -237,12 +235,12 @@ unweighted_means_members = mw.weightedAvg(model_historical_lgm["tas_CLIM_lgm"])
 lgm_tas_data = mw.summarizeMembers(model_historical_lgm["tas_CLIM_lgm"], true)
 unweighted_means = mw.weightedAvg(lgm_tas_data)
 f10 = Figure();
-mw.plotValsOnMap!(f10, unweighted_means, "unweighted average LGM: tas_CLIM")
+mw.plotValsOnMap!(f10[1,1], unweighted_means, "unweighted average LGM: tas_CLIM")
  
 # weighted avg across models
 weighted_means = mw.weightedAvg(lgm_tas_data; weights=weights.w)
 f11 = Figure();
-mw.plotValsOnMap!(f11, weighted_means, "weighted means LGM: tas_CLIM")
+mw.plotValsOnMap!(f11[1,1], weighted_means, "weighted means LGM: tas_CLIM")
 
 # weighted and unweighted means should be different:
 Array(weighted_means) .== Array(unweighted_means)

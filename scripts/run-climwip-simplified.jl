@@ -13,22 +13,21 @@ using Statistics
 using YAXArrays
 
 # Load data for computing weights (output from ESMValTool recipe)
-path_data = "test/data/climwip-simplified"; 
-path_recipes = "./configs/climwip_config";
+path_data = "../test/data/climwip-simplified"; 
+path_recipes = "../configs/climwip_config";
 
 plot_dir = "reproduce-climwip-figs"
 
 # TODO: go through use of is_cmip instead of dtype
-model_data = mw.defineDataMap(
+model_data = mwd.loadDataFromESMValToolRecipes(
     path_data, 
-    path_recipes, 
-    :esmvaltool_recipes; 
+    path_recipes;
     dir_per_var = false,
-    dtype = "cmip",
+    is_cmip = true,
     filename_format = :esmvaltool,
     constraint = Dict(
-        "aliases" => ["calculate_weights_climwip"], 
-        "mips" => ["CMIP5", "CMIP6"]
+        :aliases => ["calculate_weights_climwip"], 
+        :mips => ["CMIP5", "CMIP6"]
     )
 )
 obs_data =  mw.defineDataMap(
@@ -192,13 +191,11 @@ title_f1 = "Weighted mean temp. change 2081-2100 minus 1995-2014";
 weighted_avg = mww.weightedAvg(diff; weights = w_members);
 #weighted_avg = mw.sortLongitudesWest2East(weighted_avg);
 f1 = Figure();
-cmap = cgrad([:white, :salmon, :red, :darkred], 10; categorical = true)
+#cmap = cgrad([:white, :salmon, :red, :darkred], 10; categorical = true)
 mwp.plotValsOnMap!(
-    f1, weighted_avg, title_f1; 
+    f1[1,1], weighted_avg, title_f1; 
     color_range = (2.5, 6.5),
-    colors = cmap[2:end-1],
-    high_clip = cmap[end],
-    low_clip = cmap[1],
+    #colors = cmap[2:end-1],
     xlabel_rotate = false,
     east_west_labels = true
 )
@@ -209,12 +206,10 @@ unweighted_avg = mww.weightedAvg(diff; use_members_equal_weights=false);
 #unweighted_avg = mwd.sortLongitudesWest2East(unweighted_avg);
 diff_wu = weighted_avg .- unweighted_avg;
 f2 = Figure();
-cmap = reverse(Colors.colormap("RdBu", logscale=false, mid=0.5))
+#cmap = reverse(Colors.colormap("RdBu", logscale=false, mid=0.5))
 mwp.plotValsOnMap!(f2, diff_wu, title_f2; 
     color_range = (-1, 1),
-    colors = cmap[2:end-1],
-    high_clip = cmap[end],
-    low_clip = cmap[1],
+    #colors = cmap[2:end-1],
     xlabel_rotate = false,
     east_west_labels = true
 )
