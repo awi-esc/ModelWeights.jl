@@ -269,9 +269,17 @@ function addColorBar(
     legend_label::String = "",
     fontsize::Int = 15,
     colorbar_size::Int = 15,
-    clip_vals_colorbar::Bool = false
-)
-    clip_kwargs = clip_vals_colorbar ? (;highclip = color_map[end], lowclip = color_map[1]) : (;)
+    clip_vals_colorbar::Bool = false,
+    lowclip = nothing,
+    highclip = nothing
+) 
+    if clip_vals_colorbar 
+        color_low = isnothing(lowclip) ? color_map[1] : lowclip
+        color_high = isnothing(highclip) ? color_map[end] : highclip
+        clip_kwargs = (;highclip = color_high, lowclip = color_low)
+    else
+        clip_kwargs = (;)
+    end
     orientation_kwargs = pos in [:r, :l] ? 
         (; width = Fixed(colorbar_size), flipaxis = pos == :r, vertical = true) :
         (; height = Fixed(colorbar_size), flipaxis = pos == :t, vertical = false)
