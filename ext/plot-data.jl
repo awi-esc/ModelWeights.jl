@@ -46,7 +46,9 @@ function plotValsOnMap!(
     add_colorbar::Bool = true,
     colorbar_pos::Symbol = :r,
     rounded_proj::Bool = false,
-    colorbar_size::Int = 15
+    colorbar_size::Int = 15,
+    lowclip = nothing,
+    highclip = nothing
 )
     means = Data.sortLongitudesWest2East(means)
     means = Data.lon360to180(means)
@@ -75,6 +77,10 @@ function plotValsOnMap!(
     if isnothing(color_map)
         color_map = mapValsToColorScheme(vals)
     end
+
+    color_low = isnothing(lowclip) ? color_map[1] : lowclip
+    color_high = isnothing(highclip) ? color_map[end] : highclip
+
     if rounded_proj
         ax = GeoMakie.GeoAxis(
             gp;
@@ -87,8 +93,8 @@ function plotValsOnMap!(
             ax, dims_lon, dims_lat, coalesce.(Array(means), NaN); 
             colormap = color_map,
             levels = range(color_range[1], color_range[2], length = length(color_map)),
-            extendlow = color_map[1], 
-            extendhigh = color_map[end]
+            extendlow = color_low, 
+            extendhigh = color_high
         )
     else
         ax = Axis(
@@ -112,8 +118,8 @@ function plotValsOnMap!(
             colormap = color_map, 
             colorrange = color_range, 
             alpha = alpha,
-            highclip = color_map[end],
-            lowclip = color_map[1],
+            lowclip = color_low,
+            highclip = color_high
         )
     end
     lines!(GeoMakie.coastlines(); color = :black, linewidth=.8)
@@ -125,7 +131,9 @@ function plotValsOnMap!(
             colorbar_pos;
             legend_label, 
             fontsize, 
-            colorbar_size
+            colorbar_size,
+            lowclip,
+            highclip
         )
     end
     if hidedecorations
