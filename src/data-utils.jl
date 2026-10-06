@@ -456,6 +456,10 @@ includes the day and the hour. When `add_hour` is set to false, only the date is
 """
 function writeDataToDisk(data, target_path::String; overwrite::Bool = false, add_hour::Bool = true)
     target_path = overwrite ? target_path : Data.individuatePath(target_path; add_hour)
+    target_dir = dirname(target_path)
+    if !isdir(target_dir)
+        mkpath(target_dir)
+    end
     if endswith(target_path, ".jld2")
         jldsave(target_path; data = data)
     else
@@ -731,7 +735,15 @@ function inferTimeResolution(ds::YAXArray)
     end
 end
 
+"""
+    function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
 
+# Arguments:
+- `data::Vector{<:YAXArray}`: must have dimension :time.
+- `model_times::Bool = false`:  if calendar years are meaningless (e.g. lgm simulations just count the number of model 
+years. Therefore, the actual timestamps are ignored and every dataset is aligned to start at year 1, and the combined 
+axis is stretched to the longest timeseries.
+"""
 function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
     isempty(data) && return data
     T = mapreduce(eltype, promote_type, data)  # finds a common type across all arrays
@@ -752,9 +764,6 @@ function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
     end
     resolution = uniq_resolutions[1]
     if model_times
-        # calendar years are meaningless here (e.g. lgm simulations just count
-        # model years) -> ignore the actual timestamps, align every dataset to
-        # start at year 1, and stretch the combined axis to the longest series
         year_min = 1
         nb_years_per_ds = if resolution == :monthly
             map(x -> cld(length(dims(x, :time)), 12), data)
