@@ -36,6 +36,9 @@ function globalMeans(data::YAXArray)
 
     temp = aw_mat .* Array(data)
     gms = dropdims(mapslices(x -> sum(skipmissing(x)), temp; dims=(1, 2)); dims=(1,2))
+    # if gms equals 0 this means that all values were missing, set them to NaN. don't set missing to NaN before, since 
+    # that would result in NaN as soon as a single entry is NaN.
+    replace!(gms, 0 => NaN)
     return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), deepcopy(data.properties))
 end
 
