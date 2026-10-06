@@ -9,7 +9,7 @@ using ColorSchemes, Dates, DimensionalData, Distributions, Statistics, YAXArrays
 import ModelWeights.Plots: plotValsOnMap, plotValsOnMap!, plotMapGrid!, plotZonalMean, plotZonalMean!, plotAMOC, plotEnsembleSpread
 import ModelWeights.Plots: plotTimeseries, plotTimeseries!, plotTempGraph, makeScatterPlot, plotECDF, plotPDF, plotExpectedECS
 
-import ModelWeights.Plots: savePlot, plotDistMatrices, convertKgsToSv!, mapValsToColors, addMinorGrid!
+import ModelWeights.Plots: savePlot, plotDistMatrices, convertKgsToSv!, mapValsToColors, addMinorGrid!, latitude2NorthSouth, addColorBar
 import ModelWeights.Plots: plotWeights, plotDistances, plotDistancesIndependence, plotCRPSSPseudoObs, crpssBoxPlot, boxplotMCMCWeights, densityMCMCWeights, plotCorrWeights 
 
 function __init__()

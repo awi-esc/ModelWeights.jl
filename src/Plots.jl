@@ -23,6 +23,8 @@ function plotDistMatrices end
 function convertKgsToSv! end
 function mapValsToColors end
 function addMinorGrid! end
+function latitude2NorthSouth end
+function addColorBar end
 # function makeSubplots end 
 
 function plotWeights end
