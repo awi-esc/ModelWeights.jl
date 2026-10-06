@@ -434,7 +434,7 @@ function plotTimeseries(
         plots = Vector(undef, n)
         for idx in eachindex(1:n)
             indices = idx_time_dim == 1 ? [:, idx] : [idx , :]
-            if !isempty(colors)
+            if !isnothing(colors)
                 plots[idx] = lines!(
                     ax,
                     timesteps,
