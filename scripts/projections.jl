@@ -66,24 +66,25 @@ mw.Plots.plotTimeseries!(
     ax, 
     historical.avg; 
     uncertainties = coalesce.(historical.uncertainties, missing => NaN), 
-    label = "Non-weighted mean", 
+    labels = "Non-weighted mean", 
     label_unc = label_unc_unw(quantiles), 
-    color_line = :grey
+    colors = :grey
 )
 mw.Plots.plotTimeseries!(
     ax, 
     ssp126.avg; 
     uncertainties = coalesce.(ssp126.uncertainties, missing => NaN),
-    label = "Non-weighted mean", 
+    labels = "Non-weighted mean", 
     label_unc = label_unc_unw(quantiles),
-    color_line = :blue
+    colors = :blue
 )
 mw.Plots.plotTimeseries!(
     ax, 
     ssp585.avg; 
     uncertainties = coalesce.(ssp585.uncertainties, missing => NaN), 
-    label = "Non-weighted mean", 
-    label_unc = label_unc_unw(quantiles)
+    labels = "Non-weighted mean", 
+    label_unc = label_unc_unw(quantiles),
+    colors = :darkred
 )
 
 axislegend(position=:lt)
