@@ -318,43 +318,82 @@ function plotEnsembleSpread(
 end
 
 """
-    plotTimeseries!(ax::Axis, vals::AbstractArray;)
+    plotTimeseries!(ax::Axis, data::AbstractArray;)
 
-Plot timeseries of data vector `vals`.
+Add timeseries of `data` to `ax`; one line for every entry of the dimension other than 
+`dim_name`. Return vector of the line plots (followed by the band plot if `uncertainties` 
+are given).
 
 # Arguments:
-- `vals::AbstractArray`: must have dimension `dim_name` (default: :time)
+- `data::AbstractArray`: must have dimension `dim_name` (default: :time) and possibly one 
+other dimension.
+- `uncertainties`: only for data with a single dimension; must have dimension :confidence 
+with lookup values "lower" and "upper".
+- `use_index::Bool`: if true, data is plotted against 1:n instead of against the values of 
+dimension `dim_name`.
+- `colors`: single color used for all lines or vector with one color for every line; if 
+nothing, default Makie colors are used.
+- `color_unc`: color of uncertainty band; if nothing, color of the line is used if it was 
+given, otherwise :darkgrey.
+- `labels`: single label or vector with one label for every line; if nothing, lines of data 
+with two dimensions are labeled with the values of the dimension other than `dim_name`.
 """
 function plotTimeseries!(
     ax::Axis,
-    vals::AbstractArray;
+    data::AbstractArray;
     uncertainties::Union{AbstractArray, Nothing} = nothing,
     dim_name::Symbol = :time,
-    color_line::Symbol = :darkred,
-    color_unc::Symbol = :darkred,
-    label::String = "",
+    use_index::Bool = false,
+    colors = nothing,
+    color_unc = nothing,
+    labels::Union{AbstractVector, AbstractString, Nothing} = nothing,
     label_unc::String = "",
     linestyle::Symbol = :solid,
     linewidth = 3,
-    alpha = 0.5
+    alpha = 0.5 # just for the uncertainy band
 )
-    plots = []
-    timesteps = Array(dims(vals, dim_name))
-    if typeof(timesteps[1]) == DateTime
+    nb_dims = ndims(data)
+    if nb_dims > 2
+        throw(ArgumentError("Timeseries can only be plotted for data with dimension $dim_name and just one other dimension."))
+    end
+    if nb_dims == 2 && !isnothing(uncertainties)
+        throw(ArgumentError("Uncertainties can only be plotted for data with a single dimension."))
+    end
+    timesteps = Array(dims(data, dim_name))
+    if use_index
+        timesteps = 1:length(timesteps)
+    elseif typeof(timesteps[1]) == DateTime
         timesteps = map(x -> Dates.year(x), timesteps)
     end
 
-    lineplot = lines!(
-        ax,
-        timesteps,
-        vec(coalesce.(vals, NaN)),
-        color = color_line,
-        label = label,
-        linestyle = linestyle,
-        linewidth = linewidth,
-    )
-    push!(plots, lineplot)
+    idx_time_dim = dimnum(data, dim_name)
+    idx_other_dim = idx_time_dim == 1 ? 2 : 1
+    n = nb_dims == 1 ? 1 : size(data, idx_other_dim)
+    if isnothing(labels) && nb_dims == 2
+        labels = string.(Array(dims(data)[idx_other_dim]))
+    end
+    for (name, vals) in (("colors", colors), ("labels", labels))
+        if vals isa AbstractVector && length(vals) != n
+            throw(ArgumentError("Got $(length(vals)) $name for $n timeseries."))
+        end
+    end
+
+    plots = []
+    for idx in 1:n
+        vals = nb_dims == 1 ? data : selectdim(data, idx_other_dim, idx)
+        kwargs = Dict{Symbol, Any}(:linestyle => linestyle, :linewidth => linewidth)
+        if !isnothing(colors)
+            kwargs[:color] = colors isa AbstractVector ? colors[idx] : colors
+        end
+        if !isnothing(labels)
+            kwargs[:label] = labels isa AbstractVector ? labels[idx] : labels
+        end
+        push!(plots, lines!(ax, timesteps, vec(coalesce.(vals, NaN)); kwargs...))
+    end
     if !isnothing(uncertainties)
+        if isnothing(color_unc)
+            color_unc = isnothing(colors) ? :darkgrey : (colors isa AbstractVector ? colors[1] : colors)
+        end
         bandplot = band!(
             ax,
             timesteps,
@@ -372,91 +411,39 @@ end
 """
     plotTimeseries(data::YAXArray;)
 
-Plot timeseries of data vector `data`.
+Plot timeseries of `data` against the indices of dimension `dim_name` in a new figure. 
+
+For data with two dimensions, a legend with one entry for every line is added below the plot.
+Further data can be added with `plotTimeseries!(content(f[1,1]), data; use_index=true)`.
 
 # Arguments:
 - `data::YAXArray`: must have dimension `dim_name` (default: :time) and possibly one other dimension
+- `n_step::Int`: distance between xticks.
+- `kwargs...`: passed on to `plotTimeseries!`.
 """
 function plotTimeseries(
     data::YAXArray;
-    uncertainties::Union{YAXArray, Nothing} = nothing,
     dim_name::Symbol = :time,
     n_step::Int = 10,
-    colors::Union{AbstractVector{<:Colorant}, Nothing}=nothing,
-    linestyle::Symbol = :solid,
-    linewidth = 3,
     xlabel = "time",
     ylabel = "",
     title = "",
     legend_title = "",
-    legend_nb_rows::Union{Int, Nothing} = nothing
+    legend_nb_rows::Union{Int, Nothing} = nothing,
+    kwargs...
 )
-    timesteps = Array(dims(data, dim_name))
-    nt = length(timesteps)
-    timesteps = 1:nt
-
-    if nt < n_step
-        xticks = 1:nt
-    else
-        indices =  [1, (n_step : n_step : nt)...]
-        xticks =  timesteps[indices]
-    end
-    xtick_labels = string.(xticks)
+    nt = length(dims(data, dim_name))
+    xticks = nt < n_step ? (1:nt) : [1, (n_step : n_step : nt)...]
 
     f = Figure(); 
-    ax = Axis(f[1,1], xlabel=xlabel, ylabel=ylabel, title=title, xticks=(xticks, xtick_labels));
+    ax = Axis(f[1,1], xlabel=xlabel, ylabel=ylabel, title=title, xticks=(xticks, string.(xticks)));
+    plots = plotTimeseries!(ax, data; dim_name, use_index = true, kwargs...)
 
-    nb_dims = ndims(data)
-    if nb_dims > 2
-        throw(ArgumentError("Timeseries can only be plotted for data with :time dimension and just one other dimension."))
-    end
-    if nb_dims == 1
-        lines!(
-            ax,
-            timesteps,
-            vec(coalesce.(data, NaN)),
-            linestyle = linestyle,
-            linewidth = linewidth
-        )
-        if !isnothing(uncertainties)
-            band!(
-                ax,
-                timesteps,
-                Array(vec(coalesce.(uncertainties[confidence=At("lower")], NaN))),
-                Array(vec(coalesce.(uncertainties[confidence=At("upper")], NaN))),
-                color = (:darkgrey, 0.9)
-            )
-        end
-    else
-        idx_time_dim = Data.indexDim(data, dim_name)
-        idx_other_dim = idx_time_dim == 1 ? 2 : 1
-        n = size(data, idx_other_dim)
-        plots = Vector(undef, n)
-        for idx in eachindex(1:n)
-            indices = idx_time_dim == 1 ? [:, idx] : [idx , :]
-            if !isnothing(colors)
-                plots[idx] = lines!(
-                    ax,
-                    timesteps,
-                    vec(coalesce.(data[indices...], NaN)),
-                    linestyle = linestyle,
-                    linewidth = linewidth,
-                    color = colors[idx]
-                )
-            else
-                plots[idx] = lines!(
-                    ax,
-                    timesteps,
-                    vec(coalesce.(data[indices...], NaN)),
-                    linestyle = linestyle,
-                    linewidth = linewidth
-                )
-            end
-        end
-
+    if ndims(data) == 2
+        n = length(plots)
         n_rows = isnothing(legend_nb_rows) ? div(n, 4) + 1 : legend_nb_rows
         Legend(
-            f[2,1], plots, string.(Array(dims(data)[idx_other_dim])), legend_title; 
+            f[2,1], plots, map(p -> p.label[], plots), legend_title; 
             framevisible=false, 
             orientation=:horizontal, nbanks = n_rows, 
             labelsize=10
