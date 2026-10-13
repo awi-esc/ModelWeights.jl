@@ -269,6 +269,7 @@ end
 
 """
     boxplotMCMCWeights(
+        gp,
         chains, 
         models;
         chain = 1,
@@ -279,11 +280,13 @@ end
     )
 
 # Arguments:
-- `chains`: a vector where each element corresponds to one MCMC chain, which contain 
+- `gp::GridPosition`: grid position within the figure
+- `chains:AbstractArray`: a vector where each element corresponds to one MCMC chain, which contain 
 matrices of size N_iter x N_models
-- `models`: model names
+- `models::AbstractArray{String}`: model names
 """
 function boxplotMCMCWeights(
+    gp::GridPosition,
     chains::AbstractArray, 
     models::AbstractArray{String};
     chain::Int = 1,
@@ -293,17 +296,15 @@ function boxplotMCMCWeights(
     show_outliers::Bool = true,
     show_median::Bool = true,
     title::String = "",
-    marker_size::Int = 30,
-    fig_size = (300, 200)
+    marker_size::Int = 30
 )
     N_models = length(models)
     samples = chains[chain]
     prior = !isempty(chains_prior)
     N_iter = size(samples, 1)
-    f = Figure(size = fig_size)
     offset = prior ? 2 : 1
     ys = [(x-1) * offset for x in 1:N_models]
-    ax = Axis(f[1,1], xticks = (xticks, string.(xticks)), yticks = (ys, models), title=title, xlabel="Weight")
+    ax = Axis(gp, xticks = (xticks, string.(xticks)), yticks = (ys, models), title=title, xlabel="Weight")
     if prior
         Makie.ylims!(ax, -offset, maximum(ys) + offset/2)
     else
@@ -351,7 +352,7 @@ function boxplotMCMCWeights(
         end
     end
     Makie.vlines!(ax, 1/N_models, color=:grey, linestyle=:dash)
-    return f
+    return ax
 end
 
 function densityMCMCWeights(
@@ -387,20 +388,21 @@ end
 
 
 """
-    plotCorrWeights(models_labels, weights)
+    plotCorrWeights(gp, models_labels, weights)
 
 # Arguments:
+- `gp::GridPosition`: 
 - `models_labels::AbstractVector`: names of models
 - `weights::AbstractArray`: samples (iterations) x models
 - `pairs::AbstractVector`: tuples for models to be compared against one another as indices
 """
 function plotCorrWeights(
+    gp::GridPosition,
     models_labels::AbstractVector,
     weights::AbstractArray, 
     pairs::AbstractVector;
     color::Symbol = :grey,
     color_means::Union{Symbol, ColorTypes.RGB, Nothing} = CairoMakie.RGBf(206/255, 250/255, 220/255),
-    fig_size::Union{Tuple, Nothing} = nothing,
     xlims::Union{Nothing, Tuple} = nothing,
     ylims::Union{Nothing, Tuple} = nothing, 
     fs::Int = 11,
@@ -408,15 +410,16 @@ function plotCorrWeights(
     xticks::AbstractArray = 0:0.1:1,
     yticks::AbstractArray = 0:0.1:1
 )
-    f = isnothing(fig_size) ? Figure() : Figure(size=fig_size)
+    axes = [];
     for (i, (m1, m2)) in enumerate(pairs)
         ax = Axis(
-            f[1, i], 
+            gp[1, i], 
             xlabel = models_labels[m1], ylabel = models_labels[m2],
             xticklabelsize = fs, yticklabelsize = fs,
             xticks = (xticks, string.(xticks)),
             yticks = (yticks, string.(yticks))
         );
+        axes.push!(ax)
         Makie.scatter!(ax, weights[:, m1], weights[:, m2], color=color)
         if !isnothing(color_means)
             Makie.scatter!(ax, mean(weights[:, m1]), mean(weights[:, m2]),
@@ -430,5 +433,5 @@ function plotCorrWeights(
             Makie.ylims!(ax, ylims...)
         end
     end
-    return f
+    return axes
 end
