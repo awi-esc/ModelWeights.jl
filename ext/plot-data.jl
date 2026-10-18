@@ -430,12 +430,13 @@ function plotTimeseries(
     title = "",
     legend_title = "",
     legend_nb_rows::Union{Int, Nothing} = nothing,
+    fig_size::Union{Tuple, Nothing} = nothing,
     kwargs...
 )
     nt = length(dims(data, dim_name))
     xticks = nt < n_step ? (1:nt) : [1, (n_step : n_step : nt)...]
 
-    f = Figure(); 
+    f = isnothing(fig_size) ? Figure() : Figure(size = fig_size); 
     ax = Axis(f[1,1], xlabel=xlabel, ylabel=ylabel, title=title, xticks=(xticks, string.(xticks)));
     plots = plotTimeseries!(ax, data; dim_name, use_index = true, kwargs...)
 
