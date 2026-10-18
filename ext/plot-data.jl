@@ -186,57 +186,17 @@ function plotValsOnMap(
 end
 
 
+""" plotAMOC!(gp::GridPosition, data::DimArray)
 
-""" plotHistAtPos(data::AbstractArray, location::Dict)
-
-Plot histogram of all data for a specific `location`.
-
-# Arguments:
-- `data`: dimensions 'lon' (from -180° to 180°), 'lat' (-90° to 90°)
-- `location`: must have keys 'name', 'lon', 'lat'
+    Plot AMOC strength for variable "amoc".
 """
-function plotHistAtPos(data::YAXArray, location::Dict)
-    longitudes = Array(dims(data, :lon))
-    longitudes = ifelse(any(longitudes .> 180), lon360to180.(longitudes), longitudes)
-    if location["lon"] > 180
-        location["lon"] = lon360to180(location["lon"])
-    end
-    coords = getClosestGridPoint(location, longitudes, Array(dims(data, :lat)))
-    # no idea why At doesnt work for negative values at longitude dimension...
-    # At would drop dimensions directly..
-    data_loc =
-        data[lat=Where(elem->elem==coords["lat"]), lon=Where(elem->elem==coords["lon"])]
-    data_loc = dropdims(data_loc, dims = :lon)
-    data_loc = dropdims(data_loc, dims = :lat)
-
-    grid_lat = latitude2NorthSouth(coords["lat"])
-    grid_lon = longitude2EastWest(coords["lon"])
-    t1 =
-        "Variable: " *
-        data.properties["variable_id"] *
-        " Experiment: " *
-        data.properties["experiment_id"]
-    t2 = "near " * location["name"] * "(" * grid_lat * "," * grid_lon * ")"
-
-    fig = getFigure((14, 10), 16)
-    ax = Axis(fig[1, 1], title = join([t1, t2], "\n"), xlabel = data.properties["units"])
-    hist!(ax, vec(data_loc))
-    return fig
-end
-
-
-""" plotAMOC(data::DimArray)
-
-Plot AMOC strength for variable "amoc".
-"""
-function plotAMOC(data::YAXArray)
-    fig = getFigure((8, 5), 12)
+function plotAMOC!(gp::GridPosition, data::YAXArray)
     t = "variable: amoc, experiment: " * data.properties["experiment_id"]
-
+    
     unit = get(data.properties, "units", "")
     xlab = isempty(unit) ? "" : "Transport in " * unit
     ax = Axis(
-        fig[1, 1],
+        gp,
         title = join(["AMOC strength (at 26.5°N)", t], "\n"),
         xlabel = xlab
     )
