@@ -1,10 +1,5 @@
 using Colors: Colorant
 
-function getFigure(figsize, fontsize)
-    size_pt = 72 .* figsize
-    fig = Figure(size = size_pt, fontsize = fontsize)
-    return fig
-end
 
 function savePlot(fig, target_path::String; overwrite::Bool=false, verbose::Bool=true)
     target_path = overwrite ? target_path : Data.individuatePath(target_path)
