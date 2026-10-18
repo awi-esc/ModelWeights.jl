@@ -7,7 +7,7 @@ function plotValsOnMap! end
 function plotMapGrid! end
 function plotZonalMean end
 function plotZonalMean! end
-function plotAMOC end
+function plotAMOC! end
 function plotEnsembleSpread end
 function plotTimeseries end
 function plotTimeseries! end
