@@ -114,6 +114,29 @@ function mergeMetaDataFromMultipleFiles(data::AbstractVector{<:AbstractArray})
 end
 
 
+function _checkForSameSize(data::AbstractVector{<:YAXArray})
+    if isempty(data)
+        return true
+    end
+    #data_sizes = unique(size.(data)), the following is much faster and far less allocations!
+    first_size = size(data[1])
+    same_size = all(x -> size(x) == first_size, data)
+
+    if !same_size
+        # dimensions must be identical except for time
+        if !all(x -> hasdim(x, :time), data)
+            # TODO: this check is not sufficient! could be different in other domain than :time
+            return false
+            #@warn "Data is not defined on the same grid across all models!"
+        else
+            # if difference only in time, use maximal possible timeseries and add missing values
+            data = alignTimeseries(data; model_times)
+            #overlapTimeseries!(data)
+        end
+    end
+end
+
+
 """
     combineModelsFromMultipleFiles(
         data::AbstractVector{AbstractArray{<:YAXArray}}; 
@@ -376,6 +399,13 @@ function areaWeightMatrix(
     aw_mat[mask] .= 0
     return aw_mat ./ sum(aw_mat; dims=(1,2))
 end
+
+function areaWeightMatrix(latitudes::AbstractVector{T}, n_lon) where T <: Number
+    area_weights = cos.(deg2rad.(latitudes))
+    aw_mat = repeat(area_weights', n_lon)
+    return aw_mat ./ sum(aw_mat)
+end
+
 
 
 function checkDataStructure(path_data::String, dir_per_var::Bool)
