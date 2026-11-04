@@ -767,7 +767,31 @@ end
 Plot a grid of maps using `mwp.plotValsOnMap!`. Data is filled rowwise.
 
 By default a single colorbar is added across all rows to the right of the plot.
+
 # Arguments
+- fig:Figure:
+- data_arrays::Vector{<:AbstractArray}:
+- titles::Vector{String}:
+- nrows::Int:
+- ncols::Int:
+- add_sep_colorbars::Bool: (default: false) if true, seperate colorbar per row (default) or column (set `sep_colorbar=:col`)
+- sep_colorbar::Symbol: one of :row (default), :col
+- fontsize::Int = 14
+- legend_labels::AbstractArray{String} = [""],
+- colormap = nothing
+- colorrange = nothing
+- color_maps::Union{AbstractVector, Nothing} = nothing
+- color_ranges::Union{AbstractVector{<:Tuple}, Nothing} = nothing
+- xlabel::String = "Longitude"
+- ylabel::String = "Latitude"
+- xlabel_rotate::Number = 0
+- xticks::Union{AbstractArray, Nothing} = nothing
+- yticks::Union{AbstractArray, Nothing} = nothing
+- main_title::String = ""
+- east_west_labels::Bool = false
+- alpha::Number = 0.8
+- hidedecorations::Bool = false
+- colorbar_size::Int = 15
 """
 function plotMapGrid!(
     fig::Figure,
