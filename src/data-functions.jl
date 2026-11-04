@@ -512,12 +512,13 @@ function loadPreprocData(
             if !isnothing(fv) 
                 ds_var = replaceFillValues(ds_var, fv)
             end
-            if meta.variable == "msftmz"
-                sector = get(ds, "sector", nothing)
-                if !isnothing(sector)
-                    merge!(props, sector.properties)
-                end
-            end
+            # TODO: double check this:
+            # if meta.variable == "msftmz"
+            #     sector = get(ds, "sector", nothing)
+            #     if !isnothing(sector)
+            #         merge!(props, sector.properties)
+            #     end
+            # end
             props["path"] = meta.path
             if hasfield(T, :mip) 
                 props["mip_era"] = meta.mip
@@ -529,7 +530,11 @@ function loadPreprocData(
             push!(data, YAXArray(Tuple(dimensions), allowmissing(ds_var), props))
         end
     end
+    print("length data: $(length(data))")
+    return data[1]
     return isempty(data) ? nothing : 
+        # TODO: check if combining from multiple files is possible (e.g. not possible if models are not defined on the same grid)
+        # in that case add a single entry in the DataMap for every file
         combineModelsFromMultipleFiles(data; model_names, new_dim, sorted, meta=meta_info, model_times)
 end
 
