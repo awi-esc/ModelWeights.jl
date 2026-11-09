@@ -68,59 +68,59 @@ end
     @test mwd.getAtModel(da, "m2") == [17, 2, 1987]
 end
 
-
-@testset "Test defineDataMap(path::String, id::String) filename_format :cmip" begin
-    # Original (from ESGF) CMIP data, may include the timerange or not, for both cmip5 and cmip6.
+# TODO: The following testset retrieves local data, update this to use on-the-fly generated pseudo data.
+# @testset "Test defineDataMap(path::String, id::String) filename_format :cmip" begin
+#     # Original (from ESGF) CMIP data, may include the timerange or not, for both cmip5 and cmip6.
     
-    # directory contains pr and tas data for CCSM4 model. The distinguishing variable is not model, but variable...
-    # TODO: this is not supported! (does run, but loads metadata for both variables, but just the first variable's data)
-    path_cmip5 = "/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/midHolocene/mon/atmos/Amon/r1i1p1/v20120604";
+#     # directory contains pr and tas data for CCSM4 model. The distinguishing variable is not model, but variable...
+#     # TODO: this is not supported! (does run, but loads metadata for both variables, but just the first variable's data)
+#     path_cmip5 = "/albedo/work/projects/p_pool_clim_data/cmip5/output1/NCAR/CCSM4/midHolocene/mon/atmos/Amon/r1i1p1/v20120604";
     
-    for fn in [:cmip, :cmip5]
-        df = mwd.defineDataMap(
-            path_cmip5,
-            "midHolocene";
-            filename_format = :cmip,
-            constraint = Dict(:variables => ["tas"])
-        )
-        @test Array(df["midHolocene"].member) == ["CCSM4#r1i1p1"]
-        @test df["midHolocene"].properties["name"] == ["tas"]
-    end
+#     for fn in [:cmip, :cmip5]
+#         df = mwd.defineDataMap(
+#             path_cmip5,
+#             "midHolocene";
+#             filename_format = :cmip,
+#             constraint = Dict(:variables => ["tas"])
+#         )
+#         @test Array(df["midHolocene"].member) == ["CCSM4#r1i1p1"]
+#         @test df["midHolocene"].properties["name"] == ["tas"]
+#     end
 
-    # do not constrain variables:
-    df = mwd.defineDataMap(
-        path_cmip5,
-        "midHolocene";
-        filename_format = :cmip
-    )
-    # since the directory contains multiple variables for the same model, it should return all data, 
-    # and model CCSM4 should be twice in the model dimension. TODO: this is not supported yet
-    @test_broken length(dims(df["midHolocene"], :member)) == 2
-    @warn "The directory should contain data for one variable and multiple models, or just one model and variable for multiple time periods, but not multiple variables for one model."
+#     # do not constrain variables:
+#     df = mwd.defineDataMap(
+#         path_cmip5,
+#         "midHolocene";
+#         filename_format = :cmip
+#     )
+#     # since the directory contains multiple variables for the same model, it should return all data, 
+#     # and model CCSM4 should be twice in the model dimension. TODO: this is not supported yet
+#     @test_broken length(dims(df["midHolocene"], :member)) == 2
+#     @warn "The directory should contain data for one variable and multiple models, or just one model and variable for multiple time periods, but not multiple variables for one model."
 
-    # CMIP6
-    # directory only contains orog_fx_AWI-ESM-1-REcoM_historical_r1i1p1f1_gn.nc
-    path_cmip6 = "/albedo/work/projects/p_pool_clim_data/CMIP6/CMIP/AWI/AWI-ESM-1-REcoM/historical/r1i1p1f1/fx/orog/gn/v20230314/"
-    for fn in [:cmip, :cmip6]
-        df = mwd.defineDataMap(
-            path_cmip6,
-            "orog-historical";
-            filename_format = fn
-        )
-        @test Array(df["orog-historical"].member) == ["AWI-ESM-1-REcoM#r1i1p1f1"] 
-    end
-    # directory contains multiple files with pr for AWI-ESM-1-REcoM, for various time periods, from 1850-2014
-    path_cmip6 = "/albedo/work/projects/p_pool_clim_data/CMIP6/CMIP/AWI/AWI-ESM-1-REcoM/historical/r1i1p1f1/Amon/pr/gn/v20230314"
-    for fn in [:cmip, :cmip6_tr]
-        df = mwd.defineDataMap(
-            path_cmip6,
-            "pr-historical-ts";
-            filename_format = fn
-        )
-        @test year(df["pr-historical-ts"].time[1]) == 1850
-        @test year(df["pr-historical-ts"].time[end]) == 2014
-    end
-end
+#     # CMIP6
+#     # directory only contains orog_fx_AWI-ESM-1-REcoM_historical_r1i1p1f1_gn.nc
+#     path_cmip6 = "/albedo/work/projects/p_pool_clim_data/CMIP6/CMIP/AWI/AWI-ESM-1-REcoM/historical/r1i1p1f1/fx/orog/gn/v20230314/"
+#     for fn in [:cmip, :cmip6]
+#         df = mwd.defineDataMap(
+#             path_cmip6,
+#             "orog-historical";
+#             filename_format = fn
+#         )
+#         @test Array(df["orog-historical"].member) == ["AWI-ESM-1-REcoM#r1i1p1f1"] 
+#     end
+#     # directory contains multiple files with pr for AWI-ESM-1-REcoM, for various time periods, from 1850-2014
+#     path_cmip6 = "/albedo/work/projects/p_pool_clim_data/CMIP6/CMIP/AWI/AWI-ESM-1-REcoM/historical/r1i1p1f1/Amon/pr/gn/v20230314"
+#     for fn in [:cmip, :cmip6_tr]
+#         df = mwd.defineDataMap(
+#             path_cmip6,
+#             "pr-historical-ts";
+#             filename_format = fn
+#         )
+#         @test year(df["pr-historical-ts"].time[1]) == 1850
+#         @test year(df["pr-historical-ts"].time[end]) == 2014
+#     end
+# end
 
 # Needs to be updated:
 # @testset "Test defineDataMap" begin
