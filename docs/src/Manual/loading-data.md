@@ -1,56 +1,82 @@
 # Loading data
 
-The basic representation of data is in form of a dictionary that simply maps from ids 
-(Strings) to the data itself stored as [YAXArrays](https://juliadatacubes.github.io/YAXArrays.jl/v0.6.1/).
-We name this type alias a `DataMap`. 
+`ModelWeights`, can load CMIP model data as well as observational data.  So far only data on a longitude-latitude grid is supported. The dimensions of the loaded data are (in this order): `:lon`, `:lat` and `:model` for observational data or `:member` for CMIP data where `:member` refers to specific model runs, i.e., variants/simulations. For time series, the last dimension is the time dimension (`:time`).
+
+<!-- Also supported is 3D AMOC data, with a fourth dimension called `:lev` representing depth. -->
+
+#### Data representation
+The basic representation of data is called a `DataMap` which is a simple dictionary mapping from ids 
+(Strings) to the data stored as [YAXArrays](https://juliadatacubes.github.io/YAXArrays.jl/v0.6.1/).
+
+#### Metadata
+The metadata of each dataset (the `.properties` Dictionary of each YAXArray in a DataMap) contains the metadata loaded from the original model files.
+<!-- as well as additional information if it is provided in the optional keyword argument `meta_data` of function `defineDataMap` (a dictionary with keys of type String). -->
+
+## Functions for loading data
+
+The main entry point to load data, is the function `defineDataMap`, which loads data from specified paths. To load data based on configuration files, there are the functions `loadDataFromESMValToolRecipes` and `loadDataFromYAML` explained further below. 
+
+They all share the following **optional keyword arguments**:
+
+- `constraint`: a `Dict{Symbol, <:AbstractArray{String}}` with certain options to filter the data to be loaded; see [here](filtering-data.md#filtering-data) for the available options.
+- `constraint_ts`: a `NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}` specifying a start and end year for time series data. By default, there are no restrictions, i.e. all time points are included.
+- `level`: a `Symbol` out of: `:member, :model, :none`. Specifies on which level the data of the different experiments or variables should agree. If set to `:member`, only the subset of exact model runs that are available for every experiment/variable are loaded. If set to `:model`, the exact runs do not matter, but each loaded model is loaded for every experiment/variable. If set to `:none`, for every experiment/variable all available data is loaded, without any restrictions.
+- `is_cmip`: a Boolean that, if `true` (default) assumes certain meta data to be present in the data.
+- `filename_format`: a Symbol (default: `:esmvaltool`).
+- `sorted`: a Boolean that, if `true` (default) the returned data is sorted alphabetically with respect to the model names.
+- `model_times`: a Boolean that, if set to `true` (default: `false`) assumes that the time dimension refers to model times, i.e., not to actual dates. <!--This has an influence on assumptions for loading time series data-->
+- `filename_format`: a Symbol that specifies the structure of the filenames of the data (default: `:esmvaltool`). This argument is important since the data is loaded based on the information retrieved from the filenames of the data. The predefined filename formats are:
+  - `filename_format = :cmip`
+
+    ```julia
+    "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
+    # Example:  
+    ````
+
+  - `filename_format = :esmvaltool_cmip5`
+
+    ```julia
+    "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
+    # Example: 
+    ```
+
+  - `filename_format = :esmvaltool_cmip5_tr`
+
+    ```julia
+    "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE"
+    # Example: 
+    ```
+
+  - `filename_format = :esmvaltool_cmip6`
+    ```julia
+    "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
+    # Example: 
+    ```
+
+  - `filename_format = :esmvaltool_cmip6_tr`
+    ```julia
+    "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE"
+    # Example: 
+    ```
+
+  - `filename_format = :esmvaltool_obs`
+    ```julia
+    "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
+    ```
+  
+  - `filename_format = :esmvaltool_obs_tr`
+    ```julia
+    "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE"
+    ```
+
+  - `filename_format = :esmvaltool` (default)
+
+    Only esmvaltool format is assumed, for every file it is automatically derived which exact format it corresponds to.
+
+  <!-- Further, it is possible to specify your own filename format. TODO -->
 
 
-## Load several datasets into a DataMap
-
-Data is loaded with the function `defineDataMap`. It defines several methods that we explain further below. 
-
-The `defineDataMap` methods provide a set of default keyword arguments: 
-
-- `preview::Bool = false`: set to true if instead of loading the data, a list of paths to the data that would be loaded with the given paths and constraints, is returned.
-
-- `sorted::Bool = true`: set to false, if the loaded data should not be sorted alphabetically according to the model dimension.
-
-
-The most important two arguments are `filename_format` and `dtype` which we will explain in turn next:
-
-### Filename format
-
-- `filename_format::Union{Symbol, String}`: This argument is important since the data is loaded based on the information retrieved from the filenames of the data.
-
-There are three predefined filename formats:
-
-- `VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE` (:cmip), default value
-- `MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE` (:esmvaltool_cmip5)
-- `MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID` (:esmvaltool_cmip6)
-
-It is also possible to use the format `:esmvaltool` so that for every file it is automatically
-derived based on the fileformat whether it corresponds to CMIP5 or CMIP6.
-
-Further, it is possible to specify your own filename format. TODO
-
-### Data Type (dtype) 
-
-- `dtype::String = "cmip"`
-
-For now, the keyword argument `dtype` is just used to provide specific meta data when `dtype="cmip"`.
-This argument should be specified when *not* working with CMIP data (including observational data), since cmip is the default value.
-
-
-### Metadata
-
-The metadata of each dataset (the `.properties` Dictionary of each YAXArray in a DataMap) contains the metadata loaded from the original files as well as additional information if it is provided in the optional keyword argument `meta_data` of function `defineDataMap` (a dictionary with keys of type String).
-
-
-### Loading data from directories
-
-The datasets loaded in a DataMap all refer to a single variable and experiment, i.e. the 
-YAXArrays have the dimensions of the grid the data is defined on, e.g., (`lon`, `lat`) or, 
-for 3D data, (`lon`, `lat`, `depth`).
+## Loading data from directories using `defineDataMap`
 
 To load data for different datasets, e.g. variable tos for lgm and historical experiment:
 
@@ -79,21 +105,25 @@ defineDataMap("path/to/lgm/tos", "lgm-tos"; dtype = "cmip")
 ````
 
 
-### Loading data preprocessed with ESMValTool 
+## Loading data preprocessed with ESMValTool 
 
-#### [Based on recipes](@id loading-data-recipes) 
-If you use ESMValTool to preprocess data, you can use the recipes for preprocessing the data as config files to load the or some of the data into a ModelWeights.DataMap. The first argument points to the top-level directory where the data is stored, namely the same that was used in ESMValTool as base data directory. The second argument points to a directory that contains one or more recipes, namely the filled out versions of the recipes that are generated by ESMValTool, to be found in the run-directory. These have the same name as the recipe itself concatenated with _filled in the end.
+### Using ESMValTool recipes as config files
+If you use ESMValTool to preprocess data, you can use the recipes for preprocessing the data as config files to load the data (or a subset of it) into a ``DataMap``. 
 
-To ensure that the first two arguments are correctly interpreted, the third argument must be set
-to `:esmvaltool_recipes`. In this case, the default value for `filename_format` is set to :esmvaltool (instead of :cmip). 
+`````julia
+loadDataFromESMValToolRecipes(path_data, path_recipes)
+`````
 
-````julia
-defineDataMap("path/to/base/data/dir", "path/to/recipes/dir", :esmvaltool_recipes; dtype = "cmip")
-````
+The first argument, `path_data`, points to the top-level directory where the data is stored, corresponding to ESMValTool's `output_dir`. The second argument, `path_recipes`, points to a directory that contains one or more ESMValTool recipes. Note that these should correspond to the explicitly spelled out versions (`X_filled.yml`, where X is the name of the original recipe) that are automatically generated by ESMValTool, stored in the `run` directory of `output_dir`.
 
-#### [Based on config files](@id loading-data-config)
+The following additional *optional* arguments can further be used when loading data based on ESMValTool recipes:
 
-If the data was preprocessed with ESMValTool, it is also possible to specify a config yaml file with the required values. Here is an example that loads tas and tos data for the experiments lgm, historical and piControl: 
+- `dir_per_var`: if true (default), every climate variable to be loaded is stored in a subdirectory of `path_data`. This is the case, when each recipe loads data for one variable only.
+
+
+### Using newly created .yaml files as config files
+
+If the data was preprocessed with ESMValTool, it is also possible to create a config yaml file with the required values. Here is an example that loads `tas` and `tos` data for the experiments `lgm`, `historical` and `piControl`: 
 
 ````yaml
 base_path_data: "/path/to/dir/with/preprocessed/data"
