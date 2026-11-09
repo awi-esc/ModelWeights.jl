@@ -1,6 +1,6 @@
 # Loading data
 
-`ModelWeights`, can load CMIP model data as well as observational data.  So far only data on a longitude-latitude grid is supported. The dimensions of the loaded data are (in this order): `:lon`, `:lat` and `:model` for observational data or `:member` for CMIP data where `:member` refers to specific model runs, i.e., variants/simulations. For time series, the last dimension is the time dimension (`:time`).
+`ModelWeights`, can load CMIP model data as well as observational data.  So far only data on a longitude-latitude grid is supported. The dimensions of the loaded data are (in this order): `:lon`, `:lat`, `:time` (just for timeseries data) and the last dimension is `:model` for observational data or `:member` for CMIP data where `:member` refers to specific model runs, i.e., variants/simulations.
 
 <!-- Also supported is 3D AMOC data, with a fourth dimension called `:lev` representing depth. -->
 
@@ -26,52 +26,73 @@ They all share the following **optional keyword arguments**:
 - `sorted`: a Boolean that, if `true` (default) the returned data is sorted alphabetically with respect to the model names.
 - `model_times`: a Boolean that, if set to `true` (default: `false`) assumes that the time dimension refers to model times, i.e., not to actual dates. <!--This has an influence on assumptions for loading time series data-->
 - `filename_format`: a Symbol that specifies the structure of the filenames of the data (default: `:esmvaltool`). This argument is important since the data is loaded based on the information retrieved from the filenames of the data. The predefined filename formats are:
-  - `filename_format = :cmip`
 
-    ```julia
-    "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
-    # Example:  
-    ````
+  - `filename_format = :esmvaltool` (default)
+    Only esmvaltool format is assumed, for every file it is automatically derived which exact format it corresponds to.
 
   - `filename_format = :esmvaltool_cmip5`
-
     ```julia
     "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
-    # Example: 
-    ```
-
-  - `filename_format = :esmvaltool_cmip5_tr`
-
-    ```julia
-    "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE"
-    # Example: 
+    # Example: CMIP5_ACCESS1-0_Amon_piControl_r1i1p1_tas.nc
     ```
 
   - `filename_format = :esmvaltool_cmip6`
     ```julia
     "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
-    # Example: 
-    ```
-
-  - `filename_format = :esmvaltool_cmip6_tr`
-    ```julia
-    "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE"
-    # Example: 
+    # Example: CMIP6_ACCESS-CM2_Amon_piControl_r1i1p1f1_tas_gn.nc
     ```
 
   - `filename_format = :esmvaltool_obs`
     ```julia
     "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
+    # Example: 
     ```
+
+    <br>
+    When the data was filtered for a specific time period within ESMValTool, the filename of the stored data ends with the timerange. Such data is loaded with the following filename formats:
   
+  - `filename_format = :esmvaltool_cmip5_tr`
+    ```julia
+    "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE"
+    # Example: CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1960-2100.nc
+    ```
+
+  - `filename_format = :esmvaltool_cmip6_tr`
+    ```julia
+    "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE"
+    # Example: CMIP6_ACCESS-CM2_Amon_historical_r1i1p1f1_tas_gn_1850-1900.nc
+    ```
+
   - `filename_format = :esmvaltool_obs_tr`
     ```julia
     "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE"
+    # Example:
     ```
 
-  - `filename_format = :esmvaltool` (default)
+    <br>
+  - `filename_format = :cmip` This is the format of CMIP data as downloaded from ESGF. For every file it is automatically derived which exact cmip format it corresponds to (CMIP5/CMIP6) and whether it is a timeseries or a climatology.
 
-    Only esmvaltool format is assumed, for every file it is automatically derived which exact format it corresponds to.
+  - `filename_format = :cmip6`
+    ```julia
+    "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID"
+    # Example: orog_fx_AWI-ESM-1-REcoM_historical_r1i1p1f1_gn.nc
+    ````
+  - `filename_format = :cmip5`
+    ```julia
+      "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT"
+        # Example:
+    ```
+  
+  - `filename_format = :cmip6_tr`
+    ```julia
+    "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
+    # Example: pr_Amon_AWI-ESM-1-1-LR_lgm_r1i1p1f1_gn_396101-396512.nc
+    ````
+  - `filename_format = :cmip5_tr`
+    ```julia
+      "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_TIMERANGE"
+        # Example: pr_Amon_CCSM4_midHolocene_r1i1p1_100001-130012.nc
+    ```
 
   <!-- Further, it is possible to specify your own filename format. TODO -->
 

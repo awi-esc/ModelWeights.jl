@@ -925,7 +925,7 @@ function defineDataMap(
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     level::Symbol = :none,
     is_cmip::Bool = true,
-    filename_format::Symbol = :cmip,
+    filename_format::Symbol = :esmvaltool,
     sorted::Bool = true,
     model_times::Bool = false, 
     one_entry_per_file::Bool = false,
@@ -988,7 +988,7 @@ function defineDataMap(
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     level::Symbol = :none,
     is_cmip::Bool = true,
-    filename_format::Symbol = :cmip,
+    filename_format::Symbol = :esmvaltool,
     sorted::Bool = true,
     model_times::Bool = false,
     one_entry_per_file::Bool = false,
@@ -1035,7 +1035,7 @@ function defineDataMap(
     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
     level::Symbol = :none,
     is_cmip::Bool = true,
-    filename_format::Symbol = :cmip,
+    filename_format::Symbol = :esmvaltool,
     sorted::Bool = true,
     model_times::Bool = false
 )

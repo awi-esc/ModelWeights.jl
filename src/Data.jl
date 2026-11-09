@@ -35,6 +35,24 @@ const MODEL_NAME_FIXES = Dict(
     #"fio-esm" => "FIO-ESM"
 )
 
+# These are taken from https://github.com/WCRP-CMIP/CMIP6_CVs/blob/main/CMIP6_grid_label.json
+const CMIP6_GRID_LABELS = Set([
+    "gm",
+    "gn", "gna", "gng", "gnz",
+    "gr",
+    "gr1", "gr1a", "gr1g", "gr1z",
+    "gr2", "gr2a", "gr2g", "gr2z",
+    "gr3", "gr3a", "gr3g", "gr3z",
+    "gr4", "gr4a", "gr4g", "gr4z",
+    "gr5", "gr5a", "gr5g", "gr5z",
+    "gr6", "gr6a", "gr6g", "gr6z",
+    "gr7", "gr7a", "gr7g", "gr7z",
+    "gr8", "gr8a", "gr8g", "gr8z",
+    "gr9", "gr9a", "gr9g", "gr9z",
+    "gra", "grg", "grz",
+])
+
+
 abstract type AbstractLevel end
 abstract type Level <: AbstractLevel end
 abstract type NoLevel <: AbstractLevel end
@@ -138,13 +156,20 @@ function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String}; sorted::Bo
 end
 
 abstract type AbstractFnFormat end
+abstract type CMIPFormat <: AbstractFnFormat end
+
 abstract type ESMVTFormat <: AbstractFnFormat end
     abstract type ESMVTModelFormat <: ESMVTFormat end
     abstract type ESMVTObsFormat   <: ESMVTFormat end
     
 struct FF_ESMVT <: ESMVTFormat end
-struct FF_CMIP <: AbstractFnFormat end    
-    
+struct FF_CMIP <: CMIPFormat end
+
+struct FF_CMIP5 <: CMIPFormat end
+struct FF_CMIP5_TR <: CMIPFormat end    
+struct FF_CMIP6 <: CMIPFormat end  
+struct FF_CMIP6_TR <: CMIPFormat end    
+
 # These are just for the formatString functions
 struct FF_ESMVT_CMIP5    <: ESMVTModelFormat end
 struct FF_ESMVT_CMIP5_TR <: ESMVTModelFormat end
@@ -157,20 +182,29 @@ struct FF_ESMVT_OBS_TR   <: ESMVTObsFormat end
 
 # Internal conversion
 toFF(::Val{:cmip}) = FF_CMIP()
+toFF(::Val{:cmip5})  = FF_CMIP5()
+toFF(::Val{:cmip5_tr})  = FF_CMIP5_TR()
+toFF(::Val{:cmip6})  = FF_CMIP6()
+toFF(::Val{:cmip6_tr})  = FF_CMIP6_TR()
+
+toFF(::Val{:esmvaltool}) = FF_ESMVT()
 toFF(::Val{:esmvaltool_cmip5})  = FF_ESMVT_CMIP5()
 toFF(::Val{:esmvaltool_cmip5_tr})  = FF_ESMVT_CMIP5_TR()
 
 toFF(::Val{:esmvaltool_cmip6}) = FF_ESMVT_CMIP6()
 toFF(::Val{:esmvaltool_cmip6_tr}) = FF_ESMVT_CMIP6_TR()
 
-toFF(::Val{:esmvaltool}) = FF_ESMVT()
 toFF(::Val{:esmvaltool_obs}) = FF_ESMVT_OBS()
 toFF(::Val{:esmvaltool_obs_tr}) = FF_ESMVT_OBS_TR()
 
 toFF(f::AbstractFnFormat) = f 
 toFF(::Val{f}) where {f} = throw(ArgumentError("invalid filename format :$f, expected one of: :cmip, :esmvaltool, :esmvaltool_cmip5, :esmvaltool_cmip5_tr, :esmvaltool_cmip6, :esmvaltool_cmip6_tr, :esmvaltool_obs, :esmvaltool_obs_tr"))
 
-formatString(::FF_CMIP) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
+formatString(::FF_CMIP5) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT"
+formatString(::FF_CMIP5_TR) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_TIMERANGE"
+
+formatString(::FF_CMIP6) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID"
+formatString(::FF_CMIP6_TR) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
 
 formatString(::FF_ESMVT_CMIP5) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
 formatString(::FF_ESMVT_CMIP5_TR) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE"
@@ -186,13 +220,17 @@ function _parseFormat(format_string::String)
     return Dict(Symbol(lowercase(p)) => i for (i, p) in enumerate(parts))
 end
 # # precomputed at definition time
-const CMIP5_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP5()))
-const CMIP5_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_CMIP5_TR()))
+const CMIP5_ESMVT_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP5()))
+const CMIP5_ESMVT_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_CMIP5_TR()))
+const CMIP6_ESMVT_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP6()))
+const CMIP6_ESMVT_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_CMIP6_TR()))
 
-const CMIP6_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP6()))
-const CMIP6_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_CMIP6_TR()))
+const CMIP5_FIELD_INDICES = _parseFormat(formatString(FF_CMIP5()))
+const CMIP5_FIELD_INDICES_TR = _parseFormat(formatString(FF_CMIP5_TR()))
+const CMIP6_FIELD_INDICES = _parseFormat(formatString(FF_CMIP6()))
+const CMIP6_FIELD_INDICES_TR = _parseFormat(formatString(FF_CMIP6_TR()))
 
-const CMIP_FIELD_INDICES = _parseFormat(formatString(FF_CMIP()))
+
 const OBS_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_OBS()))
 const OBS_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_OBS_TR()))
 

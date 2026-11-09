@@ -1056,45 +1056,24 @@ function _parseFilenameModel(filename::String, path::String, field_indices::Dict
     )
 end
 
+# ESMValTool formats
 function parsePath(path::String, ::FF_ESMVT)
     filename = first(splitext(basename(path)))
     parts = split(filename, "_")
-    is_obs = false
-    if parts[1] == "CMIP5"
-        format_dict = length(parts) == 6 ? CMIP5_FIELD_INDICES : CMIP5_FIELD_INDICES_TR
-    elseif parts[1] == "CMIP6"
-        format_dict = length(parts) == 7 ? CMIP6_FIELD_INDICES : CMIP6_FIELD_INDICES_TR
-    elseif parts[1] == "native6"
+    proj = parts[1]
+    if proj == "native6"
         format_dict = length(parts) == 6 ? OBS_FIELD_INDICES : OBS_FIELD_INDICES_TR
-        is_obs = true
+        return _parseFilenameObs(filename, path, format_dict)
+    elseif proj in ["CMIP5", "CMIP6"]
+        if proj == "CMIP6"
+            format_dict = length(parts) == 7 ? CMIP6_ESMVT_FIELD_INDICES : CMIP6_ESMVT_FIELD_INDICES_TR
+        else
+            format_dict = length(parts) == 6 ? CMIP5_ESMVT_FIELD_INDICES : CMIP5_ESMVT_FIELD_INDICES_TR
+        end
+        return _parseFilenameModel(filename, path, format_dict)
     else
-        throw(ErrorException("Not implemented: only CMIP5 + CMIP6 for models implemented and only native6 for observations. Found: $(parts[1])."))
+        throw(ErrorException("Not implemented: only CMIP5 + CMIP6 for models implemented and only native6 for observations. Found: $(proj)."))
     end
-    is_obs ? _parseFilenameObs(filename, path, format_dict) : _parseFilenameModel(filename, path, format_dict)
-end
-
-function parsePath(path::String, ::ESMVTModelFormat)::ModelMeta
-    filename = first(splitext(basename(path)))
-    parts = split(filename, "_")
-    if parts[1] == "CMIP5"
-        format_dict = length(parts) == 6 ? CMIP5_FIELD_INDICES : CMIP5_FIELD_INDICES_TR
-    elseif parts[1] == "CMIP6"
-        format_dict = length(parts) == 7 ? CMIP6_FIELD_INDICES : CMIP6_FIELD_INDICES_TR
-    else
-        throw(ErrorException("Not implemented: only CMIP5 + CMIP6 for models implemented. Found: $(parts[1]). For observational data use :esmvaltool_obs"))
-    end
-    _parseFilenameModel(filename, path, format_dict)
-end
-
-function parsePath(path::String, ::ESMVTObsFormat)::ObsMeta
-    filename = first(splitext(basename(path)))
-    parts = split(filename, "_")
-    if parts[1] == "native6"
-        format_dict = length(parts) == 6 ? OBS_FIELD_INDICES : OBS_FIELD_INDICES_TR
-    else
-        throw(ErrorException("Not implemented: only native6 implemented for observations. Found: $(parts[1])"))
-    end
-    _parseFilenameObs(filename, path, format_dict)
 end
 
 function parsePath(path::String, ::FF_ESMVT_OBS)::ObsMeta
@@ -1109,27 +1088,62 @@ end
 
 function parsePath(path::String, ::FF_ESMVT_CMIP6)::ModelMeta
     filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP6_FIELD_INDICES)
+    _parseFilenameModel(filename, path, CMIP6_ESMVT_FIELD_INDICES)
 end
 
 function parsePath(path::String, ::FF_ESMVT_CMIP6_TR)::ModelMeta
     filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP6_FIELD_INDICES_TR)
+    _parseFilenameModel(filename, path, CMIP6_ESMVT_FIELD_INDICES_TR)
 end
 
 function parsePath(path::String, ::FF_ESMVT_CMIP5)::ModelMeta
     filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP5_FIELD_INDICES)
+    _parseFilenameModel(filename, path, CMIP5_ESMVT_FIELD_INDICES)
 end
 
 function parsePath(path::String, ::FF_ESMVT_CMIP5_TR)::ModelMeta
     filename = first(splitext(basename(path)))
+    _parseFilenameModel(filename, path, CMIP5_ESMVT_FIELD_INDICES_TR)
+end
+
+# CMIP formats
+function parsePath(path::String, ::FF_CMIP)::ModelMeta
+    filename = first(splitext(basename(path)))
+    parts = split(filename, "_")
+    # CMIP6 ends with GRID (+ TIMERANGE), CMIP5 does not have GRID in the end
+    l = length(parts)
+    if l in [5, 6, 7]
+        if l == 5
+            format_dict = CMIP5_FIELD_INDICES
+        elseif l == 7
+            format_dict = CMIP6_FIELD_INDICES_TR
+        else
+            format_dict = parts[end] in CMIP6_GRID_LABELS ? CMIP6_FIELD_INDICES : CMIP5_FIELD_INDICES_TR
+        end
+        return _parseFilenameModel(filename, path, format_dict)
+    else
+        throw(ErrorException("Not implemented: only CMIP5 + CMIP6 for models implemented. Found: $(proj)."))
+    end
+end
+
+function parsePath(path::String, ::FF_CMIP5)::ModelMeta
+    filename = first(splitext(basename(path)))
+    _parseFilenameModel(filename, path, CMIP5_FIELD_INDICES)
+end
+
+function parsePath(path::String, ::FF_CMIP5_TR)::ModelMeta
+    filename = first(splitext(basename(path)))
     _parseFilenameModel(filename, path, CMIP5_FIELD_INDICES_TR)
 end
 
-function parsePath(path::String, ::FF_CMIP)::ModelMeta
+function parsePath(path::String, ::FF_CMIP6)::ModelMeta
     filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP_FIELD_INDICES)
+    _parseFilenameModel(filename, path, CMIP6_FIELD_INDICES)
+end
+
+function parsePath(path::String, ::FF_CMIP6_TR)::ModelMeta
+    filename = first(splitext(basename(path)))
+    _parseFilenameModel(filename, path, CMIP6_FIELD_INDICES_TR)
 end
 
 
