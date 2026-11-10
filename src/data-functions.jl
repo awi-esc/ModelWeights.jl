@@ -614,26 +614,6 @@ function _loadDataMapCore(
         end
     end
     data = data[indices_found]
-    # no_data_found = emptyYAX.(data)
-    # data_found = .!no_data_found
-    # if any(no_data_found)
-    #     #@warn "no data found for ids: $(ids[.!found_data])"
-    #     #filter!(!isnothing, data)
-    #     data = data[data_found]
-    #     #data = YAXArray.(data) # why needed?
-    # end
-
-    # if isempty(data)
-    #     # no data was found at all
-    #     return nothing # TODO: better to return an empty array?!
-    # end
-
-    # if isa(level, Level) && is_cmip
-    #     models = isa(level, LevModel) ?  modelsFromMemberIDs.(data; uniq=true) : Array.(lookup.(data, :member))
-    #     shared_models = reduce(intersect, models)
-    #     data = map(ds -> subsetModelData(ds, shared_models), data)
-    # end
-    #ids_filtered = ids[data_found]
     ids_filtered = ids[indices_found]
     return defineDataMap(data, ids_filtered)
 end
