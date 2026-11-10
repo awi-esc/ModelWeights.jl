@@ -1,7 +1,8 @@
 # Loading data
 
-`ModelWeights`, can load CMIP model data as well as observational data.  So far only data on a longitude-latitude grid is supported. The dimensions of the loaded data are (in this order): `:lon`, `:lat`, `:time` (just for timeseries data) and the last dimension is `:model` for observational data or `:member` for CMIP data where `:member` refers to specific model runs, i.e., variants/simulations.
+`ModelWeights` supports loading CMIP model data as well as observational data. It's main purpose, however, is to facilitate working with ensembles of climate models, thus the focus lies on CMIP data.
 
+So far only data on a longitude-latitude grid is supported. The dimensions of the loaded data are (in this order): `:lon`, `:lat`, `:time` (just for timeseries data) and the last dimension is `:model` for observational data or `:member` for CMIP data where `:member` refers to specific model runs, i.e., variants/simulations.
 <!-- Also supported is 3D AMOC data, with a fourth dimension called `:lev` representing depth. -->
 
 #### Data representation
@@ -97,111 +98,69 @@ They all share the following **optional keyword arguments**:
   <!-- Further, it is possible to specify your own filename format. TODO -->
 
 
-## Loading data from directories using `defineDataMap`
+### Loading data from directories using `defineDataMap`
 
-To load data for different datasets, e.g. variable tos for lgm and historical experiment:
+When loading data from specified paths, it is generally assumed that the paths point to directories that contain data for a single climate variable and experiment: the dimensions of the loaded data are :lon, :lat, :time (for timeseries) and :model (or :member).
+
+There are four methods of the function `defineDataMap`. The first of two positional arguments is the path (or paths) to where the data is stored and the second argument is the id (or ids) that will be used for the respective dataset(s).
+
+1. For a single dataset, i.e. one experiment and one variable only. For example, to load `tos` model data for the `lgm` (in this example the output is a dataset with 6 models on a 72x36 grid):
+
+    ```julia-repl
+    julia> defineDataMap("path/to/lgm/tos", "lgm-tos")
+    ::DataMap
+    lgm-tos: (72, 36, 6)
+    ```
+    The first argument should point to the directory that only contains `tos` data for the `lgm`.
+
+2. As in 1., but the data for the requested dataset should be retrieved from multiple locations, e.g. when CMIP5 and CMIP6 are stored seperately:
+    ```julia-repl
+    paths = ["path/to/cmip5/lgm/tos", "path/to/cmip6/lgm/tos"]
+    julia> defineDataMap(paths, "lgm-tos")
+    ::DataMap
+    lgm-tos: (72, 36, 6)
+    ```
+
+3. To load data for different datasets, e.g. `tos` and `tas` for the `lgm` experiment:
+
+    ```julia-repl
+    julia> paths = ["path/to/lgm/tas", "path/to/lgm/tos"]
+    ids = ["lgm_tas", "lgm_tos"]
+    
+    julia> defineDataMap(paths, ids)
+    ::DataMap
+    lgm_tas: (72, 36, 14)
+    lgm_tos: (72, 36, 14)
+    ```
+4. Same as in 3., but the data of one ore more datasets is retrieved from multiple locations, e.g., when you store CMIP5 and CMIP6 data seperately:
+
+    ```julia-repl
+    julia> paths = [
+        ["path/to/cmip5/lgm/tas", "path/to/cmip6/lgm/tas"], 
+        ["path/to/cmip5/lgm/tos", "path/to/cmip6/lgm/tos"]
+    ]
+    ids = ["lgm_tas", "lgm_tos"]
+    
+    julia> defineDataMap(paths, ids_datasets)
+    ::DataMap
+    lgm_tas: (72, 36, 14)
+    lgm_tos: (72, 36, 14)
+    ```
+
+### Loading data from ESMValTool recipes
+
+If you use ESMValTool to preprocess data, you can use the recipes for preprocessing the data as config files to load the data (or a subset of it) into a ``DataMap``. 
 
 ````julia
 using ModelWeights
-paths_datasets = ["path/to/lgm/tos", "path/to/historical/tos"]
-ids_datasets = ["lgm-tos", "historical-tos"]
-defineDataMap(paths_datasets, ids_datasets; dtype = "cmip")
-````
-
-You might have several directories from where you want to load data for a single dataset, e.g. when you store CMIP5 and CMIP6 data at different locations. `defineDataMap` also accepts Vectors of Vectors, e.g.:
-
-````julia
-paths_datasets = [
-    ["path/to/cmip5/lgm/tos", "path/to/cmip6/lgm/tos"], 
-    ["path/to/cmip5/historical/tos", "path/to/cmip6/historical/tos"]
-]
-ids_datasets = ["lgm-tos", "historical-tos"]
-defineDataMap(paths_datasets, ids_datasets; dtype = "cmip")
-````
-
-If you just want to load a single dataset, Vectors aren't needed, e.g.:
-
-````julia
-defineDataMap("path/to/lgm/tos", "lgm-tos"; dtype = "cmip")
-````
-
-
-## Loading data preprocessed with ESMValTool 
-
-### Using ESMValTool recipes as config files
-If you use ESMValTool to preprocess data, you can use the recipes for preprocessing the data as config files to load the data (or a subset of it) into a ``DataMap``. 
-
-`````julia
 loadDataFromESMValToolRecipes(path_data, path_recipes)
-`````
+````
 
 The first argument, `path_data`, points to the top-level directory where the data is stored, corresponding to ESMValTool's `output_dir`. The second argument, `path_recipes`, points to a directory that contains one or more ESMValTool recipes. Note that these should correspond to the explicitly spelled out versions (`X_filled.yml`, where X is the name of the original recipe) that are automatically generated by ESMValTool, stored in the `run` directory of `output_dir`.
 
-The following additional *optional* arguments can further be used when loading data based on ESMValTool recipes:
+The following additional *optional* argument can further be used when loading data based on ESMValTool recipes:
 
 - `dir_per_var`: if true (default), every climate variable to be loaded is stored in a subdirectory of `path_data`. This is the case, when each recipe loads data for one variable only.
-
-
-### Using newly created .yaml files as config files
-
-If the data was preprocessed with ESMValTool, it is also possible to create a config yaml file with the required values. Here is an example that loads `tas` and `tos` data for the experiments `lgm`, `historical` and `piControl`: 
-
-````yaml
-base_path_data: "/path/to/dir/with/preprocessed/data"
-
-datasets: [
-  {
-    base_dir: "LGM", 
-    exp: "lgm", 
-    variables: ["tas", "tos"],
-    aliases: ["lgm"],
-    statistics: ["CLIM"], 
-    subset: {
-      base_subdirs: ["20241114"]
-    }
-  },
-  {
-    base_dir: "piControl", 
-    exp: "piControl", 
-    variables: ["tas", "tos"],
-    aliases: ["piControl"],  
-    statistics: ["CLIM"],
-    subset: {
-      base_subdirs: ["lgm_models", "20250322"]
-    }
-  },
-    {
-    base_dir: "historical", 
-    exp: "historical", 
-    variables: ["tas", "tos"],
-    aliases: ["historical"], 
-    statistics: ["CLIM"]
-  }
-]
-````
-
-
-TODO: update the following expected keys
-
-Keys expected in the config-yaml file:
-- `path_data`: base path to where the preprocessed data is stored. This path will be concatenated with the directories specified for each dataset. It can 
-be omitted if inside datasets (see below), `base_dir` refers to the entire absolute path.
-- `datasets`: list of each dataset to be loaded. Each dataset is specified by a dictionary with the following keys:
-    - `base_dir::String`: relative path to the data with respect to the path given in `path_data`. If `path_data` is not specified in the config file, `path_data` for this dataset is assumed to refer to an absolute path instead.
-    - `exp::String`: e.g., "historical"
-    - `variables::Vector{String}`: e.g., ["tos", "tas"]
-    - `statistics::Vector{String}`: may be empty for fixed variables for which no statistics are computed. In that case, `statistics` is set to ["none"] and a warning is thrown unless for known fixed variables (for now just [`orog`]).
-
-   The following keys are optional:
-   - `subdirs`: vector of strings; only subdirectories that contain any of the given strings in their name will be considered.
-   - `timeranges`:
-   - `aliases`:
-
-
-
-
-
-
 
 When the data was preprocessed with ESMValTool, the structure of the directories where the data is stored looks as follows.
 Uppercase names refer to variables, lowercase names mean that the names can be arbitrary unless stated differently in the comments to the right. 
@@ -261,19 +220,55 @@ Note that here, we assume one subdirectory per climate variable, and thus the na
 ....
 ```
 
+#### Using .yaml files as config files, including constraints
+tba
+<!-- 
+If the data was preprocessed with ESMValTool, it is also possible to create a config yaml file with the required values. Here is an example that loads `tas` and `tos` data for the experiments `lgm`, `historical` and `piControl`: 
 
-## Loading a single dataset into a YAXArray
+````yaml
+base_path_data: "/path/to/dir/with/preprocessed/data"
 
-The function that all `defineDataMap` functions eventually calls is `loadPreprocData`. 
-It can be used to directly load data into a YAXArray.
-It accepts a vector paths to netcdf files and the filename format (and some optional 
-keyword arguments, like `dtype`).
-
-````julia
-paths = [
-    "path/to/data/dir/CMIP6_AWI-ESM-1-1-LR_Amon_lgm_r1i1p1f1_tas_gn.nc", 
-    "path/to/data/dir/CMIP6_CESM2-FV2_Amon_lgm_r1i2p2f1_tas_gn.nc"
+datasets: [
+  {
+    base_dir: "LGM", 
+    exp: "lgm", 
+    variables: ["tas", "tos"],
+    aliases: ["lgm"],
+    statistics: ["CLIM"], 
+    subset: {
+      base_subdirs: ["20241114"]
+    }
+  },
+  {
+    base_dir: "piControl", 
+    exp: "piControl", 
+    variables: ["tas", "tos"],
+    aliases: ["piControl"],  
+    statistics: ["CLIM"],
+    subset: {
+      base_subdirs: ["lgm_models", "20250322"]
+    }
+  },
+    {
+    base_dir: "historical", 
+    exp: "historical", 
+    variables: ["tas", "tos"],
+    aliases: ["historical"], 
+    statistics: ["CLIM"]
+  }
 ]
-filename_format = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
-v1 = loadPreprocData(paths, filename_format; dtype = "cmip")
 ````
+
+Keys expected in the config-yaml file:
+- `path_data`: base path to where the preprocessed data is stored. This path will be concatenated with the directories specified for each dataset. It can 
+be omitted if inside datasets (see below), `base_dir` refers to the entire absolute path.
+- `datasets`: list of each dataset to be loaded. Each dataset is specified by a dictionary with the following keys:
+    - `base_dir::String`: relative path to the data with respect to the path given in `path_data`. If `path_data` is not specified in the config file, `path_data` for this dataset is assumed to refer to an absolute path instead.
+    - `exp::String`: e.g., "historical"
+    - `variables::Vector{String}`: e.g., ["tos", "tas"]
+    - `statistics::Vector{String}`: may be empty for fixed variables for which no statistics are computed. In that case, `statistics` is set to ["none"] and a warning is thrown unless for known fixed variables (for now just [`orog`]).
+
+   The following keys are optional:
+   - `subdirs`: vector of strings; only subdirectories that contain any of the given strings in their name will be considered.
+   - `timeranges`:
+   - `aliases`: -->

@@ -412,15 +412,15 @@ end
         constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
         is_cmip::Bool = true,
         sorted::Bool = true, 
-        meta_info::Union{Dict{String, String}, Nothing} = nothing
+        meta_info::Union{Dict{String, String}, Nothing} = nothing, 
+        model_times::Bool = false
     )
 
 Return data loaded from `paths` as single YAXArray. 
 
-Each path points to a different model, i.e. the data for one dataset is loaded from multiple 
-files and all datasets in `paths` must share the same dimensions. Which variable is loaded 
-is inferred from the filenames (in `paths`), or if `meta_info` has key 'variable', the 
-respective value is used.
+Each path points to a different model, i.e. the data for one dataset is loaded from multiple files and all datasets in 
+`paths` must share the same dimensions. Which variable is loaded is inferred from the filenames (in `paths`), or if 
+`meta_info` has key 'variable', the respective value is used.
 """
 function loadPreprocData(
     meta_data::Vector{T};
