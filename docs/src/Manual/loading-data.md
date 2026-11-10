@@ -3,7 +3,10 @@
 `ModelWeights` supports loading CMIP model data as well as observational data. It's main purpose, however, is to facilitate working with ensembles of climate models, thus the focus lies on CMIP data.
 
 So far only data on a longitude-latitude grid is supported. The dimensions of the loaded data are (in this order): `:lon`, `:lat`, `:time` (just for timeseries data) and the last dimension is `:model` for observational data or `:member` for CMIP data where `:member` refers to specific model runs, i.e., variants/simulations.
+
+```@raw html
 <!-- Also supported is 3D AMOC data, with a fourth dimension called `:lev` representing depth. -->
+```
 
 #### Data representation
 The basic representation of data is called a `DataMap` which is a simple dictionary mapping from ids 
@@ -11,9 +14,12 @@ The basic representation of data is called a `DataMap` which is a simple diction
 
 #### Metadata
 The metadata of each dataset (the `.properties` Dictionary of each YAXArray in a DataMap) contains the metadata loaded from the original model files.
-<!-- as well as additional information if it is provided in the optional keyword argument `meta_data` of function `defineDataMap` (a dictionary with keys of type String). -->
 
-## Functions for loading data
+```@raw html
+<!-- as well as additional information if it is provided in the optional keyword argument `meta_data` of function `defineDataMap` (a dictionary with keys of type String). -->
+```
+
+## `defineDataMap`: optional arguments
 
 The main entry point to load data, is the function `defineDataMap`, which loads data from specified paths. To load data based on configuration files, there are the functions `loadDataFromESMValToolRecipes` and `loadDataFromYAML` explained further below. 
 
@@ -26,8 +32,9 @@ They all share the following **optional keyword arguments**:
 - `filename_format`: a Symbol (default: `:esmvaltool`).
 - `sorted`: a Boolean that, if `true` (default) the returned data is sorted alphabetically with respect to the model names.
 - `model_times`: a Boolean that, if set to `true` (default: `false`) assumes that the time dimension refers to model times, i.e., not to actual dates. <!--This has an influence on assumptions for loading time series data-->
-- `filename_format`: a Symbol that specifies the structure of the filenames of the data (default: `:esmvaltool`). This argument is important since the data is loaded based on the information retrieved from the filenames of the data. The predefined filename formats are:
+- `filename_format`: a Symbol that specifies the structure of the filenames of the data (default: `:esmvaltool`). This argument is important since the data is loaded based on the information retrieved from the filenames of the data. The predefined filename formats are explained in the next paragraph.
 
+## Filename formats
   - `filename_format = :esmvaltool` (default)
     Only esmvaltool format is assumed, for every file it is automatically derived which exact format it corresponds to.
 
@@ -36,6 +43,7 @@ They all share the following **optional keyword arguments**:
     "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
     # Example: CMIP5_ACCESS1-0_Amon_piControl_r1i1p1_tas.nc
     ```
+
 
   - `filename_format = :esmvaltool_cmip6`
     ```julia
@@ -48,8 +56,6 @@ They all share the following **optional keyword arguments**:
     "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
     # Example: 
     ```
-
-    <br>
     When the data was filtered for a specific time period within ESMValTool, the filename of the stored data ends with the timerange. Such data is loaded with the following filename formats:
   
   - `filename_format = :esmvaltool_cmip5_tr`
@@ -70,14 +76,14 @@ They all share the following **optional keyword arguments**:
     # Example:
     ```
 
-    <br>
+
   - `filename_format = :cmip` This is the format of CMIP data as downloaded from ESGF. For every file it is automatically derived which exact cmip format it corresponds to (CMIP5/CMIP6) and whether it is a timeseries or a climatology.
 
   - `filename_format = :cmip6`
     ```julia
     "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID"
     # Example: orog_fx_AWI-ESM-1-REcoM_historical_r1i1p1f1_gn.nc
-    ````
+    ```
   - `filename_format = :cmip5`
     ```julia
       "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT"
@@ -88,68 +94,67 @@ They all share the following **optional keyword arguments**:
     ```julia
     "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
     # Example: pr_Amon_AWI-ESM-1-1-LR_lgm_r1i1p1f1_gn_396101-396512.nc
-    ````
+    ```
   - `filename_format = :cmip5_tr`
     ```julia
       "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_TIMERANGE"
         # Example: pr_Amon_CCSM4_midHolocene_r1i1p1_100001-130012.nc
     ```
 
-  <!-- Further, it is possible to specify your own filename format. TODO -->
+```@raw html
+<!-- Further, it is possible to specify your own filename format. TODO  -->
+```
 
 
-### Loading data from directories using `defineDataMap`
+
+## `defineDataMap`: Loading data from directories
 
 When loading data from specified paths, it is generally assumed that the paths point to directories that contain data for a single climate variable and experiment: the dimensions of the loaded data are :lon, :lat, :time (for timeseries) and :model (or :member).
 
 There are four methods of the function `defineDataMap`. The first of two positional arguments is the path (or paths) to where the data is stored and the second argument is the id (or ids) that will be used for the respective dataset(s).
 
 1. For a single dataset, i.e. one experiment and one variable only. For example, to load `tos` model data for the `lgm` (in this example the output is a dataset with 6 models on a 72x36 grid):
+   ```julia-repl
+   julia> defineDataMap("path/to/lgm/tos", "lgm-tos")
+   ::DataMap
+   lgm-tos: (72, 36, 6)
+   ```
+   The first argument should point to the directory that only contains `tos` data for the `lgm`.
 
-    ```julia-repl
-    julia> defineDataMap("path/to/lgm/tos", "lgm-tos")
-    ::DataMap
-    lgm-tos: (72, 36, 6)
-    ```
-    The first argument should point to the directory that only contains `tos` data for the `lgm`.
-
-2. As in 1., but the data for the requested dataset should be retrieved from multiple locations, e.g. when CMIP5 and CMIP6 are stored seperately:
-    ```julia-repl
-    paths = ["path/to/cmip5/lgm/tos", "path/to/cmip6/lgm/tos"]
-    julia> defineDataMap(paths, "lgm-tos")
-    ::DataMap
-    lgm-tos: (72, 36, 6)
-    ```
+2. As in 1., but the data for the requested dataset should be retrieved from multiple locations, e.g. when CMIP5 and CMIP6 are stored separately:
+   ```julia-repl
+   julia> paths = ["path/to/cmip5/lgm/tos", "path/to/cmip6/lgm/tos"]
+   julia> defineDataMap(paths, "lgm-tos")
+   ::DataMap
+   lgm-tos: (72, 36, 6)
+   ```
 
 3. To load data for different datasets, e.g. `tos` and `tas` for the `lgm` experiment:
+   ```julia-repl
+   julia> paths = ["path/to/lgm/tas", "path/to/lgm/tos"]
+   julia> ids = ["lgm_tas", "lgm_tos"]
+   julia> defineDataMap(paths, ids)
+   ::DataMap
+   lgm_tas: (72, 36, 14)
+   lgm_tos: (72, 36, 14)
+   ```
 
-    ```julia-repl
-    julia> paths = ["path/to/lgm/tas", "path/to/lgm/tos"]
-    ids = ["lgm_tas", "lgm_tos"]
-    
-    julia> defineDataMap(paths, ids)
-    ::DataMap
-    lgm_tas: (72, 36, 14)
-    lgm_tos: (72, 36, 14)
-    ```
-4. Same as in 3., but the data of one ore more datasets is retrieved from multiple locations, e.g., when you store CMIP5 and CMIP6 data seperately:
+4. Same as in 3., but the data of one or more datasets is retrieved from multiple locations, e.g., when you store CMIP5 and CMIP6 data separately:
+   ```julia-repl
+   julia> paths = [
+     ["path/to/cmip5/lgm/tas", "path/to/cmip6/lgm/tas"], 
+     ["path/to/cmip5/lgm/tos", "path/to/cmip6/lgm/tos"]
+   ]
+   julia> ids = ["lgm_tas", "lgm_tos"]
+   julia> defineDataMap(paths, ids)
+   ::DataMap
+   lgm_tas: (72, 36, 14)
+   lgm_tos: (72, 36, 14)
+   ```
 
-    ```julia-repl
-    julia> paths = [
-        ["path/to/cmip5/lgm/tas", "path/to/cmip6/lgm/tas"], 
-        ["path/to/cmip5/lgm/tos", "path/to/cmip6/lgm/tos"]
-    ]
-    ids = ["lgm_tas", "lgm_tos"]
-    
-    julia> defineDataMap(paths, ids_datasets)
-    ::DataMap
-    lgm_tas: (72, 36, 14)
-    lgm_tos: (72, 36, 14)
-    ```
+## `loadDataFromESMValToolRecipes`: [Loading data from ESMValTool recipes](@id loading-esmvt)
 
-### [Loading data from ESMValTool recipes](@id loading-esmvt)
-
-If you use ESMValTool to preprocess data, you can use the recipes for preprocessing the data as config files to load the data (or a subset of it) into a ``DataMap``. 
+If you use ESMValTool to preprocess data, you can use the recipes for preprocessing the data as config files to load the data (or a subset of it) into a `DataMap`. 
 
 ```julia
 using ModelWeights
@@ -220,10 +225,12 @@ Note that here, we assume one subdirectory per climate variable, and thus the na
 ....
 ```
 
-#### Using .yaml files as config files, including constraints
+### `loadDataFromYAML`: Using .yaml files as config files, including constraints
 tba
-<!-- 
-If the data was preprocessed with ESMValTool, it is also possible to create a config yaml file with the required values. Here is an example that loads `tas` and `tos` data for the experiments `lgm`, `historical` and `piControl`: 
+
+
+```@raw html
+<!-- If the data was preprocessed with ESMValTool, it is also possible to create a config yaml file with the required values. Here is an example that loads `tas` and `tos` data for the experiments `lgm`, `historical` and `piControl`: 
 
 ````yaml
 base_path_data: "/path/to/dir/with/preprocessed/data"
@@ -272,3 +279,4 @@ be omitted if inside datasets (see below), `base_dir` refers to the entire absol
    - `subdirs`: vector of strings; only subdirectories that contain any of the given strings in their name will be considered.
    - `timeranges`:
    - `aliases`: -->
+```

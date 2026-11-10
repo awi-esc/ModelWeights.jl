@@ -7,14 +7,16 @@ makedocs(
     modules = [ModelWeights],
     pages = [
         "Home" => "index.md",
-        "getting-started.md",
+        "Getting started" => "getting-started.md",
+        "Examples" => "examples.md",
         "weights.md",
         "Manual" => ["Manual/loading-data.md", "Manual/filtering-data.md", "Manual/computing-weights.md"],
         #"Examples" => ["examples/climwip.md", "examples/lgm.md"],
-        "Reference" => ["reference/API.md", "reference/references.md"] 
+        "References" => "references.md"
     ],
     format = Documenter.HTML(
-        edit_link = "main"
+        edit_link = "main",
+        assets = ["assets/custom.css"],
     ),
     clean = true
 )

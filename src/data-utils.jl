@@ -657,7 +657,8 @@ end
 
 """
     metaDataFromESMValToolRecipes(
-        base_path_configs::String; constraint::Union{Dict, Nothing} = nothing
+        base_path_configs::String; 
+        constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}() 
     )
 
 Read variable, statistic, experiment and timerange/alias values from ESMValTool recipes 
@@ -712,7 +713,7 @@ function metaDataFromESMValToolRecipes(
         end
     end
     if !isempty(constraint)
-        constrainMetaData!(meta_attribs, constraint)
+        constrainRecipeMetaData!(meta_attribs, constraint)
     end
     return meta_attribs
 end
@@ -1194,16 +1195,15 @@ end
 
 
 """
-    constrainMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict)
+    constrainRecipeMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict{Symbol, Vector{String}}))
 
-Subset entries in `meta_attributes` so that only those with properties specified 
-in `constraint` remain.
+Subset entries in `meta_attributes` so that only those with properties specified in `constraint` remain.
 
 # Arguments
-- `constraint::Dict`: Mapping to vector specifiying the properties of which at least one 
+- `constraint::Dict{Symbol, Vector{String}})`: Mapping to vector specifiying the properties of which at least one 
 must be present for an id to be retained.
 """
-function constrainMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict{Symbol, Vector{String}})
+function constrainRecipeMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict{Symbol, Vector{String}})
     timerange_constraints = get(constraint, :timeranges, String[])
     alias_constraints = get(constraint, :aliases, String[])
     timerangeOk(attrib::MetaData) = any(x -> attrib.timerange == x, timerange_constraints)
