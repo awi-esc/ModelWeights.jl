@@ -615,6 +615,7 @@ function _loadDataMapCore(
     end
     data = data[indices_found]
     ids_filtered = ids[indices_found]
+    isempty(data) && @warn "No Data found for given constraints!"
     return defineDataMap(data, ids_filtered)
 end
 
