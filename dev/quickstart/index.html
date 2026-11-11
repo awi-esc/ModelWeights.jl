@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="referrer" content="no-referrer"/><title>Quickstart · ModelWeights.jl</title><meta name="title" content="Quickstart · ModelWeights.jl"/><meta property="og:title" content="Quickstart · ModelWeights.jl"/><meta property="twitter:title" content="Quickstart · ModelWeights.jl"/><meta name="description" content="Documentation for ModelWeights.jl."/><meta property="og:description" content="Documentation for ModelWeights.jl."/><meta property="twitter:description" content="Documentation for ModelWeights.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/documentercitations/citations-hover.css" rel="stylesheet" type="text/css"/><link href="../assets/documentercitations/citations.css" rel="stylesheet" type="text/css"/><link href="../assets/custom.css" rel="stylesheet" type="text/css"/><script src="../assets/documentercitations/citations-data.js"></script><script src="../assets/documentercitations/citations-hover.js"></script><script src="../assets/documentercitations/citations-backlinks.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img src="../assets/logo.png" alt="ModelWeights.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../">ModelWeights.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../installation/">Installation</a></li><li class="is-active"><a class="tocitem" href>Quickstart</a><ul class="internal"><li><a class="tocitem" href="#Loading-Data"><span>Loading Data</span></a></li><li><a class="tocitem" href="#Loading-Filtering-Data"><span>Loading + Filtering Data</span></a></li><li><a class="tocitem" href="#Manipulating-data"><span>Manipulating data</span></a></li><li><a class="tocitem" href="#Computing-Weights"><span>Computing Weights</span></a></li></ul></li><li><a class="tocitem" href="../weights/">Model weights</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../Manual/loading-data/">Loading data</a></li><li><a class="tocitem" href="../Manual/filtering-data/">Filtering data</a></li><li><a class="tocitem" href="../Manual/computing-weights/">Computing weights</a></li></ul></li><li><a class="tocitem" href="../dev-guide/">Development</a></li><li><span class="tocitem">References</span><ul><li><a class="tocitem" href="../refs/public-api/">Public API</a></li><li><a class="tocitem" href="../refs/references/">References</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Quickstart</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Quickstart</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/awi-esc/ModelWeights.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/awi-esc/ModelWeights.jl/blob/main/docs/src/quickstart.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Quickstart"><a class="docs-heading-anchor" href="#Quickstart">Quickstart</a><a id="Quickstart-1"></a><a class="docs-heading-anchor-permalink" href="#Quickstart" title="Permalink"></a></h1><p>The paths we use in the examples point to the sample test data, stored in <code>test/data</code>. This data was preprocessed with ESMValTool.</p><p>First, we need to load <code>ModelWeights.Data</code> into our julia environment.</p><pre><code class="language-julia hljs">import ModelWeights.Data as mwd</code></pre><p>For simplicity, we also do (assuming the examples are run from the top-level directory):</p><pre><code class="language-julia hljs">base = &quot;test/data&quot;</code></pre><h2 id="Loading-Data"><a class="docs-heading-anchor" href="#Loading-Data">Loading Data</a><a id="Loading-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Loading-Data" title="Permalink"></a></h2><p>Load <code>tos</code> and <code>tas</code> climatologies for the <code>lgm</code> experiment:</p><pre><code class="language-julia hljs">paths_lgm_tas = joinpath.(base, [&quot;lgm-cmip5-tas-climatologies&quot;, &quot;lgm-cmip6-tas-climatologies&quot;])
+paths_lgm_tos = joinpath.(base, [&quot;lgm-cmip5-tos-climatologies&quot;, &quot;lgm-cmip6-tos-climatologies&quot;])
+ids = [&quot;lgm_tas_CLIM&quot;, &quot;lgm_tos_CLIM&quot;] # your chosen ids to refer to the data</code></pre><pre><code class="language-julia-repl hljs">julia&gt; dm = mwd.defineDataMap([paths_lgm_tas, paths_lgm_tos], ids; filename_format = :esmvaltool)
+::DataMap
+lgm_tas_CLIM: (72, 36, 17)
+lgm_tos_CLIM: (72, 36, 16)</code></pre><p>Subset data so that every dataset contains the same models (but not necessarily the same model members):</p><pre><code class="language-julia-repl hljs">julia&gt; dm_models = mwd.subsetModelData(dm, :model)
+::DataMap
+lgm_tas_CLIM: (72, 36, 15)
+lgm_tos_CLIM: (72, 36, 16)</code></pre><p>Subset data so that every dataset contains the exact same model simulations:</p><pre><code class="language-julia-repl hljs">julia&gt; dm_members = mwd.subsetModelData(dm, :member)
+::DataMap
+lgm_tas_CLIM: (72, 36, 15)
+lgm_tos_CLIM: (72, 36, 15)</code></pre><h2 id="Loading-Filtering-Data"><a class="docs-heading-anchor" href="#Loading-Filtering-Data">Loading + Filtering Data</a><a id="Loading-Filtering-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Loading-Filtering-Data" title="Permalink"></a></h2><p>The same filtering, as done in the previous examples, can also be done directly when loading the data: </p><pre><code class="language-julia-repl hljs">julia&gt; mwd.defineDataMap(
+    [paths_lgm_tas, paths_lgm_tos], 
+    ids; 
+    filename_format = :esmvaltool,
+    level = :model
+)
+::DataMap
+lgm_tas_CLIM: (72, 36, 15)
+lgm_tos_CLIM: (72, 36, 16)</code></pre><p>for exact simulations, we set <code>level=:member</code>:</p><pre><code class="language-julia-repl hljs">julia&gt; mwd.defineDataMap(
+    [paths_lgm_tas, paths_lgm_tos], 
+    ids; 
+    filename_format = :esmvaltool,
+    level = :member
+)
+::DataMap
+lgm_tas_CLIM: (72, 36, 15)
+lgm_tos_CLIM: (72, 36, 15)</code></pre><p>To see which models/members are shared across datasets:</p><pre><code class="language-julia-repl hljs">mwd.sharedModels(dm, :model)
+13-element Vector{String}:
+ &quot;AWI-ESM-1-1-LR&quot;
+ &quot;CESM2-FV2&quot;
+ &quot;CESM2-WACCM-FV2&quot;
+ &quot;CNRM-CM5&quot;
+ &quot;FGOALS-g2&quot;
+ &quot;GISS-E2-R&quot;
+ &quot;INM-CM4-8&quot;
+ &quot;IPSL-CM5A-LR&quot;
+ &quot;MIROC-ES2L&quot;
+ &quot;MIROC-ESM&quot;
+ &quot;MPI-ESM-P&quot;
+ &quot;MPI-ESM1-2-LR&quot;
+ &quot;MRI-CGCM3&quot;</code></pre><pre><code class="language-julia-repl hljs">julia&gt; mwd.sharedModels(dm, :member)
+15-element Vector{String}:
+ &quot;AWI-ESM-1-1-LR#r1i1p1f1_gn&quot;
+ &quot;CESM2-FV2#r1i2p2f1_gn&quot;
+ &quot;CESM2-WACCM-FV2#r1i2p2f1_gn&quot;
+ &quot;CNRM-CM5#r1i1p1&quot;
+ &quot;FGOALS-g2#r1i1p1&quot;
+ &quot;GISS-E2-R#r1i1p150&quot;
+ ⋮
+ &quot;MIROC-ES2L#r1i1p1f2_gn&quot;
+ &quot;MIROC-ESM#r1i1p1&quot;
+ &quot;MPI-ESM-P#r1i1p1&quot;
+ &quot;MPI-ESM-P#r1i1p2&quot;
+ &quot;MPI-ESM1-2-LR#r1i1p1f1_gn&quot;
+ &quot;MRI-CGCM3#r1i1p1&quot;</code></pre><h2 id="Manipulating-data"><a class="docs-heading-anchor" href="#Manipulating-data">Manipulating data</a><a id="Manipulating-data-1"></a><a class="docs-heading-anchor-permalink" href="#Manipulating-data" title="Permalink"></a></h2><p>We may want to apply a function to every entry in our <code>DataMap</code>. For example, to compute (area weighted) global means for all datasets:</p><pre><code class="language-julia hljs">gms = mwd.apply(dm_members, mwd.globalMeans)
+::DataMap
+lgm_tas_CLIM: (15,)
+lgm_tos_CLIM: (15,)</code></pre><p>Tpply a function just on a subset of the datasets in our <code>DataMap</code>:</p><pre><code class="language-julia-repl hljs">mwd.apply(
+    dm_members,
+    mwd.globalMeans;
+    ids = [&quot;lgm_tas_CLIM&quot;]
+)
+::DataMap
+lgm_tas_CLIM: (15,)</code></pre><p>To save the result as a new entry, use the data-modifying function <code>apply!</code>. Note that, if no new id is given, the old id will be overwritten.</p><pre><code class="language-julia-repl hljs">julia&gt; mwd.apply!(
+    dm_members, 
+    mwd.globalMeans; 
+    ids = [&quot;lgm_tas_CLIM&quot;],
+    ids_new = [&quot;lgm_tas_GM&quot;]
+)
+
+julia&gt; dm_members
+::DataMap
+lgm_tas_CLIM: (72, 36, 15)
+lgm_tas_GM: (15,)
+lgm_tos_CLIM: (72, 36, 15)</code></pre><h2 id="Computing-Weights"><a class="docs-heading-anchor" href="#Computing-Weights">Computing Weights</a><a id="Computing-Weights-1"></a><a class="docs-heading-anchor-permalink" href="#Computing-Weights" title="Permalink"></a></h2><div class="admonition is-info" id="Coming-soon-1175160ba4c37f84"><header class="admonition-header">Coming soon<a class="admonition-anchor" href="#Coming-soon-1175160ba4c37f84" title="Permalink"></a></header><div class="admonition-body"><p>This section is not finished yet. </p></div></div><p>Let&#39;s first create some random (non realistic) observational data (with the same grid as in the model data!) and load it into a DataMap:</p><pre><code class="language-julia hljs">using DimensionalData
+using YAXArrays
+
+longitudes = collect(lookup(dm_models[&quot;lgm_tas_CLIM&quot;], :lon))
+latitudes = collect(lookup(dm_models[&quot;lgm_tas_CLIM&quot;], :lat))
+
+obs_tas = YAXArray((
+    Dim{:lon}(longitudes), Dim{:lat}(latitudes), Dim{:model}([&quot;obs&quot;])),
+    rand(length(longitudes), length(latitudes), 1)
+)
+obs_tos = YAXArray((
+    Dim{:lon}(longitudes), Dim{:lat}(latitudes), Dim{:model}([&quot;obs&quot;])),
+    rand(length(longitudes), length(latitudes), 1)
+)
+dm_obs = mwd.defineDataMap([obs_tas, obs_tos], [&quot;tas_CLIM&quot;, &quot;tos_CLIM&quot;])</code></pre><p>We need to specify the diagnostics that the performance and independence weights should be based on as well as the relative impact of each and the hyperparameters <span>$\sigma_D, \sigma_S$</span> that respectively regulate the strength of the performance- and independence weighting.</p><p>Note that the diagnostics for the distances between models and data must all be defined on a lon x lat grid.</p><pre><code class="language-julia hljs">config = mww.ConfigWeights(
+    performance = Dict(
+        &quot;tas_ANOM-GM&quot; =&gt; 1,
+        &quot;tos_ANOM-GM&quot; =&gt; 1
+    ),
+    independence = Dict(
+        &quot;lgm_tas_CLIM&quot; =&gt; 0.5,
+        &quot;lgm_tos_CLIM&quot; =&gt; 0.5
+    ),
+    sigma_independence = 0.5, # may be ommited (0.5 is default value)
+    sigma_performance = 0.5 # may be ommited (0.5 is default value)
+);</code></pre><!-- Let's compute the diagnostics we haven't computed yet that we just specified, the anomalies with respect to the global mean (denoted as "ANOM-GM"). For model data:
+<p>julia dm<em>models = mwd.subsetModelData(dm, :model) ids = collect(keys(dm</em>models)) ids<em>new = map(x -&gt; replace(x, &quot;CLIM&quot; =&gt; &quot;ANOM-GM&quot;), ids) mwd.apply(dm</em>models, mwd.anomaliesGM; ids, ids_new)</p><pre><code class="nohighlight hljs">
+And for observational data:
+</code></pre><p>julia ids = collect(keys(dm<em>obs)) ids</em>new = map(x -&gt; replace(x, &quot;CLIM&quot; =&gt; &quot;ANOM-GM&quot;), ids) mwd.apply!(dm<em>obs, mwd.anomaliesGM; ids, ids</em>new)</p><pre><code class="nohighlight hljs">
+Before we can compute weights, we need to make sure that the keys for the observations and models for the diagnostics are identical:
+</code></pre><p>julia mwd.renameDict!(     dm<em>models,     [&quot;lgm</em>tas<em>ANOM-GM&quot;, &quot;lgm</em>tos<em>ANOM-GM&quot;],     [&quot;tas</em>ANOM-GM&quot;, &quot;tos_ANOM-GM&quot;] )</p><pre><code class="nohighlight hljs">
+Now, we&#39;re ready to compute model weights:
+</code></pre><p>julia weights = mww.climwipWeights(dm<em>models, dm</em>obs, config)</p><pre><code class="language--- hljs"></code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../installation/">« Installation</a><a class="docs-footer-nextpage" href="../weights/">Model weights »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.20.0 on <span class="colophon-date" title="Wednesday 11 November 2026 11:41">Wednesday 11 November 2026</span>. Using Julia version 1.13.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
