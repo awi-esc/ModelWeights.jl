@@ -1,16 +1,16 @@
-# ModelWeights
+# ModelWeights.jl
 
 `ModelWeights.jl` was built to facilitate working with climate model ensembles such as CMIP, with a particular focus on computing model weights.
 
-Among others, it provides functions to compute model weights based on independence- and performance metrics, following the approach from Brunner et al (2020).
+Among other things, it provides functions to compute model weights based on independence and performance metrics, following the approach of Brunner et al. (2020).
 
-The package assumes the data to be already available in a pre-processed state, in particular, it assumes all data is defined on the same lon-lat grid.
+The package assumes the data to be already available in a preprocessed state, in particular, it assumes all data is defined on the same lon-lat grid.
 
-## Main functionalities
+## Main features
 
-- Load and filter .nc data to get ensembles of models in a data format convenient for further analysis, e.g., get `tas` data of all models that provide it for each of a set of experiments, e.g. the lgm, piControl and historical.
-- Data can be loaded based on ESMValTool recipes, if they were used for preprocessing.
-- Computation of model weights for models in an ensemble using various approaches
+- Load and filter NetCDF (`.nc`) data to get ensembles of models in a data format convenient for further analysis, e.g., get `tas` data of all models that provide it for each of a set of experiments, such as the lgm, piControl and historical.
+- Load data based on ESMValTool recipes, if they were used for preprocessing.
+- Compute model weights for models in an ensemble using various approaches
 
 
 ## Installation
@@ -19,24 +19,24 @@ For now, ModelWeights.jl should be used like any local package under development
 
 1. Clone the repository to a local directory.
 
-2. Add ModelWeights.jl to your workspace in Julia using `Pkg.dev()` rather than `Pkg.add()`:
+2. Add ModelWeights.jl to your Julia environment using `dev` rather than `add` in the `pkg>` mode or:
 
 ```julia
 using Pkg
-Pkg.dev("path/to/ModelWeights.jl")
+Pkg.develop("path/to/ModelWeights.jl")
 ```
 
 ## Quickstart
 
 The paths we use in the examples point to the sample test data, stored in `test/data`. This data was preprocessed with ESMValTool.
 
-First, we need to load `ModelWeights.Data` into our julia environment.
+First, we need to load `ModelWeights.Data` into our Julia environment.
 
 ```julia
 import ModelWeights.Data as mwd
 ```
 
-For simplicity, we also do (assuming the examples are run from the top-level directory):
+For simplicity, we also define (assuming the examples are run from the top-level directory):
 
 ```julia
 base = "test/data"
@@ -65,7 +65,7 @@ lgm_tas_CLIM: (72, 36, 17)
 lgm_tos_CLIM: (72, 36, 16)
 ```
 
-Subset data so that every dataset contains the same models (but not necessarily the same model members):
+Subset data so that every dataset contains the same models (but not necessarily the same model members, as is the case in this example):
 
 ```julia-repl
 julia> dm_models = mwd.subsetModelData(dm, :model)
@@ -99,7 +99,7 @@ lgm_tas_CLIM: (72, 36, 15)
 lgm_tos_CLIM: (72, 36, 16)
 ```
 
-for exact simulations, we set `level=:member`:
+To keep only identical simulations, set `level=:member`:
 
 ```julia-repl
 julia> mwd.defineDataMap(
@@ -116,7 +116,7 @@ lgm_tos_CLIM: (72, 36, 15)
 To see which models/members are shared across datasets:
 
 ```julia-repl
-mwd.sharedModels(dm, :model)
+julia> mwd.sharedModels(dm, :model)
 13-element Vector{String}:
  "AWI-ESM-1-1-LR"
  "CESM2-FV2"
@@ -132,6 +132,8 @@ mwd.sharedModels(dm, :model)
  "MPI-ESM1-2-LR"
  "MRI-CGCM3"
 ```
+Note that, since the output here is 13 models, this means that some models in the simulation have multiple runs as the original datasets contained 15 and 16 members.
+
 
 ```julia-repl
 julia> mwd.sharedModels(dm, :member)
@@ -151,21 +153,21 @@ julia> mwd.sharedModels(dm, :member)
  "MRI-CGCM3#r1i1p1"
 ```
 
-### Manipulating data
+### Manipulating Data
 
-We may want to apply a function to every entry in our `DataMap`. For example, to compute (area weighted) global means for all datasets:
+We may want to apply a function to every entry in our `DataMap`. For example, to compute (area-weighted) global means for all datasets:
 
-```julia 
-gms = mwd.apply(dm_members, mwd.globalMeans)
+```julia-repl 
+julia> gms = mwd.apply(dm_members, mwd.globalMeans)
 ::DataMap
 lgm_tas_CLIM: (15,)
 lgm_tos_CLIM: (15,)
 ```
 
-Tpply a function just on a subset of the datasets in our `DataMap`:
+To apply a function just on a subset of the datasets in our `DataMap`:
 
 ```julia-repl
-mwd.apply(
+julia> mwd.apply(
     dm_members,
     mwd.globalMeans;
     ids = ["lgm_tas_CLIM"]
@@ -174,7 +176,7 @@ mwd.apply(
 lgm_tas_CLIM: (15,)
 ```
 
-To save the result as a new entry, use the data-modifying function `apply!`. Note that, if no new id is given, the old id will be overwritten.
+To save the result as a new entry, use the data-modifying function `apply!`. Note that, if no new id is given, the data stored under the original id(s) will be overwritten.
 
 ```julia-repl
 julia> mwd.apply!(
@@ -202,4 +204,4 @@ lgm_tos_CLIM: (72, 36, 15)
 ## References
 - Brunner, Lukas, Angeline G. Pendergrass, Flavio Lehner, Anna L. Merrifield, Ruth Lorenz, and Reto Knutti. “Reduced Global Warming from CMIP6 Projections When Weighting Models by Performance and Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020): 995–1012. https://doi.org/10.5194/esd-11-995-2020.
 
-- For online documentation of climwip in ESMValTool, see [here](https://docs.esmvaltool.org/en/latest/recipes/recipe_climwip.html).
+- For online documentation of climwip in ESMValTool, see [the ClimWIP recipe documentation in ESMValTool](https://docs.esmvaltool.org/en/latest/recipes/recipe_climwip.html).
