@@ -1,8 +1,10 @@
 # ModelWeights.jl
 
-A package to compute weights (based on independence- and performance) for ensembles of Earth System Models (ESMs), especially CMIP models, including convenience functions for handling climate model data.
+`ModelWeights.jl` was built to facilitate working with climate model ensembles such as CMIP, with a particular focus on computing model weights.
 
-To use the provided functionalities the data must be available on the same grid.
+Among other things, it provides functions to compute model weights based on independence and performance metrics, following the approach of Brunner et al. (2020).
+
+To use the provided functionalities, it is assumed that the data is already available in a preprocessed state, in particular, it must be defined on the same lon-lat grid.
 
 
 ## Package features

@@ -4,7 +4,7 @@
 
 Among other things, it provides functions to compute model weights based on independence and performance metrics, following the approach of Brunner et al. (2020).
 
-The package assumes the data to be already available in a preprocessed state, in particular, it assumes all data is defined on the same lon-lat grid.
+It is assumed that the data is already available in a preprocessed state, in particular, it must be defined on the same lon-lat grid.
 
 ## Main features
 
