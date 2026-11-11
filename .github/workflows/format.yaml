@@ -1,0 +1,59 @@
+name: Format check
+
+# Checks that every Julia file changed in a push (or pull request) is formatted
+# with JuliaFormatter (style: see .JuliaFormatter.toml). Nothing is committed;
+# the job fails and prints the required changes. To fix locally:
+#   julia -e 'using JuliaFormatter; format(["path/to/file.jl"])'
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history, needed to diff against the previous push
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+
+      - name: Install JuliaFormatter
+        run: julia -e 'using Pkg; Pkg.add(name="JuliaFormatter", version="2")'
+
+      - name: Find changed Julia files
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            base="$PR_BASE"
+          elif [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+          else
+            # new branch or force push: compare with where the branch left main
+            base=$(git merge-base origin/main HEAD)
+          fi
+          git diff --name-only --diff-filter=ACMR "$base" HEAD -- '*.jl' > changed_files.txt
+          echo "Changed Julia files since $base:"
+          cat changed_files.txt
+
+      - name: Check formatting
+        run: |
+          if [ ! -s changed_files.txt ]; then
+            echo "No Julia files changed."
+            exit 0
+          fi
+          julia -e 'using JuliaFormatter; format(readlines("changed_files.txt"))'
+          if ! git diff --quiet; then
+            echo "::error::Some Julia files are not formatted. Required changes:"
+            git diff
+            exit 1
+          fi
+          echo "All changed Julia files are formatted."
