@@ -1,4 +1,4 @@
-# Quickstart: Examples
+# Quickstart
 
 The paths we use in the examples point to the sample test data, stored in `test/data`. This data was preprocessed with ESMValTool.
 
@@ -14,7 +14,7 @@ For simplicity, we also do (assuming the examples are run from the top-level dir
 base = "test/data"
 ```
 
-## Quickstart: Loading Data
+## Loading Data
 
 Load `tos` and `tas` climatologies for the `lgm` experiment:
 
@@ -49,7 +49,7 @@ lgm_tas_CLIM: (72, 36, 15)
 lgm_tos_CLIM: (72, 36, 15)
 ```
 
-## Quickstart: Loading + Filtering Data
+## Loading + Filtering Data
 
 The same filtering, as done in the previous examples, can also be done directly when loading the data: 
 
@@ -77,7 +77,7 @@ julia> mwd.defineDataMap(
 ::DataMap
 lgm_tas_CLIM: (72, 36, 15)
 lgm_tos_CLIM: (72, 36, 15)
-````
+```
 
 To see which models/members are shared across datasets:
 
@@ -117,5 +117,121 @@ julia> mwd.sharedModels(dm, :member)
  "MRI-CGCM3#r1i1p1"
 ```
 
-## Quickstart: Manipulating data
+## Manipulating data
 
+We may want to apply a function to every entry in our `DataMap`. For example, to compute (area weighted) global means for all datasets:
+
+```julia 
+gms = mwd.apply(dm_members, mwd.globalMeans)
+::DataMap
+lgm_tas_CLIM: (15,)
+lgm_tos_CLIM: (15,)
+```
+
+Tpply a function just on a subset of the datasets in our `DataMap`:
+
+```julia-repl
+mwd.apply(
+    dm_members,
+    mwd.globalMeans;
+    ids = ["lgm_tas_CLIM"]
+)
+::DataMap
+lgm_tas_CLIM: (15,)
+```
+
+To save the result as a new entry, use the data-modifying function `apply!`. Note that, if no new id is given, the old id will be overwritten.
+
+```julia-repl
+julia> mwd.apply!(
+    dm_members, 
+    mwd.globalMeans; 
+    ids = ["lgm_tas_CLIM"],
+    ids_new = ["lgm_tas_GM"]
+)
+
+julia> dm_members
+::DataMap
+lgm_tas_CLIM: (72, 36, 15)
+lgm_tas_GM: (15,)
+lgm_tos_CLIM: (72, 36, 15)
+```
+
+## Computing Weights
+
+!!! info "Coming soon"
+    This section is not finished yet. 
+
+Let's first create some random (non realistic) observational data (with the same grid as in the model data!) and load it into a DataMap:
+
+```julia
+using DimensionalData
+using YAXArrays
+
+longitudes = collect(lookup(dm_models["lgm_tas_CLIM"], :lon))
+latitudes = collect(lookup(dm_models["lgm_tas_CLIM"], :lat))
+
+obs_tas = YAXArray((
+    Dim{:lon}(longitudes), Dim{:lat}(latitudes), Dim{:model}(["obs"])),
+    rand(length(longitudes), length(latitudes), 1)
+)
+obs_tos = YAXArray((
+    Dim{:lon}(longitudes), Dim{:lat}(latitudes), Dim{:model}(["obs"])),
+    rand(length(longitudes), length(latitudes), 1)
+)
+dm_obs = mwd.defineDataMap([obs_tas, obs_tos], ["tas_CLIM", "tos_CLIM"])
+```
+
+We need to specify the diagnostics that the performance and independence weights should be based on as well as the relative impact of each and the hyperparameters $\sigma_D, \sigma_S$ that respectively regulate the strength of the performance- and independence weighting.
+
+Note that the diagnostics for the distances between models and data must all be defined on a lon x lat grid.
+
+```julia
+config = mww.ConfigWeights(
+    performance = Dict(
+        "tas_ANOM-GM" => 1,
+        "tos_ANOM-GM" => 1
+    ),
+    independence = Dict(
+        "lgm_tas_CLIM" => 0.5,
+        "lgm_tos_CLIM" => 0.5
+    ),
+    sigma_independence = 0.5, # may be ommited (0.5 is default value)
+    sigma_performance = 0.5 # may be ommited (0.5 is default value)
+);
+```
+
+```@raw html
+<!-- Let's compute the diagnostics we haven't computed yet that we just specified, the anomalies with respect to the global mean (denoted as "ANOM-GM"). For model data:
+
+```julia
+dm_models = mwd.subsetModelData(dm, :model)
+ids = collect(keys(dm_models))
+ids_new = map(x -> replace(x, "CLIM" => "ANOM-GM"), ids)
+mwd.apply(dm_models, mwd.anomaliesGM; ids, ids_new)
+```
+
+And for observational data:
+
+```julia
+ids = collect(keys(dm_obs))
+ids_new = map(x -> replace(x, "CLIM" => "ANOM-GM"), ids)
+mwd.apply!(dm_obs, mwd.anomaliesGM; ids, ids_new)
+```
+
+Before we can compute weights, we need to make sure that the keys for the observations and models for the diagnostics are identical:
+
+```julia
+mwd.renameDict!(
+    dm_models,
+    ["lgm_tas_ANOM-GM", "lgm_tos_ANOM-GM"],
+    ["tas_ANOM-GM", "tos_ANOM-GM"]
+)
+```
+
+Now, we're ready to compute model weights:
+
+```julia
+weights = mww.climwipWeights(dm_models, dm_obs, config)
+``` -->
+```
