@@ -1,6 +1,6 @@
 # Model weights
 
-The weighting method that we use was developed by Knutti et al. (2017) that is based on work from Sanderson et al. (2015) (see [References](@ref)).
+The weighting method that we use was developed by Knutti et al. [Knutti2017](@cite), based on work from Sanderson et al.[Sanderson2015a, Sanderson2015b](@cite).
 
 ## Basic computation of weights
  

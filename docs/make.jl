@@ -1,6 +1,8 @@
-using Documenter, ModelWeights
+using Documenter, DocumenterCitations, ModelWeights
 
 DocMeta.setdocmeta!(ModelWeights, :DocTestSetup, :(using ModelWeights); recursive=true)
+
+bib = CitationBibliography(joinpath(@__DIR__, "src", "refs", "refs.bib"); style=:numeric)
 
 makedocs(
     sitename = "ModelWeights.jl",
@@ -13,12 +15,13 @@ makedocs(
         "Manual" => ["Manual/loading-data.md", "Manual/filtering-data.md", "Manual/computing-weights.md"],
         #"Examples" => ["examples/climwip.md", "examples/lgm.md"],
         "Development" => "dev-guide.md",
-        "References" => "references.md"
+        "References" => ["refs/public-api.md", "refs/references.md"]
     ],
     format = Documenter.HTML(
         edit_link = "main",
         assets = ["assets/custom.css"],
     ),
+    plugins = [bib],
     clean = true
 )
 
