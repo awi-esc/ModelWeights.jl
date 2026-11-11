@@ -1,8 +1,16 @@
 # ModelWeights
 
-This repository contains the code for the Julia Package ModelWeights. Besides functionalities to load, subset and manipulate CMIP data, it provides functions to compute **independence** and **performance** weights according to the approach from Brunner et al. (2020).
+`ModelWeights.jl` was built to facilitate working with climate model ensembles such as CMIP, with a particular focus on computing model weights.
 
-<!-- This approach assigns lower weights to models that make similar predictions (in a predefined reference period). Models whose predictions are further away (compared to the predictions of the other models in the ensemble) receive larger weights.  -->
+Among others, it provides functions to compute model weights based on independence- and performance metrics, following the approach from Brunner et al (2020).
+
+The package assumes the data to be already available in a pre-processed state, in particular, it assumes all data is defined on the same lon-lat grid.
+
+## Main functionalities
+
+- Load and filter .nc data to get ensembles of models in a data format convenient for further analysis, e.g., get `tas` data of all models that provide it for each of a set of experiments, e.g. the lgm, piControl and historical.
+- Data can be loaded based on ESMValTool recipes, if they were used for preprocessing.
+- Computation of model weights for models in an ensemble using various approaches
 
 
 ## Installation
