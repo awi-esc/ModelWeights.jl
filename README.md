@@ -196,7 +196,7 @@ lgm_tos_CLIM: (72, 36, 15)
 
 ## Documentation
 
-- stable: [https://awi-esc.github.io/ModelWeights.jl/stable/](https://awi-esc.github.io/ModelWeights.jl/stable/)
+- stable (latest tag): [https://awi-esc.github.io/ModelWeights.jl/stable/](https://awi-esc.github.io/ModelWeights.jl/stable/)
 - dev: [https://awi-esc.github.io/ModelWeights.jl/dev/](https://awi-esc.github.io/ModelWeights.jl/dev/)
 
 
