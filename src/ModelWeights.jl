@@ -7,7 +7,7 @@ include("Weights.jl")
 include("Plots.jl")
 
 # make submodules available in the scope of main module (ModelWeights)
-import .Data  
+import .Data
 import .Timeseries
 import .Weights
 import .Plots

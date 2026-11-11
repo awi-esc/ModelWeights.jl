@@ -21,8 +21,12 @@ Compute linear trend as ordinary least squares for timeseries `data` and return 
 function linearTrend(data::YAXArray; full_predictions::Bool = false)
     Data.throwErrorIfDimMissing(data, :time)
     timesteps = Dates.year.(Array(data.time))
-    trends = mapslices(y -> computeLinearTrend(timesteps, Array(y); full_predictions), data; dims = (:time,))
-    return full_predictions ? trends : dropdims(trends, dims=:OutAxis1)
+    trends = mapslices(
+        y -> computeLinearTrend(timesteps, Array(y); full_predictions),
+        data;
+        dims = (:time,),
+    )
+    return full_predictions ? trends : dropdims(trends, dims = :OutAxis1)
 end
 
 
@@ -87,13 +91,11 @@ function filterTimeseries(
     data::YAXArray,
     start_year::Int,
     end_year::Int;
-    only_models_non_missing_vals::Bool = true
+    only_models_non_missing_vals::Bool = true,
 )
     Data.throwErrorIfDimMissing(data, :time)
     try
-        df = data[time = Where(
-            x -> Dates.year(x) >= start_year && Dates.year(x) <= end_year,
-        )]
+        df = data[time=Where(x->Dates.year(x)>=start_year&&Dates.year(x)<=end_year)]
     catch
         @warn "No data found in between $start_year and $end_year !"
         return nothing
@@ -103,9 +105,9 @@ function filterTimeseries(
         dim_symbol = Data.modelDim(df)
 
         dims = otherdims(df, dim_symbol)
-        models_missing_vals = dropdims(any(ismissing, df; dims=dims), dims=dims)
+        models_missing_vals = dropdims(any(ismissing, df; dims = dims), dims = dims)
         #models_missing_vals = mapslices(x -> any(ismissing.(x)), df, dims = otherdims(df, dim_symbol))
-        
+
         n_models = length(DimensionalData.dims(models_missing_vals, dim_symbol))
         indices_missing = findall(models_missing_vals)
         if !isempty(indices_missing)
@@ -115,8 +117,9 @@ function filterTimeseries(
             end
             models_missing = Data.getByIdxModel(models_missing_vals, indices_missing)
             models_missing = DimensionalData.dims(models_missing, dim_symbol).val
-            df = dim_symbol == :model ? df[model = Where(x -> !(x in models_missing))] :
-                df[member = Where(x -> !(x in models_missing))]
+            df =
+                dim_symbol == :model ? df[model=Where(x->!(x in models_missing))] :
+                df[member=Where(x->!(x in models_missing))]
             # update metadata too
             indices_keep = filter(x -> !(x in indices_missing), 1:n_models)
             Data.subsetMeta!(df.properties, indices_keep)
@@ -137,25 +140,25 @@ end
 """
 function filterTimeseries(
     data::YAXArray,
-    indices::AbstractArray{<:Int}; 
-    relative::Bool=false
+    indices::AbstractArray{<:Int};
+    relative::Bool = false,
 )
     Data.throwErrorIfDimMissing(data, :time)
     times = Array(data.time)
     if relative
         indices_ts = get(data.properties, "timeseries-start-end", nothing)
-        if isnothing(indices_ts) 
+        if isnothing(indices_ts)
             indices_ts = addStartEnd!(data)
         end
-        ts_lengths = indices_ts[:,2] .- indices_ts[:,1] .+ 1
+        ts_lengths = indices_ts[:, 2] .- indices_ts[:, 1] .+ 1
         ts_lengths[ts_lengths .== 1] .= 0
 
         n = indices[2]-indices[1] + 1
-        dim_time = map(x -> DateTime(x), 1 : n)
+        dim_time = map(x -> DateTime(x), 1:n)
         dimensions = Vector(undef, ndims(data))
         i_time = Data.indexDim(data, :time)
         i_model = Data.indexDim(data, :model)
-        for (i,d) in enumerate(dims(data))
+        for (i, d) in enumerate(dims(data))
             dimensions[i] = i == i_time ? Dim{:time}(dim_time) : d
         end
         s = collect(size(data))
@@ -168,15 +171,15 @@ function filterTimeseries(
                 s_temp[i_model] = 1
                 vals = fill(missing, s_temp...)
             else
-                ts_start = indices_ts[i,1] + indices[1] - 1
+                ts_start = indices_ts[i, 1] + indices[1] - 1
                 ts_end = ts_start + n - 1
                 #TODO: this fails if ts_start or ts_end exceed boundaries
-                vals = data[model = At(m), time = ts_start : ts_end]
+                vals = data[model=At(m), time=ts_start:ts_end]
             end
-            dat[model = At(m)] = vals
+            dat[model=At(m)] = vals
         end
     else
-        dat = data[time = indices[1] : indices[2]]
+        dat = data[time=indices[1]:indices[2]]
         # TODO: add case when indices exceeds range
         dat = YAXArray(dims(dat), Array(dat), deepcopy(dat.properties))
         start_year = times[1]
@@ -200,12 +203,14 @@ function addStartEnd!(data::YAXArray)
 
     arr = data.data
     for (i, model) in enumerate(models)
-        ts = 1;
-        i_start = 0; i_end = 0;
+        ts = 1
+        i_start = 0
+        i_end = 0
         while ts < n_timesteps && i_start == 0
             #slice = @view data[model = At(model), time=ts]
             slice = model_dim_last ? selectdim(arr, i_model, i) : selectdim(arr, i_time, ts)
-            slice = model_dim_last ? selectdim(slice, i_time, ts) : selectdim(slice, i_model, i)
+            slice =
+                model_dim_last ? selectdim(slice, i_time, ts) : selectdim(slice, i_model, i)
             all_missing = nb_dims_larger_2 ? all(ismissing, slice) : ismissing(slice.data[])
             if all_missing
                 ts += 1
@@ -220,10 +225,14 @@ function addStartEnd!(data::YAXArray)
         else
             while ts < n_timesteps && i_end == 0
                 #slice = @view data[model = At(model), time=ts]
-                slice = model_dim_last ? selectdim(arr, i_model, i) : selectdim(arr, i_time, ts)
-                slice = model_dim_last ? selectdim(slice, i_time, ts) : selectdim(slice, i_model, i)
+                slice =
+                    model_dim_last ? selectdim(arr, i_model, i) : selectdim(arr, i_time, ts)
+                slice =
+                    model_dim_last ? selectdim(slice, i_time, ts) :
+                    selectdim(slice, i_model, i)
 
-                all_missing = nb_dims_larger_2 ? all(ismissing, slice) : ismissing(slice.data[])
+                all_missing =
+                    nb_dims_larger_2 ? all(ismissing, slice) : ismissing(slice.data[])
                 if all_missing
                     i_end = ts-1
                 else

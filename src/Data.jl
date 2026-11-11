@@ -9,7 +9,7 @@ export subsetModelData, sharedModels
 export MODEL_MEMBER_DELIM
 
 import StatsBase
-import Missings:allowmissing
+import Missings: allowmissing
 import LinearRegression as lr
 
 using CSV
@@ -29,27 +29,58 @@ using YAXArrays
 const MODEL_MEMBER_DELIM = "#"
 # maps from file name as retrieved from metadata to name in the filename itself
 const MODEL_NAME_FIXES = Dict(
-    "FGOALS_g2" => "FGOALS-g2", 
+    "FGOALS_g2" => "FGOALS-g2",
     "ACCESS1.3" => "ACCESS1-3",
-    "FIO-ESM" => "fio-esm"
-    #"fio-esm" => "FIO-ESM"
+    "FIO-ESM" => "fio-esm",
 )
 
 # These are taken from https://github.com/WCRP-CMIP/CMIP6_CVs/blob/main/CMIP6_grid_label.json
 const CMIP6_GRID_LABELS = Set([
     "gm",
-    "gn", "gna", "gng", "gnz",
+    "gn",
+    "gna",
+    "gng",
+    "gnz",
     "gr",
-    "gr1", "gr1a", "gr1g", "gr1z",
-    "gr2", "gr2a", "gr2g", "gr2z",
-    "gr3", "gr3a", "gr3g", "gr3z",
-    "gr4", "gr4a", "gr4g", "gr4z",
-    "gr5", "gr5a", "gr5g", "gr5z",
-    "gr6", "gr6a", "gr6g", "gr6z",
-    "gr7", "gr7a", "gr7g", "gr7z",
-    "gr8", "gr8a", "gr8g", "gr8z",
-    "gr9", "gr9a", "gr9g", "gr9z",
-    "gra", "grg", "grz",
+    "gr1",
+    "gr1a",
+    "gr1g",
+    "gr1z",
+    "gr2",
+    "gr2a",
+    "gr2g",
+    "gr2z",
+    "gr3",
+    "gr3a",
+    "gr3g",
+    "gr3z",
+    "gr4",
+    "gr4a",
+    "gr4g",
+    "gr4z",
+    "gr5",
+    "gr5a",
+    "gr5g",
+    "gr5z",
+    "gr6",
+    "gr6a",
+    "gr6g",
+    "gr6z",
+    "gr7",
+    "gr7a",
+    "gr7g",
+    "gr7z",
+    "gr8",
+    "gr8a",
+    "gr8g",
+    "gr8z",
+    "gr9",
+    "gr9a",
+    "gr9g",
+    "gr9z",
+    "gra",
+    "grg",
+    "grz",
 ])
 
 
@@ -63,10 +94,11 @@ struct LevNone <: NoLevel end
 
 # Internal conversion
 toLevel(::Val{:member}) = LevMember()
-toLevel(::Val{:model})  = LevModel()
+toLevel(::Val{:model}) = LevModel()
 toLevel(::Val{:none}) = LevNone()
-toLevel(l::Level) = l 
-toLevel(::Val{l}) where {l} = throw(ArgumentError("invalid level :$l, expected one of: :member, :model, :none"))
+toLevel(l::Level) = l
+toLevel(::Val{l}) where {l} =
+    throw(ArgumentError("invalid level :$l, expected one of: :member, :model, :none"))
 
 
 mutable struct MetaData
@@ -76,9 +108,9 @@ mutable struct MetaData
     timerange::String
     subdir::String
     id::String
-    variable_long::Union{String, Nothing}
-    statistic::Union{String, Nothing}
-    esmvaltoolPreproc::Union{String, Nothing}
+    variable_long::Union{String,Nothing}
+    statistic::Union{String,Nothing}
+    esmvaltoolPreproc::Union{String,Nothing}
 
     function MetaData(
         variable::String,
@@ -87,22 +119,31 @@ mutable struct MetaData
         timerange::String,
         subdir::String,
         id::String,
-        variable_long::Union{String, Nothing},
-        statistic::Union{String, Nothing},
-        esmvaltoolPreproc::Union{String, Nothing}
+        variable_long::Union{String,Nothing},
+        statistic::Union{String,Nothing},
+        esmvaltoolPreproc::Union{String,Nothing},
     )
         if any(map(isempty, [variable, experiment, alias]))
-            throw(ArgumentError("alias (name of diagnostic in ESMValTool), variable and experiment must be provided!"))
+            throw(
+                ArgumentError(
+                    "alias (name of diagnostic in ESMValTool), variable and experiment must be provided!",
+                ),
+            )
         end
         if absent(subdir)
-            subdir = !absent(statistic) ? join([variable, statistic], "_") :
+            subdir =
+                !absent(statistic) ? join([variable, statistic], "_") :
                 throw(ArgumentError("Either subdir or statistic must be provided!"))
         end
         id_built = join([subdir, alias], "_")
         if !isempty(id)
             # if id and statistics are given, it must hold: id = variable_statistic
             if id_built != id
-                throw(ArgumentError("ID must be identical to SUBDIR_ALIAS, if SUBDIR isn't provide it is assumed to equal VARIABLE_STATISTIC"))
+                throw(
+                    ArgumentError(
+                        "ID must be identical to SUBDIR_ALIAS, if SUBDIR isn't provide it is assumed to equal VARIABLE_STATISTIC",
+                    ),
+                )
             end
         end
         return new(
@@ -114,7 +155,7 @@ mutable struct MetaData
             id_built,
             variable_long,
             statistic,
-            esmvaltoolPreproc
+            esmvaltoolPreproc,
         )
     end
 end
@@ -126,15 +167,25 @@ function MetaData(
     timerange::String = "",
     subdir::String = "",
     id::String = "",
-    variable_long::Union{String, Nothing} = nothing,
-    statistic::Union{String, Nothing} = nothing,
-    esmvaltoolPreproc::Union{String, Nothing} = nothing
+    variable_long::Union{String,Nothing} = nothing,
+    statistic::Union{String,Nothing} = nothing,
+    esmvaltoolPreproc::Union{String,Nothing} = nothing,
 )
-    return MetaData(variable, experiment, alias, timerange, subdir, id, variable_long, statistic, esmvaltoolPreproc)
+    return MetaData(
+        variable,
+        experiment,
+        alias,
+        timerange,
+        subdir,
+        id,
+        variable_long,
+        statistic,
+        esmvaltoolPreproc,
+    )
 end
 
 
-const DataMap = Dict{String, YAXArray}
+const DataMap = Dict{String,YAXArray}
 
 function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String}; sorted::Bool = true)
     if length(data) != length(ids)
@@ -145,7 +196,11 @@ function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String}; sorted::Bo
         if haskey(dm, id) # merge on model dimension
             model_dim = modelDim(d)
             if modelDim(dm[id]) != model_dim
-                throw(ArgumentError("Cant join two identical ids, with :member and :model dimension."))
+                throw(
+                    ArgumentError(
+                        "Cant join two identical ids, with :member and :model dimension.",
+                    ),
+                )
             end
             dm[id] = mergeYAX(dm[id], d, model_dim)
         else
@@ -159,37 +214,37 @@ abstract type AbstractFnFormat end
 abstract type CMIPFormat <: AbstractFnFormat end
 
 abstract type ESMVTFormat <: AbstractFnFormat end
-    abstract type ESMVTModelFormat <: ESMVTFormat end
-    abstract type ESMVTObsFormat   <: ESMVTFormat end
-    
+abstract type ESMVTModelFormat <: ESMVTFormat end
+abstract type ESMVTObsFormat <: ESMVTFormat end
+
 struct FF_ESMVT <: ESMVTFormat end
 struct FF_CMIP <: CMIPFormat end
 
 struct FF_CMIP5 <: CMIPFormat end
-struct FF_CMIP5_TR <: CMIPFormat end    
-struct FF_CMIP6 <: CMIPFormat end  
-struct FF_CMIP6_TR <: CMIPFormat end    
+struct FF_CMIP5_TR <: CMIPFormat end
+struct FF_CMIP6 <: CMIPFormat end
+struct FF_CMIP6_TR <: CMIPFormat end
 
 # These are just for the formatString functions
-struct FF_ESMVT_CMIP5    <: ESMVTModelFormat end
+struct FF_ESMVT_CMIP5 <: ESMVTModelFormat end
 struct FF_ESMVT_CMIP5_TR <: ESMVTModelFormat end
-struct FF_ESMVT_CMIP6    <: ESMVTModelFormat end
+struct FF_ESMVT_CMIP6 <: ESMVTModelFormat end
 struct FF_ESMVT_CMIP6_TR <: ESMVTModelFormat end
 
-struct FF_ESMVT_OBS      <: ESMVTObsFormat end
-struct FF_ESMVT_OBS_TR   <: ESMVTObsFormat end
+struct FF_ESMVT_OBS <: ESMVTObsFormat end
+struct FF_ESMVT_OBS_TR <: ESMVTObsFormat end
 
 
 # Internal conversion
 toFF(::Val{:cmip}) = FF_CMIP()
-toFF(::Val{:cmip5})  = FF_CMIP5()
-toFF(::Val{:cmip5_tr})  = FF_CMIP5_TR()
-toFF(::Val{:cmip6})  = FF_CMIP6()
-toFF(::Val{:cmip6_tr})  = FF_CMIP6_TR()
+toFF(::Val{:cmip5}) = FF_CMIP5()
+toFF(::Val{:cmip5_tr}) = FF_CMIP5_TR()
+toFF(::Val{:cmip6}) = FF_CMIP6()
+toFF(::Val{:cmip6_tr}) = FF_CMIP6_TR()
 
 toFF(::Val{:esmvaltool}) = FF_ESMVT()
-toFF(::Val{:esmvaltool_cmip5})  = FF_ESMVT_CMIP5()
-toFF(::Val{:esmvaltool_cmip5_tr})  = FF_ESMVT_CMIP5_TR()
+toFF(::Val{:esmvaltool_cmip5}) = FF_ESMVT_CMIP5()
+toFF(::Val{:esmvaltool_cmip5_tr}) = FF_ESMVT_CMIP5_TR()
 
 toFF(::Val{:esmvaltool_cmip6}) = FF_ESMVT_CMIP6()
 toFF(::Val{:esmvaltool_cmip6_tr}) = FF_ESMVT_CMIP6_TR()
@@ -197,8 +252,12 @@ toFF(::Val{:esmvaltool_cmip6_tr}) = FF_ESMVT_CMIP6_TR()
 toFF(::Val{:esmvaltool_obs}) = FF_ESMVT_OBS()
 toFF(::Val{:esmvaltool_obs_tr}) = FF_ESMVT_OBS_TR()
 
-toFF(f::AbstractFnFormat) = f 
-toFF(::Val{f}) where {f} = throw(ArgumentError("invalid filename format :$f, expected one of: :cmip, :esmvaltool, :esmvaltool_cmip5, :esmvaltool_cmip5_tr, :esmvaltool_cmip6, :esmvaltool_cmip6_tr, :esmvaltool_obs, :esmvaltool_obs_tr"))
+toFF(f::AbstractFnFormat) = f
+toFF(::Val{f}) where {f} = throw(
+    ArgumentError(
+        "invalid filename format :$f, expected one of: :cmip, :esmvaltool, :esmvaltool_cmip5, :esmvaltool_cmip5_tr, :esmvaltool_cmip6, :esmvaltool_cmip6_tr, :esmvaltool_obs, :esmvaltool_obs_tr",
+    ),
+)
 
 formatString(::FF_CMIP5) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT"
 formatString(::FF_CMIP5_TR) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_TIMERANGE"
@@ -207,10 +266,14 @@ formatString(::FF_CMIP6) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID"
 formatString(::FF_CMIP6_TR) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
 
 formatString(::FF_ESMVT_CMIP5) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
-formatString(::FF_ESMVT_CMIP5_TR) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE"
+formatString(
+    ::FF_ESMVT_CMIP5_TR,
+) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE"
 
 formatString(::FF_ESMVT_CMIP6) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
-formatString(::FF_ESMVT_CMIP6_TR) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE"
+formatString(
+    ::FF_ESMVT_CMIP6_TR,
+) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE"
 
 formatString(::FF_ESMVT_OBS) = "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
 formatString(::FF_ESMVT_OBS_TR) = "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE"
@@ -244,42 +307,54 @@ struct ModelMeta <: AbstractMeta
     model::SubString{String}
     experiment::SubString{String}
     variant::SubString{String}
-    grid::Union{Nothing, SubString{String}} # in CMIP standard only given for CMIP6, not CMIP5
-    mip::Union{Nothing, SubString{String}} # in CMIP standard only given for CMIP5, not CMIP6
-    timerange::Union{Nothing, SubString{String}}# only given in filenames of CMIP standard
+    grid::Union{Nothing,SubString{String}} # in CMIP standard only given for CMIP6, not CMIP5
+    mip::Union{Nothing,SubString{String}} # in CMIP standard only given for CMIP5, not CMIP6
+    timerange::Union{Nothing,SubString{String}}# only given in filenames of CMIP standard
     member_id::String
-    
+
     function ModelMeta(
-        fn::String, 
+        fn::String,
         path::String,
-        variable::SubString{String}, 
-        tableid::SubString{String}, 
-        model::SubString{String}, 
-        experiment::SubString{String}, 
-        variant::SubString{String}, 
-        grid::Union{Nothing, SubString{String}}, 
-        mip::Union{Nothing, SubString{String}}, 
-        timerange::Union{Nothing, SubString{String}}
+        variable::SubString{String},
+        tableid::SubString{String},
+        model::SubString{String},
+        experiment::SubString{String},
+        variant::SubString{String},
+        grid::Union{Nothing,SubString{String}},
+        mip::Union{Nothing,SubString{String}},
+        timerange::Union{Nothing,SubString{String}},
     )
         member_id = string(model, MODEL_MEMBER_DELIM, variant)
         if !isnothing(mip) && lowercase(mip) == "cmip6"
             member_id = string(member_id, "_", grid)
         end
-        new(fn, path, variable, tableid, model, experiment, variant, grid, mip, timerange, member_id)
+        new(
+            fn,
+            path,
+            variable,
+            tableid,
+            model,
+            experiment,
+            variant,
+            grid,
+            mip,
+            timerange,
+            member_id,
+        )
     end
 end
 
 function ModelMeta(;
     fn::String,
     path::String,
-    variable::SubString{String}, 
-    tableid::SubString{String}, 
-    model::SubString{String}, 
-    experiment::SubString{String}, 
-    variant::SubString{String}, 
-    grid::Union{Nothing, SubString{String}}, 
-    mip::Union{Nothing, SubString{String}}, 
-    timerange::Union{Nothing, SubString{String}}
+    variable::SubString{String},
+    tableid::SubString{String},
+    model::SubString{String},
+    experiment::SubString{String},
+    variant::SubString{String},
+    grid::Union{Nothing,SubString{String}},
+    mip::Union{Nothing,SubString{String}},
+    timerange::Union{Nothing,SubString{String}},
 )
     ModelMeta(fn, path, variable, tableid, model, experiment, variant, grid, mip, timerange)
 end
@@ -288,29 +363,29 @@ struct ObsMeta <: AbstractMeta
     fn::String
     path::String
     variable::SubString{String}
-    tableid::SubString{String} 
+    tableid::SubString{String}
     model::SubString{String}
     grid::SubString{String}
-    type::SubString{String} 
+    type::SubString{String}
     version::SubString{String}
-    timerange::Union{Nothing, SubString{String}}
+    timerange::Union{Nothing,SubString{String}}
 end
 
 function ObsMeta(;
-    fn::String, 
+    fn::String,
     path::String,
     variable::SubString{String},
-    tableid::SubString{String}, 
-    model::SubString{String}, 
-    grid::SubString{String}, 
-    type::SubString{String}, 
+    tableid::SubString{String},
+    model::SubString{String},
+    grid::SubString{String},
+    type::SubString{String},
     version::SubString{String},
-    timerange::Union{Nothing, SubString{String}}
+    timerange::Union{Nothing,SubString{String}},
 )
     ObsMeta(fn, path, variable, tableid, model, grid, type, version, timerange)
 end
 
-const PreviewMap = Dict{String, Vector{AbstractMeta}}
+const PreviewMap = Dict{String,Vector{AbstractMeta}}
 
 @kwdef struct Constraint
     filenames::Vector{String}
@@ -326,7 +401,7 @@ end
 
 const CONSTRAINT_FIELDS = fieldnames(Constraint)
 
-function Constraint(constraint::Dict{Symbol, Vector{String}}; warn::Bool=true)
+function Constraint(constraint::Dict{Symbol,Vector{String}}; warn::Bool = true)
     all_keys = keys(constraint)
     irrelevant_keys = filter(x -> !(x in CONSTRAINT_FIELDS), all_keys)
     if !isempty(irrelevant_keys) && warn
@@ -341,7 +416,7 @@ function Constraint(constraint::Dict{Symbol, Vector{String}}; warn::Bool=true)
         variants = get(constraint, :variants, String[]),
         grids = get(constraint, :grids, String[]),
         mips = get(constraint, :mips, String[]),
-        members = get(constraint, :members, String[])
+        members = get(constraint, :members, String[]),
     )
 end
 
@@ -355,7 +430,7 @@ function convertESMVTConstraint(constraint::Dict)
         :variants => get(constraint, "variants", String[]),
         :grids => get(constraint, "grids", String[]),
         :mips => get(constraint, "mips", String[]),
-        :members => get(constraint, "members", String[])
+        :members => get(constraint, "members", String[]),
     )
 end
 
@@ -368,8 +443,8 @@ const CONSTRAINTS_TO_META = Dict(
     :models => :model,
     :experiments => :experiment,
     :variants => :variant,
-    :grids => :grid, 
-    :mips => :mip
+    :grids => :grid,
+    :mips => :mip,
 )
 
 
@@ -391,7 +466,7 @@ function Base.show(io::IO, ::MIME"text/plain", x::PreviewMap)
     end
 end
 
-function Base.show(io::IO, ::MIME"text/plain", x::Union{MetaData, AbstractMeta, Constraint})
+function Base.show(io::IO, ::MIME"text/plain", x::Union{MetaData,AbstractMeta,Constraint})
     fields = map(f -> (f, getfield(x, f)), fieldnames(typeof(x)))
     fields = filter(field -> !isnothing(field[2]), fields)
     map(f -> println(io, f), fields)
@@ -403,7 +478,7 @@ m2 = copy(m; variable = SubString("siconc")) # this will use all fields of m exc
 to a SubString, since that's the type that is expected in struct MetaData.
 """
 function Base.copy(m::ModelMeta; kwargs...)
-    grid = isnothing(m.grid) ? nothing :  get(kwargs, :grid, m.grid)
+    grid = isnothing(m.grid) ? nothing : get(kwargs, :grid, m.grid)
     mip = isnothing(m.mip) ? nothing : get(kwargs, :mip, m.mip)
     ModelMeta(;
         fn = get(kwargs, :fn, m.fn),

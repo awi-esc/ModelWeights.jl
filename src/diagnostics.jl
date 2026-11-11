@@ -1,4 +1,4 @@
-function activeDiagnostics(config::Dict{String, Number})
+function activeDiagnostics(config::Dict{String,Number})
     return filter(k -> config[k] > 0, collect(keys(config)))
 end
 
@@ -17,11 +17,11 @@ function globalMeans(data::YAXArray)
     throwErrorIfNotLonLat(data)
     latitudes = collect(lookup(data, :lat))
 
-    spatial = [1,2]
+    spatial = [1, 2]
     other = filter(x -> !(x in spatial), 1:ndims(data))
     mask = falses(size(data)...)
     for I in CartesianIndices(axes(data)[other])
-        indices = (:,:,I.I...)
+        indices = (:, :, I.I...)
         @views mask[indices...] .= ismissing.(@views data[indices...])
     end
     aw_mat = areaWeightMatrix(latitudes, Array(mask)) # is normalized, lon x lat
@@ -29,13 +29,17 @@ function globalMeans(data::YAXArray)
     units = get(data.properties, "units", nothing)
     if !isnothing(units) && length(unique(units)) != 1
         if any(x -> x != "degC" && x != "K", units)
-            throw(ArgumentError("Data for all models must be defined in the same units to compute global mean! Only degC and K are converted into degC."))
+            throw(
+                ArgumentError(
+                    "Data for all models must be defined in the same units to compute global mean! Only degC and K are converted into degC.",
+                ),
+            )
         end
         data = kelvinToCelsius(data)
     end
 
     temp = aw_mat .* Array(data)
-    gms = dropdims(mapslices(x -> sum(skipmissing(x)), temp; dims=(1, 2)); dims=(1,2))
+    gms = dropdims(mapslices(x -> sum(skipmissing(x)), temp; dims = (1, 2)); dims = (1, 2))
     # if gms equals 0 this means that all values were missing, set them to NaN. don't set missing to NaN before, since 
     # that would result in NaN as soon as a single entry is NaN.
     replace!(gms, 0 => NaN)
@@ -45,7 +49,8 @@ end
 # assume no missing values!
 function globalMeansNoMissing(data::YAXArray)
     throwErrorIfNotLonLat(data)
-    weights = areaWeightMatrix(lookup(data, :lat), Bool.(zeros(size(data, 1), size(data, 2))))
+    weights =
+        areaWeightMatrix(lookup(data, :lat), Bool.(zeros(size(data, 1), size(data, 2))))
 
     units = get(data.properties, "units", nothing)
     if !isnothing(units) && length(unique(units)) != 1
@@ -56,12 +61,12 @@ function globalMeansNoMissing(data::YAXArray)
     end
     A = Array(data)
     # reshape weights for broadcasting WITHOUT allocation
-    W = reshape(weights, size(weights)..., ntuple(_ -> 1, ndims(A)-2)...) 
-    gms = sum(A .* W; dims=(1,2))
+    W = reshape(weights, size(weights)..., ntuple(_ -> 1, ndims(A)-2)...)
+    gms = sum(A .* W; dims = (1, 2))
     return YAXArray(
         otherdims(data, (:lon, :lat)),
-        dropdims(gms; dims=(1,2)),
-        deepcopy(data.properties)
+        dropdims(gms; dims = (1, 2)),
+        deepcopy(data.properties),
     )
 end
 
@@ -70,10 +75,10 @@ end
 - `data::AbstractArray`: dimensions: lon, lat, model
 """
 function globalMeans(data::AbstractArray, latitudes::AbstractArray)
-    mask = Bool.(mapslices(model -> ismissing.(model), data; dims=(1,2)))
+    mask = Bool.(mapslices(model -> ismissing.(model), data; dims = (1, 2)))
     aw_mat = areaWeightMatrix(latitudes, Array(mask)) # is normalized, lon x lat
-    gms = mapslices(x -> sum(skipmissing(x)), aw_mat .* Array(data); dims=(1, 2))
-    return dropdims(gms; dims=(1,2))
+    gms = mapslices(x -> sum(skipmissing(x)), aw_mat .* Array(data); dims = (1, 2))
+    return dropdims(gms; dims = (1, 2))
 end
 
 
@@ -92,7 +97,11 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray)
     dims_ref = Array(dims(ref_data, dimension))
     l = length(dims_orig) - length(dims_ref)
     if l > 0
-        throw(ArgumentError("To compute anomalies, reference data must contain all models of original data!"))
+        throw(
+            ArgumentError(
+                "To compute anomalies, reference data must contain all models of original data!",
+            ),
+        )
     end
     # model dimensions must be identical
     indices = l < 0 ? findall(x -> x in dims_orig, dims_ref) : 1:length(dims_orig)
@@ -109,11 +118,15 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray)
     #     @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
     #     return nothing
     # end
-    return YAXArray(orig_data.axes, Array(orig_data.data) .- Array(ref_data.data), orig_data.properties)
+    return YAXArray(
+        orig_data.axes,
+        Array(orig_data.data) .- Array(ref_data.data),
+        orig_data.properties,
+    )
 end
 
 
-function anomaliesGM(orig_data::YAXArray; ref_data::Union{YAXArray, Nothing} = nothing)
+function anomaliesGM(orig_data::YAXArray; ref_data::Union{YAXArray,Nothing} = nothing)
     gms = isnothing(ref_data) ? globalMeans(orig_data) : globalMeans(ref_data)
     return anomalies(orig_data, gms)
 end
@@ -128,7 +141,7 @@ end
 
 function climatology(data::YAXArray)
     throwErrorIfDimMissing(data, :time)
-    return dropdims(mean(data; dims=:time); dims=:time)
+    return dropdims(mean(data; dims = :time); dims = :time)
 end
 
 
@@ -147,14 +160,11 @@ have dimension :model
 """
 function gregoryECS(data_tas::YAXArray, data_rtmt::YAXArray)
     models = dims(data_tas, :model)
-    estimated_ecs = YAXArray(
-        (models,),
-        zeros(length(models))
-    )
+    estimated_ecs = YAXArray((models,), zeros(length(models)))
     for m in models
         lr_model = lr.linregress(data_tas[model=At(m)].data, data_rtmt[model=At(m)].data)
         slope, bias = lr.coef(lr_model)
-        estimated_ecs[model = At(m)] = (-1) * bias / (2*slope)
+        estimated_ecs[model=At(m)] = (-1) * bias / (2*slope)
     end
     return estimated_ecs
 end

@@ -6,7 +6,7 @@
 Wrapper function for mean that removes 'dimension' from the returned YAXArray.
 """
 function average(data::YAXArray, dimension::Symbol)
-    avg = mean(data; dims=dimension)    
+    avg = mean(data; dims = dimension)
     indices = map(x -> x == dimension ? 1 : Colon(), dimNames(data))
     return avg[indices...]
 end
@@ -17,7 +17,7 @@ end
 Wrapper function for sum that removes 'dimension' from the returned YAXArray.
 """
 function add(data::YAXArray, dimension::Symbol)
-    result = sum(data; dims=dimension)    
+    result = sum(data; dims = dimension)
     indices = map(x -> x == dimension ? 1 : Colon(), dimNames(data))
     return result[indices...]
 end
@@ -46,11 +46,23 @@ end
 Throw ArgumentError if `data` does not have ALL dimensions in `dimensions` when 
 `include=:all` (default), or if `data` does not have ANY dimension in `dimensions`.
 """
-function throwErrorIfDimMissing(data::YAXArray, dimensions::Vector{Symbol}; include::Symbol=:all)
+function throwErrorIfDimMissing(
+    data::YAXArray,
+    dimensions::Vector{Symbol};
+    include::Symbol = :all,
+)
     if include == :all && any(x -> !hasdim(data, x), dimensions)
-        throw(ArgumentError("Data must have all of dimensions $(dimensions). Found: $(DimensionalData.name.(DimensionalData.dims(data)))"))
-    elseif  all(x -> !hasdim(data, x), dimensions)
-        throw(ArgumentError("Data must have any of dimensions $(dimensions). Found: $(DimensionalData.name.(DimensionalData.dims(data)))"))
+        throw(
+            ArgumentError(
+                "Data must have all of dimensions $(dimensions). Found: $(DimensionalData.name.(DimensionalData.dims(data)))",
+            ),
+        )
+    elseif all(x -> !hasdim(data, x), dimensions)
+        throw(
+            ArgumentError(
+                "Data must have any of dimensions $(dimensions). Found: $(DimensionalData.name.(DimensionalData.dims(data)))",
+            ),
+        )
     end
     return nothing
 end
@@ -59,11 +71,19 @@ end
 function throwErrorIfNotLonLat(data::YAXArray)
     try
         dimensions = DimensionalData.name.(dims(data))
-        if dimensions[1:2]  != (:lon, :lat)
-            throw(ArgumentError("Input data must have :lon as first and :lat as second dimension! Found:$(dimensions)"))
+        if dimensions[1:2] != (:lon, :lat)
+            throw(
+                ArgumentError(
+                    "Input data must have :lon as first and :lat as second dimension! Found:$(dimensions)",
+                ),
+            )
         end
     catch _
-        throw(ArgumentError("Input data must have :lon as first and :lat as second dimension! Found:$(DimensionalData.name.(dims(data)))"))
+        throw(
+            ArgumentError(
+                "Input data must have :lon as first and :lat as second dimension! Found:$(DimensionalData.name.(dims(data)))",
+            ),
+        )
     end
     return nothing
 end
@@ -86,19 +106,19 @@ julia> ModelWeights.Data.combineAll(["tos", "tas"], ["CLIM"])
  "tas_CLIM"
 ```
 """
-function combineAll(v::Vararg{Vector{String}}; sep::String="_")
+function combineAll(v::Vararg{Vector{String}}; sep::String = "_")
     if any(isempty.(v))
         @warn "At least one input vector is empty -> empty vector returned!"
         return Vector{String}()
     end
-    combinations =  map(elems -> join(elems, sep), Iterators.product(v...))
+    combinations = map(elems -> join(elems, sep), Iterators.product(v...))
     # init in reduce is important! otherwise if combinations is just one element, that 
     # element would be returned as String!
-    return reduce(vcat, combinations; init=Vector{String}())
+    return reduce(vcat, combinations; init = Vector{String}())
 end
 
 
-function warnIfhasMissing(df::YAXArray; name::String="")
+function warnIfhasMissing(df::YAXArray; name::String = "")
     if any(ismissing, df)
         base = "Data contains missing values"
         msg = isempty(name) ? base : "$base; $name"
@@ -108,7 +128,7 @@ function warnIfhasMissing(df::YAXArray; name::String="")
 end
 
 
-function currentTime(;add_hour::Bool=true)
+function currentTime(; add_hour::Bool = true)
     current_day = string(Dates.today())
     if add_hour
         current_day = current_day * '_' * Dates.format(Dates.now(), "HH_MM")
@@ -130,7 +150,8 @@ function individuatePath(target::String; add_hour::Bool = true)
     end
     if isfile(target)
         msg = "$target already exisits, will use "
-        target = joinpath(target_dir, join([currentTime(;add_hour), basename(target)], "_"))
+        target =
+            joinpath(target_dir, join([currentTime(; add_hour), basename(target)], "_"))
         @info msg * "$target instead."
     end
     return target
@@ -161,11 +182,11 @@ function kelvinToCelsius!(data::YAXArray)
             if !isempty(indices)
                 model_dim = modelDim(data)
                 if model_dim == :member
-                    temp = Array(data[member = indices])
-                    data[member = indices] .= temp .- c
+                    temp = Array(data[member=indices])
+                    data[member=indices] .= temp .- c
                 else
-                    temp = Array(data[model = indices])
-                    data[model = indices] .= temp .- c
+                    temp = Array(data[model=indices])
+                    data[model=indices] .= temp .- c
                 end
                 units[indices] .= "degC"
             end
@@ -208,18 +229,18 @@ function convertToSv!(data::YAXArray)
 end
 
 
-function m2ToKm2(data::YAXArray; scale=1)
+function m2ToKm2(data::YAXArray; scale = 1)
     df = YAXArray(data.axes, Array(data.data), deepcopy(data.properties))
     m2ToKm2!(df; scale)
     return df
 end
 
-function m2ToKm2!(data::YAXArray; scale=1)
+function m2ToKm2!(data::YAXArray; scale = 1)
     temp = Array(data)
     data .= temp ./ (10^6 * scale)
     m = modelDim(data)
     n = length(DimensionalData.dims(data, m))
-    units = get(() -> fill("", n), data.properties, "units")    
+    units = get(() -> fill("", n), data.properties, "units")
     if any(x -> x != "m2" && x != "", units)
         @warn "When converting m2 to km2, some metadata was not 'm2'. "
     end
@@ -240,7 +261,7 @@ function absent(x::Dict)
     isempty(x)
 end
 
-function absent(x::Nothing) 
+function absent(x::Nothing)
     return true
 end
 
@@ -258,8 +279,11 @@ Rename dimension `dim` in `data`to `dim_name` and set dimension values of dimens
 - `dim_vals::AbstractVector{T}`:  New dimension values.
 """
 function setDim(
-    data::YAXArray, dim::Symbol, dim_name::Symbol, dim_vals::AbstractVector{T}
-) where T
+    data::YAXArray,
+    dim::Symbol,
+    dim_name::Symbol,
+    dim_vals::AbstractVector{T},
+) where {T}
     data = setDim(data, dim, dim_name)
     return setDim(data, dim_name, dim_vals)
 end
@@ -291,7 +315,7 @@ Set dimension values of dimension `dim` in `data` to `dim_vals`.
 - `dim::Symbol`: Name of the dimension to be changed.
 - `dim_vals::Vector{String}`:  New dimension values.
 """
-function setDim(data::YAXArray, dim::Symbol, dim_vals::AbstractVector{T}) where T
+function setDim(data::YAXArray, dim::Symbol, dim_vals::AbstractVector{T}) where {T}
     data = DimensionalData.set(data, dim => dim_vals)
     return data
 end
@@ -309,8 +333,10 @@ end
 
 
 function renameDict!(
-    data::Dict{T, V}, ids::AbstractVector{T}, ids_new::AbstractVector{T}
-) where {T <: Union{String, Symbol}, V}
+    data::Dict{T,V},
+    ids::AbstractVector{T},
+    ids_new::AbstractVector{T},
+) where {T<:Union{String,Symbol},V}
     if length(ids) != length(ids_new)
         throw(ArgumentError("The nb of old and new ids must be the same!"))
     end
@@ -333,8 +359,8 @@ end
 Normalize values for every entry in `data` such that they sum up to 1. If remove_zero is
 true (default), the returned dictionary does not contain entries for which values were 0.
 """
-function normalizeDict(data::Dict{String, T}; remove_zero::Bool=true) where T <: Number
-    result = Dict{String, Float64}()
+function normalizeDict(data::Dict{String,T}; remove_zero::Bool = true) where {T<:Number}
+    result = Dict{String,Float64}()
     total = sum(values(data))
     if total == 0
         throw(ArgumentError("Cannot normalize dict by total value of 0!"))
@@ -356,12 +382,10 @@ end
 Convert dictionary `data` into a YAXArray with new dimension `dim_name` 
 (default is :diagnostic) whose lookup names are the keys of `data`.
 """
-function dict2YAX(data::Dict{String, T}; dim_name::Symbol = :diagnostic) where {T <: Number}
-    yax = YAXArray(
-        (Dim{:diagnostic}(collect(keys(data))),), Array{T}(undef, length(data))
-    )
+function dict2YAX(data::Dict{String,T}; dim_name::Symbol = :diagnostic) where {T<:Number}
+    yax = YAXArray((Dim{:diagnostic}(collect(keys(data))),), Array{T}(undef, length(data)))
     for k in keys(data)
-        yax[diagnostic = At(k)] = data[k]
+        yax[diagnostic=At(k)] = data[k]
     end
     if dim_name != :diagnostic
         setDim(yax, :diagnostic, dim_name)
@@ -375,7 +399,7 @@ end
     
 Convert longitudes measured from 0° to 360° into  -180° to 180° scale.
 """
-function lon360to180(lon::T) where {T <: Real}
+function lon360to180(lon::T) where {T<:Real}
     return lon > 179 ? lon - 360 : lon
 end
 
@@ -394,7 +418,7 @@ Convert longitudes measured from -180° to 180° into 0° to 360° scale.
 
 For western hemisphere (negative longitudes) 360 is added.
 """
-function lon180to360(lon::T) where {T <: Real}
+function lon180to360(lon::T) where {T<:Real}
     return ifelse(lon < 0, lon + 360, lon)
 end
 
@@ -410,7 +434,7 @@ Arrange 'data' such that eastern latitudes come first, then western latitudes.
 """
 function sortLongitudesEast2West(data::YAXArray)
     indices = longitudesEastWest(data)
-    return data[lon = vcat(indices.east, indices.west)]
+    return data[lon=vcat(indices.east, indices.west)]
 end
 
 """
@@ -433,7 +457,7 @@ function sortLongitudesWest2East(data::YAXArray)
     # )
     # data = data[lon = At(sorted_lon)]
     # data = DimensionalData.Lookups.set(data, lon = lookup_lon)
-    return data[lon = vcat(indices.west, indices.east)]
+    return data[lon=vcat(indices.west, indices.east)]
 end
 
 
@@ -453,8 +477,8 @@ function longitudesEastWest(data::YAXArray)
 end
 
 
-function countMap(data::AbstractVector{T}) where T    
-    counts = Dict{T, Int}()
+function countMap(data::AbstractVector{T}) where {T}
+    counts = Dict{T,Int}()
     for cat in data
         counts[cat] = get(counts, cat, 0) + 1
     end
@@ -464,7 +488,8 @@ end
 
 function insertSingletonDim(A::AbstractArray, idx::Int)
     old_size = size(A)
-    new_size = ntuple(i -> i < idx ? old_size[i] : (i > idx ? old_size[i-1] : 1), ndims(A)+1)
+    new_size =
+        ntuple(i -> i < idx ? old_size[i] : (i > idx ? old_size[i-1] : 1), ndims(A)+1)
     return reshape(A, new_size)
 end
 
@@ -477,11 +502,8 @@ function _insertSingletonDim(A::YAXArray, idx::Int, ::Val{name}, val::String) wh
     old_dims = DimensionalData.dims(A)
     new_dim = Dim{name}([val])
 
-    new_dims = DimensionalData.DimTuple((
-        old_dims[1:idx-1]...,
-        new_dim,
-        old_dims[idx:end]...
-    ))
+    new_dims =
+        DimensionalData.DimTuple((old_dims[1:(idx-1)]..., new_dim, old_dims[idx:end]...))
     return YAXArray(new_dims, A_mat, copy(A.properties))
 end
 

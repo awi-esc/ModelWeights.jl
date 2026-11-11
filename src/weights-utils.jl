@@ -22,8 +22,8 @@ per model is taken into account, e.g. ["m1#run1", "m1#run2", "m1#run3", "m2#run1
 """
 function weightedAvg(
     data::YAXArray;
-    weights::Union{YAXArray, Nothing} = nothing,
-    use_members_equal_weights::Bool = true
+    weights::Union{YAXArray,Nothing} = nothing,
+    use_members_equal_weights::Bool = true,
 )
     model_dim = Data.modelDim(data)
     equal_weighting = isnothing(weights)
@@ -33,14 +33,15 @@ function weightedAvg(
         msg = "weight vector must have same dimension as data (found: data: $model_dim, weights::$(dims(weights)))!"
         throw(ArgumentError(msg))
     end
-    
-    models_align = sort(collect(dims(data, model_dim))) == sort(collect(dims(weights, model_dim)))
+
+    models_align =
+        sort(collect(dims(data, model_dim))) == sort(collect(dims(weights, model_dim)))
     if !equal_weighting && !models_align
         weights, data = Data.alignWeightsAndData(data, weights)
     end
     weighted_data = @d data .* weights
     #weighted_avg = mapslices(x -> sum(skipmissing(x)), weighted_data; dims=(model_dim,))
-    weighted_avg = mapslices(x -> sum(x), weighted_data; dims=(model_dim,))
+    weighted_avg = mapslices(x -> sum(x), weighted_data; dims = (model_dim,))
     return weighted_avg
 end
 
@@ -59,39 +60,39 @@ end
 
 Compute weighted average across dimension `idx_dim` of `data` using `weights`.
 """
-function weightedAvg(data::AbstractArray, weights::AbstractVector, idx_dim::Int)    
+function weightedAvg(data::AbstractArray, weights::AbstractVector, idx_dim::Int)
     s = size(data)
-    target_dims = s[1:end-1]
+    target_dims = s[1:(end-1)]
     n_target_dims = length(target_dims)
-    shape_w = map(x -> x==idx_dim ? length(weights) : 1, 1:n_target_dims+1)
+    shape_w = map(x -> x==idx_dim ? length(weights) : 1, 1:(n_target_dims+1))
     weights = reshape(weights, shape_w...)
-    
+
     is_yax = isa(data, YAXArray)
     # must materialize anyway since in new YAXArrays version this fails otherwise due to DiskArrayEngine
     weighted = is_yax ? Array(data) .* weights : data .* weights
-    weighted_avg = dropdims(sum(weighted, dims=idx_dim); dims=idx_dim)
+    weighted_avg = dropdims(sum(weighted, dims = idx_dim); dims = idx_dim)
     if is_yax
         weighted_avg = YAXArray(
-            (dims(data)[filter(x -> x != idx_dim, 1:length(dims(data)))]...,),   
-            weighted_avg
+            (dims(data)[filter(x -> x != idx_dim, 1:length(dims(data)))]...,),
+            weighted_avg,
         )
     end
     return weighted_avg
 end
 
 
-function weightedVar(data::YAXArray, w::AbstractVector; correct::Bool=false)
+function weightedVar(data::YAXArray, w::AbstractVector; correct::Bool = false)
     d = Data.modelDim(data)
     idx_d = dimnum(data, d)
     if correct
-        n = sum(w).^2 ./ sum(w.^2)
+        n = sum(w) .^ 2 ./ sum(w .^ 2)
     else
         n = size(data, idx_d)
     end
     w = YAXArray((Dim{d}(lookup(data, d)),), w)
     wavg = weightedAvg(data, w)
-    sq_dist = map(d -> d.^2, data .- wavg)
-    arr = dropdims(sum(Array(sq_dist .* w); dims = idx_d); dims=idx_d)
+    sq_dist = map(d -> d .^ 2, data .- wavg)
+    arr = dropdims(sum(Array(sq_dist .* w); dims = idx_d); dims = idx_d)
     return (arr ./ sum(w)) .* (n/(n-1))
 end
 
@@ -252,16 +253,19 @@ function applyWeights(model_data::YAXArray, weights::YAXArray)
     if length(shared_models) == 0
         throw(ArgumentError("No models given for which weights had been computed!"))
     else
-        model_data = model_data[model = Where(x -> x in shared_models)]
-        weights = weights[model = Where(x -> x in shared_models)]
-        weights = weights ./ sum(weights; dims=:model)
+        model_data = model_data[model=Where(x->x in shared_models)]
+        weights = weights[model=Where(x->x in shared_models)]
+        weights = weights ./ sum(weights; dims = :model)
         if length(shared_models) < length(models)
             @warn "Weights renormalized since computed for more models than models in given data."
         end
     end
     if hasdim(weights, :weight)
-        results = map(x -> weightedAvg(model_data; weights=weights[weight=At(x)]), weights.weight)
-        results_yax = cat(results...; dims=dims(weights, :weight))
+        results = map(
+            x -> weightedAvg(model_data; weights = weights[weight=At(x)]),
+            weights.weight,
+        )
+        results_yax = cat(results...; dims = dims(weights, :weight))
     else
         results_yax = weightedAvg(model_data; weights)
     end
@@ -270,20 +274,30 @@ end
 
 
 function likelihoodWeights(
-    vec::Vector{<:Number}, models::Vector{String}, distr::Distribution, name::String
+    vec::Vector{<:Number},
+    models::Vector{String},
+    distr::Distribution,
+    name::String,
 )
     return likelihoodWeights(Distributions.pdf(distr, vec), models, name)
 end
 
 function likelihoodWeights(
-    vec::Vector{<:Number}, models::Vector{String}, lh_fn::Function, name::String, args...; kwargs...
+    vec::Vector{<:Number},
+    models::Vector{String},
+    lh_fn::Function,
+    name::String,
+    args...;
+    kwargs...,
 )
     likelihoods = map(x -> lh_fn(x, args...), vec)
     return likelihoodWeights(likelihoods, models, name)
 end
 
 function likelihoodWeights(
-    likelihoods::Vector{<:Number}, models::Vector{String}, name::String
+    likelihoods::Vector{<:Number},
+    models::Vector{String},
+    name::String,
 )
     weights = likelihoods ./ sum(likelihoods)
     return YAXArray((Dim{:model}(models), Dim{:weight}([name])), reshape(weights, :, 1))
@@ -299,11 +313,9 @@ end
 # TODO: add config for independence weight, maybe abstract config struct, that can 
 # be more general than ConfigWeights.
 # return ClimWIP object
-function climwipWeights(
-    wP::MMEWeights, wI::MMEWeights; suffix_combined::String = ""
-)
+function climwipWeights(wP::MMEWeights, wI::MMEWeights; suffix_combined::String = "")
     wIP = wP.w .* wI.w
-    wIP = wIP ./ sum(wIP)    
+    wIP = wIP ./ sum(wIP)
     # if isempty(name_combined)
     #     name_combined = join([wP.name, wI.name], "-")
     # end
@@ -313,18 +325,19 @@ function climwipWeights(
     #         reshape(wIP.data, :, 1)
     #     )
     # else
-        # weights_arr = cat([wP.w, wI.w, wIP]..., dims=Dim{:weight}([wP.name, wI.name, name_combined]))
-        # return weights_arr
+    # weights_arr = cat([wP.w, wI.w, wIP]..., dims=Dim{:weight}([wP.name, wI.name, name_combined]))
+    # return weights_arr
     # end
     name_combined = isempty(suffix_combined) ? "wIP" : "wIP_" * suffix_combined
-    weights_arr = cat([wP.w, wI.w, wIP]..., dims=Dim{:weight}([wP.name, wI.name, name_combined]))
+    weights_arr =
+        cat([wP.w, wI.w, wIP]..., dims = Dim{:weight}([wP.name, wI.name, name_combined]))
     return ClimWIP(
         performance_distances = Dict(),
         independence_distances = Dict(),
-        Di = YAXArray(rand(1,1)),
-        Sij = YAXArray(rand(1,1)),
+        Di = YAXArray(rand(1, 1)),
+        Sij = YAXArray(rand(1, 1)),
         w = weights_arr,
-        config = ConfigWeights()
+        config = ConfigWeights(),
     )
 end
 
@@ -333,11 +346,15 @@ function climwipWeights(
     weights_perform::AbstractVector{MMEWeights},
     wI::MMEWeights,
     suffix_combined_wP::String;
-    suffix_combined::String = ""
+    suffix_combined::String = "",
 )
-    models = map(mme -> sort(lookup(mme.w, :model)), weights_perform) 
+    models = map(mme -> sort(lookup(mme.w, :model)), weights_perform)
     if length(unique(models)) != 1
-        throw(ArgumentError("Different performance weight vectors must be defined for the same models!"))
+        throw(
+            ArgumentError(
+                "Different performance weight vectors must be defined for the same models!",
+            ),
+        )
     end
 
     wP = similar(weights_perform[1].w)
@@ -367,11 +384,11 @@ function climwipWeights(
     obs_data::DataMap,
     config::ConfigWeights;
     suffix_name::String = "historical",
-    norm_avg_members::Bool = true
+    norm_avg_members::Bool = true,
 )
     diagnostics_indep = Data.activeDiagnostics(config.independence)
     diagnostics_perform = Data.activeDiagnostics(config.performance)
-    
+
     config = normalizeConfigWeight(config)
     weights_perform = Data.dict2YAX(config.performance)
     weights_indep = Data.dict2YAX(config.independence)
@@ -379,8 +396,18 @@ function climwipWeights(
     dists_perform_all = Data.distancesData(model_data, obs_data, diagnostics_perform)
     dists_indep_all = Data.distancesModels(model_data, diagnostics_indep)
 
-    Di = Data.generalizedDistances(dists_perform_all, diagnostics_perform, weights_perform; norm_avg_members)
-    Sij = Data.generalizedDistances(dists_indep_all, diagnostics_indep, weights_indep; norm_avg_members)
+    Di = Data.generalizedDistances(
+        dists_perform_all,
+        diagnostics_perform,
+        weights_perform;
+        norm_avg_members,
+    )
+    Sij = Data.generalizedDistances(
+        dists_indep_all,
+        diagnostics_indep,
+        weights_indep;
+        norm_avg_members,
+    )
 
     wP = performanceWeights(Di, config.sigma_performance)
     wI = independenceWeights(Sij, config.sigma_independence)
@@ -390,7 +417,7 @@ function climwipWeights(
 
     names_weights = String.(map(x -> join([x, suffix_name], "-"), ["wIP", "wI", "wP"]))
     weights_arr = cat([w, wI, wP]..., dims = Dim{:weight}(names_weights))
-    
+
     # save dists and diagnostics as dictionaries
     dists_perform, dists_indep = Dict(), Dict()
     for (diag, dists) in zip(diagnostics_perform, dists_perform_all)
@@ -399,14 +426,14 @@ function climwipWeights(
     for (diag, dists) in zip(diagnostics_indep, dists_indep_all)
         dists_indep[diag] = dists
     end
-    
+
     return ClimWIP(
         performance_distances = dists_perform,
         independence_distances = dists_indep,
         Di = Di,
         Sij = Sij,
         w = weights_arr,
-        config = config
+        config = config,
     )
 end
 
@@ -416,16 +443,17 @@ function performanceWeights(
     obs_data::DataMap,
     diagnostics::AbstractVector{<:String};
     suffix_name::String = "",
-    sigma_D::Number = 1/sqrt(2)
+    sigma_D::Number = 1/sqrt(2),
 )
     dists_perform_all = Data.distancesData(model_data, obs_data, diagnostics)
     dists_perform_all = Data.summarizeMembers.(dists_perform_all)
     models = collect(lookup(dists_perform_all[1], :model))
     wPs = Vector{MMEWeights}(undef, length(diagnostics))
     for (i, d) in enumerate(diagnostics)
-        wP_unnormalized = exp.(-Array(dists_perform_all[i].data)./(2*sigma_D^2))
+        wP_unnormalized = exp.(-Array(dists_perform_all[i].data) ./ (2*sigma_D^2))
         wP = wP_unnormalized ./ sum(wP_unnormalized)
-        wPs[i] = MMEWeights(w = YAXArray((Dim{:model}(models),), wP), name=d * suffix_name)
+        wPs[i] =
+            MMEWeights(w = YAXArray((Dim{:model}(models),), wP), name = d * suffix_name)
     end
     return wPs
 end
@@ -461,7 +489,7 @@ function climwipWeights(
     dists_indep_all::YAXArray,
     dists_perform_all::YAXArray,
     config::ConfigWeights;
-    suffix_name::String = "historical"
+    suffix_name::String = "historical",
 )
     config = normalizeConfigWeight(config)
     weights_perform = Data.dict2YAX(config.performance)
@@ -484,7 +512,7 @@ function climwipWeights(
         Di = Di,
         Sij = Sij,
         w = weights_arr,
-        config = config
+        config = config,
     )
 end
 
@@ -547,13 +575,22 @@ end
 function normalizeConfigWeight(config::ConfigWeights)
     perform = Data.normalizeDict(config.performance)
     indep = Data.normalizeDict(config.independence)
-    return ConfigWeights(perform, indep, config.sigma_performance, config.sigma_independence)
+    return ConfigWeights(
+        perform,
+        indep,
+        config.sigma_performance,
+        config.sigma_independence,
+    )
 end
 
 
 function brier(p_hat::Number, outcome::Int)
     if outcome != 1 && outcome != 0
-        throw(ArgumentError("Event can either be observed (1) or not (1), input must be a number!"))
+        throw(
+            ArgumentError(
+                "Event can either be observed (1) or not (1), input must be a number!",
+            ),
+        )
     end
     return (p_hat - outcome)^2
 end
@@ -564,13 +601,17 @@ end
 """
 function rps(p_hat::Vector{<:Number}, cat::Int)
     if cat > length(p_hat)
-        throw(ArgumentError("The length of the forecast probability vector ($p_hat) is smaller then the observed category ($cat)"))
+        throw(
+            ArgumentError(
+                "The length of the forecast probability vector ($p_hat) is smaller then the observed category ($cat)",
+            ),
+        )
     end
     cdf_p = cumsum(p_hat)
     obs = zeros(length(p_hat))
     obs[cat] = 1
     cdf_obs = cumsum(obs)
-    return sum((cdf_p .- cdf_obs).^2)
+    return sum((cdf_p .- cdf_obs) .^ 2)
 end
 
 """
@@ -585,7 +626,7 @@ Use closed Form definition of CRPS.
 - `samples::AbstractVector{<:Union{Missing, Number}}`: vector of predictions.
 - `obs::Number`:: single observation.
 """
-function crps(samples::AbstractVector{<:Union{Missing, Number}}, obs::Number)
+function crps(samples::AbstractVector{<:Union{Missing,Number}}, obs::Number)
     # expected absolute error between forecast points and observation
     ev_obs = mean(abs.(samples .- obs))
     # expected absolute difference between two random forecast points (each sample pair)
@@ -604,17 +645,21 @@ Compute Continuous Ranked Probability Score (CRPS) for predicted `samples` and o
 - `obs`: must have the same dimensions as `samples` except for the model dimension (:model or :member)
 which is only present in `samples`.
 """
-function crps(samples::YAXArray{<:Union{Missing, Number}}, obs::YAXArray)
+function crps(samples::YAXArray{<:Union{Missing,Number}}, obs::YAXArray)
     model_dim = Data.modelDim(samples)
     dimensions = otherdims(samples, model_dim)
     if length(dimensions) == 0
-        throw(ArgumentError("for observations that are single values, use single value as input arg to crps for obs! "))
+        throw(
+            ArgumentError(
+                "for observations that are single values, use single value as input arg to crps for obs! ",
+            ),
+        )
     end
     if dimensions != dims(obs)
         throw(ArgumentError("Models and observations must be defined on same grid!"))
     end
     values = YAXArray(dimensions, ones(size(dimensions)))
-    for (I, slice) in zip(CartesianIndices(obs), eachslice(samples; dims=dimensions))
+    for (I, slice) in zip(CartesianIndices(obs), eachslice(samples; dims = dimensions))
         values[I] = crps(collect(slice), only(obs[I]))
     end
     return values
@@ -622,16 +667,16 @@ end
 
 
 function crpss(
-    samples_forecast::AbstractVector{<:Union{Missing, Number}}, 
-    samples_baseline::AbstractVector{<:Union{Missing, Number}},
-    obs::Number
+    samples_forecast::AbstractVector{<:Union{Missing,Number}},
+    samples_baseline::AbstractVector{<:Union{Missing,Number}},
+    obs::Number,
 )
     crps_fc = crps(samples_forecast, obs)
     crps_baseline = crps(samples_baseline, obs)
     return 1 - (crps_fc / crps_baseline)
 end
 
-function crpss(crps_fc::T, crps_baseline::T) where {T <: Union{Matrix, Number}}
+function crpss(crps_fc::T, crps_baseline::T) where {T<:Union{Matrix,Number}}
     result = 1 .- (crps_fc ./ crps_baseline)
     return result
 end
@@ -650,7 +695,11 @@ timestep there is exactly one observation. The CRPSS is based on the average CRP
 - `samples_baseline::YAXArray`: must have dimension :time and :model or :member
 - `observations::YAXArray`: must have only dimension :time
 """
-function crpss(samples_forecast::YAXArray, samples_baseline::YAXArray, observations::YAXArray)
+function crpss(
+    samples_forecast::YAXArray,
+    samples_baseline::YAXArray,
+    observations::YAXArray,
+)
     Data.throwErrorIfDimMissing(samples_forecast, :time)
     Data.throwErrorIfDimMissing(samples_baseline, :time)
     Data.throwErrorIfDimMissing(observations, :time)
@@ -659,26 +708,32 @@ function crpss(samples_forecast::YAXArray, samples_baseline::YAXArray, observati
     dims_bl = otherdims(samples_baseline, (:time, level_predictions))
     dims_obs = otherdims(observations, :time)
     if (dims_fc != dims_bl) || (dims_fc != dims_obs)
-        throw(ArgumentError("forecast, baseline and observation must all have the same dimensions!"))
+        throw(
+            ArgumentError(
+                "forecast, baseline and observation must all have the same dimensions!",
+            ),
+        )
     end
     start_y, end_y = Dates.year.(timesteps[[1, end]])
     n_years = end_y - start_y + 1
-    
+
     n_dims = length(dims_fc)
     crps_forecast = n_dims == 0 ? zeros(n_years) : zeros(size(dims_fc)..., n_years)
     crps_baseline = n_dims == 0 ? zeros(n_years) : zeros(size(dims_fc)..., n_years)
-    indices = [Colon() for _ in 1:n_dims]
+    indices = [Colon() for _ = 1:n_dims]
     for ts in range(1, n_years)
         if n_dims == 0
-            crps_forecast[ts] = crps(samples_forecast[time = ts], observations[time=ts])
-            crps_baseline[ts] = crps(samples_baseline[time = ts], observations[time=ts])      
+            crps_forecast[ts] = crps(samples_forecast[time=ts], observations[time=ts])
+            crps_baseline[ts] = crps(samples_baseline[time=ts], observations[time=ts])
         else
-            crps_forecast[indices..., ts] = crps(samples_forecast[time = ts], observations[time=ts])
-            crps_baseline[indices..., ts] = crps(samples_baseline[time = ts], observations[time=ts])
+            crps_forecast[indices..., ts] =
+                crps(samples_forecast[time=ts], observations[time=ts])
+            crps_baseline[indices..., ts] =
+                crps(samples_baseline[time=ts], observations[time=ts])
         end
     end
     # take mean over last dimension time
-    crps_fc = dropdims(mean(crps_forecast, dims = n_dims + 1), dims = n_dims + 1) 
+    crps_fc = dropdims(mean(crps_forecast, dims = n_dims + 1), dims = n_dims + 1)
     crps_baseline = dropdims(mean(crps_baseline, dims = n_dims + 1), dims = n_dims + 1)
     result = crpss(crps_fc, crps_baseline)
     return n_dims > 0 ? YAXArray(dims_fc, result) : result
@@ -701,17 +756,30 @@ across timesteps.
 - `weights::YAXArray`: must have same model dimension as `samples` (:model or :member)
 - `n::Int=1000`: length sample vector for computing weighted samples
 """
-function crpss_weighted(samples::YAXArray, observations::YAXArray, weights::YAXArray; n::Int=1000)
+function crpss_weighted(
+    samples::YAXArray,
+    observations::YAXArray,
+    weights::YAXArray;
+    n::Int = 1000,
+)
     level_predictions = Data.modelDim(samples)
     level_weights = Data.modelDim(weights)
     if level_weights != level_predictions
-        throw(ArgumentError("Predictions and weights must be defined on the same level. Found: Predictions: $level_predictions, Weights: $level_weights."))
-    end    
+        throw(
+            ArgumentError(
+                "Predictions and weights must be defined on the same level. Found: Predictions: $level_predictions, Weights: $level_weights.",
+            ),
+        )
+    end
     Data.throwErrorIfDimMissing(samples, :time)
     Data.throwErrorIfDimMissing(observations, :time)
     timesteps = lookup(samples, :time)
     if Dates.year.(timesteps) != Dates.year.(lookup(observations, :time))
-        throw(ArgumentError("forecast and observations must all be defined for the same time points!"))
+        throw(
+            ArgumentError(
+                "forecast and observations must all be defined for the same time points!",
+            ),
+        )
     end
     start_y, end_y = Dates.year.(timesteps[[1, end]])
     n_years = end_y - start_y + 1
@@ -719,21 +787,22 @@ function crpss_weighted(samples::YAXArray, observations::YAXArray, weights::YAXA
     n_dims = length(dimensions)
     crps_weighted = n_dims == 0 ? zeros(n_years) : zeros(size(dimensions)..., n_years)
     crps_unweighted = n_dims == 0 ? zeros(n_years) : zeros(size(dimensions)..., n_years)
-    indices = [Colon() for _ in 1:n_dims]
+    indices = [Colon() for _ = 1:n_dims]
     for ts in range(1, n_years)
-        forecast_samples = samples[time = ts]
+        forecast_samples = samples[time=ts]
         weighted_samples = weightSamples(forecast_samples, weights; n)
         #weighted_samples_indices = rand(Distributions.Categorical(weights), n)
         if n_dims == 0
             crps_weighted[ts] = crps(collect(weighted_samples), only(observations[time=ts]))
-            crps_unweighted[ts] = crps(collect(forecast_samples), only(observations[time=ts]))
+            crps_unweighted[ts] =
+                crps(collect(forecast_samples), only(observations[time=ts]))
         else
             crps_weighted[indices..., ts] = crps(weighted_samples, observations[time=ts])
             crps_unweighted[indices..., ts] = crps(forecast_samples, observations[time=ts])
         end
     end
     # take mean over last dimension time
-    crps_fc = dropdims(mean(crps_weighted, dims = n_dims + 1), dims = n_dims + 1) 
+    crps_fc = dropdims(mean(crps_weighted, dims = n_dims + 1), dims = n_dims + 1)
     crps_baseline = dropdims(mean(crps_unweighted, dims = n_dims + 1), dims = n_dims + 1)
     if n_dims > 0
         result = YAXArray(dimensions, crpss(crps_fc, crps_baseline))
@@ -756,11 +825,20 @@ Compute Continuous Ranked Probability Skill Score for weighted vs. unweighted pr
 - `weights::YAXArray`: must have same model dimension as `samples` (:model or :member)
 - `n::Int=1000`: length sample vector for computing weighted samples
 """
-function crpss_weighted(samples::YAXArray, observed::Number, weights::YAXArray; n::Int=1000)
+function crpss_weighted(
+    samples::YAXArray,
+    observed::Number,
+    weights::YAXArray;
+    n::Int = 1000,
+)
     level_predictions = Data.modelDim(samples)
     level_weights = Data.modelDim(weights)
     if level_weights != level_predictions
-        throw(ArgumentError("Predictions and weights must be defined on the same level. Found: Predictions: $level_predictions, Weights: $level_weights."))
+        throw(
+            ArgumentError(
+                "Predictions and weights must be defined on the same level. Found: Predictions: $level_predictions, Weights: $level_weights.",
+            ),
+        )
     end
     weighted_samples = weightSamples(samples, weights; n)
     crps_weighted = crps(weighted_samples, observed)
@@ -779,11 +857,15 @@ the returned vector has `n` entries.
 - `weights::YAXArray`: must have same model dimension as `samples` (:model or :member).
 - `n::Int = 1000`: length of returned vector. 
 """
-function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)    
+function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)
     level_predictions = Data.modelDim(samples)
     level_weights = Data.modelDim(weights)
     if level_weights != level_predictions
-        throw(ArgumentError("Predictions and weights must be defined for the same models. Found: Predictions: $level_predictions, Weights: $level_weights."))
+        throw(
+            ArgumentError(
+                "Predictions and weights must be defined for the same models. Found: Predictions: $level_predictions, Weights: $level_weights.",
+            ),
+        )
     end
     weights_n = rand(Distributions.Multinomial(n, weights))
     model_names = collect(lookup(samples, level_predictions))
@@ -791,35 +873,42 @@ function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)
     samples_mat = Array(samples)
     dimensions = otherdims(samples, level_predictions)
     n_dims = length(dimensions)
-    weighted_samples = n_dims == 0 ? Array{eltype(samples_mat)}(undef, n) : 
+    weighted_samples =
+        n_dims == 0 ? Array{eltype(samples_mat)}(undef, n) :
         Array{eltype(samples_mat)}(undef, size(dimensions)..., n)
-    indices = [Colon() for _ in 1:n_dims]
+    indices = [Colon() for _ = 1:n_dims]
     pos = 1
     for (i, nb) in enumerate(weights_n)
         if n_dims == 0
-            weighted_samples[pos : pos + nb - 1] .= samples_mat[indices..., i]
+            weighted_samples[pos:(pos+nb-1)] .= samples_mat[indices..., i]
         else
-            weighted_samples[indices..., pos : pos + nb - 1] .= samples_mat[indices..., i]
+            weighted_samples[indices..., pos:(pos+nb-1)] .= samples_mat[indices..., i]
         end
-        models[pos : pos + nb - 1] .= model_names[i]
+        models[pos:(pos+nb-1)] .= model_names[i]
         pos += nb
     end
     return YAXArray((dimensions..., Dim{level_predictions}(models)), weighted_samples)
 end
 
 
-function computeLLInverseMSE(data::YAXArray, obs::YAXArray; best_model::Union{YAXArray, Nothing}=nothing)
-    mses = Data.distancesData(data, obs; metric=:mse)
+function computeLLInverseMSE(
+    data::YAXArray,
+    obs::YAXArray;
+    best_model::Union{YAXArray,Nothing} = nothing,
+)
+    mses = Data.distancesData(data, obs; metric = :mse)
     if hasdim(mses, :member)
         mses = Data.summarizeMembers(mses)
     end
-    mses_best = isnothing(best_model) ? minimum(mses) : Data.distancesData(best_model, obs; metric=:mse)
+    mses_best =
+        isnothing(best_model) ? minimum(mses) :
+        Data.distancesData(best_model, obs; metric = :mse)
     return log.(mses_best ./ mses)
 end
 
 
 function computeLLInverseMSE(
-    data::AbstractArray, 
+    data::AbstractArray,
     obs::AbstractArray,
     latitudes::AbstractArray{<:Real},
     idx_model::Int,
@@ -828,15 +917,17 @@ function computeLLInverseMSE(
     summarize_members::Bool = true,
 )
     T = promote_type(eltype(data), eltype(obs), eltype(best_model))
-    mses = Data.distancesData(data, obs, latitudes; metric=:mse, idx_model)
+    mses = Data.distancesData(data, obs, latitudes; metric = :mse, idx_model)
     if summarize_members
         mses = Data.summarizeMembers(data, 1, model_names)
     end
-    if isempty(best_model) 
+    if isempty(best_model)
         mses_best = fill(T(minimum(mses)), size(mses))
-    else 
-        mses_best = Array{T}(Data.distancesData(best_model, obs, latitudes; metric=:mse, idx_model))
-    end  
+    else
+        mses_best = Array{T}(
+            Data.distancesData(best_model, obs, latitudes; metric = :mse, idx_model),
+        )
+    end
     return log.(mses_best ./ mses)
     #return log.(1 ./ mses)
 end
@@ -848,20 +939,28 @@ end
 Compute log likelihood for every diagnostic in `data`. Return a YAXArray with dimensions
 'model' and 'diagnostic' if `data` has dimension 'diagnostic'.
 """
-function llInverseMSE(data::YAXArray, obs::YAXArray; best_model::Union{YAXArray, Nothing}=nothing)    
+function llInverseMSE(
+    data::YAXArray,
+    obs::YAXArray;
+    best_model::Union{YAXArray,Nothing} = nothing,
+)
     diagnostics = hasdim(data, :diagnostic) ? lookup(data, :diagnostic) : nothing
     model_dim = Data.modelDim(data)
-    models = model_dim==:member ? lookup(Data.summarizeMembers(data), :model) : lookup(data, :model)
-    
+    models =
+        model_dim==:member ? lookup(Data.summarizeMembers(data), :model) :
+        lookup(data, :model)
+
     if !isnothing(diagnostics)
         lls = zeros(length(models), length(diagnostics))
         for (i, d) in enumerate(diagnostics)
-            bm = isnothing(best_model) ? nothing : best_model[diagnostic = At(d)]
-            lls[:,i] .= computeLLInverseMSE(data[diagnostic = At(d)], obs[diagnostic = At(d)]; best_model = bm)
+            bm = isnothing(best_model) ? nothing : best_model[diagnostic=At(d)]
+            lls[:, i] .= computeLLInverseMSE(
+                data[diagnostic=At(d)],
+                obs[diagnostic=At(d)];
+                best_model = bm,
+            )
         end
-        lls = YAXArray(
-            (Dim{:model}(models), Dim{:diagnostic}(diagnostics)), lls
-        )
+        lls = YAXArray((Dim{:model}(models), Dim{:diagnostic}(diagnostics)), lls)
     else
         lls = YAXArray((Dim{:model}(models),), computeLLInverseMSE(data, obs; best_model))
     end
@@ -892,35 +991,37 @@ function llInverseMSE(
     model_dim::Int,
     summarize_members::Bool,
     diagnostic_dim::Int, # set to 0 if not present
-    best_model::AbstractArray 
-)   
+    best_model::AbstractArray,
+)
     T = promote_type(eltype(data), eltype(obs), eltype(best_model))
     n_models = length(model_names)
     if diagnostic_dim != 0
         n_diagnostics = size(data)[diagnostic_dim]
         lls = zeros(T, n_models, n_diagnostics)
-        for k in 1:n_diagnostics
-            bm = !isempty(best_model) ? Array{T}(selectdim(best_model, diagnostic_dim, k)) : Array{T}(best_model)
-            lls[:,k] .= computeLLInverseMSE(
-                Array{T}(selectdim(data, diagnostic_dim, k)), 
+        for k = 1:n_diagnostics
+            bm =
+                !isempty(best_model) ? Array{T}(selectdim(best_model, diagnostic_dim, k)) :
+                Array{T}(best_model)
+            lls[:, k] .= computeLLInverseMSE(
+                Array{T}(selectdim(data, diagnostic_dim, k)),
                 Array{T}(selectdim(obs, diagnostic_dim, k)),
                 latitudes,
                 model_dim,
                 model_names,
                 bm;
-                summarize_members
+                summarize_members,
             )
         end
     else
         lls = computeLLInverseMSE(
-                data, 
-                obs,
-                latitudes,
-                model_dim,
-                model_names,
-                best_model;
-                summarize_members
-            )
+            data,
+            obs,
+            latitudes,
+            model_dim,
+            model_names,
+            best_model;
+            summarize_members,
+        )
     end
     return lls
 end
@@ -943,7 +1044,7 @@ function computeWeights(lls::YAXArray, w_diagnostics::YAXArray; adjust_w::Bool =
     end
     nb_diagnostics = length(filter(x -> x > 0, w_diagnostics))
 
-    n_a = adjust_w ? (w_diagnostics./sum(w_diagnostics)) .* nb_diagnostics : w_diagnostics
+    n_a = adjust_w ? (w_diagnostics ./ sum(w_diagnostics)) .* nb_diagnostics : w_diagnostics
     lls_combined = lls * n_a # matrix multiplication, same as sum(lls .* n_a, dims=2)
     likelihoods = exp.(lls_combined)
     return likelihoods ./ sum(likelihoods)
@@ -959,7 +1060,7 @@ second dimension. If several diangostics, equal weights for each are used (lls j
 """
 function computeWeights(lls::YAXArray)
     if length(size(lls)) == 2
-        lls = sum(lls; dims=2)
+        lls = sum(lls; dims = 2)
     end
     likelihoods = exp.(lls)
     return likelihoods ./ sum(likelihoods)
@@ -971,11 +1072,11 @@ function softmax(scores)
 end
 
 
-function formatZSamples(samples, n_models; list_chains::Bool=false)
+function formatZSamples(samples, n_models; list_chains::Bool = false)
     n_iter, _, n_chains = size(samples.value)
-    zsamples = zeros(n_iter, n_models, n_chains);
-    for c in 1:n_chains
-        for m in 1:n_models
+    zsamples = zeros(n_iter, n_models, n_chains)
+    for c = 1:n_chains
+        for m = 1:n_models
             zsamples[:, m, c] .= samples.value[:, Symbol("z[$m]"), c]
         end
     end
@@ -983,25 +1084,23 @@ function formatZSamples(samples, n_models; list_chains::Bool=false)
 end
 
 function chainsAsList(samples_mat, n_chains, n_models)
-   weights = Vector(undef, n_chains)
-    for c in 1:n_chains
-        weights[c] = map(x -> samples_mat[:,x,c], 1:n_models)
+    weights = Vector(undef, n_chains)
+    for c = 1:n_chains
+        weights[c] = map(x -> samples_mat[:, x, c], 1:n_models)
     end
     return weights
 end
 
-function convertZSamplesToWeights(samples, n_models; as_matrix::Bool=true)
+function convertZSamplesToWeights(samples, n_models; as_matrix::Bool = true)
     zsamples = formatZSamples(samples, n_models)
     n_iter, _, n_chains = size(samples.value)
     psamples = zeros(n_iter, n_models, n_chains)
-    for c in 1:n_chains
-        for i in 1:n_iter
-            psamples[i,:,c] .= softmax(zsamples[i,:,c])
+    for c = 1:n_chains
+        for i = 1:n_iter
+            psamples[i, :, c] .= softmax(zsamples[i, :, c])
         end
     end
-    return !as_matrix ? 
-        chainsAsList(psamples, n_chains, n_models) :
-        psamples
+    return !as_matrix ? chainsAsList(psamples, n_chains, n_models) : psamples
 end
 
 
@@ -1017,35 +1116,36 @@ end
 Should not contain zero entries! (would do a lot of unnecessary work)
 """
 @model function bmaCombinedDiagnostics(
-    data::AbstractArray, 
-    obs::AbstractArray, 
-    wn_diagnostics::AbstractArray
+    data::AbstractArray,
+    obs::AbstractArray,
+    wn_diagnostics::AbstractArray,
 )
     s1, s2, n_models, n_diagnostics = size(data)
     z ~ MvNormal(FillArrays.Zeros(n_models), I)
     w = softmax(z)
-    
+
     T = eltype(z)
     sigma_sq = Vector{T}(undef, n_diagnostics)
     logw = log.(w)
     log2pi = T(log(2 * pi))
 
-    for k in 1:n_diagnostics
+    for k = 1:n_diagnostics
         sigma_sq[k] ~ InverseGamma(2, 3)
         log_sigma_sq = log(sigma_sq[k])
         logL = zero(T)
         summed_logs = Vector{T}(undef, n_models)
-        for l1 in 1:s1
-            for l2 in 1:s2
+        for l1 = 1:s1
+            for l2 = 1:s2
                 x = obs[l1, l2, k]
-                for i in 1:n_models
+                for i = 1:n_models
                     mu = data[l1, l2, i, k]
-                    logpdf_gaussian = -0.5 * (log2pi + log_sigma_sq) - 0.5 * (x - mu)^2 / sigma_sq[k]
+                    logpdf_gaussian =
+                        -0.5 * (log2pi + log_sigma_sq) - 0.5 * (x - mu)^2 / sigma_sq[k]
                     summed_logs[i] = logw[i] + logpdf_gaussian
                 end
                 m = maximum(summed_logs)
                 s = zero(T)
-                @inbounds for i in 1:n_models
+                @inbounds for i = 1:n_models
                     s += exp(summed_logs[i] - m)
                 end
                 logL += log(s) + m
@@ -1074,17 +1174,17 @@ Should not contain zero entries! (would do a lot of unnecessary work)
 - `wn_other`: weight for other diagnostic (not gaussian)
 """
 @model function bmaCombinedDiagnostics(
-    data::AbstractArray, 
-    obs::AbstractArray, 
+    data::AbstractArray,
+    obs::AbstractArray,
     wn_diagnostics::AbstractArray,
     data_other::AbstractArray,
-    distr_other, 
-    wn_other::T
-) where T<:Number
+    distr_other,
+    wn_other::T,
+) where {T<:Number}
     s1, s2, n_models, n_diagnostics = size(data)
     z ~ MvNormal(Zeros(n_models), I)
     w = softmax(z)
-    
+
     expected_val = sum(w .* data_other)
     @addlogprob! wn_other * log(distr_other(expected_val))
 
@@ -1093,22 +1193,23 @@ Should not contain zero entries! (would do a lot of unnecessary work)
     logw = log.(w)
     log2pi = Tz(log(2 * pi))
 
-    for k in 1:n_diagnostics
+    for k = 1:n_diagnostics
         sigma_sq[k] ~ InverseGamma(2, 3)
         log_sigma_sq = log(sigma_sq[k])
         logL = zero(Tz)
         summed_logs = Vector{Tz}(undef, n_models)
-        for l1 in 1:s1
-            for l2 in 1:s2
+        for l1 = 1:s1
+            for l2 = 1:s2
                 x = obs[l1, l2, k]
-                for i in 1:n_models
+                for i = 1:n_models
                     mu = data[l1, l2, i, k]
-                    logpdf_gaussian = -0.5 * (log2pi + log_sigma_sq) - 0.5 * (x - mu)^2 / sigma_sq[k]
+                    logpdf_gaussian =
+                        -0.5 * (log2pi + log_sigma_sq) - 0.5 * (x - mu)^2 / sigma_sq[k]
                     summed_logs[i] = logw[i] + logpdf_gaussian
                 end
                 m = maximum(summed_logs)
                 s = zero(Tz)
-                @inbounds for i in 1:n_models
+                @inbounds for i = 1:n_models
                     s += exp(summed_logs[i] - m)
                 end
                 logL += log(s) + m
@@ -1122,15 +1223,15 @@ Should not contain zero entries! (would do a lot of unnecessary work)
 end
 
 
-function logsumexp(data::AbstractArray{T}) where T<:Number
+function logsumexp(data::AbstractArray{T}) where {T<:Number}
     n = length(data)
     summed_logs = Vector{T}(undef, n)
-    for i in 1:n
+    for i = 1:n
         summed_logs[i] = log(data[i])
     end
     m = maximum(summed_logs)
     s = zero(T)
-    @inbounds for i in 1:n
+    @inbounds for i = 1:n
         s += exp(summed_logs[i] - m)
     end
     return log(s) + m
@@ -1146,11 +1247,11 @@ end
 - `area_weights`:: area weights to account for different grid cell areas, size equal to first dimensions of `data` and `obs` (lon x lat)
 """
 @model function weightedAvgModel(
-    data::AbstractArray, 
-    obs::AbstractArray, 
+    data::AbstractArray,
+    obs::AbstractArray,
     wn_diagnostics::AbstractArray,
     prior_params::AbstractArray,
-    area_weights::AbstractArray
+    area_weights::AbstractArray,
 )
     n_diagnostics = size(data, 4)
 
@@ -1158,11 +1259,14 @@ end
     T = eltype(w)
     weighted_avg = weightedAvg(data, w, 3) # model is third dimension
     sigma_sq = Vector{T}(undef, n_diagnostics)
-    
-    for d in 1:n_diagnostics
+
+    for d = 1:n_diagnostics
         sigma_sq[d] ~ InverseGamma(2, 3)
         covariance = Diagonal(vec((1 ./ area_weights) .* sigma_sq[d]))
-        logL = Distributions.logpdf(MvNormal(vec(weighted_avg[:, :, d]), covariance), vec(obs[:,:,d]))
+        logL = Distributions.logpdf(
+            MvNormal(vec(weighted_avg[:, :, d]), covariance),
+            vec(obs[:, :, d]),
+        )
         @addlogprob! wn_diagnostics[d] * logL
     end
 end
@@ -1178,12 +1282,12 @@ end
 - `area_weights`:: area weights to account for different grid cell areas, size equal to first dimensions of `data` and `obs`
 """
 @model function weightedAvgModel(
-    data::AbstractArray, 
-    obs::AbstractArray, 
+    data::AbstractArray,
+    obs::AbstractArray,
     wn_diagnostics::AbstractArray,
     prior_params::AbstractArray,
     hyperprior_sigma::AbstractArray,
-    area_weights::AbstractArray
+    area_weights::AbstractArray,
 )
     n_diagnostics = size(data, 4)
 
@@ -1191,14 +1295,17 @@ end
     T = eltype(w)
     weighted_avg = weightedAvg(data, w, 3) # model is third dimension
     sigma_sq = Vector{T}(undef, n_diagnostics)
-    
+
     a ~ Uniform(hyperprior_sigma...)
     b ~ Uniform(hyperprior_sigma...)
 
-    for d in 1:n_diagnostics
+    for d = 1:n_diagnostics
         sigma_sq[d] ~ InverseGamma(a, b)
         covariance = Diagonal(vec((1 ./ area_weights) .* sigma_sq[d]))
-        logL = Distributions.logpdf(MvNormal(vec(weighted_avg[:, :, d]), covariance), vec(obs[:,:,d]))
+        logL = Distributions.logpdf(
+            MvNormal(vec(weighted_avg[:, :, d]), covariance),
+            vec(obs[:, :, d]),
+        )
         @addlogprob! wn_diagnostics[d] * logL
     end
 end
@@ -1213,7 +1320,10 @@ end
 
 
 @model function weightedAvgModelECS(
-    data::AbstractArray, dirichlet_params::AbstractArray, lh_fn::Function, inflate_lh::Bool
+    data::AbstractArray,
+    dirichlet_params::AbstractArray,
+    lh_fn::Function,
+    inflate_lh::Bool,
 )
     w ~ Dirichlet(dirichlet_params)
     lambda = inflate_lh ? length(data) : 1
@@ -1224,10 +1334,10 @@ end
 @model function weightedAvgModelECSMassoud(data::AbstractArray, lh_fn::Function)
     n_models = length(data)
     z = Vector(undef, n_models)
-    for i in 1:n_models
-        z[i] ~ Uniform(0,1)
+    for i = 1:n_models
+        z[i] ~ Uniform(0, 1)
     end
-    w = z.^8 ./ sum(z.^8)
+    w = z .^ 8 ./ sum(z .^ 8)
     @addlogprob! log(lh_fn(sum(data .* w)))
 end
 
@@ -1238,15 +1348,15 @@ end
 # Arguments:
 """
 @model function weightedAvgModelCombined(
-    data::AbstractArray, 
-    obs::AbstractArray, 
+    data::AbstractArray,
+    obs::AbstractArray,
     wn_diagnostics::AbstractArray,
     dirichlet_params::AbstractArray,
     hyperprior_sigma::AbstractArray,
     area_weights::AbstractArray,
     ecs_data::AbstractArray,
-    weigh_lh::Bool, 
-    lh_fn_ecs::Function
+    weigh_lh::Bool,
+    lh_fn_ecs::Function,
 )
     n_diagnostics = size(data, 4)
 
@@ -1254,7 +1364,7 @@ end
     T = eltype(w)
     weighted_avg = weightedAvg(data, w, 3) # model is third dimension
     sigma_sq = Vector{T}(undef, n_diagnostics)
-    
+
     if !weigh_lh
         wn_diagnostics[:] .= 1
     end
@@ -1262,10 +1372,13 @@ end
     a ~ Uniform(hyperprior_sigma...)
     b ~ Uniform(hyperprior_sigma...)
 
-    for d in 1:n_diagnostics
+    for d = 1:n_diagnostics
         sigma_sq[d] ~ InverseGamma(a, b)
         covariance = Diagonal(vec((1 ./ area_weights) .* sigma_sq[d]))
-        logL = Distributions.logpdf(MvNormal(vec(weighted_avg[:, :, d]), covariance), vec(obs[:,:,d]))
+        logL = Distributions.logpdf(
+            MvNormal(vec(weighted_avg[:, :, d]), covariance),
+            vec(obs[:, :, d]),
+        )
         @addlogprob! wn_diagnostics[d] * logL
     end
 
@@ -1284,8 +1397,8 @@ end
 function drawFromSamples(samples, n_iter::Int, n_chains::Int, n_models::Int)
     weights_list = map(c -> samples.value[:, 1:n_models, c], 1:n_chains)
     weights_mat = zeros(n_iter, n_models, n_chains)
-    for i in 1:n_chains 
-        weights_mat[:,:,i] .= weights_list[i][:,1:n_models]
+    for i = 1:n_chains
+        weights_mat[:, :, i] .= weights_list[i][:, 1:n_models]
     end
     return (weights_mat, weights_list)
 end
@@ -1298,7 +1411,13 @@ end
 - `n_models::Int`: 
 - `from_prior::Bool`: if true sample from prior, otherwise use NUTS sampler
 """
-function drawFromModel(model, n_iter::Int, n_chains::Int, n_models::Int; from_prior::Bool=false)
+function drawFromModel(
+    model,
+    n_iter::Int,
+    n_chains::Int,
+    n_models::Int;
+    from_prior::Bool = false,
+)
     if from_prior
         @info "Draw from Prior"
         samples = Turing.sample(model, Prior(), MCMCThreads(), n_iter, n_chains)
@@ -1315,23 +1434,28 @@ end
 # Arguments:
 - `prior_weights::AbstractArray`: n_samples x n_models 
 """
-function sampleMC(data::YAXArray, lh_fn::Function, n_samples::Int; prior_weights::AbstractArray=[])
+function sampleMC(
+    data::YAXArray,
+    lh_fn::Function,
+    n_samples::Int;
+    prior_weights::AbstractArray = [],
+)
     if isempty(prior_weights)
-        prior_weights = rand(n_samples, length(data)).^8
-        prior_weights = prior_weights ./ sum(prior_weights; dims=2)
+        prior_weights = rand(n_samples, length(data)) .^ 8
+        prior_weights = prior_weights ./ sum(prior_weights; dims = 2)
     end
     likelihoods = Vector(undef, n_samples)
-    for i in 1:n_samples
-        w = prior_weights[i,:]
+    for i = 1:n_samples
+        w = prior_weights[i, :]
         val = weightedAvg(data, w, 1)[1]
         likelihoods[i] = lh_fn(val)
     end
-   indices_high_to_low = sortperm(likelihoods, rev=true)
-   likelihoods_sorted = likelihoods[indices_high_to_low]
-   prior_weights_sorted =  prior_weights[indices_high_to_low, :];
-   
-   indices = 1:Int(round((2/3) * n_samples))
-   posterior_weights = prior_weights_sorted[indices, :]
+    indices_high_to_low = sortperm(likelihoods, rev = true)
+    likelihoods_sorted = likelihoods[indices_high_to_low]
+    prior_weights_sorted = prior_weights[indices_high_to_low, :]
 
-   return (prior_weights_sorted, posterior_weights, likelihoods_sorted)
+    indices = 1:Int(round((2/3)*n_samples))
+    posterior_weights = prior_weights_sorted[indices, :]
+
+    return (prior_weights_sorted, posterior_weights, likelihoods_sorted)
 end

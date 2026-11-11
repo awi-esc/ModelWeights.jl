@@ -43,11 +43,15 @@ function plotCorrWeights end
 function __init__()
     Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
         f = exc.f
-        if f isa Function && parentmodule(f) === Plots &&
+        if f isa Function &&
+           parentmodule(f) === Plots &&
            isnothing(Base.get_extension(parentmodule(Plots), :MakieExt))
-            printstyled(io, "\n\nModelWeights.Plots.$(nameof(f)) is only available when " *
+            printstyled(
+                io,
+                "\n\nModelWeights.Plots.$(nameof(f)) is only available when " *
                 "the plotting extension is loaded. Run `using CairoMakie, GeoMakie` first.";
-                color = :cyan)
+                color = :cyan,
+            )
         end
     end
 end

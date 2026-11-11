@@ -2,7 +2,7 @@ module Weights
 
 using ..Data
 
-import LinearAlgebra:Diagonal
+import LinearAlgebra: Diagonal
 import StatsBase.ecdf
 
 using Dates
@@ -21,8 +21,8 @@ using YAXArrays
 
 
 @kwdef struct ConfigWeights
-    performance::Dict{String, Number} = Dict()
-    independence::Dict{String, Number} = Dict()
+    performance::Dict{String,Number} = Dict()
+    independence::Dict{String,Number} = Dict()
     sigma_performance::Number = 0.5
     sigma_independence::Number = 0.5
 end
@@ -60,10 +60,10 @@ function MMEWeights(weights::YAXArray, ids::Vector{String}, name::String)
     models = collect(lookup(weights, :model))
     wP = YAXArray((Dim{:model}(models),), ones(length(models)))
     for id in ids
-        wP = @d wP .* weights[weight = At(id)]
+        wP = @d wP .* weights[weight=At(id)]
     end
     wP = wP ./ sum(wP)
-    return MMEWeights(w=wP, name=name)
+    return MMEWeights(w = wP, name = name)
 end
 
 

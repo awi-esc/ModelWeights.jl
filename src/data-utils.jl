@@ -21,12 +21,12 @@ function convertToYAX(dm::DataMap; dim_name::Symbol = :diagnostic)
     dimensions = dims(dm[diagnostics[1]])
 
     data = YAXArray(
-        (dimensions..., Dim{dim_name}(diagnostics)), 
-        rand(size(dimensions)..., length(diagnostics))
+        (dimensions..., Dim{dim_name}(diagnostics)),
+        rand(size(dimensions)..., length(diagnostics)),
     )
     for d in diagnostics
         # @info "adding diagnostic $d ..."        
-        data[diagnostic = At(d)] .= dm[d]
+        data[diagnostic=At(d)] .= dm[d]
     end
     return data
 end
@@ -39,7 +39,7 @@ Return `data` where model dimension (:member or :model) has value `model`. No ch
 """
 function getAtModel(data::YAXArray, model::String)
     dimension = modelDim(data)
-    return dimension == :model ? data[model = At(model)] : data[member = At(model)]
+    return dimension == :model ? data[model=At(model)] : data[member=At(model)]
 end
 
 
@@ -49,7 +49,7 @@ end
 Return `data` at model dimension (:member or :model) at `indices`.
 """
 function getByIdxModel(data::YAXArray, indices::AbstractVector{Int})
-   dimension = modelDim(data)
+    dimension = modelDim(data)
     n = size(data, dimension)
     if maximum(indices) > n
         throw(ArgumentError("$dimension dimension only has $n elements."))
@@ -64,11 +64,13 @@ end
 Return `data` at model dimensions `model_dims` at `indices`.
 """
 function indexModel(
-    data::YAXArray, model_dims::NTuple{N, Symbol}, indices::Vector{Int}
+    data::YAXArray,
+    model_dims::NTuple{N,Symbol},
+    indices::Vector{Int},
 ) where {N}
     data = YAXArray(data.axes, data.data, deepcopy(data.properties))
     dim_names = dimNames(data)
-    index_vec = map(dim_names) do name 
+    index_vec = map(dim_names) do name
         name in model_dims ? indices : Colon()
     end
     data = view(data, index_vec...)
@@ -86,9 +88,9 @@ end
 function putAtModel!(data::YAXArray, model::String, input)
     dimension = modelDim(data)
     if dimension == :model
-        data[model = At(model)] = input
+        data[model=At(model)] = input
     else
-        data[member = At(model)] = input
+        data[member=At(model)] = input
     end
     return data
 end
@@ -103,10 +105,10 @@ lists, with missing if key wasnt in a dataset.
 function mergeMetaDataFromMultipleFiles(data::AbstractVector{<:AbstractArray})
     n_files = length(data)
     meta_keys = unique(vcat(map(x -> collect(keys(x.properties)), data)...))
-    meta_dict = Dict{String, Any}()
+    meta_dict = Dict{String,Any}()
     for (i, ds) in enumerate(data)
         for key in meta_keys
-            values = get!(meta_dict, key, repeat(Any[missing], outer=n_files))
+            values = get!(meta_dict, key, repeat(Any[missing], outer = n_files))
             values[i] = get(ds.properties, key, missing)
         end
     end
@@ -164,12 +166,12 @@ If `sorted` is true, model dimension of returned data is sorted alphabetically a
 vector entries in the metadata dictionary of the returned array are also sorted accordingly.
 """
 function combineModelsFromMultipleFiles(
-    data::AbstractVector{<:YAXArray}; 
+    data::AbstractVector{<:YAXArray};
     model_names::Vector{String} = String[],
-    meta::Union{Dict{String, String}, Nothing} = nothing,
+    meta::Union{Dict{String,String},Nothing} = nothing,
     new_dim::Symbol = :model,
     sorted::Bool = true,
-    model_times::Bool = false
+    model_times::Bool = false,
 )
     if isempty(data)
         #@warn "Data vector is empty!"
@@ -198,7 +200,7 @@ function combineModelsFromMultipleFiles(
         model_names = model_names[sort_indices]
         data = data[sort_indices]
     end
-    meta_dict = mergeMetaDataFromMultipleFiles(data)    
+    meta_dict = mergeMetaDataFromMultipleFiles(data)
     if !isnothing(meta)
         meta_dict["_meta"] = meta
     end
@@ -209,12 +211,12 @@ function combineModelsFromMultipleFiles(
     end
     dimData = concatenatecubes(data, Dim{new_dim}(model_names))
     if has_0_dims
-        dimData = dimData[temp = 1]
+        dimData = dimData[temp=1]
     end
     dimData = YAXArray(dimData.axes, dimData, meta_dict)
     if length(model_names) != length(unique(model_names))
         counts = countMap(model_names)
-        duplicates = [k for (k,v) in counts if v > 1]
+        duplicates = [k for (k, v) in counts if v > 1]
         # handle duplicates
         indices_remove = Int[]
         models = collect(lookup(dimData, new_dim))
@@ -223,7 +225,7 @@ function combineModelsFromMultipleFiles(
             push!(indices_remove, indices[2:end]...)
         end
         indices_keep = [i for i in eachindex(models) if !(i in indices_remove)]
-        
+
         # TODO: fix to do this also with arbitrary new_dim name!
         dimData = getByIdxModel(dimData, indices_keep)
     end
@@ -352,12 +354,12 @@ end
 # end
 
 
-function modelsFromMemberIDs(members::AbstractVector{<:AbstractString}; uniq::Bool=false)
+function modelsFromMemberIDs(members::AbstractVector{<:AbstractString}; uniq::Bool = false)
     models = [String(first(split(x, MODEL_MEMBER_DELIM))) for x in members]
     return uniq ? unique(models) : models
 end
 
-function modelsFromMemberIDs(data::YAXArray; uniq::Bool=false)
+function modelsFromMemberIDs(data::YAXArray; uniq::Bool = false)
     throwErrorIfDimMissing(data, :member)
     return modelsFromMemberIDs(string.(dims(data, :member)); uniq)
 end
@@ -387,20 +389,27 @@ Return matrix of size length(longitudes) x length(latitudes) with normalized are
 have same length as `latitudes`.
 """
 function areaWeightMatrix(
-    latitudes::AbstractVector{T}, mask::AbstractArray{Bool}
-) where T <: Number #where {T <: Union{Missing, Bool}}
+    latitudes::AbstractVector{T},
+    mask::AbstractArray{Bool},
+) where {T<:Number} #where {T <: Union{Missing, Bool}}
     if size(mask, 2) != length(latitudes)
-        throw(ArgumentError("Second dimension of mask must be lat and equal $(length(latitudes)), found:$(size(mask))"))
+        throw(
+            ArgumentError(
+                "Second dimension of mask must be lat and equal $(length(latitudes)), found:$(size(mask))",
+            ),
+        )
     end
     area_weights = cos.(deg2rad.(latitudes))
     s = size(mask)
     n_lon = s[1]
-    aw_mat = length(s) > 2 ? repeat(area_weights', n_lon, 1, s[3:end]...) : repeat(area_weights', n_lon)
+    aw_mat =
+        length(s) > 2 ? repeat(area_weights', n_lon, 1, s[3:end]...) :
+        repeat(area_weights', n_lon)
     aw_mat[mask] .= 0
-    return aw_mat ./ sum(aw_mat; dims=(1,2))
+    return aw_mat ./ sum(aw_mat; dims = (1, 2))
 end
 
-function areaWeightMatrix(latitudes::AbstractVector{T}, n_lon) where T <: Number
+function areaWeightMatrix(latitudes::AbstractVector{T}, n_lon) where {T<:Number}
     area_weights = cos.(deg2rad.(latitudes))
     aw_mat = repeat(area_weights', n_lon)
     return aw_mat ./ sum(aw_mat)
@@ -412,7 +421,11 @@ function checkDataStructure(path_data::String, dir_per_var::Bool)
     if !dir_per_var
         subdirs = filter(x -> isdir(joinpath(path_data, x)), readdir(path_data))
         if !("preproc" in subdirs)
-            throw(ArgumentError("If dir_per_var is false, path_data must contain a directory named 'preproc'"))
+            throw(
+                ArgumentError(
+                    "If dir_per_var is false, path_data must contain a directory named 'preproc'",
+                ),
+            )
         end
     end
     return nothing
@@ -446,15 +459,14 @@ end
 
     Merge two dictionaries into one. Warn if the dictionaries have shared keys. In that case, the value of the last dictionary is taken.
 """
-function joinDicts(v::Dict...; warn_msg::String="")
+function joinDicts(v::Dict...; warn_msg::String = "")
     result = typeof(v[1])()
     for dm in v
         shared_keys = sharedKeys(result, dm)
         if length(shared_keys) > 0
             dups = filter(!isempty, map(shared_keys) do x
-                    dm[x] != result[x] ? (x, result[x], dm[x]) : ()
-                end
-            )
+                dm[x] != result[x] ? (x, result[x], dm[x]) : ()
+            end)
             if !isempty(dups)
                 @warn warn_msg dups
             end
@@ -471,7 +483,7 @@ function physicsFromMember(member::String)
 end
 
 
-function joinDataMaps(v::Union{Dict{String, MetaData}, DataMap}...; warn_msg::String="")
+function joinDataMaps(v::Union{Dict{String,MetaData},DataMap}...; warn_msg::String = "")
     return joinDicts(v...; warn_msg)
 end
 
@@ -484,7 +496,12 @@ Save `data` as Julia obj if `target_path` has ending '.jld2', otherwise save as 
 If file at `target_path` already exists, timestamp is added if `overwrite` is false (default). By default the timestamp 
 includes the day and the hour. When `add_hour` is set to false, only the date is appended to the filename.
 """
-function writeDataToDisk(data, target_path::String; overwrite::Bool = false, add_hour::Bool = true)
+function writeDataToDisk(
+    data,
+    target_path::String;
+    overwrite::Bool = false,
+    add_hour::Bool = true,
+)
     target_path = overwrite ? target_path : Data.individuatePath(target_path; add_hour)
     target_dir = dirname(target_path)
     if !isdir(target_dir)
@@ -570,7 +587,7 @@ identical, otherwise just keep vector.
 - `meta`:
 - `indices`: indices to remain in vectors mapped to in `meta`. 
 """
-function subsetMeta!(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)    
+function subsetMeta!(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
     for (k, v) in meta
         if isa(v, Vector)
             vals = v[indices]
@@ -578,7 +595,7 @@ function subsetMeta!(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
                 vals = unique(v[indices])
                 vals = length(vals) == 1 ? vals[1] : vals
             end
-        else 
+        else
             vals = deepcopy(v)
         end
         meta[k] = vals
@@ -597,8 +614,8 @@ identical, otherwise just keep vector.
 - `meta`:
 - `indices`: indices to remain in vectors mapped to in `meta`. 
 """
-function subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)    
-    meta_new = Dict()    
+function subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
+    meta_new = Dict()
     for (k, v) in meta
         if isa(v, Vector)
             vals = v[indices]
@@ -606,7 +623,7 @@ function subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
                 vals = unique(v[indices])
                 vals = length(vals) == 1 ? vals[1] : vals
             end
-        else 
+        else
             vals = deepcopy(v)
         end
         meta_new[k] = vals
@@ -624,7 +641,8 @@ If the metadata for members of a model differ across members, the respective
 entry in the vector will be a vector itself.
 """
 function updateGroupedDataMetadata(
-    meta::Dict, grouped_data::DimensionalData.DimGroupByArray,
+    meta::Dict,
+    grouped_data::DimensionalData.DimGroupByArray,
 )
     meta_new = filter(((k, v),) -> k == "member_names" || !(v isa Vector), meta)
     attributes = filter(x -> meta[x] isa Vector && x != "member_names", keys(meta))
@@ -667,7 +685,7 @@ values.
 """
 function metaDataFromESMValToolRecipes(
     base_path_configs::String;
-    constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}() 
+    constraint::Dict{Symbol,<:AbstractArray{String}} = Dict{Symbol,Vector{String}}(),
 )
     paths_configs = filter(
         x -> isfile(x) && endswith(x, ".yml"),
@@ -681,13 +699,14 @@ function metaDataFromESMValToolRecipes(
 
         for alias in aliases
             data = data_all[alias]["variables"]
-            for (k, v) in data      
+            for (k, v) in data
                 variable = get(v, "short_name", "")
                 var_long = get(v, "variable_long_name", "")
                 preprocessor = get(v, "preprocessor", "")
-                
+
                 var_stat = String.(split(k, "_"))
-                statistic = length(var_stat) == 2 && var_stat[1] == variable ? var_stat[2] : nothing
+                statistic =
+                    length(var_stat) == 2 && var_stat[1] == variable ? var_stat[2] : nothing
                 if typeof(v["exp"]) <: String
                     experiment = v["exp"]
                 else
@@ -696,12 +715,14 @@ function metaDataFromESMValToolRecipes(
                 end
                 timerange = replace(get(v, "timerange", "full"), "/" => "-")
                 meta = MetaData(
-                    variable, experiment, alias; 
+                    variable,
+                    experiment,
+                    alias;
                     timerange = timerange,
                     subdir = k,
                     variable_long = var_long,
                     statistic = statistic,
-                    esmvaltoolPreproc = preprocessor
+                    esmvaltoolPreproc = preprocessor,
                 )
                 # if there are different recipes for CMIP5 and CMIP6, 'meta' might already 
                 # have been added to 'meta_attribs'
@@ -724,8 +745,8 @@ function isEqual(m1::MetaData, m2::MetaData)
 end
 
 
-function metadataToDict(meta::MetaData; exclude::Vector{Symbol}=Vector{Symbol}())
-    d = Dict{String, Any}()
+function metadataToDict(meta::MetaData; exclude::Vector{Symbol} = Vector{Symbol}())
+    d = Dict{String,Any}()
     for f in filter(x -> !(x in exclude), fieldnames(MetaData))
         d[String(f)] = getfield(meta, f)
     end
@@ -734,9 +755,7 @@ end
 
 
 function structToDict(data)
-    return Dict(
-        name => getfield(data, name) for name in fieldnames(typeof(data))
-    )
+    return Dict(name => getfield(data, name) for name in fieldnames(typeof(data)))
 end
 
 
@@ -754,7 +773,7 @@ function inferTimeResolution(ds::YAXArray)
     # boundary years (first/last) may be truncated, e.g. only a few months of data;
     # ignore them when there are interior years to fall back on
     uniq_years = sort(collect(keys(counts)))
-    interior_years = length(uniq_years) > 2 ? uniq_years[2:end-1] : uniq_years
+    interior_years = length(uniq_years) > 2 ? uniq_years[2:(end-1)] : uniq_years
     max_count = maximum(counts[y] for y in interior_years)
 
     if max_count == 1
@@ -762,7 +781,11 @@ function inferTimeResolution(ds::YAXArray)
     elseif max_count == 12
         return :monthly
     else
-        throw(ErrorException("time resolution could not be inferred from data, only annual and monthly implemented. Found $max_count timesteps within a year (expected 1 for annual or 12 for monthly)"))
+        throw(
+            ErrorException(
+                "time resolution could not be inferred from data, only annual and monthly implemented. Found $max_count timesteps within a year (expected 1 for annual or 12 for monthly)",
+            ),
+        )
     end
 end
 
@@ -782,7 +805,11 @@ function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
     none_time_dims = otherdims(first(data), :time)
     ref_size = isempty(none_time_dims) ? nothing : size(none_time_dims)
     if !isnothing(ref_size) && !all(x -> size(otherdims(x, :time)) == ref_size, data)
-        throw(ArgumentError("Dimension sizes must be identical across data to align timeseries!"))
+        throw(
+            ArgumentError(
+                "Dimension sizes must be identical across data to align timeseries!",
+            ),
+        )
     end
     if !all(x -> hasdim(x, :time), data)
         throw(ArgumentError("All datasets must have time dimension to align timeseries!"))
@@ -791,7 +818,11 @@ function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
     resolutions = map(inferTimeResolution, data)
     uniq_resolutions = unique(resolutions)
     if length(uniq_resolutions) != 1
-        throw(ArgumentError("All datasets must have the same time resolution. Found: $uniq_resolutions"))
+        throw(
+            ArgumentError(
+                "All datasets must have the same time resolution. Found: $uniq_resolutions",
+            ),
+        )
     end
     resolution = uniq_resolutions[1]
     if model_times
@@ -808,10 +839,10 @@ function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
     end
     nb_years = year_max - year_min + 1
     if resolution == :monthly
-        timerange = DateTime(year_min, 1) : Month(1) : DateTime(year_max, 12)
+        timerange = DateTime(year_min, 1):Month(1):DateTime(year_max, 12)
         nb_timesteps = nb_years * 12
     else # :annual (otherwise error in inferTimeResolution)
-        timerange = DateTime(year_min): Year(1) : DateTime(year_max)
+        timerange = DateTime(year_min):Year(1):DateTime(year_max)
         nb_timesteps = nb_years
     end
 
@@ -820,7 +851,9 @@ function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
     full_axes = (none_time_dims..., time_axis)
     for (i, ds) in enumerate(data)
         # if ds allows missing values, undef is initialized with missing
-        dat = isnothing(ref_size) ? Array{T}(undef, nb_timesteps) : Array{T}(undef, ref_size..., nb_timesteps)
+        dat =
+            isnothing(ref_size) ? Array{T}(undef, nb_timesteps) :
+            Array{T}(undef, ref_size..., nb_timesteps)
         ds_extended = YAXArray(full_axes, dat, ds.properties)
 
         if model_times
@@ -828,7 +861,7 @@ function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
             # matching on year/month is meaningless -> align by position instead,
             # anchored at the start of the combined axis
             n = length(dims(ds, :time))
-            ds_extended[time = 1:n] = ds
+            ds_extended[time=1:n] = ds
         else
             # indexing would be faster
             # time_idx = findall(in(dims(ds, :time)), timerange)
@@ -836,7 +869,7 @@ function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
             # matched on (year, month) rather than year alone, so a dataset missing
             # individual months within a year doesn't get misaligned into the wrong slots
             ds_yearmonths = Dates.yearmonth.(dims(ds, :time))
-            ds_extended[time = Where(x -> Dates.yearmonth(x) in ds_yearmonths)] = ds
+            ds_extended[time=Where(x->Dates.yearmonth(x) in ds_yearmonths)] = ds
         end
         data_new[i] = ds_extended
     end
@@ -849,20 +882,28 @@ function overlapTimeseries!(data::Vector{AbstractArray})
         throw(ArgumentError("All datasets must have time dimension to align timeseries!"))
     end
     start_years = map(x -> minimum(map(Dates.year, dims(x, :time))), data)
-    end_years =  map(x -> maximum(map(Dates.year, dims(x, :time))), data)
+    end_years = map(x -> maximum(map(Dates.year, dims(x, :time))), data)
     start_y = maximum(start_years)
     end_y = minimum(end_years)
     if start_y > end_y
         ts = unique(zip(start_years, end_years))
-        throw(ArgumentError("The different timeseries to be merged do not overlap! Found timeseries $ts, latest start: $start_y  earlist end: $end_y"))
+        throw(
+            ArgumentError(
+                "The different timeseries to be merged do not overlap! Found timeseries $ts, latest start: $start_y  earlist end: $end_y",
+            ),
+        )
     end
     timerange = DateTime(start_y):Year(1):DateTime(end_y)
     timerange_years = map(Dates.year, timerange)
     for (i, ds) in enumerate(data)
         ds_years = map(x -> Dates.year(x), dims(ds, :time))
         indices = findall(x -> x in timerange_years, ds_years)
-        ds_slice = ds[time = indices]
-        data[i] = YAXArray((otherdims(ds, :time)..., Dim{:time}(timerange)), ds_slice.data, ds.properties)   
+        ds_slice = ds[time=indices]
+        data[i] = YAXArray(
+            (otherdims(ds, :time)..., Dim{:time}(timerange)),
+            ds_slice.data,
+            ds.properties,
+        )
     end
 end
 
@@ -876,30 +917,34 @@ Return metadata of data specified in `ds`.
 - `ds`: content of config yaml file specifying meta attributes and paths of data.
 """
 function metaDataFromYAML(ds::Dict)
-    fn_err(x) = throw(ArgumentError("$(x) must be provided for each dataset in config yaml file!"))
+    fn_err(x) =
+        throw(ArgumentError("$(x) must be provided for each dataset in config yaml file!"))
     experiment = get(() -> fn_err("exp"), ds, "exp")
     variables = get(() -> fn_err("variables"), ds, "variables")
     aliases = get(() -> fn_err("aliases"), ds, "aliases")
-    
+
     subdirs = get(ds, "subdirs", nothing)
     statistics = get(ds, "statistics", nothing)
 
     meta_ds = Vector{MetaData}()
     if isnothing(subdirs)
-        subdirs = isnothing(statistics) ? 
-            fn_err("if subdirs not provided, statistics") : 
+        subdirs =
+            isnothing(statistics) ? fn_err("if subdirs not provided, statistics") :
             combineAll(variables, statistics)
         for alias in aliases
             for subdir in subdirs
                 var, stats = string.(split(subdir, "_"))
-                push!(meta_ds, MetaData(var, experiment, alias; subdir=subdir, statistic=stats))     
+                push!(
+                    meta_ds,
+                    MetaData(var, experiment, alias; subdir = subdir, statistic = stats),
+                )
             end
         end
     else
         for var in variables
             for alias in aliases
                 for subdir in subdirs
-                    push!(meta_ds, MetaData(var, experiment, alias; subdir=subdir))
+                    push!(meta_ds, MetaData(var, experiment, alias; subdir = subdir))
                 end
             end
         end
@@ -941,23 +986,31 @@ In ESMValTool, `meta.alias` corresponds to the (self-chosen) name under the sect
 The returned paths are the paths to all files within this directory.
 """
 function resolvePathsFromMetaData(
-    meta::MetaData, 
-    base_path::String, 
+    meta::MetaData,
+    base_path::String,
     dir_per_var::Bool;
     base_subdirs::T = String[],
     #constraint::Dict = Dict{Symbol, Vector{String}}()
-) where T <: AbstractArray{String}
+) where {T<:AbstractArray{String}}
     if dir_per_var
         base_paths = filter(isdir, readdir(base_path, join = true)) # all subdirectories
         filter!(x -> occursin("_" * meta.variable, x), base_paths) # just subdirs for variable
         if isempty(base_paths)
-            throw(ArgumentError("$(base_path) doesnt contain directories for variable $(meta.variable)!"))
+            throw(
+                ArgumentError(
+                    "$(base_path) doesnt contain directories for variable $(meta.variable)!",
+                ),
+            )
         end
         if !isempty(base_subdirs)
             bps = copy(base_paths)
             constrainSubdirs!(base_paths, base_subdirs)
             if isempty(base_paths)
-                throw(ArgumentError("$(bps) dont match with constraint base_subdirs: $base_subdirs!"))
+                throw(
+                    ArgumentError(
+                        "$(bps) dont match with constraint base_subdirs: $base_subdirs!",
+                    ),
+                )
             end
         end
     else
@@ -1000,12 +1053,12 @@ Retrieve information from `filename` and return it as an object of type ObsMeta.
 - `path::String`:
 - `field_indices::Dict{Symbol, Int}`:
 """
-function _parseFilenameObs(filename::String, path::String, field_indices::Dict{Symbol, Int})
+function _parseFilenameObs(filename::String, path::String, field_indices::Dict{Symbol,Int})
     parts_fn = split(filename, "_")
     if length(field_indices) != length(parts_fn)
         throw(ArgumentError("File $filename doesn't align with given format!"))
     end
-    function field_to_val_in_fn(field::Symbol) 
+    function field_to_val_in_fn(field::Symbol)
         idx = get(field_indices, field, nothing)
         return isnothing(idx) ? nothing : parts_fn[idx]
     end
@@ -1013,12 +1066,12 @@ function _parseFilenameObs(filename::String, path::String, field_indices::Dict{S
         fn = filename,
         path = path,
         grid = field_to_val_in_fn(:grid),
-        model =  field_to_val_in_fn(:model),
+        model = field_to_val_in_fn(:model),
         type = field_to_val_in_fn(:type),
         version = field_to_val_in_fn(:version),
         tableid = field_to_val_in_fn(:tableid),
         variable = field_to_val_in_fn(:variable),
-        timerange = field_to_val_in_fn(:timerange)
+        timerange = field_to_val_in_fn(:timerange),
     )
 end
 
@@ -1034,12 +1087,16 @@ Retrieve information from `filename` and return it as an object of type ModelMet
 - `path::String`:
 - `field_indices::Dict{Symbol, Int}`:
 """
-function _parseFilenameModel(filename::String, path::String, field_indices::Dict{Symbol, Int})
+function _parseFilenameModel(
+    filename::String,
+    path::String,
+    field_indices::Dict{Symbol,Int},
+)
     parts_fn = split(filename, "_")
     if length(field_indices) != length(parts_fn)
         throw(ArgumentError("File $filename doesn't align with given format!"))
     end
-    function field_to_val_in_fn(field::Symbol) 
+    function field_to_val_in_fn(field::Symbol)
         idx = get(field_indices, field, nothing)
         return isnothing(idx) ? nothing : parts_fn[idx]
     end
@@ -1048,12 +1105,12 @@ function _parseFilenameModel(filename::String, path::String, field_indices::Dict
         path = path,
         variable = field_to_val_in_fn(:variable),
         tableid = field_to_val_in_fn(:tableid),
-        model =  field_to_val_in_fn(:model),
+        model = field_to_val_in_fn(:model),
         experiment = field_to_val_in_fn(:experiment),
         variant = field_to_val_in_fn(:variant),
         grid = field_to_val_in_fn(:grid),
         mip = field_to_val_in_fn(:mip),
-        timerange = field_to_val_in_fn(:timerange)
+        timerange = field_to_val_in_fn(:timerange),
     )
 end
 
@@ -1067,13 +1124,21 @@ function parsePath(path::String, ::FF_ESMVT)
         return _parseFilenameObs(filename, path, format_dict)
     elseif proj in ["CMIP5", "CMIP6"]
         if proj == "CMIP6"
-            format_dict = length(parts) == 7 ? CMIP6_ESMVT_FIELD_INDICES : CMIP6_ESMVT_FIELD_INDICES_TR
+            format_dict =
+                length(parts) == 7 ? CMIP6_ESMVT_FIELD_INDICES :
+                CMIP6_ESMVT_FIELD_INDICES_TR
         else
-            format_dict = length(parts) == 6 ? CMIP5_ESMVT_FIELD_INDICES : CMIP5_ESMVT_FIELD_INDICES_TR
+            format_dict =
+                length(parts) == 6 ? CMIP5_ESMVT_FIELD_INDICES :
+                CMIP5_ESMVT_FIELD_INDICES_TR
         end
         return _parseFilenameModel(filename, path, format_dict)
     else
-        throw(ErrorException("Not implemented: only CMIP5 + CMIP6 for models implemented and only native6 for observations. Found: $(proj)."))
+        throw(
+            ErrorException(
+                "Not implemented: only CMIP5 + CMIP6 for models implemented and only native6 for observations. Found: $(proj).",
+            ),
+        )
     end
 end
 
@@ -1119,11 +1184,17 @@ function parsePath(path::String, ::FF_CMIP)::ModelMeta
         elseif l == 7
             format_dict = CMIP6_FIELD_INDICES_TR
         else
-            format_dict = parts[end] in CMIP6_GRID_LABELS ? CMIP6_FIELD_INDICES : CMIP5_FIELD_INDICES_TR
+            format_dict =
+                parts[end] in CMIP6_GRID_LABELS ? CMIP6_FIELD_INDICES :
+                CMIP5_FIELD_INDICES_TR
         end
         return _parseFilenameModel(filename, path, format_dict)
     else
-        throw(ErrorException("Not implemented: only CMIP5 + CMIP6 for models implemented. Found: $(proj)."))
+        throw(
+            ErrorException(
+                "Not implemented: only CMIP5 + CMIP6 for models implemented. Found: $(proj).",
+            ),
+        )
     end
 end
 
@@ -1148,12 +1219,12 @@ function parsePath(path::String, ::FF_CMIP6_TR)::ModelMeta
 end
 
 
-function isRetained(fn_meta::T, constraint::Constraint) where {T <: AbstractMeta}
+function isRetained(fn_meta::T, constraint::Constraint) where {T<:AbstractMeta}
     allowed_members = getfield(constraint, :members)
     if !isempty(allowed_members)
         !(_model_key(fn_meta, LevMember()) in allowed_members) && return false
     end
-    
+
     for field in keys(CONSTRAINTS_TO_META)
         #TODO: handle filenames separately (see below)? to include just part of the given constraint, e.g. all filenames must contain 'xy'
         allowed_vals = getfield(constraint, field)
@@ -1186,7 +1257,8 @@ function collectNCFilePaths(path_data_dir::String)
     if !isdir(path_data_dir)
         throw(ArgumentError("$path_data_dir is not a directory!"))
     end
-    paths_to_files = filter(x -> isfile(x) && endswith(x, ".nc"), readdir(path_data_dir; join=true))
+    paths_to_files =
+        filter(x -> isfile(x) && endswith(x, ".nc"), readdir(path_data_dir; join = true))
     if isempty(paths_to_files)
         @warn "No .nc files found!"
     end
@@ -1203,7 +1275,10 @@ Subset entries in `meta_attributes` so that only those with properties specified
 - `constraint::Dict{Symbol, Vector{String}})`: Mapping to vector specifiying the properties of which at least one 
 must be present for an id to be retained.
 """
-function constrainRecipeMetaData!(meta_attributes::Vector{MetaData}, constraint::Dict{Symbol, Vector{String}})
+function constrainRecipeMetaData!(
+    meta_attributes::Vector{MetaData},
+    constraint::Dict{Symbol,Vector{String}},
+)
     timerange_constraints = get(constraint, :timeranges, String[])
     alias_constraints = get(constraint, :aliases, String[])
     timerangeOk(attrib::MetaData) = any(x -> attrib.timerange == x, timerange_constraints)
@@ -1223,8 +1298,10 @@ function constrainRecipeMetaData!(meta_attributes::Vector{MetaData}, constraint:
     end
     stats_constraints = get(constraint, :statistics, String[])
     vars_constraints = get(constraint, :variables, String[])
-    stats_ok(attrib::MetaData) = isempty(stats_constraints) || any(x -> attrib.statistic == x, stats_constraints)
-    vars_ok(attrib::MetaData) = isempty(vars_constraints) || any(x -> attrib.variable == x, vars_constraints)
+    stats_ok(attrib::MetaData) =
+        isempty(stats_constraints) || any(x -> attrib.statistic == x, stats_constraints)
+    vars_ok(attrib::MetaData) =
+        isempty(vars_constraints) || any(x -> attrib.variable == x, vars_constraints)
     filter!(stats_ok, meta_attributes)
     filter!(vars_ok, meta_attributes)
     return nothing
@@ -1240,15 +1317,15 @@ function avgObsDatasets(observations::YAXArray)
         throw(ArgumentError("Obs data requires dim :model when averaging across datasets."))
     end
     if length(dims(observations, :model)) > 1
-        return mean(observations, dims=:model)[model=At("combined")]
+        return mean(observations, dims = :model)[model=At("combined")]
     else
         return observations[model=1]
     end
 end
 
 
-function distancesData(model_data::DataMap, obs_data::DataMap, config::Dict{String, Number})
-    return distancesData(model_data, obs_data,  activeDiagnostics(config))
+function distancesData(model_data::DataMap, obs_data::DataMap, config::Dict{String,Number})
+    return distancesData(model_data, obs_data, activeDiagnostics(config))
 end
 
 """
@@ -1283,24 +1360,33 @@ If `observations' has dimension 'model' (for several observational datasets), th
 - `observations::YAXArray`: dimensions must be 'lon', 'lat' and possibly 'model'.
 - `metric::Symbol`: :rmse for Root Mean Squared Error (default) or :mse for Mean Squared Error
 """
-function distancesData(models::YAXArray, observations::YAXArray; metric::Symbol=:rmse)
+function distancesData(models::YAXArray, observations::YAXArray; metric::Symbol = :rmse)
     throwErrorIfDimMissing(models, [:lon, :lat]; include = :all)
     obs = hasdim(observations, :model) ? avgObsDatasets(observations) : observations
     model_dim = modelDim(models)
     model_names = lookup(models, model_dim)
     if otherdims(models, model_dim) != dims(obs)
         msg = "Found: Model dims (other than model dim): $(DimensionalData.name.(otherdims(models, model_dim))) and observational dims: $(DimensionalData.name.(dims(obs)))"
-        throw(ArgumentError("dimensions of model (other than model dim) and observation data must align!" * msg))
+        throw(
+            ArgumentError(
+                "dimensions of model (other than model dim) and observation data must align!" *
+                msg,
+            ),
+        )
     end
     latitudes = collect(lookup(models, :lat))
     obs_data = collect(obs)
     model_data = collect(models)
-    mask_missing =  (ismissing.(obs_data) .+ ismissing.(model_data)) .> 0 # observations or model is missing (or both)
+    mask_missing = (ismissing.(obs_data) .+ ismissing.(model_data)) .> 0 # observations or model is missing (or both)
     # mask_missing has same dimensions as model_data (due to broadcasting)
     idx_model = dimnum(models, model_dim)
     distances = similar(model_names, eltype(model_data))
     if !(metric in [:rmse, :mse])
-        throw(ArgumentError("Optional argument :metric must be :rmse (default) or :mse! Found: $metric"))
+        throw(
+            ArgumentError(
+                "Optional argument :metric must be :rmse (default) or :mse! Found: $metric",
+            ),
+        )
     end
     fn = metric == :rmse ? areaWeightedRMSE : areaWeightedMSE
     @inbounds for i in eachindex(model_names)
@@ -1333,25 +1419,25 @@ Compute the distance as the area-weighted RMSE (default) or MSE between model pr
 - `idx_model::Int`: index of model/member-dimension in `model_data`.
 """
 function distancesData(
-    model_data::AbstractArray, 
-    obs_data::AbstractArray, 
-    latitudes::AbstractArray{<:Real}; 
-    metric::Symbol=:rmse,
-    idx_model::Int = 3
+    model_data::AbstractArray,
+    obs_data::AbstractArray,
+    latitudes::AbstractArray{<:Real};
+    metric::Symbol = :rmse,
+    idx_model::Int = 3,
 )
     s = size(model_data)
     if length(s) != length(size(obs_data))
         obs_data = insertSingletonDim(obs_data, idx_model)
     end
-    mask_missing =  (ismissing.(obs_data) .+ ismissing.(model_data)) .> 0 # observations or model is missing (or both)
+    mask_missing = (ismissing.(obs_data) .+ ismissing.(model_data)) .> 0 # observations or model is missing (or both)
     obs_data = selectdim(obs_data, idx_model, 1)
-    
+
     distances = Vector{eltype(model_data)}(undef, size(model_data)[idx_model])
     if !(metric in [:rmse, :mse])
         throw(ArgumentError("Optional argument :metric must be :rmse (default) or :mse!"))
     end
     fn = metric == :rmse ? areaWeightedRMSE : areaWeightedMSE
-    @inbounds for i in 1:s[idx_model]
+    @inbounds for i = 1:s[idx_model]
         data_m = selectdim(model_data, idx_model, i)
         mask = selectdim(mask_missing, idx_model, i)
         aw_mat = areaWeightMatrix(latitudes, mask)
@@ -1361,7 +1447,7 @@ function distancesData(
 end
 
 
-function distancesModels(model_data::DataMap, config::Dict{String, Number})
+function distancesModels(model_data::DataMap, config::Dict{String,Number})
     return distancesModels(model_data, activeDiagnostics(config))
 end
 
@@ -1394,10 +1480,10 @@ function distancesModels(data::YAXArray)
     models = collect(lookup(data, dim_symbol))
     idx_model = dimnum(data, dim_symbol)
     nb_models = length(models)
-    
+
     arr = Array(data)
     # only take values where none (!) of the models have missing values!! (Not just the two that are compared to one another)
-    mask_missing = dropdims(any(ismissing, arr, dims=idx_model), dims = idx_model)
+    mask_missing = dropdims(any(ismissing, arr, dims = idx_model), dims = idx_model)
     aw_mat = areaWeightMatrix(collect(lookup(data, :lat)), mask_missing)
     matrixS = zeros(nb_models, nb_models)
     @inbounds for i in range(1, length(models)-1)
@@ -1411,7 +1497,9 @@ function distancesModels(data::YAXArray)
     new_dim1 = dim_symbol == :member ? :member1 : model1
     new_dim2 = dim_symbol == :member ? :member2 : model2
     return YAXArray(
-        (Dim{new_dim1}(models), Dim{new_dim2}(models)), symDistMatrix, deepcopy(data.properties)
+        (Dim{new_dim1}(models), Dim{new_dim2}(models)),
+        symDistMatrix,
+        deepcopy(data.properties),
     )
 end
 
@@ -1430,23 +1518,29 @@ For every diagnostic in `distances_all`, compute the weighted sum of all diagnos
 BEFORE computing the median that is used to normalize the distances (seperately for each 
 diagnostic); if false, median is computed across all individual members of each diagnostic.
 """
-function generalizedDistances(distances_all::YAXArray, weights::YAXArray; norm_avg_members::Bool = true)
+function generalizedDistances(
+    distances_all::YAXArray,
+    weights::YAXArray;
+    norm_avg_members::Bool = true,
+)
     throwErrorIfDimMissing(distances_all, :diagnostic)
     model_dims = modelDims(distances_all)
-    norm = dropdims(median(distances_all, dims=model_dims), dims=model_dims)
+    norm = dropdims(median(distances_all, dims = model_dims), dims = model_dims)
 
     has_model_dim = :model in model_dims
     if !has_model_dim
-        distances_all = :member1 in  model_dims ?
-            summarizeMembersMatrix(distances_all, false) :
+        distances_all =
+            :member1 in model_dims ? summarizeMembersMatrix(distances_all, false) :
             summarizeMembersVector(distances_all)
     end
     dimensions = modelDims(distances_all)
-    norm = norm_avg_members ? dropdims(median(distances_all, dims=dimensions), dims=dimensions) : norm
+    norm =
+        norm_avg_members ?
+        dropdims(median(distances_all, dims = dimensions), dims = dimensions) : norm
     normalized_distances = distances_all ./ norm
-    
+
     weighted_dists = YAXArrays.compute(normalized_distances .* weights) # materializes, otherwise error with new DiskArrayEngine backend
-    return dropdims(sum(weighted_dists, dims = :diagnostic), dims=:diagnostic)
+    return dropdims(sum(weighted_dists, dims = :diagnostic), dims = :diagnostic)
 end
 
 
@@ -1466,35 +1560,49 @@ BEFORE computing the median that is used to normalize the distances (seperately 
 diagnostic); if false, median is computed across all individual members of each diagnostic.
 """
 function generalizedDistances(
-    distances_all::Vector{<:YAXArray}, diagnostics::Vector{String}, weights::YAXArray;
-    norm_avg_members::Bool = true
+    distances_all::Vector{<:YAXArray},
+    diagnostics::Vector{String},
+    weights::YAXArray;
+    norm_avg_members::Bool = true,
 )
     if length(distances_all) != length(diagnostics)
-        throw(ArgumentError("distances must be computed for every diagnostic, found $(length(distances_all)) distances, but $(length(diagnostics)) diagnostics."))
+        throw(
+            ArgumentError(
+                "distances must be computed for every diagnostic, found $(length(distances_all)) distances, but $(length(diagnostics)) diagnostics.",
+            ),
+        )
     end
-    map(x -> throwErrorIfDimMissing(x, [:model, :member, :member1]; include=:any), distances_all)
+    map(
+        x -> throwErrorIfDimMissing(x, [:model, :member, :member1]; include = :any),
+        distances_all,
+    )
     normalizations = median.(distances_all)
     # average model members
     model_dims = modelDims.(distances_all)
     has_model_dim = all(t -> :model in t, model_dims)
     if !has_model_dim
-        distances_all = all(t -> :member1 in t, model_dims) ?
+        distances_all =
+            all(t -> :member1 in t, model_dims) ?
             summarizeMembersMatrix.(distances_all, false) :
             summarizeMembersVector.(distances_all)
     end
     normalizations = norm_avg_members ? median.(distances_all) : normalizations
-    normalized_distances = map(distances_all, normalizations, diagnostics) do dists, norm, diagnostic
-        d = Array(dists) ./ norm
-        dimensions = dims(dists)
-        YAXArray(
-            (dimensions..., Dim{:diagnostic}([diagnostic])), 
-            reshape(d, (size(dimensions)..., 1)), 
-            deepcopy(dists.properties)
-        )
-    end
-    distances = cat(normalized_distances...; dims=Dim{:diagnostic}(diagnostics))
+    normalized_distances =
+        map(distances_all, normalizations, diagnostics) do dists, norm, diagnostic
+            d = Array(dists) ./ norm
+            dimensions = dims(dists)
+            YAXArray(
+                (dimensions..., Dim{:diagnostic}([diagnostic])),
+                reshape(d, (size(dimensions)..., 1)),
+                deepcopy(dists.properties),
+            )
+        end
+    distances = cat(normalized_distances...; dims = Dim{:diagnostic}(diagnostics))
     weighted_dists = distances .* weights
-    return dropdims(mapslices(sum, weighted_dists; dims = (:diagnostic,)), dims=:diagnostic)
+    return dropdims(
+        mapslices(sum, weighted_dists; dims = (:diagnostic,)),
+        dims = :diagnostic,
+    )
 end
 
 
@@ -1575,7 +1683,9 @@ Return a vector with models retrieved from csv file at `path`. If col_variants i
 returned models are on level of model members (MODEL#variant, e.g. AWI-ESM#r1i1p1f1).
 """
 function loadModelsFromCSV(
-    path::String, col_models::String; col_variants::Union{String, Nothing}=nothing
+    path::String,
+    col_models::String;
+    col_variants::Union{String,Nothing} = nothing,
 )
     models = DataFrame(CSV.File(path))
     dropmissing!(models, col_models)
@@ -1604,10 +1714,14 @@ error between `m1` and `m2`.
 """
 function areaWeightedMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
     if size(m1) != size(m2) || size(m1) != size(aw_mat)
-        throw(ArgumentError("All input arrays must have same size to compute areaweighted rmse! Found: $(size.([m1, m2, aw_mat]))."))
+        throw(
+            ArgumentError(
+                "All input arrays must have same size to compute areaweighted rmse! Found: $(size.([m1, m2, aw_mat])).",
+            ),
+        )
     end
     squared_diff = (m1 .- m2) .^ 2
-    return sum(skipmissing(aw_mat .* squared_diff))./ sum(aw_mat)
+    return sum(skipmissing(aw_mat .* squared_diff)) ./ sum(aw_mat)
 end
 
 
@@ -1649,13 +1763,15 @@ function areaWeightedRMSE(m1::YAXArray, m2::YAXArray)
     diff = m1 .- m2
     latitudes = collect(lookup(m1, :lat))
     mask = falses(size(m1)...)
-    indices = (:,:)
-    
+    indices = (:, :)
+
     @views mask[indices...] .= ismissing.(diff) .|| isnan.(diff)
-    aw_mat = areaWeightMatrix(latitudes, mask) 
-    
-    m1 = allowmissing(m1); m2 = allowmissing(m2)
-    m1[mask] .= missing; m2[mask] .= missing
+    aw_mat = areaWeightMatrix(latitudes, mask)
+
+    m1 = allowmissing(m1)
+    m2 = allowmissing(m2)
+    m1[mask] .= missing
+    m2[mask] .= missing
 
     return areaWeightedRMSE(m1.data, m2.data, aw_mat)
 end
@@ -1673,11 +1789,11 @@ end
 - `latitudes`: 
 """
 function areaWeightedSquaredErr(
-    model_data::AbstractArray, 
-    obs_data::AbstractArray, 
-    latitudes::AbstractArray{<:Real}; 
+    model_data::AbstractArray,
+    obs_data::AbstractArray,
+    latitudes::AbstractArray{<:Real};
 )
-    mask =  (ismissing.(obs_data) .+ ismissing.(model_data)) .> 0 # observations or model is missing (or both)
+    mask = (ismissing.(obs_data) .+ ismissing.(model_data)) .> 0 # observations or model is missing (or both)
     aw_mat = areaWeightMatrix(latitudes, mask)
     squared_diff = (model_data .- obs_data) .^ 2
     return skipmissing(aw_mat .* squared_diff) ./ sum(aw_mat)
@@ -1685,7 +1801,11 @@ end
 
 
 function computeQuantiles(
-    df::AbstractArray, model_dim::Symbol, w::Union{AbstractArray, Nothing}, lower::Real, upper::Real
+    df::AbstractArray,
+    model_dim::Symbol,
+    w::Union{AbstractArray,Nothing},
+    lower::Real,
+    upper::Real,
 )
     idx = findfirst(x -> x == model_dim, dimNames(df))
     out_axes = deleteat!(collect(axes(similar(df))), idx)
@@ -1693,9 +1813,9 @@ function computeQuantiles(
     out = Array{eltype(df)}(undef, 2, out_shape...)
 
     out_dims = otherdims(df, model_dim)
-    for (i,slice) in enumerate(eachslice(df; dims=out_dims))
-        out[1,i] = quantile(coalesce.(slice, NaN), lower; w=w)
-        out[2,i] = quantile(coalesce.(slice, NaN), upper; w=w)
+    for (i, slice) in enumerate(eachslice(df; dims = out_dims))
+        out[1, i] = quantile(coalesce.(slice, NaN), lower; w = w)
+        out[2, i] = quantile(coalesce.(slice, NaN), upper; w = w)
     end
     ds = (Dim{:confidence}(["lower", "upper"]), out_dims...)
     return YAXArray(ds, out)
@@ -1717,9 +1837,10 @@ Compute weighted `quantiles` of timeseries `data`.
 lower and upper bound in this order.
 """
 function uncertaintyRanges(
-    data::YAXArray; 
-    weights::Union{YAXArray, Nothing} = nothing, 
-    q_lower::Float64 = 0.167, q_upper::Float64 = 0.833
+    data::YAXArray;
+    weights::Union{YAXArray,Nothing} = nothing,
+    q_lower::Float64 = 0.167,
+    q_upper::Float64 = 0.833,
 )
     model_dim = modelDim(data)
     meta = deepcopy(data.properties)
@@ -1737,7 +1858,7 @@ function uncertaintyRanges(
         w_names = lookup(weights, :weight)
         quantiles = Vector(undef, length(w_names))
         for (i_w, weight_id) in enumerate(w_names)
-            w, df = alignWeightsAndData(data, weights[weight = At(weight_id)])
+            w, df = alignWeightsAndData(data, weights[weight=At(weight_id)])
             quantiles[i_w] = computeQuantiles(df, model_dim, w, q_lower, q_upper)
         end
         qs = concatenatecubes(quantiles, dims(weights, :weight))
@@ -1752,10 +1873,10 @@ end
 Compute the p-th quantile.
 """
 function quantile(
-    samples::AbstractArray{<:Number}, 
+    samples::AbstractArray{<:Number},
     p::Number;
-    w::Union{Nothing, AbstractArray{<:Number}} = nothing,
-    interpolate::Bool = true
+    w::Union{Nothing,AbstractArray{<:Number}} = nothing,
+    interpolate::Bool = true,
 )
     if p < 0 || p > 1
         throw(ArgumentError("It must hold: 0<p<=1! Found: $p"))
@@ -1769,10 +1890,10 @@ function quantile(
         probs_cum = cumsum(w[indices])
     end
     idx = findfirst(x -> x >= p, probs_cum)
-    
+
     h = (n - 1) * p + 1
     interpolate = isinteger(h) ? false : interpolate
-    
+
     if interpolate
         if isnothing(w)
             # use linear interpolation default definition used in numpy
@@ -1790,9 +1911,9 @@ function quantile(
                     result = samples[1]
                 else
                     # standard linear interpolation
-                    x0, x1 = samples[idx - 1], samples[idx]
-                    q0, q1 = probs_cum[idx - 1], probs_cum[idx]
-                    result =  x0 + ((p - q0)/(q1 - q0)) * (x1 - x0)
+                    x0, x1 = samples[idx-1], samples[idx]
+                    q0, q1 = probs_cum[idx-1], probs_cum[idx]
+                    result = x0 + ((p - q0)/(q1 - q0)) * (x1 - x0)
                 end
             end
         end
@@ -1821,11 +1942,15 @@ function fixModelNameInconsistenciesCMIP(props::Dict, fn_meta::ModelMeta)
         name = get(MODEL_NAME_FIXES, model_from_file_properties, nothing)
         if isnothing(name)
             # not known yet
-            throw(KeyError("model name as read from metadata of stored .nc file ($model_from_file_properties) and used as dimension name is not identical to name inferred from filename ($(fn_meta.model))."))
+            throw(
+                KeyError(
+                    "model name as read from metadata of stored .nc file ($model_from_file_properties) and used as dimension name is not identical to name inferred from filename ($(fn_meta.model)).",
+                ),
+            )
         else
             return replace(fn_meta.member_id, fn_meta.model => name)
         end
-    end 
+    end
 end
 
 
@@ -1839,8 +1964,8 @@ If none is present, throw ArgumentError.
 """
 function modelDim(data::YAXArray)
     err_msg = "Data must have either dimension :member or :model, found: $(dims(data))."
-    return hasdim(data, :model) ? :model : 
-        hasdim(data, :member) ? :member : throw(ArgumentError(err_msg))
+    return hasdim(data, :model) ? :model :
+           hasdim(data, :member) ? :member : throw(ArgumentError(err_msg))
 end
 
 """
@@ -1856,7 +1981,11 @@ function modelDims(data::YAXArray)
         model_dims = filter(d -> occursin("member", d), dim_names)
     end
     if isempty(model_dims)
-        throw(ArgumentError("Data must contain a dimension with 'member' or 'model' in its name! found: $dim_names"))
+        throw(
+            ArgumentError(
+                "Data must contain a dimension with 'member' or 'model' in its name! found: $dim_names",
+            ),
+        )
     end
     return Tuple(Symbol.(model_dims))
 end
@@ -1872,11 +2001,11 @@ end
 function apply!(
     dm::DataMap,
     fn::Function,
-    args...; 
+    args...;
     ids::AbstractVector{T} = String[],
     ids_new::AbstractVector{T} = String[],
-    kwargs...
-) where T <: Union{String, Symbol}
+    kwargs...,
+) where {T<:Union{String,Symbol}}
 
     ids = isempty(ids) ? collect(keys(dm)) : ids
     ids_new = isempty(ids_new) ? ids : ids_new
@@ -1913,11 +2042,11 @@ same keys as in `dm` are used.
 function apply(
     dm::DataMap,
     fn::Function,
-    args...; 
+    args...;
     ids::AbstractVector{T} = String[],
     ids_new::AbstractVector{T} = String[],
-    kwargs...
-) where T <: Union{String, Symbol}
+    kwargs...,
+) where {T<:Union{String,Symbol}}
 
     dm_new = DataMap()
     ids = isempty(ids) ? collect(keys(dm)) : ids
@@ -1952,10 +2081,10 @@ Apply `fn` with positional arguments `args` and keyword arguments `kwargs` and r
 function applyMap(
     dm::DataMap,
     fn::Function,
-    args...; 
+    args...;
     ids::AbstractVector{T} = String[],
-    kwargs...
-) where T <: Union{String, Symbol}
+    kwargs...,
+) where {T<:Union{String,Symbol}}
     ids = isempty(ids) ? collect(keys(dm)) : ids
     output = Dict()
     for id in ids
@@ -1974,16 +2103,24 @@ If no values are given, return indices for entire vector `times`.
 
 """
 function indicesTimeseries(
-    times::Vector{DateTime}, 
-    constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}
+    times::Vector{DateTime},
+    constraint_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}},
 )
     start_y = constraint_ts.start_year
     end_y = constraint_ts.end_year
-    indices_time = searchsortedfirst(Dates.year.(times), start_y) : searchsortedlast(Dates.year.(times), end_y)
+    indices_time =
+        searchsortedfirst(Dates.year.(times), start_y):searchsortedlast(
+            Dates.year.(times),
+            end_y,
+        )
     times = times[indices_time]
     # only use data that's exactly from start to end!
-    start_wrong = start_y != typemin(Int) && (!isempty(times) && start_y != minimum(map(Dates.year, times)))
-    end_wrong   = end_y != typemax(Int) && (!isempty(times) && end_y != maximum(map(Dates.year, times)))
+    start_wrong =
+        start_y != typemin(Int) &&
+        (!isempty(times) && start_y != minimum(map(Dates.year, times)))
+    end_wrong =
+        end_y != typemax(Int) &&
+        (!isempty(times) && end_y != maximum(map(Dates.year, times)))
     return (isempty(times) || start_wrong || end_wrong) ? [] : indices_time
 end
 
@@ -1995,7 +2132,7 @@ function alignWeightsAndData(data::YAXArray, weights::YAXArray)
         if level_data == :member
             data = summarizeMembers(data)
         else
-            weights = summarizeMembers(weights; fn=sum)
+            weights = summarizeMembers(weights; fn = sum)
         end
     end
     models_data = collect(dims(data, level_data))
@@ -2045,20 +2182,20 @@ For every model in `dat_members` that has more than `max_int` members, randomly 
 function reduceNbMembers(dat_members::YAXArray; max_n::Int = 5)
     nb_members_dict = nbModelMembers(dat_members)
     members = collect(dat_members.member)
-    df_large = filter(((k,v),) -> v > max_n, nb_members_dict)
+    df_large = filter(((k, v),) -> v > max_n, nb_members_dict)
     indices_members = []
     for model in collect(keys(df_large))
-        indices_model = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), members);
-        include_model = StatsBase.sample(indices_model, max_n, replace=false)
+        indices_model = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), members)
+        include_model = StatsBase.sample(indices_model, max_n, replace = false)
         push!(indices_members, include_model)
     end
-    df_ok = filter(((k,v),) -> v <= max_n, nb_members_dict)
+    df_ok = filter(((k, v),) -> v <= max_n, nb_members_dict)
     for model in collect(keys(df_ok))
-        indices_model = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), members);
+        indices_model = findall(x -> startswith(x, model * MODEL_MEMBER_DELIM), members)
         push!(indices_members, indices_model)
     end
     indices_members = sort(collect(Iterators.flatten(indices_members)))
-    return dat_members[member = indices_members]
+    return dat_members[member=indices_members]
 end
 
 
@@ -2068,7 +2205,7 @@ end
 - `n_rep::Int`: number of repetitions for selected model
 - `index::Int`: index of model to be repeated (default: 2nd)
 """
-function repeatModel(data::AbstractArray, n_rep::Int; index::Int=2)
+function repeatModel(data::AbstractArray, n_rep::Int; index::Int = 2)
     if n_rep == 1
         return copy(data)
     end
@@ -2076,20 +2213,22 @@ function repeatModel(data::AbstractArray, n_rep::Int; index::Int=2)
     n_models = length(models)
     m_rep = models[index]
     models_rep = [map(i -> m_rep * "#" * string(i), 1:n_rep)...]
-    models_new = vec(hcat([models[1:index-1]..., models_rep..., models[index+1:end]...]))
+    models_new =
+        vec(hcat([models[1:(index-1)]..., models_rep..., models[(index+1):end]...]))
     s = size(data)
     data_rep = YAXArray(
         (dims(data, :lon), dims(data, :lat), Dim{:model}(models_new)),
-        rand(s[1], s[2], length(models) + n_rep - 1)
+        rand(s[1], s[2], length(models) + n_rep - 1),
     )
     if index > 1
-        data_rep[:,:,1:index-1] .= Array(data[model=1:index-1])
+        data_rep[:, :, 1:(index-1)] .= Array(data[model=1:(index-1)])
     end
-    for i in 1:n_rep
+    for i = 1:n_rep
         data_rep[:, :, index+i-1] .= Array(data[model=index])
     end
     if index < n_models
-        data_rep[:, :, index + n_rep : n_models + n_rep - 1] .= Array(data[model = index + 1 : n_models])
+        data_rep[:, :, (index+n_rep):(n_models+n_rep-1)] .=
+            Array(data[model=(index+1):n_models])
     end
     return data_rep
 end
@@ -2109,28 +2248,34 @@ end
    Merge two YAXArrays with identical dimensions into one with additional dimension 'new_dim'.
 """
 function mergeYAX(
-   df::AbstractArray{<:YAXArray}, new_dim::Symbol, new_dim_vals::T
-) where T <: AbstractArray
-    try 
-        merged = cat(df..., dims=Dim{new_dim}(new_dim_vals))
+    df::AbstractArray{<:YAXArray},
+    new_dim::Symbol,
+    new_dim_vals::T,
+) where {T<:AbstractArray}
+    try
+        merged = cat(df..., dims = Dim{new_dim}(new_dim_vals))
         return _sortYAX(merged, new_dim)
     catch e
         @warn "input arrays do not all have identical dimensions, missing values will be added!"
         # dimension names need to be identical
         names = unique(dimNames.(df))
         if length(names) != 1
-            throw(ArgumentError("the names of the dimensions of all input arrays must be identical"))
+            throw(
+                ArgumentError(
+                    "the names of the dimensions of all input arrays must be identical",
+                ),
+            )
         end
         names = names[1]
         new_dimensions = Vector(undef, length(names) + 1)
-        for (i,d) in enumerate(names)
+        for (i, d) in enumerate(names)
             idx = argmax(size.(df, d))
             new_dimensions[i] = Dim{d}(lookup(df[idx], d))
         end
         new_dimensions[end] = Dim{new_dim}(new_dim_vals)
         l = length.(new_dimensions)
 
-        result = Array{Union{Missing, Float64}}(missing, l...)
+        result = Array{Union{Missing,Float64}}(missing, l...)
         merged = YAXArray(Tuple(new_dimensions), result)
         # fill content
         for (i, dat) in enumerate(df)
@@ -2154,7 +2299,7 @@ Combine two YAXArrays with identical dimensions into one with extended dimension
 - `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(),
 otherwise, lookup type is Unordered()
 """
-function mergeYAX(df1::YAXArray, df2::YAXArray, dim::Symbol; sorted::Bool=true)
+function mergeYAX(df1::YAXArray, df2::YAXArray, dim::Symbol; sorted::Bool = true)
     return mergeYAX([df1, df2], dim; sorted)
 end
 
@@ -2169,19 +2314,22 @@ Combine several YAXArrays with identical dimensions into one with extended dimen
 - `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(),
 otherwise, lookup type is Unordered()
 """
-function mergeYAX(
-    dfs::AbstractArray{<:YAXArray}, dim::Symbol; sorted::Bool=true
-)
+function mergeYAX(dfs::AbstractArray{<:YAXArray}, dim::Symbol; sorted::Bool = true)
     if length(dfs) < 2
         throw(ArgumentError("at least two YAXArrays must be given to be merged."))
     end
     other_dims = otherdims(dfs[1], dim)
     if any(otherdims(df, dim) != other_dims for df in dfs[2:end])
-        throw(ArgumentError("Dimensions must be identical to be merged by extending an existing dimension."))
+        throw(
+            ArgumentError(
+                "Dimensions must be identical to be merged by extending an existing dimension.",
+            ),
+        )
     end
     new_vals = vcat((val(dims(df, dim)) for df in dfs)...)
     dim_lookup = DimensionalData.lookup(dfs[1], dim)
-    new_lookup = isa(dim_lookup, DimensionalData.Lookups.Categorical) ?
+    new_lookup =
+        isa(dim_lookup, DimensionalData.Lookups.Categorical) ?
         Lookups.Categorical(new_vals; order = Lookups.Unordered()) :
         Lookups.Sampled(new_vals; order = Lookups.Unordered())
 
@@ -2193,10 +2341,9 @@ function mergeYAX(
 end
 
 # TODO: add for DataMap
-function mergeYAX(dm::DataMap, dim::Symbol; sorted::Bool = true)
-end
+function mergeYAX(dm::DataMap, dim::Symbol; sorted::Bool = true) end
 
-function _sortYAX(df::T, dim::Symbol) where T <: YAXArray
+function _sortYAX(df::T, dim::Symbol) where {T<:YAXArray}
     idx = dimnum(df, dim)
     vals = DimensionalData.lookup(df, dim)
     perm = sortperm(vals)
@@ -2204,8 +2351,9 @@ function _sortYAX(df::T, dim::Symbol) where T <: YAXArray
     df = df[indices...] # already applies to dimension names and content!
     # but set type of Lookup values to ForwardOrdered():
     dim_lookup = DimensionalData.lookup(df, dim)
-    new_lookup = isa(dim_lookup, DimensionalData.Lookups.Categorical) ?
-        Lookups.Categorical(val(dims(df, dim)); order = Lookups.ForwardOrdered()) : 
+    new_lookup =
+        isa(dim_lookup, DimensionalData.Lookups.Categorical) ?
+        Lookups.Categorical(val(dims(df, dim)); order = Lookups.ForwardOrdered()) :
         Lookups.Sampled(val(dims(df, dim)); order = Lookups.ForwardOrdered())
     df = DimensionalData.set(df, dim => new_lookup)
     return df
@@ -2213,15 +2361,15 @@ end
 
 
 function limitMap(data::YAXArray, lat::Tuple, lon::Tuple)
-    return data[lat = Where(x -> x > lat[1] && x < lat[2]), lon = Where(x -> x > lon[1] && x < lon[2])]
+    return data[lat=Where(x->x>lat[1]&&x<lat[2]), lon=Where(x->x>lon[1]&&x<lon[2])]
 end
 
 function limitLat(data::YAXArray, lat::Tuple)
-    return data[lat = Where(x -> x > lat[1] && x < lat[2])]
+    return data[lat=Where(x->x>lat[1]&&x<lat[2])]
 end
 
 function limitLon(data::YAXArray, lon::Tuple)
-    return data[lon = Where(x -> x > lon[1] && x < lon[2])]
+    return data[lon=Where(x->x>lon[1]&&x<lon[2])]
 end
 
 
@@ -2242,10 +2390,10 @@ function getSiextentMask(sic::YAXArray; north::Bool = true, south::Bool = true)
     mask = Array(sic.data) .> 15
     mask = YAXArray(dims(sic), coalesce.(mask, false))
     if !north
-        mask[lat = Where(x -> x > 0)] .= false
+        mask[lat=Where(x->x>0)] .= false
     end
     if !south
-        mask[lat = Where(x -> x < 0)] .= false
+        mask[lat=Where(x->x<0)] .= false
     end
     return mask
 end
@@ -2268,7 +2416,12 @@ supplementary_var=:areacello from the same file as the sea ice concentration dat
 - `north::Bool = true`: include grid cells in the northern hemisphere.
 - `south::Bool = true`: include grid cells in the southern hemisphere.
 """
-function getSiextentMask(sic::YAXArray, lat::YAXArray; north::Bool = true, south::Bool = true)
+function getSiextentMask(
+    sic::YAXArray,
+    lat::YAXArray;
+    north::Bool = true,
+    south::Bool = true,
+)
     dim1, dim2 = dimNames(sic)[1:2]
     function maskSlice(xout, siconc_slice, lat_slice)
         ice = coalesce.(siconc_slice .> 15, false)
@@ -2285,9 +2438,10 @@ function getSiextentMask(sic::YAXArray, lat::YAXArray; north::Bool = true, south
         xout .= ice .& hemisphere
     end
     mask = mapCube(
-        maskSlice, (sic, lat);
+        maskSlice,
+        (sic, lat);
         indims = (InDims(dim1, dim2), InDims(dim1, dim2)), # we want the slices of 2D arrays with dimensions dim1, dim2
-        outdims = OutDims(dims(sic, dim1), dims(sic, dim2); outtype = Bool) # output are slice of 2D Boolean arrays with dimensions dim1, dim2
+        outdims = OutDims(dims(sic, dim1), dims(sic, dim2); outtype = Bool), # output are slice of 2D Boolean arrays with dimensions dim1, dim2
     )
     # mapCube's output buffer is typed Union{Missing, Bool} regardless of `outtype`; downstream
     # boolean indexing (`array[mask]`) requires a strict Array{Bool}, so materialize it as one
@@ -2317,9 +2471,10 @@ function getSiextent(masks::DataMap, data_areacello::DataMap; suffix::String = "
         @info "Processing $key ..."
         cell_area = data_areacello["$(key)$(suffix)"]
         siextent_per_member = mapCube(
-            f, (cell_area, mask);
+            f,
+            (cell_area, mask);
             indims = (InDims(:x, :y), InDims(:x, :y)), # we want the slices of 2D arrays, namely the dimensions :x, :y (for every member)
-            outdims = OutDims() # no arguments: the output is a scalar (0-dim)
+            outdims = OutDims(), # no arguments: the output is a scalar (0-dim)
         )
         cmip_siextent[i] = siextent_per_member
     end
