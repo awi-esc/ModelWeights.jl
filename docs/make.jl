@@ -9,8 +9,8 @@ makedocs(
     modules = [ModelWeights],
     pages = [
         "Home" => "index.md",
-        "Getting started" => "getting-started.md",
-        "Examples" => "examples.md",
+        "Quickstart" => "quickstart.md",
+        #"Examples" => "examples.md",
         "weights.md",
         "Manual" => ["Manual/loading-data.md", "Manual/filtering-data.md", "Manual/computing-weights.md"],
         #"Examples" => ["examples/climwip.md", "examples/lgm.md"],
