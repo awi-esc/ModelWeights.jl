@@ -25,7 +25,20 @@ makedocs(
     clean = true
 )
 
+# Version menu: stable (latest tag), main (main branch), dev (dev branch).
+# Each deploydocs call only deploys when CI runs on its devbranch (or on a tag).
+versions = ["stable" => "v^", "main" => "main", "dev" => "dev"]
+
 deploydocs(
     repo = "github.com/awi-esc/ModelWeights.jl.git",
-    devbranch = "main"
+    devbranch = "main",
+    devurl = "main",
+    versions = versions
+)
+
+deploydocs(
+    repo = "github.com/awi-esc/ModelWeights.jl.git",
+    devbranch = "dev",
+    devurl = "dev",
+    versions = versions
 )
