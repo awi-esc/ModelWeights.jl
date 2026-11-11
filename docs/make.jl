@@ -12,6 +12,7 @@ makedocs(
         "weights.md",
         "Manual" => ["Manual/loading-data.md", "Manual/filtering-data.md", "Manual/computing-weights.md"],
         #"Examples" => ["examples/climwip.md", "examples/lgm.md"],
+        "Development" => "dev-guide.md",
         "References" => "references.md"
     ],
     format = Documenter.HTML(
