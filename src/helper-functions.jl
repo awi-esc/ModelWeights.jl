@@ -230,6 +230,16 @@ function convertToSv!(data::YAXArray)
     return nothing
 end
 
+"""
+    m2ToKm2(data::YAXArray; scale=1)
+
+Return new YAXArray with `data` converted from m^2 to km^2.
+
+# Keywords
+- `scale=1`: divide data by `scale` * 10^6
+
+See also [`m2ToKm2!`](@ref)
+"""
 function m2ToKm2(data::YAXArray; scale = 1)
     df = YAXArray(data.axes, Array(data.data), deepcopy(data.properties))
     m2ToKm2!(df; scale)

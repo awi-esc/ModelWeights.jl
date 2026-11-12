@@ -32,4 +32,15 @@ To directly see changes you make to the documentation, use LiveServer.jl (add it
     - src: contains Julia functions -->
 ```
 
+## Private API
 
+```@index
+Pages = ["dev-guide.md"]
+```
+
+```@autodocs
+Modules = [ModelWeights.Data, ModelWeights.Timeseries, ModelWeights.Weights, ModelWeights.Plots]
+Private = true
+Public = false
+Order   = [:function, :type]
+```
