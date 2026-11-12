@@ -27,11 +27,8 @@ export MODEL_MEMBER_DELIM
 
 const MODEL_MEMBER_DELIM = "#"
 # maps from file name as retrieved from metadata to name in the filename itself
-const MODEL_NAME_FIXES = Dict(
-    "FGOALS_g2" => "FGOALS-g2",
-    "ACCESS1.3" => "ACCESS1-3",
-    "FIO-ESM" => "fio-esm",
-)
+const MODEL_NAME_FIXES =
+    Dict("FGOALS_g2" => "FGOALS-g2", "ACCESS1.3" => "ACCESS1-3", "FIO-ESM" => "fio-esm")
 
 # These are taken from https://github.com/WCRP-CMIP/CMIP6_CVs/blob/main/CMIP6_grid_label.json
 const CMIP6_GRID_LABELS = Set([
@@ -473,6 +470,7 @@ end
 
 """
 # Usage:
+
 m2 = copy(m; variable = SubString("siconc")) # this will use all fields of m except for :variable which is set to "siconc", it maps
 to a SubString, since that's the type that is expected in struct MetaData.
 """

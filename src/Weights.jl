@@ -50,9 +50,10 @@ end
 Combine weights given in `weights` at `ids` into a normalized MMEWeight.
 
 # Arguments:
-- `weights::YAXArray`: Must have dimensions :weight and :model.
-- `ids::Vector{String}`: weights in `weights` where dimension :weights equals these ids will be combined.
-- `name::String`: Name of the new MMEWeights-instance.
+
+  - `weights::YAXArray`: Must have dimensions :weight and :model.
+  - `ids::Vector{String}`: weights in `weights` where dimension :weights equals these ids will be combined.
+  - `name::String`: Name of the new MMEWeights-instance.
 """
 function MMEWeights(weights::YAXArray, ids::Vector{String}, name::String)
     Data.throwErrorIfDimMissing(weights, [:model, :weight])

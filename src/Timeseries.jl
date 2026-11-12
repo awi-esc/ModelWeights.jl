@@ -11,12 +11,13 @@ import ..Data # binds only the name Data, nothing from inside
 """
     linearTrend(data::YAXArray; full_predictions::Bool=true)
 
-Compute linear trend as ordinary least squares for timeseries `data` and return slope 
+Compute linear trend as ordinary least squares for timeseries `data` and return slope
 (default) or predicted y for every element in `x` (if `full_predictions`=true)
 
 # Arguments:
-- `data::YAXArray`: must have dimension :time.
-- `full_predictions::Bool`:
+
+  - `data::YAXArray`: must have dimension :time.
+  - `full_predictions::Bool`:
 """
 function linearTrend(data::YAXArray; full_predictions::Bool = false)
     Data.throwErrorIfDimMissing(data, :time)
@@ -36,9 +37,10 @@ end
 Regress y on x and return slope (default) or predicted y for every element in `x` (if `full_predictions`=true)
 
 # Arguments:
-- `x::Vector`:
-- `y:Vector`:
-- `full_predictions::Bool`: if false, return slope, otherwise return all values predicted for `x`.
+
+  - `x::Vector`:
+  - `y:Vector`:
+  - `full_predictions::Bool`: if false, return slope, otherwise return all values predicted for `x`.
 """
 function computeLinearTrend(x::Vector, y::Vector; full_predictions::Bool = false)
     indices = findall(.!(ismissing.(y)))
@@ -82,10 +84,11 @@ end
     )
 
 # Arguments:
-- `data::YAXArray`:
-- `start_year::Number`: set to -Inf to not filter for start time.
-- `end_year::Number`: set to Inf to not filter for end time.
-- `only_models_non_missing_vals::Bool = true`:
+
+  - `data::YAXArray`:
+  - `start_year::Number`: set to -Inf to not filter for start time.
+  - `end_year::Number`: set to Inf to not filter for end time.
+  - `only_models_non_missing_vals::Bool = true`:
 """
 function filterTimeseries(
     data::YAXArray,
@@ -135,8 +138,9 @@ end
     function filterTimeseries(data::YAXArray, indices::AbstractArray{<:Int})
 
 # Arguments:
-- `data::YAXArray`:
-- `indices::AbstractArray{<:Int}`: start and end indices
+
+  - `data::YAXArray`:
+  - `indices::AbstractArray{<:Int}`: start and end indices
 """
 function filterTimeseries(
     data::YAXArray,
