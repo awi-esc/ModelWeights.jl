@@ -236,7 +236,8 @@ end
 Return new YAXArray with `data` converted from m^2 to km^2.
 
 # Keywords
-- `scale=1`: divide data by `scale` * 10^6
+
+  - `scale=1`: divide data by `scale` * 10^6
 
 See also [`m2ToKm2!`](@ref)
 """
