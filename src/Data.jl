@@ -1,16 +1,9 @@
 module Data
 
-export DataMap
-
-export defineDataMap
-export summarizeMembers, summarizeMembers!
-export subsetModelData, sharedModels
-
-export MODEL_MEMBER_DELIM
-
 import StatsBase
-import Missings: allowmissing
 import LinearRegression as lr
+
+using Missings: allowmissing
 
 using CSV
 using Dates
@@ -25,6 +18,12 @@ using Setfield
 using Statistics
 using YAML
 using YAXArrays
+
+export DataMap, defineDataMap
+export summarizeMembers, summarizeMembers!
+export subsetModelData, sharedModels
+export MODEL_MEMBER_DELIM
+
 
 const MODEL_MEMBER_DELIM = "#"
 # maps from file name as retrieved from metadata to name in the filename itself
@@ -474,7 +473,7 @@ end
 
 """
 # Usage:
-m2 = copy(m; variable = SubString("siconc")) # this will use all fields of m except for :variable which is set to "siconc", it maps 
+m2 = copy(m; variable = SubString("siconc")) # this will use all fields of m except for :variable which is set to "siconc", it maps
 to a SubString, since that's the type that is expected in struct MetaData.
 """
 function Base.copy(m::ModelMeta; kwargs...)
