@@ -25,7 +25,7 @@ function convertToYAX(dm::DataMap; dim_name::Symbol = :diagnostic)
         rand(size(dimensions)..., length(diagnostics)),
     )
     for d in diagnostics
-        # @info "adding diagnostic $d ..."        
+        # @info "adding diagnostic $d ..."
         data[diagnostic=At(d)] .= dm[d]
     end
     return data
@@ -141,7 +141,7 @@ end
 
 """
     combineModelsFromMultipleFiles(
-        data::AbstractVector{AbstractArray{<:YAXArray}}; 
+        data::AbstractVector{AbstractArray{<:YAXArray}};
         model_names::Vector{String} = String[],
         meta::Union{Dict{String, T}, Nothing} = nothing,
         new_dim::Symbol = :model,
@@ -302,20 +302,20 @@ end
 
 # """
 #     filterPathsSharedModels(
-#         paths::AbstractVector{String}, 
-#         shared_models::AbstractVector{String}, 
+#         paths::AbstractVector{String},
+#         shared_models::AbstractVector{String},
 #         fn_format::AbstractFnFormat
 #     )
 
-# Every vector of paths in `all_paths` is filtered s.t. it only contains models or model 
+# Every vector of paths in `all_paths` is filtered s.t. it only contains models or model
 # members given in `shared_models`.
 
-# # Arguments:
+# # Arguments
 # - `paths`: contains paths to data files
 # """
 # function filterPathsSharedModels(
-#     paths::AbstractVector{String}, 
-#     shared_models::AbstractVector{String}, 
+#     paths::AbstractVector{String},
+#     shared_models::AbstractVector{String},
 #     fn_format::AbstractFnFormat
 # )
 #     if isempty(shared_models)
@@ -330,12 +330,12 @@ end
 
 # """
 #     filterPathsSharedModels(
-#         all_paths::AbstractVector{<:AbstractVector{String}}, 
+#         all_paths::AbstractVector{<:AbstractVector{String}},
 #         level::Level,
 #         fn_format::AbstractFnFormat
 #     )
 
-# # Arguments:
+# # Arguments
 # - `all_paths`: every entry refers to the paths to data files for the respective dataset
 # """
 # function filterPathsSharedModels(
@@ -370,7 +370,7 @@ function membersFromMemberIDs(data::YAXArray)
     throwErrorIfDimMissing(data, :member)
     ids = lookup(data, :member)
     members = [String(split(x, MODEL_MEMBER_DELIM)[2]) for x in ids]
-    # remove added grid 
+    # remove added grid
     members = map(x -> String(split(x, "_")[1]), members)
     return members
 end
@@ -384,7 +384,7 @@ end
 Return matrix of size length(longitudes) x length(latitudes) with normalized area weights
 (approximated based on latitudes) and set to 0 at positions where mask is true.
 
-# Arguments:
+# Arguments
 
   - `latitudes::AbstractVector{<:Number}`: to approximate area weights with cosine of latitudes.
   - `mask::AbstractArray{T}`: lon, lat as first and second dimension respectively where lat must
@@ -550,7 +550,7 @@ Change the lookup values for the dimension 'member' to refer to the models, i.e.
 they are not unique anymore. This is done in preparation to group the data by
 the different models.
 
-# Arguments:
+# Arguments
 
   - `data::YAXArray`: has at least dimensions in `dim_names`.
   - `dim_names::AbstractVector{Symbol}`: names of dimensions to be changed, e.g. :member,
@@ -572,7 +572,7 @@ end
 """
     membersToModels(members::AbstractArray{String})
 
-# Arguments:
+# Arguments
 
   - `members::AbstractArray{String}`: unique names of model members with model name followed by separator followed by unique identifiers.
 """
@@ -584,13 +584,7 @@ end
 """
     subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
 
-If simplify is true, use single value when all remaining elements in a vector in `meta` are
-identical, otherwise just keep vector.
-
-# Arguments:
-
-  - `meta`:
-  - `indices`: indices to remain in vectors mapped to in `meta`.
+In-place version of [`subsetMeta`](@ref).
 """
 function subsetMeta!(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
     for (k, v) in meta
@@ -610,15 +604,17 @@ end
 
 
 """
-    subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
+    subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool=false)
 
 If simplify is true, use single value when all remaining elements in a vector in `meta` are
 identical, otherwise just keep vector.
 
-# Arguments:
+# Arguments
 
   - `meta`:
   - `indices`: indices to remain in vectors mapped to in `meta`.
+
+See also [`subsetMeta!`](@ref)
 """
 function subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
     meta_new = Dict()
@@ -681,8 +677,8 @@ end
 
 """
     metaDataFromESMValToolRecipes(
-        base_path_configs::String; 
-        constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}() 
+        base_path_configs::String;
+        constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}()
     )
 
 Read variable, statistic, experiment and timerange/alias values from ESMValTool recipes
@@ -730,7 +726,7 @@ function metaDataFromESMValToolRecipes(
                     statistic = statistic,
                     esmvaltoolPreproc = preprocessor,
                 )
-                # if there are different recipes for CMIP5 and CMIP6, 'meta' might already 
+                # if there are different recipes for CMIP5 and CMIP6, 'meta' might already
                 # have been added to 'meta_attribs'
                 present = any(x -> isEqual(meta, x), meta_attribs)
                 if !present
@@ -798,7 +794,7 @@ end
 """
     function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
 
-# Arguments:
+# Arguments
 
   - `data::Vector{<:YAXArray}`: must have dimension :time.
   - `model_times::Bool = false`:  if calendar years are meaningless (e.g. lgm simulations just count the number of model
@@ -920,7 +916,7 @@ end
 
 Return metadata of data specified in `ds`.
 
-# Arguments:
+# Arguments
 
   - `ds`: content of config yaml file specifying meta attributes and paths of data.
 """
@@ -970,7 +966,7 @@ end
 
 
 """
-    resolvePathsFromMetaData( 
+    resolvePathsFromMetaData(
         meta::MetaData,
         base_path::String,
         dir_per_var::Bool;
@@ -1056,7 +1052,7 @@ end
 
 Retrieve information from `filename` and return it as an object of type ObsMeta.
 
-# Arguments:
+# Arguments
 
   - `filename::String`:
   - `path::String`:
@@ -1091,7 +1087,7 @@ end
 
 Retrieve information from `filename` and return it as an object of type ModelMeta.
 
-# Arguments:
+# Arguments
 
   - `filename::String`:
   - `path::String`:
@@ -1260,7 +1256,7 @@ end
 #         times = [DateTime(Dates.year(x), Dates.month(x)) for x in lookup(ds_var, :time)]
 #         indices_time = indicesTimeseries(times, constraint_ts)
 #         return !isempty(indices_time)
-#     end 
+#     end
 # end
 
 function collectNCFilePaths(path_data_dir::String)
@@ -1344,7 +1340,7 @@ end
 
 Compute RMSEs between models and observations for `diagnostics`.
 
-# Arguments:
+# Arguments
 
   - `diagnostics::Vector{String}`: keys for which values must be provided in `model_data` and
     `obs_data`.
@@ -1367,7 +1363,7 @@ Compute the distance as the area-weighted RMSE between model predictions and obs
 
 If `observations' has dimension 'model' (for several observational datasets), the average across all is taken.
 
-# Arguments:
+# Arguments
 
   - `models::YAXArray`: dimensions must be 'lon', 'lat', 'model'/'member'.
   - `observations::YAXArray`: dimensions must be 'lon', 'lat' and possibly 'model'.
@@ -1415,16 +1411,16 @@ end
 
 """
     distancesData(
-        model_data::AbstractArray, 
+        model_data::AbstractArray,
         obs_data::AbstractArray,
-        latitudes::AbstractArray{<:Real}; 
+        latitudes::AbstractArray{<:Real};
         metric::Symbol=:rmse,
         idx_model::Int = 3
     )
 
 Compute the distance as the area-weighted RMSE (default) or MSE between model predictions and observations.
 
-# Arguments:
+# Arguments
 
   - `model_data::AbstractArray`: dimensions must be 'lon', 'lat' and 'model'/'member' in 3rd dimension.
   - `obs_data::AbstractArray`: dimensions must be 'lon', 'lat'.
@@ -1486,7 +1482,7 @@ end
 
 Compute the area weighted RMSE between model predictions for each pair of models.
 
-# Arguments:
+# Arguments
 
   - `data::YAXArray`: first two dimensions must be 'lon', 'lat', third 'model' or 'member'.
 """
@@ -1526,7 +1522,7 @@ end
 
 For every diagnostic in `distances_all`, compute the weighted sum of all diagnostics.
 
-# Arguments:
+# Arguments
 
   - `distances_all::YAXArray`: must have dimension :diagnostic.
   - `weights::YAXArray`: weights assigned to each diagnostic.
@@ -1565,7 +1561,7 @@ end
         distances_all::Vector{<:YAXArray}, diagnostics::Vector{String}, weights::YAXArray
     )
 
-# Arguments:
+# Arguments
 
   - `distances_all::Vector{<:YAXArray}`: each entry refers to the distances of one diagnostic,
     each must have dimension 'model', 'member' or 'member1' and 'member2' (must be identical for
@@ -1724,7 +1720,7 @@ end
 Compute the area weighted (approximated by cosine of latitudes in radians) mean squared
 error between `m1` and `m2`.
 
-# Arguments:
+# Arguments
 
   - `m1`: must have dimensions 'lon', 'lat' as first dimensions.
   - `m2`: must have dimensions 'lon', 'lat' as first dimensions.
@@ -1750,7 +1746,7 @@ end
 Compute the area weighted (approximated by cosine of latitudes in radians) root mean squared
 error between `m1` and `m2`.
 
-# Arguments:
+# Arguments
 
   - `m1`: must have dimensions 'lon', 'lat' as first dimensions.
   - `m2`: must have dimensions 'lon', 'lat' as first dimensions.
@@ -1769,7 +1765,7 @@ error between `m1` and `m2`.
 
 NaN and missing values are ignored.
 
-# Arguments:
+# Arguments
 
   - `m1::YAXArray`: must have 2 dimensions 'lon', 'lat'.
   - `m2::YAXArray`: must have 2 dimensions 'lon', 'lat'.
@@ -1803,7 +1799,7 @@ end
 """
     areaWeightedSquaredErr()
 
-# Arguments:
+# Arguments
 
   - `model_data`: must have same dimensions as `obs_data`
   - `obs_data`: must have same dimensions as `model_data`
@@ -1850,7 +1846,7 @@ end
 
 Compute weighted `quantiles` of timeseries `data`.
 
-# Arguments:
+# Arguments
 
   - `data::AbstractArray`: must have dimensions 'time', 'model'.
   - `w::Union{DimArray, Nothing}=nothing`: must have dimensions 'model' and 'weight', each
@@ -2019,7 +2015,15 @@ function indexDim(data::YAXArray, dim::Symbol)
 end
 
 
+"""
+    apply!(dm::DataMap, fn::Function; kwargs...)
 
+In-place version of [`apply`](@ref): replace the data at `dm`[`id`] by the result of
+applying function `fn` to it.
+
+If `ids_new` is provided, the data at the old ids is not overwritten, but added to `dm` at
+those new keys.
+"""
 function apply!(
     dm::DataMap,
     fn::Function,
@@ -2041,24 +2045,29 @@ end
     apply(
         dm::DataMap,
         fn::Function,
-        args...; 
+        args...;
         ids::AbstractVector{T} = String[],
         ids_new::AbstractVector{T} = String[],
         kwargs...
     )
 
-Apply `fn` with positional arguments `args` and keyword arguments
-`kwargs` and return result as a new DataMap where keys are `ids_new` if provided, otherwise
-same keys as in `dm` are used.
+Apply `fn` with positional arguments `args` and keyword arguments `kwargs` and return
+result as a new DataMap where keys are `ids_new` if provided, otherwise same keys as in `dm`
+are used.
 
-# Arguments:
+# Arguments
 
   - `dm::DataMap`: data.
-  - `fn::Function`: function to be applied.
+  - `fn::Function`: function to be applied on all entries in `data` with keys `ids`.
   - `args...`: positional arguments for `fn`.
+
+# Keywords
+
   - `ids::AbstractVector{T}=String[]`: keys for data on which `fn` is applied; if empty all keys of `dm` are used.
   - `ids_new::AbstractVector{T}=String[]`: keys used in new datamap; if empty `ids` are used instead.
   - `kwargs...`: keyword arguments for `fn`.
+
+See also [`apply!`](@ref)
 """
 function apply(
     dm::DataMap,
@@ -2084,14 +2093,14 @@ end
     applyMap(
         dm::DataMap,
         fn::Function,
-        args...; 
+        args...;
         ids::AbstractVector{T} = String[],
         kwargs...
     )
 
 Apply `fn` with positional arguments `args` and keyword arguments `kwargs` and return a Dictionary mapping from `ids` to the respective result returned by `fn`.
 
-# Arguments:
+# Arguments
 
   - `dm::DataMap`: data.
   - `fn::Function`: function to be applied.
@@ -2220,7 +2229,7 @@ end
 
 
 """
-# Arguments:
+# Arguments
 
   - `data::AbstractArray`: lon x lat x model
   - `n_rep::Int`: number of repetitions for selected model
@@ -2313,7 +2322,7 @@ end
 
 Combine two YAXArrays with identical dimensions into one with extended dimension 'dim'.
 
-# Arguments:
+# Arguments
 
   - `df1::YAXArray`: first YAXArray
   - `df2::YAXArray`: second YAXArray
@@ -2330,7 +2339,7 @@ end
 
 Combine several YAXArrays with identical dimensions into one with extended dimension 'dim'.
 
-# Arguments:
+# Arguments
 
   - `dfs::AbstractArray{<:YAXArray}`: YAXArrays to be merged
   - `dim::Symbol`: dimension which is merged
@@ -2404,7 +2413,7 @@ above 15 and the grid cell lies in the requested hemisphere(s).
 
 Use this method for regular grids whose dimension coordinates correspond to true longitudes/latitudes.
 
-# Arguments:
+# Arguments
 
   - `sic::YAXArray`: sea ice concentration (percent).
   - `north::Bool = true`: include grid cells in the northern hemisphere.
@@ -2433,7 +2442,7 @@ per-cell latitude values in `lat`.
 Use this method for native/curvilinear ocean grids whose dimension coordinates are cell indices or rotated-pole
 coordinates rather than true latitude.
 
-# Arguments:
+# Arguments
 
   - `sic::YAXArray`: sea ice concentration (percent).
   - `lat::YAXArray`: real latitude values (degrees north) on the same spatial dims as `sic`. E.g. loaded with
@@ -2477,7 +2486,7 @@ end
 """
     getSiextent(masks::DataMap, data_areacello; suffix::String = "areacello")
 
-# Arguments:
+# Arguments
 
   - `masks`: For every entry, first two dimensions must have names :x, :y.
   - `data_areacello`: keys are identical to keys in `masks`, possibly with added `suffix` in the end. For every entry,
@@ -2509,12 +2518,12 @@ end
 
 
 # function warnIfModelConstraintNotFulfilled(
-#     constraints::Vector{<:Dict{<:Any, <:Any}}, 
-#     loaded_data::DataMap, 
+#     constraints::Vector{<:Dict{<:Any, <:Any}},
+#     loaded_data::DataMap,
 #     ids::Vector{String}
 # )
 #     model_constraints = map(x -> get(x, "models", String[]), constraints)
-#     if length(unique(model_constraints)) == 1 && !isempty(model_constraints[1]) 
+#     if length(unique(model_constraints)) == 1 && !isempty(model_constraints[1])
 #         model_constraints = model_constraints[1:1]
 #     end
 #     pattern = Regex("^([^" * MODEL_MEMBER_DELIM * "]+)" * MODEL_MEMBER_DELIM * "([^_]+)_?(.*)")
@@ -2526,7 +2535,7 @@ end
 #         for (i, member) in enumerate(found_members_with_grid)
 #             m = match(pattern, member)
 #             found_models[i] = m.captures[1]
-#             found_members[i] = m.captures[1] * MODEL_MEMBER_DELIM * m.captures[2]            
+#             found_members[i] = m.captures[1] * MODEL_MEMBER_DELIM * m.captures[2]
 #         end
 #         all_not_found = filter(x -> !(x in found_models) && !(x in found_members) && !(x in found_members_with_grid), requested_models)
 #         models_not_found = modelsFromMemberIDs(all_not_found; uniq=true)

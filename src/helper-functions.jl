@@ -114,7 +114,7 @@ function combineAll(v::Vararg{Vector{String}}; sep::String = "_")
         return Vector{String}()
     end
     combinations = map(elems -> join(elems, sep), Iterators.product(v...))
-    # init in reduce is important! otherwise if combinations is just one element, that 
+    # init in reduce is important! otherwise if combinations is just one element, that
     # element would be returned as String!
     return reduce(vcat, combinations; init = Vector{String}())
 end
@@ -203,10 +203,10 @@ end
 """
     convertToSv(data::YAXArray)
 
-Return a copy of `data` converted from kg/s into Sv (m3 s-1), assuming sea water.
-Updates units in meta data.
+Return a copy of `data` converted from kg/s into Sv (m3 s-1), assuming sea water; units in
+meta data are updated.
 
-# Arguments:
+See also [`convertToSv!`](@ref)
 """
 function convertToSv(data::YAXArray)
     df = YAXArray(data.axes, Array(data.data), deepcopy(data.properties))
@@ -217,7 +217,8 @@ end
 """
     convertToSv!(data::YAXArray)
 
-Mutate `data` in place, converting from kg/s into Sv (m3 s-1), assuming sea water.
+In-place version of [`convertToSv`](@ref): mutate `data` in place, converting from kg/s
+into Sv (m3 s-1), assuming sea water.
 """
 function convertToSv!(data::YAXArray)
     temp = Array(data)
@@ -229,13 +230,17 @@ function convertToSv!(data::YAXArray)
     return nothing
 end
 
-
 function m2ToKm2(data::YAXArray; scale = 1)
     df = YAXArray(data.axes, Array(data.data), deepcopy(data.properties))
     m2ToKm2!(df; scale)
     return df
 end
 
+"""
+    m2ToKm2!(data::YAXArray; scale=1)
+
+In-place version of [`m2ToKm2`](@ref).
+"""
 function m2ToKm2!(data::YAXArray; scale = 1)
     temp = Array(data)
     data .= temp ./ (10^6 * scale)
@@ -248,7 +253,6 @@ function m2ToKm2!(data::YAXArray; scale = 1)
     units .= scale != 1 ? "$scale km2" : "km2"
     return nothing
 end
-
 
 function absent(x::AbstractArray)
     isempty(x) || all(absent, x)
