@@ -82,7 +82,7 @@ end
 
 
 
-""" 
+"""
     putAtModel!(data::YAXArray, model::String, input)
 """
 function putAtModel!(data::YAXArray, model::String, input)
@@ -99,7 +99,7 @@ end
 """
     mergeMetaDataFromMultipleFiles(data::Vector{<:YAXArray})
 
-Combine arrays in `data` into a single YAXArray with meta combined from all datasets into 
+Combine arrays in `data` into a single YAXArray with meta combined from all datasets into
 lists, with missing if key wasnt in a dataset.
 """
 function mergeMetaDataFromMultipleFiles(data::AbstractVector{<:AbstractArray})
@@ -146,23 +146,24 @@ end
         meta::Union{Dict{String, T}, Nothing} = nothing,
         new_dim::Symbol = :model,
         sorted::Bool = true
+
 ) where T
 
-Combine `data` from different files into a single YAXArray. 
-The meta data of the returned YAXArray is a combination of all values from all datasets 
-using vectors with missing values for datasets that didn't have the respective metadata 
+Combine `data` from different files into a single YAXArray.
+The meta data of the returned YAXArray is a combination of all values from all datasets
+using vectors with missing values for datasets that didn't have the respective metadata
 entry in their metadata, further combined with the properties in `meta` if provided.
 
 All elements in `data` must share all dimensions except for time (if present).
-For timeseries data, the time dimension may cover different ranges. In that case, the 
-maximal possible timerange is used where missing values are added if the timepoint had not been 
+For timeseries data, the time dimension may cover different ranges. In that case, the
+maximal possible timerange is used where missing values are added if the timepoint had not been
 defined for a model.
 
 The combined YAXArray has the additional dimension `new_dim` (default: :model) with `names`
-as values. If `names` is not provided, default values 'model1', 'model2, etc. are used 
+as values. If `names` is not provided, default values 'model1', 'model2, etc. are used
 instead.
 
-If `sorted` is true, model dimension of returned data is sorted alphabetically and the 
+If `sorted` is true, model dimension of returned data is sorted alphabetically and the
 vector entries in the metadata dictionary of the returned array are also sorted accordingly.
 """
 function combineModelsFromMultipleFiles(
@@ -276,10 +277,10 @@ end
 """
     getCMIPModelsKey(meta::Dict)
 
-Return the respective key to retrieve model names in CMIP6 ('source_id') and 
+Return the respective key to retrieve model names in CMIP6 ('source_id') and
 CMIP5 ('model_id') data.
 
-If both keys are present, 'source_id' used in CMIP6 models is returned, if none 
+If both keys are present, 'source_id' used in CMIP6 models is returned, if none
 is present, throw ArgumentError.
 """
 function getCMIPModelsKey(meta::Dict)
@@ -380,13 +381,14 @@ end
         latitudes::AbstractVector{<:Number}, mask::YAXArray{T}
     ) where {T <: Union{Missing, Bool}}
 
-Return matrix of size length(longitudes) x length(latitudes) with normalized area weights 
+Return matrix of size length(longitudes) x length(latitudes) with normalized area weights
 (approximated based on latitudes) and set to 0 at positions where mask is true.
 
 # Arguments:
-- `latitudes::AbstractVector{<:Number}`: to approximate area weights with cosine of latitudes.
-- `mask::AbstractArray{T}`: lon, lat as first and second dimension respectively where lat must 
-have same length as `latitudes`.
+
+  - `latitudes::AbstractVector{<:Number}`: to approximate area weights with cosine of latitudes.
+  - `mask::AbstractArray{T}`: lon, lat as first and second dimension respectively where lat must
+    have same length as `latitudes`.
 """
 function areaWeightMatrix(
     latitudes::AbstractVector{T},
@@ -493,7 +495,7 @@ end
 
 Save `data` as Julia obj if `target_path` has ending '.jld2', otherwise save as binary.
 
-If file at `target_path` already exists, timestamp is added if `overwrite` is false (default). By default the timestamp 
+If file at `target_path` already exists, timestamp is added if `overwrite` is false (default). By default the timestamp
 includes the day and the hour. When `add_hour` is set to false, only the date is appended to the filename.
 """
 function writeDataToDisk(
@@ -520,7 +522,7 @@ end
 """
     readDataFromDisk(target_path::String; variable::String="")
 
-Load data from `target_path`. If `target_path` ends with '.jld2', `variable` 
+Load data from `target_path`. If `target_path` ends with '.jld2', `variable`
 must be specified, otherwise  data is assumed to be binary.
 """
 function readDataFromDisk(target_path::String; variable::String = "data")
@@ -549,9 +551,10 @@ they are not unique anymore. This is done in preparation to group the data by
 the different models.
 
 # Arguments:
-- `data::YAXArray`: has at least dimensions in `dim_names`.
-- `dim_names::AbstractVector{Symbol}`: names of dimensions to be changed, e.g. :member, 
-:member1 (would be changed to :model, :model1).
+
+  - `data::YAXArray`: has at least dimensions in `dim_names`.
+  - `dim_names::AbstractVector{Symbol}`: names of dimensions to be changed, e.g. :member,
+    :member1 (would be changed to :model, :model1).
 """
 function setLookupsFromMemberToModel(data::YAXArray, dim_names::AbstractVector{Symbol})
     # TODO: add checks for dim names!
@@ -570,7 +573,8 @@ end
     membersToModels(members::AbstractArray{String})
 
 # Arguments:
-- `members::AbstractArray{String}`: unique names of model members with model name followed by separator followed by unique identifiers.
+
+  - `members::AbstractArray{String}`: unique names of model members with model name followed by separator followed by unique identifiers.
 """
 function membersToModels(members::AbstractArray{String})
     return map(x -> String.(split(x, MODEL_MEMBER_DELIM)[1]), members)
@@ -580,12 +584,13 @@ end
 """
     subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
 
-If simplify is true, use single value when all remaining elements in a vector in `meta` are 
+If simplify is true, use single value when all remaining elements in a vector in `meta` are
 identical, otherwise just keep vector.
 
 # Arguments:
-- `meta`:
-- `indices`: indices to remain in vectors mapped to in `meta`. 
+
+  - `meta`:
+  - `indices`: indices to remain in vectors mapped to in `meta`.
 """
 function subsetMeta!(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
     for (k, v) in meta
@@ -607,12 +612,13 @@ end
 """
     subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
 
-If simplify is true, use single value when all remaining elements in a vector in `meta` are 
+If simplify is true, use single value when all remaining elements in a vector in `meta` are
 identical, otherwise just keep vector.
 
 # Arguments:
-- `meta`:
-- `indices`: indices to remain in vectors mapped to in `meta`. 
+
+  - `meta`:
+  - `indices`: indices to remain in vectors mapped to in `meta`.
 """
 function subsetMeta(meta::Dict, indices::Vector{<:Int}; simplify::Bool = false)
     meta_new = Dict()
@@ -634,7 +640,7 @@ end
 """
     updateGroupedDataMetadata(meta::Dict, grouped_data::DimensionalData.DimGroupByArray)
 
-Summarize vectors in `meta`, refering to different models (members), such that 
+Summarize vectors in `meta`, refering to different models (members), such that
 each vector only contains N entries (N=number of models (i.e. without unique members)).
 
 If the metadata for members of a model differ across members, the respective
@@ -679,8 +685,8 @@ end
         constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}() 
     )
 
-Read variable, statistic, experiment and timerange/alias values from ESMValTool recipes 
-stored at `base_path_configs` into a vector of Dictionaries storing the respective readoff 
+Read variable, statistic, experiment and timerange/alias values from ESMValTool recipes
+stored at `base_path_configs` into a vector of Dictionaries storing the respective readoff
 values.
 """
 function metaDataFromESMValToolRecipes(
@@ -793,10 +799,11 @@ end
     function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
 
 # Arguments:
-- `data::Vector{<:YAXArray}`: must have dimension :time.
-- `model_times::Bool = false`:  if calendar years are meaningless (e.g. lgm simulations just count the number of model 
-years. Therefore, the actual timestamps are ignored and every dataset is aligned to start at year 1, and the combined 
-axis is stretched to the longest timeseries.
+
+  - `data::Vector{<:YAXArray}`: must have dimension :time.
+  - `model_times::Bool = false`:  if calendar years are meaningless (e.g. lgm simulations just count the number of model
+    years. Therefore, the actual timestamps are ignored and every dataset is aligned to start at year 1, and the combined
+    axis is stretched to the longest timeseries.
 """
 function alignTimeseries(data::Vector{<:YAXArray}; model_times::Bool = false)
     isempty(data) && return data
@@ -914,7 +921,8 @@ end
 Return metadata of data specified in `ds`.
 
 # Arguments:
-- `ds`: content of config yaml file specifying meta attributes and paths of data.
+
+  - `ds`: content of config yaml file specifying meta attributes and paths of data.
 """
 function metaDataFromYAML(ds::Dict)
     fn_err(x) =
@@ -969,18 +977,18 @@ end
         base_subdirs::T = String[]
     ) where T <: AbstractArray{String}
 
-Return paths to data files for data specified in `meta`, possibly constraint by values in 
-`base_subdirs`. The paths were the data is stored is expected to follow the following 
+Return paths to data files for data specified in `meta`, possibly constraint by values in
+`base_subdirs`. The paths were the data is stored is expected to follow the following
 structure (corresponding to the output from ESMValTool used for preprocessing the data):
 
-`base_path` is the top-level directory. If `dir_per_var` is true, `base_path` is assumed to 
-have a (or several) subdirectory for each climate variable with _VAR as part of the 
-subdirectory's name (e.g. _tas, cmip5_tas, etc.). These subdirectories may be constraint by 
-containing at least one of the values in `base_subdirs`. 
+`base_path` is the top-level directory. If `dir_per_var` is true, `base_path` is assumed to
+have a (or several) subdirectory for each climate variable with _VAR as part of the
+subdirectory's name (e.g. _tas, cmip5_tas, etc.). These subdirectories may be constraint by
+containing at least one of the values in `base_subdirs`.
 
-Let BASE refer to `base_path`, or respectively, to the subdirectories for the climate 
-variables. Then the following structure is: BASE/preproc/meta.alias/meta.subdir. 
-In ESMValTool, `meta.alias` corresponds to the (self-chosen) name under the section 
+Let BASE refer to `base_path`, or respectively, to the subdirectories for the climate
+variables. Then the following structure is: BASE/preproc/meta.alias/meta.subdir.
+In ESMValTool, `meta.alias` corresponds to the (self-chosen) name under the section
 'diagnostics' and `meta.subdir` to the (self-chosen) name under the section 'variables'.
 
 The returned paths are the paths to all files within this directory.
@@ -1049,9 +1057,10 @@ end
 Retrieve information from `filename` and return it as an object of type ObsMeta.
 
 # Arguments:
-- `filename::String`:
-- `path::String`:
-- `field_indices::Dict{Symbol, Int}`:
+
+  - `filename::String`:
+  - `path::String`:
+  - `field_indices::Dict{Symbol, Int}`:
 """
 function _parseFilenameObs(filename::String, path::String, field_indices::Dict{Symbol,Int})
     parts_fn = split(filename, "_")
@@ -1083,9 +1092,10 @@ end
 Retrieve information from `filename` and return it as an object of type ModelMeta.
 
 # Arguments:
-- `filename::String`:
-- `path::String`:
-- `field_indices::Dict{Symbol, Int}`:
+
+  - `filename::String`:
+  - `path::String`:
+  - `field_indices::Dict{Symbol, Int}`:
 """
 function _parseFilenameModel(
     filename::String,
@@ -1272,8 +1282,9 @@ end
 Subset entries in `meta_attributes` so that only those with properties specified in `constraint` remain.
 
 # Arguments
-- `constraint::Dict{Symbol, Vector{String}})`: Mapping to vector specifiying the properties of which at least one 
-must be present for an id to be retained.
+
+  - `constraint::Dict{Symbol, Vector{String}})`: Mapping to vector specifiying the properties of which at least one
+    must be present for an id to be retained.
 """
 function constrainRecipeMetaData!(
     meta_attributes::Vector{MetaData},
@@ -1334,8 +1345,9 @@ end
 Compute RMSEs between models and observations for `diagnostics`.
 
 # Arguments:
-- `diagnostics::Vector{String}`: keys for which values must be provided in `model_data` and 
-`obs_data`.
+
+  - `diagnostics::Vector{String}`: keys for which values must be provided in `model_data` and
+    `obs_data`.
 """
 function distancesData(model_data::DataMap, obs_data::DataMap, diagnostics::Vector{String})
     return map(diagnostics) do d
@@ -1356,9 +1368,10 @@ Compute the distance as the area-weighted RMSE between model predictions and obs
 If `observations' has dimension 'model' (for several observational datasets), the average across all is taken.
 
 # Arguments:
-- `models::YAXArray`: dimensions must be 'lon', 'lat', 'model'/'member'.
-- `observations::YAXArray`: dimensions must be 'lon', 'lat' and possibly 'model'.
-- `metric::Symbol`: :rmse for Root Mean Squared Error (default) or :mse for Mean Squared Error
+
+  - `models::YAXArray`: dimensions must be 'lon', 'lat', 'model'/'member'.
+  - `observations::YAXArray`: dimensions must be 'lon', 'lat' and possibly 'model'.
+  - `metric::Symbol`: :rmse for Root Mean Squared Error (default) or :mse for Mean Squared Error
 """
 function distancesData(models::YAXArray, observations::YAXArray; metric::Symbol = :rmse)
     throwErrorIfDimMissing(models, [:lon, :lat]; include = :all)
@@ -1412,11 +1425,12 @@ end
 Compute the distance as the area-weighted RMSE (default) or MSE between model predictions and observations.
 
 # Arguments:
-- `model_data::AbstractArray`: dimensions must be 'lon', 'lat' and 'model'/'member' in 3rd dimension.
-- `obs_data::AbstractArray`: dimensions must be 'lon', 'lat'.
-- `latitudes::AbstractArray{<:Real}`: values of latitudes in `model_data` and `obs_data`. 
-- `metric::Symbol`: :rmse for Root Mean Squared Error (default) or :mse for Mean Squared Error,
-- `idx_model::Int`: index of model/member-dimension in `model_data`.
+
+  - `model_data::AbstractArray`: dimensions must be 'lon', 'lat' and 'model'/'member' in 3rd dimension.
+  - `obs_data::AbstractArray`: dimensions must be 'lon', 'lat'.
+  - `latitudes::AbstractArray{<:Real}`: values of latitudes in `model_data` and `obs_data`.
+  - `metric::Symbol`: :rmse for Root Mean Squared Error (default) or :mse for Mean Squared Error,
+  - `idx_model::Int`: index of model/member-dimension in `model_data`.
 """
 function distancesData(
     model_data::AbstractArray,
@@ -1454,7 +1468,7 @@ end
 """
     distancesModels(model_data::DataMap, diagnostics::Vector{String})
 
-Compute the model-model distances for `model_data` at every diagnostic in `diagnostics` and 
+Compute the model-model distances for `model_data` at every diagnostic in `diagnostics` and
 return a vector of YAXArrays.
 """
 function distancesModels(model_data::DataMap, diagnostics::Vector{String})
@@ -1473,7 +1487,8 @@ end
 Compute the area weighted RMSE between model predictions for each pair of models.
 
 # Arguments:
-- `data::YAXArray`: first two dimensions must be 'lon', 'lat', third 'model' or 'member'.
+
+  - `data::YAXArray`: first two dimensions must be 'lon', 'lat', third 'model' or 'member'.
 """
 function distancesModels(data::YAXArray)
     dim_symbol = modelDim(data)
@@ -1512,11 +1527,12 @@ end
 For every diagnostic in `distances_all`, compute the weighted sum of all diagnostics.
 
 # Arguments:
-- `distances_all::YAXArray`: must have dimension :diagnostic.
-- `weights::YAXArray`: weights assigned to each diagnostic.
-- `norm_avg_members::Bool`: if true (default), average distances per model are computed 
-BEFORE computing the median that is used to normalize the distances (seperately for each 
-diagnostic); if false, median is computed across all individual members of each diagnostic.
+
+  - `distances_all::YAXArray`: must have dimension :diagnostic.
+  - `weights::YAXArray`: weights assigned to each diagnostic.
+  - `norm_avg_members::Bool`: if true (default), average distances per model are computed
+    BEFORE computing the median that is used to normalize the distances (seperately for each
+    diagnostic); if false, median is computed across all individual members of each diagnostic.
 """
 function generalizedDistances(
     distances_all::YAXArray,
@@ -1550,14 +1566,15 @@ end
     )
 
 # Arguments:
-- `distances_all::Vector{<:YAXArray}`: each entry refers to the distances of one diagnostic, 
-each must have dimension 'model', 'member' or 'member1' and 'member2' (must be identical for 
-every entry!).
-- `diagnostics:: Vector{String}`: names of diagnostics.
-- `weights::YAXArray`: weights assigned to each diagnostic.
-- `norm_avg_members::Bool`: if true (default), average distances per model are computed 
-BEFORE computing the median that is used to normalize the distances (seperately for each 
-diagnostic); if false, median is computed across all individual members of each diagnostic.
+
+  - `distances_all::Vector{<:YAXArray}`: each entry refers to the distances of one diagnostic,
+    each must have dimension 'model', 'member' or 'member1' and 'member2' (must be identical for
+    every entry!).
+  - `diagnostics:: Vector{String}`: names of diagnostics.
+  - `weights::YAXArray`: weights assigned to each diagnostic.
+  - `norm_avg_members::Bool`: if true (default), average distances per model are computed
+    BEFORE computing the median that is used to normalize the distances (seperately for each
+    diagnostic); if false, median is computed across all individual members of each diagnostic.
 """
 function generalizedDistances(
     distances_all::Vector{<:YAXArray},
@@ -1679,7 +1696,7 @@ end
         path::String, col_models::String; col_variants::Union{String,Nothing}=nothing
     )
 
-Return a vector with models retrieved from csv file at `path`. If col_variants is provided, 
+Return a vector with models retrieved from csv file at `path`. If col_variants is provided,
 returned models are on level of model members (MODEL#variant, e.g. AWI-ESM#r1i1p1f1).
 """
 function loadModelsFromCSV(
@@ -1704,13 +1721,14 @@ end
 """
     areaWeightedMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
 
-Compute the area weighted (approximated by cosine of latitudes in radians) mean squared 
+Compute the area weighted (approximated by cosine of latitudes in radians) mean squared
 error between `m1` and `m2`.
 
 # Arguments:
-- `m1`: must have dimensions 'lon', 'lat' as first dimensions.
-- `m2`: must have dimensions 'lon', 'lat' as first dimensions.
-- `aw_mat`: matrix with area weights, of same size as `m1` and `m2`, that will be normalized.
+
+  - `m1`: must have dimensions 'lon', 'lat' as first dimensions.
+  - `m2`: must have dimensions 'lon', 'lat' as first dimensions.
+  - `aw_mat`: matrix with area weights, of same size as `m1` and `m2`, that will be normalized.
 """
 function areaWeightedMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
     if size(m1) != size(m2) || size(m1) != size(aw_mat)
@@ -1729,13 +1747,14 @@ end
 """
     areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
 
-Compute the area weighted (approximated by cosine of latitudes in radians) root mean squared 
-error between `m1` and `m2`. 
+Compute the area weighted (approximated by cosine of latitudes in radians) root mean squared
+error between `m1` and `m2`.
 
 # Arguments:
-- `m1`: must have dimensions 'lon', 'lat' as first dimensions.
-- `m2`: must have dimensions 'lon', 'lat' as first dimensions.
-- `aw_mat`: matrix with area weights, of same size as `m1` and `m2`, that will be normalized.
+
+  - `m1`: must have dimensions 'lon', 'lat' as first dimensions.
+  - `m2`: must have dimensions 'lon', 'lat' as first dimensions.
+  - `aw_mat`: matrix with area weights, of same size as `m1` and `m2`, that will be normalized.
 """
 function areaWeightedRMSE(m1::AbstractArray, m2::AbstractArray, aw_mat::AbstractArray)
     return sqrt(areaWeightedMSE(m1, m2, aw_mat))
@@ -1745,14 +1764,15 @@ end
 """
     areaWeightedRMSE(m1::YAXArray, m2::YAXArray)
 
-Compute the area weighted (approximated by cosine of latitudes in radians) root mean squared 
-error between `m1` and `m2`. 
+Compute the area weighted (approximated by cosine of latitudes in radians) root mean squared
+error between `m1` and `m2`.
 
 NaN and missing values are ignored.
 
 # Arguments:
-- `m1::YAXArray`: must have 2 dimensions 'lon', 'lat'.
-- `m2::YAXArray`: must have 2 dimensions 'lon', 'lat'.
+
+  - `m1::YAXArray`: must have 2 dimensions 'lon', 'lat'.
+  - `m2::YAXArray`: must have 2 dimensions 'lon', 'lat'.
 """
 function areaWeightedRMSE(m1::YAXArray, m2::YAXArray)
     if size(m1) != size(m2)
@@ -1784,9 +1804,10 @@ end
     areaWeightedSquaredErr()
 
 # Arguments:
-- `model_data`: must have same dimensions as `obs_data`
-- `obs_data`: must have same dimensions as `model_data`
-- `latitudes`: 
+
+  - `model_data`: must have same dimensions as `obs_data`
+  - `obs_data`: must have same dimensions as `model_data`
+  - `latitudes`:
 """
 function areaWeightedSquaredErr(
     model_data::AbstractArray,
@@ -1830,11 +1851,12 @@ end
 Compute weighted `quantiles` of timeseries `data`.
 
 # Arguments:
-- `data::AbstractArray`: must have dimensions 'time', 'model'.
-- `w::Union{DimArray, Nothing}=nothing`: must have dimensions 'model' and 'weight', each 
-'weight'-vector must sum up to 1.
-- `quantiles=[0.167, 0.833]`: vector with two entries between 0 and 1 representing  the 
-lower and upper bound in this order.
+
+  - `data::AbstractArray`: must have dimensions 'time', 'model'.
+  - `w::Union{DimArray, Nothing}=nothing`: must have dimensions 'model' and 'weight', each
+    'weight'-vector must sum up to 1.
+  - `quantiles=[0.167, 0.833]`: vector with two entries between 0 and 1 representing  the
+    lower and upper bound in this order.
 """
 function uncertaintyRanges(
     data::YAXArray;
@@ -2016,7 +2038,6 @@ function apply!(
 end
 
 """
-
     apply(
         dm::DataMap,
         fn::Function,
@@ -2026,18 +2047,18 @@ end
         kwargs...
     )
 
-Apply `fn` with positional arguments `args` and keyword arguments 
+Apply `fn` with positional arguments `args` and keyword arguments
 `kwargs` and return result as a new DataMap where keys are `ids_new` if provided, otherwise
 same keys as in `dm` are used.
 
-
 # Arguments:
-- `dm::DataMap`: data.
-- `fn::Function`: function to be applied.
-- `args...`: positional arguments for `fn`.
-- `ids::AbstractVector{T}=String[]`: keys for data on which `fn` is applied; if empty all keys of `dm` are used.
-- `ids_new::AbstractVector{T}=String[]`: keys used in new datamap; if empty `ids` are used instead.
-- `kwargs...`: keyword arguments for `fn`.
+
+  - `dm::DataMap`: data.
+  - `fn::Function`: function to be applied.
+  - `args...`: positional arguments for `fn`.
+  - `ids::AbstractVector{T}=String[]`: keys for data on which `fn` is applied; if empty all keys of `dm` are used.
+  - `ids_new::AbstractVector{T}=String[]`: keys used in new datamap; if empty `ids` are used instead.
+  - `kwargs...`: keyword arguments for `fn`.
 """
 function apply(
     dm::DataMap,
@@ -2060,7 +2081,6 @@ end
 
 
 """
-
     applyMap(
         dm::DataMap,
         fn::Function,
@@ -2072,11 +2092,12 @@ end
 Apply `fn` with positional arguments `args` and keyword arguments `kwargs` and return a Dictionary mapping from `ids` to the respective result returned by `fn`.
 
 # Arguments:
-- `dm::DataMap`: data.
-- `fn::Function`: function to be applied.
-- `args...`: positional arguments for `fn`.
-- `ids::AbstractVector{T}=String[]`: keys for data on which `fn` is applied; if empty all keys of `dm` are used.
-- `kwargs...`: keyword arguments for `fn`.
+
+  - `dm::DataMap`: data.
+  - `fn::Function`: function to be applied.
+  - `args...`: positional arguments for `fn`.
+  - `ids::AbstractVector{T}=String[]`: keys for data on which `fn` is applied; if empty all keys of `dm` are used.
+  - `kwargs...`: keyword arguments for `fn`.
 """
 function applyMap(
     dm::DataMap,
@@ -2100,7 +2121,6 @@ end
 
 Get indices of `times` that are exactly aligned with `start_y` and `end_y` given in `constraint_ts`.
 If no values are given, return indices for entire vector `times`.
-
 """
 function indicesTimeseries(
     times::Vector{DateTime},
@@ -2176,7 +2196,7 @@ end
 """
     reduceNbMembers(dat_members::YAXArray; max_n = 5)
 
-For every model in `dat_members` that has more than `max_int` members, randomly sample 
+For every model in `dat_members` that has more than `max_int` members, randomly sample
 `max_int` members. Return YAXArray with reduced number of members per model.
 """
 function reduceNbMembers(dat_members::YAXArray; max_n::Int = 5)
@@ -2201,9 +2221,10 @@ end
 
 """
 # Arguments:
-- `data::AbstractArray`: lon x lat x model
-- `n_rep::Int`: number of repetitions for selected model
-- `index::Int`: index of model to be repeated (default: 2nd)
+
+  - `data::AbstractArray`: lon x lat x model
+  - `n_rep::Int`: number of repetitions for selected model
+  - `index::Int`: index of model to be repeated (default: 2nd)
 """
 function repeatModel(data::AbstractArray, n_rep::Int; index::Int = 2)
     if n_rep == 1
@@ -2243,9 +2264,9 @@ end
 
 
 """
-   function mergeYAX(df::AbstractArray{YAXArray}, new_dim::Symbol, new_dim_vals::AbstractArray{String})
+function mergeYAX(df::AbstractArray{YAXArray}, new_dim::Symbol, new_dim_vals::AbstractArray{String})
 
-   Merge two YAXArrays with identical dimensions into one with additional dimension 'new_dim'.
+Merge two YAXArrays with identical dimensions into one with additional dimension 'new_dim'.
 """
 function mergeYAX(
     df::AbstractArray{<:YAXArray},
@@ -2293,11 +2314,12 @@ end
 Combine two YAXArrays with identical dimensions into one with extended dimension 'dim'.
 
 # Arguments:
-- `df1::YAXArray`: first YAXArray
-- `df2::YAXArray`: second YAXArray
-- `dim::Symbol`: dimension which is merged
-- `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(),
-otherwise, lookup type is Unordered()
+
+  - `df1::YAXArray`: first YAXArray
+  - `df2::YAXArray`: second YAXArray
+  - `dim::Symbol`: dimension which is merged
+  - `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(),
+    otherwise, lookup type is Unordered()
 """
 function mergeYAX(df1::YAXArray, df2::YAXArray, dim::Symbol; sorted::Bool = true)
     return mergeYAX([df1, df2], dim; sorted)
@@ -2309,10 +2331,11 @@ end
 Combine several YAXArrays with identical dimensions into one with extended dimension 'dim'.
 
 # Arguments:
-- `dfs::AbstractArray{<:YAXArray}`: YAXArrays to be merged
-- `dim::Symbol`: dimension which is merged
-- `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(),
-otherwise, lookup type is Unordered()
+
+  - `dfs::AbstractArray{<:YAXArray}`: YAXArrays to be merged
+  - `dim::Symbol`: dimension which is merged
+  - `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(),
+    otherwise, lookup type is Unordered()
 """
 function mergeYAX(dfs::AbstractArray{<:YAXArray}, dim::Symbol; sorted::Bool = true)
     if length(dfs) < 2
@@ -2382,9 +2405,10 @@ above 15 and the grid cell lies in the requested hemisphere(s).
 Use this method for regular grids whose dimension coordinates correspond to true longitudes/latitudes.
 
 # Arguments:
-- `sic::YAXArray`: sea ice concentration (percent).
-- `north::Bool = true`: include grid cells in the northern hemisphere.
-- `south::Bool = true`: include grid cells in the southern hemisphere.
+
+  - `sic::YAXArray`: sea ice concentration (percent).
+  - `north::Bool = true`: include grid cells in the northern hemisphere.
+  - `south::Bool = true`: include grid cells in the southern hemisphere.
 """
 function getSiextentMask(sic::YAXArray; north::Bool = true, south::Bool = true)
     mask = Array(sic.data) .> 15
@@ -2406,15 +2430,16 @@ Return a boolean mask that is `true` where sea ice concentration (`sic`, in perc
 above 15 and the grid cell lies in the requested hemisphere(s), determined from the actual
 per-cell latitude values in `lat`.
 
-Use this method for native/curvilinear ocean grids whose dimension coordinates are cell indices or rotated-pole 
+Use this method for native/curvilinear ocean grids whose dimension coordinates are cell indices or rotated-pole
 coordinates rather than true latitude.
 
 # Arguments:
-- `sic::YAXArray`: sea ice concentration (percent).
-- `lat::YAXArray`: real latitude values (degrees north) on the same spatial dims as `sic`. E.g. loaded with 
-supplementary_var=:areacello from the same file as the sea ice concentration data.
-- `north::Bool = true`: include grid cells in the northern hemisphere.
-- `south::Bool = true`: include grid cells in the southern hemisphere.
+
+  - `sic::YAXArray`: sea ice concentration (percent).
+  - `lat::YAXArray`: real latitude values (degrees north) on the same spatial dims as `sic`. E.g. loaded with
+    supplementary_var=:areacello from the same file as the sea ice concentration data.
+  - `north::Bool = true`: include grid cells in the northern hemisphere.
+  - `south::Bool = true`: include grid cells in the southern hemisphere.
 """
 function getSiextentMask(
     sic::YAXArray,
@@ -2453,9 +2478,10 @@ end
     getSiextent(masks::DataMap, data_areacello; suffix::String = "areacello")
 
 # Arguments:
-- `masks`: For every entry, first two dimensions must have names :x, :y.
-- `data_areacello`: keys are identical to keys in `masks`, possibly with added `suffix` in the end. For every entry, 
-first two dimensions must have names :x, :y.
+
+  - `masks`: For every entry, first two dimensions must have names :x, :y.
+  - `data_areacello`: keys are identical to keys in `masks`, possibly with added `suffix` in the end. For every entry,
+    first two dimensions must have names :x, :y.
 """
 function getSiextent(masks::DataMap, data_areacello::DataMap; suffix::String = "_areacello")
     # compute extent per ensemble member first, then average over members per model

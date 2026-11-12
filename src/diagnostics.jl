@@ -6,12 +6,13 @@ end
 """
     globalMeans(data::YAXArray)
 
-Return a YAXArray with area-weighted global means for each model in `data`. 
+Return a YAXArray with area-weighted global means for each model in `data`.
 
-Missing data is accounted for in the area-weights. 
+Missing data is accounted for in the area-weights.
 
 # Arguments:
-- `data::YAXArray`: must have dimensions 'lon' and 'lat'.
+
+  - `data::YAXArray`: must have dimensions 'lon' and 'lat'.
 """
 function globalMeans(data::YAXArray)
     throwErrorIfNotLonLat(data)
@@ -25,7 +26,7 @@ function globalMeans(data::YAXArray)
         @views mask[indices...] .= ismissing.(@views data[indices...])
     end
     aw_mat = areaWeightMatrix(latitudes, Array(mask)) # is normalized, lon x lat
-    # make sure that, if provided, units are identical across models 
+    # make sure that, if provided, units are identical across models
     units = get(data.properties, "units", nothing)
     if !isnothing(units) && length(unique(units)) != 1
         if any(x -> x != "degC" && x != "K", units)
@@ -40,7 +41,7 @@ function globalMeans(data::YAXArray)
 
     temp = aw_mat .* Array(data)
     gms = dropdims(mapslices(x -> sum(skipmissing(x)), temp; dims = (1, 2)); dims = (1, 2))
-    # if gms equals 0 this means that all values were missing, set them to NaN. don't set missing to NaN before, since 
+    # if gms equals 0 this means that all values were missing, set them to NaN. don't set missing to NaN before, since
     # that would result in NaN as soon as a single entry is NaN.
     replace!(gms, 0 => NaN)
     return YAXArray(otherdims(data, (:lon, :lat)), Array(gms), deepcopy(data.properties))
@@ -72,7 +73,8 @@ end
 
 """
 # Arguments:
-- `data::AbstractArray`: dimensions: lon, lat, model
+
+  - `data::AbstractArray`: dimensions: lon, lat, model
 """
 function globalMeans(data::AbstractArray, latitudes::AbstractArray)
     mask = Bool.(mapslices(model -> ismissing.(model), data; dims = (1, 2)))
@@ -113,7 +115,7 @@ function anomalies(orig_data::YAXArray, ref_data::YAXArray)
     end
     # check units: must be ensured that the meta data is correct ....
     # units_orig = get(data.properties, "units", nothing)
-    # units_ref = get(ref_data.properties, "units", nothing)     
+    # units_ref = get(ref_data.properties, "units", nothing)
     # if !(isnothing(units_orig) || isnothing(units_ref)) && units_ref[indices] != units_orig
     #     @warn "Data and reference data are given in different units! NO ANOMALIES computed!"
     #     return nothing
@@ -153,10 +155,11 @@ Approximate a model's Equilibriate Climate Sensitivity (ECS) value using the Gre
 based on data from the 4xCO2 and piControl experiment.
 
 # Arguments:
-- `data_tas::YAXArray`: timeseries of global means of tas anomalies wrt piControl experiment
-for 4xCO2 experiment. Must have dimension :model
-- `data_rtmt::YAXArray`: timeseries of global means of rtmt data for 4xCO2 experiment. Must
-have dimension :model
+
+  - `data_tas::YAXArray`: timeseries of global means of tas anomalies wrt piControl experiment
+    for 4xCO2 experiment. Must have dimension :model
+  - `data_rtmt::YAXArray`: timeseries of global means of rtmt data for 4xCO2 experiment. Must
+    have dimension :model
 """
 function gregoryECS(data_tas::YAXArray, data_rtmt::YAXArray)
     models = dims(data_tas, :model)

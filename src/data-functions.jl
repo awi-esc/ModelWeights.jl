@@ -1,14 +1,15 @@
 """
     subsetModelData(data::YAXArray, shared_models::Vector{String})
 
-Return subset of `data` containing only data from models in `shared_models`. 
+Return subset of `data` containing only data from models in `shared_models`.
 
 Takes care of metadata.
 
-# Arguments:
-- `data`: must have a dimension that contains 'member' or 'model'
-- `shared_models`: models, which can either be on level of models or members of models 
-('modelname#memberID[_grid]').
+# Arguments
+
+  - `data`: must have a dimension that contains 'member' or 'model'
+  - `shared_models`: models, which can either be on level of models or members of models
+    ('modelname#memberID[_grid]').
 """
 function subsetModelData(data::YAXArray, shared_models::Vector{String})
     if isempty(shared_models)
@@ -20,7 +21,7 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
     if occursin("member", string(model_dims[1]))
         models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
         # if shared_models is on the level of models, the following should be empty
-        # otherwise, nothing is filtered out, and members is the same as shared_models 
+        # otherwise, nothing is filtered out, and members is the same as shared_models
         members = filter(x -> !(x in models), shared_models)
         if !isempty(members) # shared models on level of members
             indices = findall(m -> m in members, dimensions)
@@ -37,20 +38,26 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
 end
 
 """
-    subsetModelData(dm::DataMap, level::Symbol=:member; ids::Vector{String}=Vector{String}())
+    subsetModelData(dm::DataMap; level::Symbol=:member, ids::Vector{String}=Vector{String}())
 
-For those datasets in `dm` that specify data on the level `level` (i.e. have dimension 
-:member or :model), return a new DataMap with subset of data s.t. the new datasets all have 
-the same models or members.
+Return a new DataMap with subset of those datasets in `dm` that specify data on the level
+`level` (i.e. have dimension :member or :model) so that all datasets have the same models or
+members.
 
 If no models are shared across datasets, return the input `dm`.
 
-# Arguments:
-- `ids::Vector{String}`: only applied for given ids in `dm` (default: all)
+# Arguments
+
+  - `dm::DataMap`:
+
+# Keywords
+
+  - `level::Symbol`: one of :none, :model, :member (default)
+  - `ids::Vector{String}=Vector{String}()`: only applied for given ids in `dm` if not empty
 """
 function subsetModelData(
-    dm::DataMap,
-    level::Symbol = :member;
+    dm::DataMap;
+    level::Symbol = :member,
     ids::Vector{String} = Vector{String}(),
 )
     shared_models = sharedModels(dm, toLevel(Val(level)))
@@ -74,7 +81,21 @@ end
 
 
 """
-    Subset all entries in dm to the shared set of models on 'level' among all entries.
+    subsetModelData!(
+        dm::DataMap, level::Symbol=:member; ids::Vector{String} = Vector{String}()
+    )
+
+Subset all entries in dm to the shared set of models on 'level' among all entries.
+
+# Arguments
+
+  - `dm::DataMap`:
+  - `level::Symbol=:member`
+
+# Keywords
+
+  - `ids::Vector{String}=Vector{String}()`: just data for these entries `ids` in `dm` are
+    considered
 """
 function subsetModelData!(
     dm::DataMap,
@@ -99,15 +120,19 @@ end
 #     subsetModelData!(dm, getLevel(level); ids)
 # end
 
-
+"""
+    sharedModels(data::DataMap, level::Level)
+"""
 function sharedModels(data::DataMap, level::Level)
     return isa(level, LevMember) ? sharedLevelMembers(data) : sharedLevelModels(data)
 end
 
+"""
+    sharedModels(data::DataMap, level::Symbol)
+"""
 function sharedModels(data::DataMap, level::Symbol)
     return sharedModels(data, toLevel(Val(level)))
 end
-
 
 function sharedModelsFromPaths(
     all_paths::Vector{Vector{String}},
@@ -135,7 +160,6 @@ function _model_key(meta, ::LevMember)
     isnothing(meta.grid) ? key : string(key, "_", meta.grid)
 end
 
-
 function sharedModelsFromMeta(meta_data::Vector{Vector{ModelMeta}}, level::Level)
     models_per_dataset = Vector{Set{String}}(undef, length(meta_data))
     @inbounds for (i, meta_data_files) in pairs(meta_data)
@@ -148,16 +172,19 @@ function sharedModelsFromMeta(meta_data::Vector{Vector{ModelMeta}}, level::Level
     return collect(reduce(intersect, models_per_dataset))
 end
 
-
-
-
 """
     alignPhysics(data::YAXArray, members::Vector{String})
 
-Return new YAXArray with the models retained from `data` that share the same physics as 
+Return new YAXArray with the models retained from `data` that share the same physics as
 the respective model's members in `members`.
-All other models that are in `data` but for which no member is specified in `members` are 
+
+All other models that are in `data` but for which no member is specified in `members` are
 also retained.
+
+# Arguments
+
+  - `data::YAXArray`:
+  - `members::Vector{String}`:
 """
 function alignPhysics(data::YAXArray, members::AbstractVector{String})
     members_data = lookup(data, :member)
@@ -178,18 +205,20 @@ function alignPhysics(data::YAXArray, members::AbstractVector{String})
 end
 
 
-""" 
+"""
     summarizeMembers(data::YAXArray; fn::Function=Statistics.mean)
 
-For each model compute a summary statistic (default: mean) across all its members. 
+For each model compute a summary statistic (default: mean) across all its members.
 
 The returned YAXArray has dimension 'model'.
 
-# Arguments:
-- `data::YAXArray`: YAXArray; must have dimension 'member'
-- `updateMeta::Bool`: set true if the vectors in the metadata refer to 
-different models. Set to false if vectors refer to different variables.
-- `fn::Function`: Function to be applied on data
+# Arguments
+
+  - `data::YAXArray`: must have dimension 'member'
+
+# Keywords
+
+  - `fn::Function=Statistics.mean`: Function to be applied on data
 """
 function summarizeMembers(data::YAXArray; fn::Function = Statistics.mean)
     df = if hasdim(data, :member)
@@ -209,22 +238,27 @@ function summarizeMembers(data::YAXArray; fn::Function = Statistics.mean)
 end
 
 
-""" 
+"""
     summarizeMembers(
-        data::AbstractArray,
-        dim::Int,
-        members::AbstractArray{String}; 
+        data::AbstractArray, dim::Int, members::AbstractArray{String};
         fn::Function=Statistics.mean
     )
 
-For each model compute a summary statistic (default: mean) across all its members. 
+For each model compute a summary statistic (default: mean) across all its members.
+
 Return Array summarized in model dimension.
 
-# Arguments:
-- `data::AbstractArray`: must have dimension 'member' and at least one other arbitrary dimension 
-- `dim::Int`: index of member dimension
-- `members::AbstractArray{String}`: names of members corresponding to member dimension in `data`.
-- `fn::Function`: Function to be applied on data
+# Arguments
+
+  - `data::AbstractArray`: must have dimension 'member' and at least one other arbitrary
+    dimension
+  - `dim::Int`: index of member dimension
+  - `members::AbstractArray{String}`: names of members corresponding to member dimension in
+    `data`.
+
+# Keywords
+
+  - `fn::Function=Statistics.mean`: Function to be applied on `data`
 """
 function summarizeMembers(
     data::AbstractArray,
@@ -259,13 +293,18 @@ function summarizeMembers(
     return summarized_data
 end
 
-
-
 """
     summarizeMembers!(data::DataMap; fn::Function=Statistics.mean)
 
-Set values for every dataset in `data` to the average across all members of 
-each model.
+Set values for every dataset in `data` to the average across all members of each model.
+
+# Arguments
+
+  - `data::DataMap`:
+
+# Keywords
+
+  - `fn::Function=Statistics.mean`
 """
 function summarizeMembers!(data::DataMap; fn::Function = Statistics.mean)
     for (k, ds) in data
@@ -280,7 +319,7 @@ end
 """
     summarizeMembers(data::DataMap; fn::Function=Statistics.mean)
 
-Return new DataMap containing every dataset in `data` summarized by applying `fn` 
+Return new DataMap containing every dataset in `data` summarized by applying `fn`
 (default: mean) to all members of each model.
 """
 function summarizeMembers(data::DataMap; fn::Function = Statistics.mean)
@@ -295,15 +334,21 @@ function summarizeMembers(data::DataMap; fn::Function = Statistics.mean)
 end
 
 
-""" 
+"""
     summarizeMembersVector(data::YAXArray; fn::Function=Statistics.mean)
 
-For each model compute a summary statistic (default: mean) across all its members. 
-The returned YAXArray has dimension :model (instead of :member).
+For each model compute a summary statistic (default: mean) across all its members.
 
-# Arguments:
-- `data::YAXArray`: YAXArray; must have dimension 'member' and at least one other arbitrary dimension 
-- `fn::Function`: Function to be applied on data
+The returned YAXArray has dimension `model` (instead of `member`).
+
+# Arguments
+
+  - `data::YAXArray`: YAXArray; must have dimension 'member' and at least one other arbitrary
+    dimension
+
+# Keywords
+
+  - `fn::Function=Statistics.mean`: Function to be applied on data
 """
 function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
     throwErrorIfDimMissing(data, :member)
@@ -339,15 +384,20 @@ end
 
 
 """
-    summarizeMembersMatrix(data::AbstractArray, updateMeta::Bool; fn::Function=Statistics.mean)
+    summarizeMembersMatrix(data::YAXArray, updateMeta::Bool; fn::Function=Statistics.mean)
 
-Compute the average across all members of each model for each given variable 
-for model to model data, e.g. distances between model pairs.
+Compute the average across all members of each model for each given variable for model to
+model data, e.g. distances between model pairs.
 
-# Arguments:
-- `data`: with at least dimensions 'member1', 'member2'
-- `updateMeta`: set true if the vectors in the metadata refer to different models. 
-Set to false if vectors refer to different variables for instance. 
+# Arguments
+
+  - `data::YAXArray`: with at least dimensions 'member1', 'member2'
+  - `updateMeta::Bool`: set true if the vectors in the metadata refer to different models.
+    Set to false if vectors refer to different variables for instance.
+
+# Keywords
+
+  - `fn::Function=Statistics.mean`
 """
 function summarizeMembersMatrix(
     data::YAXArray,
@@ -391,14 +441,12 @@ function summarizeMembersMatrix(
     # return combined
 end
 
-
 function addMasks!(datamap::DataMap, id_orog_data::String)
     orog_data = datamap[id_orog_data]
     datamap["mask_land"] = getMask(orog_data; mask_out_land = false)
     datamap["mask_ocean"] = getMask(orog_data; mask_out_land = true)
     return nothing
 end
-
 
 function filterOutModels(data::YAXArray, excluded_models::Vector{String})
     throwErrorIfDimMissing(data, [:model, :member]; include = :any)
@@ -413,7 +461,6 @@ function filterOutModels(data::YAXArray, excluded_models::Vector{String})
     return model_dim == :model ? data[model=indices_ok] : data[member=indices_ok]
 end
 
-
 function listModels(data::YAXArray)
     model_dim = modelDim(data)
     if model_dim == :member
@@ -427,23 +474,22 @@ function listModels(data::YAXArray)
 end
 
 ### ----------------------------------------------------------------------------------------
-###                                LOADING DATA                                           
+###                                LOADING DATA
 ### ----------------------------------------------------------------------------------------
 """
     loadPreprocData(
         meta_data::Vector{T};
         constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
         is_cmip::Bool = true,
-        sorted::Bool = true, 
-        meta_info::Union{Dict{String, String}, Nothing} = nothing, 
+        sorted::Bool = true,
+        meta_info::Union{Dict{String, String}, Nothing} = nothing,
         model_times::Bool = false
     )
 
-Return data loaded from `paths` as single YAXArray. 
+Return a YAXArray containing the data loaded based on `meta_data`.
 
-Each path points to a different model, i.e. the data for one dataset is loaded from multiple files and all datasets in 
-`paths` must share the same dimensions. Which variable is loaded is inferred from the filenames (in `paths`), or if 
-`meta_info` has key 'variable', the respective value is used.
+Which variable is loaded is inferred from `meta_data`, or if `meta_info` has key 'variable',
+the respective value is used.
 """
 function loadPreprocData(
     meta_data::Vector{T};
@@ -476,7 +522,7 @@ function loadPreprocData(
         end
         # if clim_var == "amoc"
         #     ds_var = ds["msftmz"]
-        # end        
+        # end
         # apply timeseries constraint
         dimension_names = dimNames(ds_var)
 
@@ -533,7 +579,7 @@ function loadPreprocData(
         #         ds_var_out[i] = isequal(x, fv) ? missing : x
         #     end
         #     raw = ds_var_out
-        # end                
+        # end
         if !exclude_file
             props = copy(ds_var.properties) # metadata just for this file!
             fv = get(props, "_FillValue", nothing)
@@ -598,8 +644,6 @@ function replaceFillValues(data::YAXArray, fill_val::T) where {T<:Real}
     return YAXArray(data.axes, arr, deepcopy(data.properties))
 end
 
-
-
 function checkInput(
     all_paths::Vector{T},
     ids::Vector{String};
@@ -621,7 +665,6 @@ function checkInput(
         )
     end
 end
-
 
 function _previewDataMapCore(
     meta_data::Vector{Vector{T}},
@@ -657,7 +700,7 @@ function _loadDataMapCore(
     data = Vector{YAXArray}(undef, length(meta_data_per_dataset))
     indices_found = Int[]
     for (i, meta_data) in enumerate(meta_data_per_dataset)
-        df = loadPreprocData(meta_data; constraint_ts, is_cmip, sorted, model_times) #, meta_info = meta_info  
+        df = loadPreprocData(meta_data; constraint_ts, is_cmip, sorted, model_times) #, meta_info = meta_info
         if !isnothing(df)
             data[i] = df
             push!(indices_found, i)
@@ -668,7 +711,6 @@ function _loadDataMapCore(
     isempty(data) && @warn "No Data found for given constraints!"
     return defineDataMap(data, ids_filtered)
 end
-
 
 function _applyLevel!(
     meta_data_per_dataset::AbstractVector{<:AbstractVector{ModelMeta}},
@@ -726,32 +768,29 @@ end
 
 
 """
-    loadDataFromESMValToolRecipes(
-        path_data::String,
-        path_recipes::String;
-        dir_per_var::Bool = true,
-        constraint::Dict{Symbol, <:AbstractArray{String}}  = Dict{Symbol, Vector{String}}(),
-        constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-        level::Symbol = :none,
-        is_cmip::Bool = true,
-        filename_format::Symbol = :esmvaltool,
-        sorted::Bool = true,
-        model_times::Bool = false
-    )
+    loadDataFromESMValToolRecipes(path_data::String, path_recipes::String; kwargs...)
 
-Load the data from the ESMValTool recipes at `path_recipes`.
+Load the data specified in ESMValTool recipes at `path_recipes` and stored at `path_data`.
 
-# Arguments:
-- `path_data::String`: top level directory were data is stored.
-- `path_recipes::String`: directory were ESMValTool recipes are stored; these must be the versions in the run folder generated by ESMValTool named  RECIPENAME_filled.yml.s
-- `dir_per_var::Bool=true`: true if there is a subdirectory in `path_data` for every climate variable to be loaded.
-- `constraint::Dict{Symbol, <:AbstractArray{String}}`: dictionary with data constraints, for options see [the documentation](@ref constraint-options)
-- `constraint_ts::NamedTuple{(:start_year, :end_year)}`: by default, no filtering takes place.
-- `level::Symbol = :none`: one of :model, :member, :none.
-- `is_cmip::Bool=true`: true for CMIP model data; false for observational data.
-- `filename_format::Symbol = :esmvaltool`: 
-- `sorted::Bool = true`: if true, the data is sorted alphabetically wrt model names.
-- `model_times::Bool = false`: if true, the given time is not assumed to refer to actual times.
+# Arguments
+
+  - `path_data::String`: top level directory were data is stored.
+  - `path_recipes::String`: directory were ESMValTool recipes are stored; these must be the
+    versions in the run folder generated by ESMValTool named  RECIPENAME_filled.yml.
+
+# Keywords
+
+  - `dir_per_var::Bool=true`: true if there is a subdirectory in `path_data` for every
+    climate variable to be loaded.
+  - `constraint::Dict{Symbol, <:AbstractArray{String}}`: dictionary with data constraints,
+    for options see [the documentation](@ref constraint-options)
+  - `constraint_ts::NamedTuple{(:start_year, :end_year)}`: by default, no filtering is done.
+  - `level::Symbol=:none`: one of :model, :member, :none.
+  - `is_cmip::Bool=true`: true for CMIP model data; false for observational data.
+  - `filename_format::Symbol = :esmvaltool`:
+  - `sorted::Bool=true`: if true, the data is sorted alphabetically wrt model names.
+  - `model_times::Bool=false`: if true, the given time is not assumed to refer to actual
+    times.
 """
 function loadDataFromESMValToolRecipes(
     path_data::String,
@@ -822,21 +861,20 @@ function loadDataFromYAML(
 end
 
 """
-    loadDataFromYAML(
-        yaml_content::Dict;
-        constraint::Dict{String, <:AbstractArray{String}} = Dict{String, Vector{String}}(),
-        level::Abstractlevel = NoLevel(),
-        is_cmip::Bool = true,
-        fn_format::Symbol = :esmvaltool
-        sorted::Bool = true
-    )
+    loadDataFromYAML(yaml_content::Dict; kwargs...)
 
-Return a DataMap-instance that contains the data specified in `yaml_content`, potentially 
+Return a DataMap-instance that contains the data specified in `yaml_content`, potentially
 constraint by values in `constraint`.
 
-# Arguments:
-- `sorted::Bool`: if true (default), model dimension is sorted alphabetically.
-- `is_cmip::Bool`: if true, model dimension of returned data have model members' names as values.
+# Arguments
+
+  - `yaml_content::Dict`:
+
+# Keywords
+
+  - `sorted::Bool=true`: if true, model dimension is sorted alphabetically.
+  - `is_cmip::Bool=true`: if true, model dimension of returned data have model members' names
+    as values.
 """
 function loadDataFromYAML(
     yaml_content::Dict;
@@ -904,7 +942,7 @@ end
 
 # # Loading data directly from given directories
 # function previewDataMap(
-#     paths_data_dirs::Vector{String}, 
+#     paths_data_dirs::Vector{String},
 #     id::String;
 #     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
 #     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
@@ -923,7 +961,7 @@ end
 
 
 # function previewDataMap(
-#     paths_data_dirs::Union{Vector{String}, Vector{Vector{String}}}, 
+#     paths_data_dirs::Union{Vector{String}, Vector{Vector{String}}},
 #     data_ids::Vector{String};
 #     constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
 #     constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
@@ -946,35 +984,29 @@ end
 
 
 """
-    defineDataMap(
-        paths::Vector{String}, 
-        id::String;
-        constraint::Dict{Symbol, <:AbstractArray{String}} = Dict{Symbol, Vector{String}}(),
-        constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}} = (start_year = typemin(Int), end_year = typemax(Int)),
-        level::Symbol = :none,
-        is_cmip::Bool = true,
-        filename_format::Symbol = :cmip,
-        sorted::Bool = true,
-        model_times::Bool = true,
-        one_entry_per_file::Bool = false,
-        supplementary_var::String = ""
-    )
+    defineDataMap(paths::Vector{String}, id::String; kwargs...)
 
-Return DataMap with entry `id` with the data (model or observations depending on `filename_format`)
-from all .nc files in all directories in `paths`, possibly constraint by `constraint` and `constraint_ts`.
+Return DataMap with entry `id` with the data (model or observations depending on
+`filename_format`) from all .nc files in all directories in `paths`, possibly constraint by
+`constraint` and `constraint_ts`.
 
-# Arguments:
-- `paths::Vector{String}`: paths to directories that contain .nc files with data to be loaded for single dataset with name `id`
-- `id::String`: refers to single dataset for which data is loaded from all `paths`
-- `constraint::Dict{Symbol, <:AbstractArray{String}}`:
-- `constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}`:
-- `level::Symbol`:
-- `is_cmip::Bool`:
-- `filename_format::Symbol`:
-- `sorted::Bool`:
-- `model_times::Bool`:
-- `one_entry_per_file::Bool`:
-- `supplementary_var::String`:
+# Arguments
+
+  - `paths::Vector{String}`: paths to directories that contain .nc files with data to be
+    loaded for single dataset with name `id`
+  - `id::String`: refers to single dataset for which data is loaded from all `paths`
+
+# Keywords
+
+  - `constraint::Dict{Symbol, <:AbstractArray{String}}`:
+  - `constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}`:
+  - `level::Symbol`:
+  - `is_cmip::Bool`:
+  - `filename_format::Symbol`:
+  - `sorted::Bool`:
+  - `model_times::Bool`:
+  - `one_entry_per_file::Bool`:
+  - `supplementary_var::String`:
 """
 function defineDataMap(
     paths::Vector{String},
@@ -1015,7 +1047,6 @@ function defineDataMap(
     return dm
 end
 
-
 function previewDataMap(
     paths::Vector{String},
     id::String;
@@ -1034,20 +1065,26 @@ function previewDataMap(
     return return_meta_data ? meta_data : _previewDataMapCore(meta_data, [id])
 end
 
-
 """
-# Arguments:
-- `path::String`: path to directory that contains .nc files with data to be loaded for single dataset
-- `id::String`: refers to single dataset for which data is loaded from all `paths`
-- `constraint::Dict{Symbol, <:AbstractArray{String}}`:
-- `constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}`:
-- `level::Symbol`:
-- `is_cmip::Bool`:
-- `filename_format::Symbol`:
-- `sorted::Bool`:
-- `model_times::Bool`:
-- `one_entry_per_file::Bool`:
-- `supplementary_var::String`:
+    defineDataMap(path::String, id::String; kwargs...)
+
+# Arguments
+
+  - `path::String`: path to directory that contains .nc files with data to be loaded for
+    single dataset
+  - `id::String`: refers to single dataset for which data is loaded from all `paths`
+
+# Keywords
+
+  - `constraint::Dict{Symbol, <:AbstractArray{String}}`:
+  - `constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}`:
+  - `level::Symbol=:none`:
+  - `is_cmip::Bool=true`:
+  - `filename_format::Symbol=:esmvaltool`:
+  - `sorted::Bool=true`:
+  - `model_times::Bool=false`:
+  - `one_entry_per_file::Bool=false`:
+  - `supplementary_var::String=""`:
 """
 function defineDataMap(
     path::String,
@@ -1108,16 +1145,29 @@ end
 
 
 """
-# Arguments:
-- `paths::Union{Vector{String}, Vector{Vector{String}}}`: each entry is a path to a single dataset (corresponding to entry in `ids`) or each entry refers to multiple datasets, i.e. each entry contains the paths to the directories that contain the .nc files with the data to be loaded for the respective dataset in `ids`.
-- `ids::Vector{String}`: each entry refers to a dataset for which data is loaded from all entries in corresponding entry in `paths`.
-- `constraint::Dict{Symbol, <:AbstractArray{String}}`:
-- `constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}`:
-- `level::Symbol`:
-- `is_cmip::Bool`:
-- `filename_format::Symbol`:
-- `sorted::Bool`:
-- `model_times::Bool`:
+    defineDataMap(
+        paths::Union{Vector{String},Vector{Vector{String}}}, ids::Vector{String};
+        kwargs...
+    )
+
+# Arguments
+
+  - `paths::Union{Vector{String}, Vector{Vector{String}}}`: each entry is a path to a single
+    dataset (corresponding to entry in `ids`) or each entry refers to multiple datasets, i.e.
+    each entry contains the paths to the directories that contain the .nc files with the data
+    to be loaded for the respective dataset in `ids`.
+  - `ids::Vector{String}`: each entry refers to a dataset for which data is loaded from all
+    entries in corresponding entry in `paths`.
+
+# Keywords
+
+  - `constraint::Dict{Symbol,<:AbstractArray{String}}=Dict{Symbol,Vector{String}}()`:
+  - `constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}`:
+  - `level::Symbol=:none`:
+  - `is_cmip::Bool=true`:
+  - `filename_format::Symbol=:esmvaltool`:
+  - `sorted::Bool=true`:
+  - `model_times::Bool=false`:
 """
 function defineDataMap(
     paths::Union{Vector{String},Vector{Vector{String}}},
@@ -1172,9 +1222,9 @@ end
 
 
 """
-    _prepareMetaData(paths_datasets, ids; constraint, constraint_ts, level, is_cmip, filename_format)
+    _prepareMetaData(paths_datasets, ids; kwargs...)
 
-    Return a vector of length `length(ids)` where each entry contains a Vector of MetaData.
+Return a vector of length `length(ids)` where each entry contains a Vector of MetaData.
 """
 function _prepareMetaData(
     paths_datasets::Vector{Vector{String}},
@@ -1208,9 +1258,9 @@ function _prepareMetaData(
 end
 
 """
-    _prepareMetaData(paths, ids; constraint, constraint_ts, level, is_cmip, filename_format)
+    _prepareMetaData(paths, ids; kwargs...)
 
-    Return a vector of length `length(ids)` where each entry contains a Vector of MetaData.
+Return a vector of length `length(ids)` where each entry contains a Vector of MetaData.
 """
 function _prepareMetaData(
     paths::Vector{String},
@@ -1244,9 +1294,9 @@ function _prepareMetaData(
 end
 
 """
-    _prepareMetaData(paths; constraint, constraint_ts, level, is_cmip, filename_format)
+    _prepareMetaData(paths; kwargs...)
 
-    Return a vector of length 1 whose single entry contains a Vector of MetaData.
+Return a vector of length 1 whose single entry contains a Vector of MetaData.
 """
 function _prepareMetaData(
     paths::Vector{String};
@@ -1272,10 +1322,10 @@ function _prepareMetaData(
     )
 end
 
-
-
 """
-Return Vector{String} with .nc files in `path` if `path` is a directory, [path] if `path` 
+    _collectPaths(path::String)
+
+Return Vector{String} with .nc files in `path` if `path` is a directory, [path] if `path`
 is a .nc file, empty String[] otherwise.
 """
 function _collectPaths(path::String)
@@ -1295,22 +1345,27 @@ function _collectPaths(path::String)
 end
 
 """
-    function _getFilteredMetaData(
-        paths_data_dirs::Vector{String},
+    _getFilteredMetaData(
+        paths_to_files::Vector{Vector{String}},
         constraint::Dict{Symbol, <:AbstractArray{String}},
         constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}};
-        level::AbstractLevel = NoLevel(),
-        is_cmip::Bool = true,
-        fn_format::AbstractFnFormat = FF_CMIP()
+        level::AbstractLevel=NoLevel(),
+        is_cmip::Bool=true,
+        fn_format::AbstractFnFormat=FF_CMIP()
     )
 
-# Arguments:
-- `paths_to_files::Vector{Vector{String}}`: each entry refers to different dataset and contains paths to all files for the respective dataset
-- `constraint::Dict{Symbol, <:AbstractArray{String}}`:
-- `constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}`:
-- `level::AbstractLevel` = NoLevel():
-- `is_cmip::Bool` = true:
-- `fn_format::AbstractFnFormat` = FF_CMIP():
+# Arguments
+
+  - `paths_to_files::Vector{Vector{String}}`: each entry refers to different dataset and
+    contains paths to all files for the respective dataset
+  - `constraint::Dict{Symbol, <:AbstractArray{String}}`:
+  - `constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}`:
+
+# Keywords
+
+  - `level::AbstractLevel=NoLevel()`:
+  - `is_cmip::Bool=true`:
+  - `fn_format::AbstractFnFormat=FF_CMIP()`:
 """
 function _getFilteredMetaData(
     paths_to_files::Vector{Vector{String}},

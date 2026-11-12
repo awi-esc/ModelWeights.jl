@@ -43,7 +43,7 @@ end
 """
     throwErrorIfDimMissing(data::YAXArray, dimensions::Vector{Symbol}; include::Symbol=:all)
 
-Throw ArgumentError if `data` does not have ALL dimensions in `dimensions` when 
+Throw ArgumentError if `data` does not have ALL dimensions in `dimensions` when
 `include=:all` (default), or if `data` does not have ANY dimension in `dimensions`.
 """
 function throwErrorIfDimMissing(
@@ -91,16 +91,18 @@ end
 """
     combineAll(v::Vararg{Vector{String}}; sep::String="_")
 
-Generate vector with all possible combinations of strings, each of which is a concatenation 
+Generate vector with all possible combinations of strings, each of which is a concatenation
 of elements from each input vector in the given order, concatenated by `sep` (default: _).
 
 # Arguments
-- `v::Vararg{Vector{String}}`: A variable number of input vectors.
-- `sep::String`: seperator
+
+  - `v::Vararg{Vector{String}}`: A variable number of input vectors.
+  - `sep::String`: seperator
 
 # Example
+
 ```jldoctest
-julia> ModelWeights.Data.combineAll(["tos", "tas"], ["CLIM"])
+julia> ModelWeights.Data.combineAll([\"tos\", \"tas\"], [\"CLIM\"])
 2-element Vector{String}:
  "tos_CLIM"
  "tas_CLIM"
@@ -140,7 +142,7 @@ end
 """
     individuatePath(target::String)
 
-If file at `target` path exists, concatenate `target` with current timestep, otherwise 
+If file at `target` path exists, concatenate `target` with current timestep, otherwise
 simply return `target`.
 """
 function individuatePath(target::String; add_hour::Bool = true)
@@ -162,7 +164,6 @@ end
     kelvinToCelsius(data::YAXArray)
 
 Return a copy of `data` with values given in Kelvin covnerted into Degree Celsius.
-
 """
 function kelvinToCelsius(data::YAXArray)
     df = YAXArray(data.axes, Array(data.data), deepcopy(data.properties))
@@ -273,10 +274,11 @@ end
 Rename dimension `dim` in `data`to `dim_name` and set dimension values of dimension `dim` to `dim_vals`.
 
 # Arguments:
-- `data::YAXArray`:
-- `dim::Symbol`: Name of the dimension to be changed.
-- `dim_name::Symbol`: New dimension name.
-- `dim_vals::AbstractVector{T}`:  New dimension values.
+
+  - `data::YAXArray`:
+  - `dim::Symbol`: Name of the dimension to be changed.
+  - `dim_name::Symbol`: New dimension name.
+  - `dim_vals::AbstractVector{T}`:  New dimension values.
 """
 function setDim(
     data::YAXArray,
@@ -295,9 +297,10 @@ end
 Rename dimension `dim` to `dim_name` in `data`.
 
 # Arguments:
-- `data::YAXArray`:
-- `dim::Symbol`: Name of the dimension to be changed.
-- `dim_name::Symbol`: New dimension name.
+
+  - `data::YAXArray`:
+  - `dim::Symbol`: Name of the dimension to be changed.
+  - `dim_name::Symbol`: New dimension name.
 """
 function setDim(data::YAXArray, dim::Symbol, dim_name::Symbol)
     data = DimensionalData.set(data, dim => dim_name)
@@ -311,9 +314,10 @@ end
 Set dimension values of dimension `dim` in `data` to `dim_vals`.
 
 # Arguments:
-- `data::YAXArray`:
-- `dim::Symbol`: Name of the dimension to be changed.
-- `dim_vals::Vector{String}`:  New dimension values.
+
+  - `data::YAXArray`:
+  - `dim::Symbol`: Name of the dimension to be changed.
+  - `dim_vals::Vector{String}`:  New dimension values.
 """
 function setDim(data::YAXArray, dim::Symbol, dim_vals::AbstractVector{T}) where {T}
     data = DimensionalData.set(data, dim => dim_vals)
@@ -379,7 +383,7 @@ end
 """
     dict2YAX(data::Dict{String, T}) where {T <: Number}
 
-Convert dictionary `data` into a YAXArray with new dimension `dim_name` 
+Convert dictionary `data` into a YAXArray with new dimension `dim_name`
 (default is :diagnostic) whose lookup names are the keys of `data`.
 """
 function dict2YAX(data::Dict{String,T}; dim_name::Symbol = :diagnostic) where {T<:Number}
@@ -394,9 +398,9 @@ function dict2YAX(data::Dict{String,T}; dim_name::Symbol = :diagnostic) where {T
 end
 
 
-""" 
+"""
     lon360to180(lon::T) where {T <: Real}
-    
+
 Convert longitudes measured from 0° to 360° into  -180° to 180° scale.
 """
 function lon360to180(lon::T) where {T<:Real}
@@ -411,10 +415,10 @@ function lon360to180(data::YAXArray; west_to_east::Bool = false)
 end
 
 
-""" 
+"""
     lon180to360(lon::T) where {T <: Real}
 
-Convert longitudes measured from -180° to 180° into 0° to 360° scale. 
+Convert longitudes measured from -180° to 180° into 0° to 360° scale.
 
 For western hemisphere (negative longitudes) 360 is added.
 """

@@ -6,19 +6,19 @@
     )
 
 Compute the average values for each (lon,lat) grid point in `data`, weighted
-by `weights`. 
+by `weights`.
 
 If no weight vector is provided, unweighted average is computed.
 
-
 # Arguments:
-- `data::YAXArray`: must have dimension 'model' or 'member'
-- `weights::Union{YAXArray, Nothing} = nothing`: weights for models or individual members
-- `use_members_equal_weights::Bool`:  if `weights` is nothing, all models receive 
-equal weight. Then, if `use_members_equal_weights` is true, the number of members 
-per model is taken into account, e.g. ["m1#run1", "m1#run2", "m1#run3", "m2#run1"] yields 
-[1/4, 1/4, 1/4, 1/4] if `use_members_equal_weights = false` and if 
-`use_members_equal_weights = true`, [1/2 * 1/3, 1/2 * 1/3, 1/2 * 3, 1/2] = [1/6, 1/6, 1/6, 1/2].
+
+  - `data::YAXArray`: must have dimension 'model' or 'member'
+  - `weights::Union{YAXArray, Nothing} = nothing`: weights for models or individual members
+  - `use_members_equal_weights::Bool`:  if `weights` is nothing, all models receive
+    equal weight. Then, if `use_members_equal_weights` is true, the number of members
+    per model is taken into account, e.g. ["m1#run1", "m1#run2", "m1#run3", "m2#run1"] yields
+    [1/4, 1/4, 1/4, 1/4] if `use_members_equal_weights = false` and if
+    `use_members_equal_weights = true`, [1/2 * 1/3, 1/2 * 1/3, 1/2 * 3, 1/2] = [1/6, 1/6, 1/6, 1/2].
 """
 function weightedAvg(
     data::YAXArray;
@@ -100,7 +100,7 @@ end
     equalWeights(data::YAXArray; use_members::Bool=true)
 
 Create a weight vector, with equal weight for each MODEL. Distribute weight across
-model members if dimension=:member and use_members is true. If use_member is false, 
+model members if dimension=:member and use_members is true. If use_member is false,
 each model member is considered as standalone model and all receive the same weight.
 """
 function equalWeights(data::YAXArray; use_members::Bool = true)
@@ -142,10 +142,13 @@ end
 
 """
     saveWeightsAsNCFile(weights::ClimWIP; target_path::String)
+
 TODO: needs to be updated, deprecated
+
 # Arguments:
-- `weights`: ClimWIP object to be saved.
-- `target_path`: Path to where weights shall be stored.
+
+  - `weights`: ClimWIP object to be saved.
+  - `target_path`: Path to where weights shall be stored.
 """
 function saveWeightsAsNCFile(weights::ClimWIP, target_path::String)
     ds = NCDataset(target_path, "c")
@@ -223,7 +226,7 @@ function writeWeightsToDisk(weights::ClimWIP, target_path::String)
 end
 
 
-""" 
+"""
     applyWeights(model_data::YAXArray, weights::YAXArray)
 
 Compute the weighted average of model data `data` with given `weights`.
@@ -233,10 +236,11 @@ and applied to the subset. Only weights per model (not members) are considered
 for now, in the future, members should be considered too.
 
 # Arguments:
-- `model_data::YAXArray`: model predictions. If given for model members, the predictions 
-of each model are considered the average value of all members of the respective model.
-- `weights::YAXArray`: if given for each member of a model, these will be summed up to 
-yield one value per model.
+
+  - `model_data::YAXArray`: model predictions. If given for model members, the predictions
+    of each model are considered the average value of all members of the respective model.
+  - `weights::YAXArray`: if given for each member of a model, these will be summed up to
+    yield one value per model.
 """
 function applyWeights(model_data::YAXArray, weights::YAXArray)
     if hasdim(weights, :member)
@@ -472,18 +476,19 @@ from Brunner, Lukas, Angeline G. Pendergrass, Flavio Lehner,
 Anna L. Merrifield, Ruth Lorenz, and Reto Knutti. “Reduced Global Warming
 from CMIP6 Projections When Weighting Models by Performance and
 Independence.” Earth System Dynamics 11, no. 4 (November 13, 2020):
-995–1012. https://doi.org/10.5194/esd-11-995-2020. 
+995–1012. https://doi.org/10.5194/esd-11-995-2020.
 
 # Arguments:
-- `dists_indep_all::YAXArray`: RMSEs between pairs of models for all 
-combinations of variables and diagnostics; has dimensions 'member1', 'member2', 'variable', 
-'diagnostic'.
-- `dists_perform_all::YAXArray`: RMSEs between model and observational data for all 
-combinations of variables and diagnostics; has dimensions 'member', 'variable', 'diagnostic'.
-- `config::ConfigWeights`: Parameters specifiying the relative contributions of each 
-combination of variable and diagnostic.
-- `suffix_name::String`: added to name of each type of weights, s.t. names are: wP-suffix, 
-wI-suffix, combined-suffix (default 'climwip').
+
+  - `dists_indep_all::YAXArray`: RMSEs between pairs of models for all
+    combinations of variables and diagnostics; has dimensions 'member1', 'member2', 'variable',
+    'diagnostic'.
+  - `dists_perform_all::YAXArray`: RMSEs between model and observational data for all
+    combinations of variables and diagnostics; has dimensions 'member', 'variable', 'diagnostic'.
+  - `config::ConfigWeights`: Parameters specifiying the relative contributions of each
+    combination of variable and diagnostic.
+  - `suffix_name::String`: added to name of each type of weights, s.t. names are: wP-suffix,
+    wI-suffix, combined-suffix (default 'climwip').
 """
 function climwipWeights(
     dists_indep_all::YAXArray,
@@ -527,8 +532,9 @@ w^{P}_i = a_0 \\cdot \\frac{e^{-(\\frac{D_i}{\\sigma_D})^2}}{N}
 ```
 
 # Arguments:
-- `Di::YAXArray`: generalized distances Di for each model
-- `sigmaD::Number`: free shape parameter for impact of performance weights
+
+  - `Di::YAXArray`: generalized distances Di for each model
+  - `sigmaD::Number`: free shape parameter for impact of performance weights
 """
 function performanceWeights(Di::YAXArray, sigmaD::Number)
     performances = exp.(-(Di ./ sigmaD) .^ 2)
@@ -553,8 +559,9 @@ w^{I}_i = a_0 \\cdot \\frac{1}{1 + \\sum_{j \\ne i} e^{-\\left( \\frac{S_{ij}}{\
 ```
 
 # Arguments:
-- `Sij`: generalized distances for each pair of models with dimensions 'model1', 'model2'
-- `sigmaS`: free shape parameter for impact of independence weights
+
+  - `Sij`: generalized distances for each pair of models with dimensions 'model1', 'model2'
+  - `sigmaS`: free shape parameter for impact of independence weights
 """
 function independenceWeights(Sij::YAXArray, sigmaS::Number)
     # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
@@ -623,8 +630,9 @@ Quantifies how good the forecast samples are a prediction for the given observat
 Use closed Form definition of CRPS.
 
 # Arguments:
-- `samples::AbstractVector{<:Union{Missing, Number}}`: vector of predictions.
-- `obs::Number`:: single observation.
+
+  - `samples::AbstractVector{<:Union{Missing, Number}}`: vector of predictions.
+  - `obs::Number`:: single observation.
 """
 function crps(samples::AbstractVector{<:Union{Missing,Number}}, obs::Number)
     # expected absolute error between forecast points and observation
@@ -641,9 +649,10 @@ end
 Compute Continuous Ranked Probability Score (CRPS) for predicted `samples` and observation `obs`.
 
 # Arguments:
-- `samples`: must have at least one more dimension than :model or :member (e.g. model x lon x lat)
-- `obs`: must have the same dimensions as `samples` except for the model dimension (:model or :member)
-which is only present in `samples`.
+
+  - `samples`: must have at least one more dimension than :model or :member (e.g. model x lon x lat)
+  - `obs`: must have the same dimensions as `samples` except for the model dimension (:model or :member)
+    which is only present in `samples`.
 """
 function crps(samples::YAXArray{<:Union{Missing,Number}}, obs::YAXArray)
     model_dim = Data.modelDim(samples)
@@ -682,18 +691,19 @@ function crpss(crps_fc::T, crps_baseline::T) where {T<:Union{Matrix,Number}}
 end
 
 """
-   crpss(samples_forecast::YAXArray, samples_baseline::YAXArray, observations::YAXArray})
-   
-Compute Continuous Ranked Probability Skill Score for forecast with respect to baseline. 
-    
+crpss(samples_forecast::YAXArray, samples_baseline::YAXArray, observations::YAXArray})
+
+Compute Continuous Ranked Probability Skill Score for forecast with respect to baseline.
+
 For every timestep there are predicted samples of the forecast (`samples_forecast`) and of
-the baseline `samples_baseline` (respectively one per model in the ensemble) and for every 
+the baseline `samples_baseline` (respectively one per model in the ensemble) and for every
 timestep there is exactly one observation. The CRPSS is based on the average CRPS across timesteps.
 
 # Arguments:
-- `samples_forecast::YAXArray`: must have dimension :time and :model or :member
-- `samples_baseline::YAXArray`: must have dimension :time and :model or :member
-- `observations::YAXArray`: must have only dimension :time
+
+  - `samples_forecast::YAXArray`: must have dimension :time and :model or :member
+  - `samples_baseline::YAXArray`: must have dimension :time and :model or :member
+  - `observations::YAXArray`: must have only dimension :time
 """
 function crpss(
     samples_forecast::YAXArray,
@@ -746,15 +756,16 @@ end
 
 Compute Continuous Ranked Probability Skill Score for weighted vs. unweighted predictions for timeseries.
 
-For every timestep there are predicted samples, one per model in the ensemble and for 
+For every timestep there are predicted samples, one per model in the ensemble and for
 every timestep there is exactly one observation. The CRPSS is based on the average CRPS
 across timesteps.
 
 # Arguments:
-- `samples::YAXArray`: must have dimension :time and :model or :member
-- `observations::YAXArray`: must have only dimension :time
-- `weights::YAXArray`: must have same model dimension as `samples` (:model or :member)
-- `n::Int=1000`: length sample vector for computing weighted samples
+
+  - `samples::YAXArray`: must have dimension :time and :model or :member
+  - `observations::YAXArray`: must have only dimension :time
+  - `weights::YAXArray`: must have same model dimension as `samples` (:model or :member)
+  - `n::Int=1000`: length sample vector for computing weighted samples
 """
 function crpss_weighted(
     samples::YAXArray,
@@ -820,10 +831,11 @@ Compute Continuous Ranked Probability Skill Score for weighted vs. unweighted pr
 `samples` is one prediction per model in the ensemble, `observed` is the observed value.
 
 # Arguments:
-- `samples::YAXArray`: must have dimension :model or :member
-- `observed::Number`:
-- `weights::YAXArray`: must have same model dimension as `samples` (:model or :member)
-- `n::Int=1000`: length sample vector for computing weighted samples
+
+  - `samples::YAXArray`: must have dimension :model or :member
+  - `observed::Number`:
+  - `weights::YAXArray`: must have same model dimension as `samples` (:model or :member)
+  - `n::Int=1000`: length sample vector for computing weighted samples
 """
 function crpss_weighted(
     samples::YAXArray,
@@ -849,13 +861,14 @@ end
 """
     weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)
 
-Repeat each entry in `samples` proportional to respective value given in `weights` so that 
+Repeat each entry in `samples` proportional to respective value given in `weights` so that
 the returned vector has `n` entries.
 
 # Arguments:
-- `samples::YAXArray`: must have dimension :model or :member.
-- `weights::YAXArray`: must have same model dimension as `samples` (:model or :member).
-- `n::Int = 1000`: length of returned vector. 
+
+  - `samples::YAXArray`: must have dimension :model or :member.
+  - `weights::YAXArray`: must have same model dimension as `samples` (:model or :member).
+  - `n::Int = 1000`: length of returned vector.
 """
 function weightSamples(samples::YAXArray, weights::YAXArray; n::Int = 1000)
     level_predictions = Data.modelDim(samples)
@@ -1031,10 +1044,11 @@ end
     computeWeights(lls::YAXArray, w_diagnostics::YAXArray)
 
 # Arguments:
-- `lls::YAXArray`: log likelihoods, must have dimensions 'model', 'diagnostic'
-- `diagnostic::YAXArray`: must have dimension 'diagnostic' with the same values as in `lls`
-- `adjust_w::Bool` If true (default), `w_diagnostics` is normalized to sum to 1 and scaled by 
-the number of diagnostics, otherwise `w_diagnostics` is not changed at all.
+
+  - `lls::YAXArray`: log likelihoods, must have dimensions 'model', 'diagnostic'
+  - `diagnostic::YAXArray`: must have dimension 'diagnostic' with the same values as in `lls`
+  - `adjust_w::Bool` If true (default), `w_diagnostics` is normalized to sum to 1 and scaled by
+    the number of diagnostics, otherwise `w_diagnostics` is not changed at all.
 """
 function computeWeights(lls::YAXArray, w_diagnostics::YAXArray; adjust_w::Bool = true)
     d_lls = lookup(lls, :diagnostic)
@@ -1055,8 +1069,9 @@ end
     computeWeights(lls::YAXArray)
 
 # Arguments:
-- `lls::YAXArray`: log likelihoods, must have dimension 'model' and possibly 'diagnostic' as 
-second dimension. If several diangostics, equal weights for each are used (lls just summed up).
+
+  - `lls::YAXArray`: log likelihoods, must have dimension 'model' and possibly 'diagnostic' as
+    second dimension. If several diangostics, equal weights for each are used (lls just summed up).
 """
 function computeWeights(lls::YAXArray)
     if length(size(lls)) == 2
@@ -1110,10 +1125,11 @@ end
     )
 
 # Arguments:
-- `data::AbstractArray`: normal distributed model data
-- `obs::AbstractArray`: observed data for same time/location as `data`
-- `wn_diagnostics::AbstractArray`: weights for guassian distributed diagnostics. Do not have to sum to 1.
-Should not contain zero entries! (would do a lot of unnecessary work)
+
+  - `data::AbstractArray`: normal distributed model data
+  - `obs::AbstractArray`: observed data for same time/location as `data`
+  - `wn_diagnostics::AbstractArray`: weights for guassian distributed diagnostics. Do not have to sum to 1.
+    Should not contain zero entries! (would do a lot of unnecessary work)
 """
 @model function bmaCombinedDiagnostics(
     data::AbstractArray,
@@ -1165,13 +1181,14 @@ end
     )
 
 # Arguments:
-- `data::AbstractArray`: normal distributed model data
-- `obs::AbstractArray`: observed data for same time/location as `data`
-- `wn_diagnostics::AbstractArray`: weights for guassian distributed diagnostics. Do not have to sum to 1.
-Should not contain zero entries! (would do a lot of unnecessary work)
-- `data_other::AbstractArray`: e.g. ECS values for every model
-- `distr_other`: e.g., pdf for ECS
-- `wn_other`: weight for other diagnostic (not gaussian)
+
+  - `data::AbstractArray`: normal distributed model data
+  - `obs::AbstractArray`: observed data for same time/location as `data`
+  - `wn_diagnostics::AbstractArray`: weights for guassian distributed diagnostics. Do not have to sum to 1.
+    Should not contain zero entries! (would do a lot of unnecessary work)
+  - `data_other::AbstractArray`: e.g. ECS values for every model
+  - `distr_other`: e.g., pdf for ECS
+  - `wn_other`: weight for other diagnostic (not gaussian)
 """
 @model function bmaCombinedDiagnostics(
     data::AbstractArray,
@@ -1240,11 +1257,12 @@ end
 
 """
 # Arguments:
-- `data::AbstractArray`: dimensions 'lon' x 'lat' x 'model' x 'diagnostic'
-- `obs::AbstractArray`: dimensions 'lon' x 'lat' x 'diagnostic'
-- `wn_diagnostics::AbstractArray`: probabilities assigned to each diagnostic in `data` (in same order)
-- `prior_params::AbstractArray`: parameters for Dirichlet prior
-- `area_weights`:: area weights to account for different grid cell areas, size equal to first dimensions of `data` and `obs` (lon x lat)
+
+  - `data::AbstractArray`: dimensions 'lon' x 'lat' x 'model' x 'diagnostic'
+  - `obs::AbstractArray`: dimensions 'lon' x 'lat' x 'diagnostic'
+  - `wn_diagnostics::AbstractArray`: probabilities assigned to each diagnostic in `data` (in same order)
+  - `prior_params::AbstractArray`: parameters for Dirichlet prior
+  - `area_weights`:: area weights to account for different grid cell areas, size equal to first dimensions of `data` and `obs` (lon x lat)
 """
 @model function weightedAvgModel(
     data::AbstractArray,
@@ -1275,11 +1293,12 @@ end
 
 """
 # Arguments:
-- `data::AbstractArray`: dimensions 'lon' x 'lat' x 'model' x 'diagnostic'
-- `obs::AbstractArray`: dimensions 'lon' x 'lat' x 'diagnostic'
-- `wn_diagnostics::AbstractArray`: probabilities assigned to each diagnostic in `data` (in same order)
-- `prior_params::AbstractArray`: parameters for Dirichlet prior
-- `area_weights`:: area weights to account for different grid cell areas, size equal to first dimensions of `data` and `obs`
+
+  - `data::AbstractArray`: dimensions 'lon' x 'lat' x 'model' x 'diagnostic'
+  - `obs::AbstractArray`: dimensions 'lon' x 'lat' x 'diagnostic'
+  - `wn_diagnostics::AbstractArray`: probabilities assigned to each diagnostic in `data` (in same order)
+  - `prior_params::AbstractArray`: parameters for Dirichlet prior
+  - `area_weights`:: area weights to account for different grid cell areas, size equal to first dimensions of `data` and `obs`
 """
 @model function weightedAvgModel(
     data::AbstractArray,
@@ -1392,7 +1411,8 @@ end
     function drawFromSamples(samples, n_iter::Int, n_chains::Int, n_models::Int)
 
 # Arguments:
-- `samples`: rows are iterations, the first 'n_models' columns are the model weights.
+
+  - `samples`: rows are iterations, the first 'n_models' columns are the model weights.
 """
 function drawFromSamples(samples, n_iter::Int, n_chains::Int, n_models::Int)
     weights_list = map(c -> samples.value[:, 1:n_models, c], 1:n_chains)
@@ -1405,11 +1425,12 @@ end
 
 """
 # Arguments:
-- `model`:
-- `n_iter`: 
-- `n_chains::Int`:
-- `n_models::Int`: 
-- `from_prior::Bool`: if true sample from prior, otherwise use NUTS sampler
+
+  - `model`:
+  - `n_iter`:
+  - `n_chains::Int`:
+  - `n_models::Int`:
+  - `from_prior::Bool`: if true sample from prior, otherwise use NUTS sampler
 """
 function drawFromModel(
     model,
@@ -1432,7 +1453,8 @@ end
 # as done in Massoud paper
 """
 # Arguments:
-- `prior_weights::AbstractArray`: n_samples x n_models 
+
+  - `prior_weights::AbstractArray`: n_samples x n_models
 """
 function sampleMC(
     data::YAXArray,
