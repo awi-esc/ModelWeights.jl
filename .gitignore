@@ -81,6 +81,8 @@ Temporary Items
 
 # End of https://www.toptal.com/developers/gitignore/api/julia,macos,visualstudiocode
 
+DEADJOE
+
 slurm-*.out
 
 # Auto generated documentation files
@@ -91,13 +93,9 @@ logs/
 
 # generated output files
 output/
-
 plots*/
 
-
-scripts/playground/
-
-
-# some specific data files:
-
+# some specific directories/files:
 test/data/climwip-simplified/**/*.xml
+scripts/playground/
+configs/
