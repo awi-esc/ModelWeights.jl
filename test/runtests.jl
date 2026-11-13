@@ -1,8 +1,4 @@
-using Logging
-using ModelWeights
 using Test
-using YAXArrays
-
 
 @testset "ModelWeights tests" begin
     @testset "Data tests" begin

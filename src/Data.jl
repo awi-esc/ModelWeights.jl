@@ -1,23 +1,23 @@
 module Data
 
-import StatsBase
+import CSV
+import Dates
+import DimensionalData as DD
+import JLD2
 import LinearRegression as lr
+import NetCDF # needed for the .nc reader of YAXArrays
+import Serialization
+import StatsBase
+import Statistics
+import YAML
 
-using Missings: allowmissing
-
-using CSV
-using Dates
 using DataFrames
-using DimensionalData
+using Dates: DateTime
+using DimensionalData: At, Where, Dim, dims, hasdim, dimnum, otherdims, lookup
+using Missings: allowmissing
+using YAXArrays: YAXArray, open_dataset, mapCube, concatenatecubes, InDims, OutDims
+
 #using Distributed
-using NCDatasets
-using NetCDF
-using JLD2
-using Serialization
-using Setfield
-using Statistics
-using YAML
-using YAXArrays
 
 export DataMap, defineDataMap
 export summarizeMembers, summarizeMembers!

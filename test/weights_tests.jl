@@ -1,6 +1,10 @@
 import ModelWeights.Data as mwd
 import ModelWeights.Weights as mww
 
+using DimensionalData: Dim, At
+using Test
+using YAXArrays: YAXArray
+
 weights_members = YAXArray(
     (
         Dim{:weight}(["wP1", "wP2"]),

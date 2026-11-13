@@ -1,12 +1,13 @@
 module Timeseries
 
-using Dates
-using DimensionalData
-using LinearRegression
-using Missings
-using YAXArrays
+import ..Data # binds only the name Data (from parent module), nothing from inside
+import Dates
+import LinearRegression as lr
 
-import ..Data # binds only the name Data, nothing from inside
+using DimensionalData: @d, At, Where, Dim, dims, otherdims, lookup
+using Missings: allowmissing
+using YAXArrays: YAXArray
+
 
 """
     linearTrend(data::YAXArray; full_predictions::Bool=true)
@@ -44,7 +45,7 @@ Regress y on x and return slope (default) or predicted y for every element in `x
 """
 function computeLinearTrend(x::Vector, y::Vector; full_predictions::Bool = false)
     indices = findall(.!(ismissing.(y)))
-    lr = linregress(x[indices], y[indices])
+    lr = lr.linregress(x[indices], y[indices])
     slope = LinearRegression.slope(lr)
     return full_predictions ? LinearRegression.bias(lr) .+ (slope .* x) : slope
 end
@@ -103,7 +104,7 @@ function filterTimeseries(
         @warn "No data found in between $start_year and $end_year !"
         return nothing
     end
-    df = YAXArray(DimensionalData.dims(df), Array(df), deepcopy(df.properties))
+    df = YAXArray(dims(df), Array(df), deepcopy(df.properties))
     if only_models_non_missing_vals
         dim_symbol = Data.modelDim(df)
 
@@ -111,7 +112,7 @@ function filterTimeseries(
         models_missing_vals = dropdims(any(ismissing, df; dims = dims), dims = dims)
         #models_missing_vals = mapslices(x -> any(ismissing.(x)), df, dims = otherdims(df, dim_symbol))
 
-        n_models = length(DimensionalData.dims(models_missing_vals, dim_symbol))
+        n_models = length(dims(models_missing_vals, dim_symbol))
         indices_missing = findall(models_missing_vals)
         if !isempty(indices_missing)
             if length(indices_missing) == n_models
@@ -119,7 +120,7 @@ function filterTimeseries(
                 return nothing
             end
             models_missing = Data.getByIdxModel(models_missing_vals, indices_missing)
-            models_missing = DimensionalData.dims(models_missing, dim_symbol).val
+            models_missing = dims(models_missing, dim_symbol).val
             df =
                 dim_symbol == :model ? df[model=Where(x->!(x in models_missing))] :
                 df[member=Where(x->!(x in models_missing))]

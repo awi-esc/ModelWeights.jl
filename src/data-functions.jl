@@ -374,8 +374,7 @@ function summarizeMembersVector(data::YAXArray; fn::Function = Statistics.mean)
         #summarized = selectdim(fn(dat; dims = (:model,)), idx_model, 1)
 
         meta = subsetMeta(deepcopy(data.properties), model_indices[m]; simplify = true)
-        summarized_data_all[i] =
-            YAXArray(DimensionalData.dims(summarized), summarized.data, meta)
+        summarized_data_all[i] = YAXArray(dims(summarized), summarized.data, meta)
     end
     summarized_data =
         combineModelsFromMultipleFiles(summarized_data_all; model_names = models_uniq)
@@ -435,9 +434,9 @@ function summarizeMembersMatrix(
     # TODO: check metadata update!
     # meta = updateMeta ? updateGroupedDataMetadata(data.properties, grouped) : data.properties
     # combined = rebuild(combined; metadata = meta)
-    # l = Lookups.Categorical(sort(models); order = Lookups.ForwardOrdered())
+    # l = DD.Lookups.Categorical(sort(models); order = DD.Lookups.ForwardOrdered())
     # combined = combined[model1=At(sort(models)), model2=At(sort(models))]
-    # combined = DimensionalData.Lookups.set(combined, model1 = l, model2 = l)
+    # combined = DD.Lookups.set(combined, model1 = l, model2 = l)
     # return combined
 end
 

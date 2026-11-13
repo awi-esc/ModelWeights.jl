@@ -1,3 +1,7 @@
+import ModelWeights.Data as mwd
+
+using Test
+
 @testset "Test updateGroupedDataMetadata" begin end
 
 
@@ -12,13 +16,13 @@
         "other_key" => ["other_val1", "other_val2"],
     )
 
-    @test ModelWeights.Data.getCMIPModelsKey(cmip5) == "model_id"
-    @test ModelWeights.Data.getCMIPModelsKey(cmip6) == "source_id"
+    @test mwd.getCMIPModelsKey(cmip5) == "model_id"
+    @test mwd.getCMIPModelsKey(cmip6) == "source_id"
 
-    @test ModelWeights.Data.getCMIPModelsKey(both) == "source_id"
+    @test mwd.getCMIPModelsKey(both) == "source_id"
     warning_both = "Dictionary contains keys source_id and model_id, source_id is used!"
     # TODO: check how this works!!
-    # @test_logs (:debug, warning_both) ModelWeights.getCMIPModelsKey(both)
+    # @test_logs (:debug, warning_both) mwd.getCMIPModelsKey(both)
 
-    @test_throws ArgumentError ModelWeights.Data.getCMIPModelsKey(none_present)
+    @test_throws ArgumentError mwd.getCMIPModelsKey(none_present)
 end

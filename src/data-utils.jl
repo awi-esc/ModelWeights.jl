@@ -642,10 +642,7 @@ each vector only contains N entries (N=number of models (i.e. without unique mem
 If the metadata for members of a model differ across members, the respective
 entry in the vector will be a vector itself.
 """
-function updateGroupedDataMetadata(
-    meta::Dict,
-    grouped_data::DimensionalData.DimGroupByArray,
-)
+function updateGroupedDataMetadata(meta::Dict, grouped_data::DD.DimGroupByArray)
     meta_new = filter(((k, v),) -> k == "member_names" || !(v isa Vector), meta)
     attributes = filter(x -> meta[x] isa Vector && x != "member_names", keys(meta))
     attribs_diff_across_members = []
@@ -1375,7 +1372,7 @@ function distancesData(models::YAXArray, observations::YAXArray; metric::Symbol 
     model_dim = modelDim(models)
     model_names = lookup(models, model_dim)
     if otherdims(models, model_dim) != dims(obs)
-        msg = "Found: Model dims (other than model dim): $(DimensionalData.name.(otherdims(models, model_dim))) and observational dims: $(DimensionalData.name.(dims(obs)))"
+        msg = "Found: Model dims (other than model dim): $(DD.name.(otherdims(models, model_dim))) and observational dims: $(DD.name.(dims(obs)))"
         throw(
             ArgumentError(
                 "dimensions of model (other than model dim) and observation data must align!" *
@@ -2327,8 +2324,8 @@ Combine two YAXArrays with identical dimensions into one with extended dimension
   - `df1::YAXArray`: first YAXArray
   - `df2::YAXArray`: second YAXArray
   - `dim::Symbol`: dimension which is merged
-  - `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(),
-    otherwise, lookup type is Unordered()
+  - `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type
+    ForwardOrdered(), otherwise, lookup type is Unordered()
 """
 function mergeYAX(df1::YAXArray, df2::YAXArray, dim::Symbol; sorted::Bool = true)
     return mergeYAX([df1, df2], dim; sorted)
@@ -2343,8 +2340,8 @@ Combine several YAXArrays with identical dimensions into one with extended dimen
 
   - `dfs::AbstractArray{<:YAXArray}`: YAXArrays to be merged
   - `dim::Symbol`: dimension which is merged
-  - `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type ForwardOrdered(),
-    otherwise, lookup type is Unordered()
+  - `sorted::Bool=true`: if true, dimension 'dim' has DimensionalData.Lookups type
+    ForwardOrdered(), otherwise, lookup type is Unordered()
 """
 function mergeYAX(dfs::AbstractArray{<:YAXArray}, dim::Symbol; sorted::Bool = true)
     if length(dfs) < 2
@@ -2358,12 +2355,12 @@ function mergeYAX(dfs::AbstractArray{<:YAXArray}, dim::Symbol; sorted::Bool = tr
             ),
         )
     end
-    new_vals = vcat((val(dims(df, dim)) for df in dfs)...)
-    dim_lookup = DimensionalData.lookup(dfs[1], dim)
+    new_vals = vcat((DD.val(dims(df, dim)) for df in dfs)...)
+    dim_lookup = lookup(dfs[1], dim)
     new_lookup =
-        isa(dim_lookup, DimensionalData.Lookups.Categorical) ?
-        Lookups.Categorical(new_vals; order = Lookups.Unordered()) :
-        Lookups.Sampled(new_vals; order = Lookups.Unordered())
+        isa(dim_lookup, DD.Lookups.Categorical) ?
+        DD.Lookups.Categorical(new_vals; order = DD.Lookups.Unordered()) :
+        DD.Lookups.Sampled(new_vals; order = DD.Lookups.Unordered())
 
     merged = cat(dfs...; dims = Dim{dim}(new_lookup))
     if sorted
@@ -2377,17 +2374,17 @@ function mergeYAX(dm::DataMap, dim::Symbol; sorted::Bool = true) end
 
 function _sortYAX(df::T, dim::Symbol) where {T<:YAXArray}
     idx = dimnum(df, dim)
-    vals = DimensionalData.lookup(df, dim)
+    vals = lookup(df, dim)
     perm = sortperm(vals)
     indices = map(x -> x == idx ? perm : Colon(), 1:ndims(df))
     df = df[indices...] # already applies to dimension names and content!
     # but set type of Lookup values to ForwardOrdered():
-    dim_lookup = DimensionalData.lookup(df, dim)
+    dim_lookup = lookup(df, dim)
     new_lookup =
-        isa(dim_lookup, DimensionalData.Lookups.Categorical) ?
-        Lookups.Categorical(val(dims(df, dim)); order = Lookups.ForwardOrdered()) :
-        Lookups.Sampled(val(dims(df, dim)); order = Lookups.ForwardOrdered())
-    df = DimensionalData.set(df, dim => new_lookup)
+        isa(dim_lookup, DD.Lookups.Categorical) ?
+        DD.Lookups.Categorical(DD.val(dims(df, dim)); order = DD.Lookups.ForwardOrdered()) :
+        DD.Lookups.Sampled(DD.val(dims(df, dim)); order = DD.Lookups.ForwardOrdered())
+    df = DD.set(df, dim => new_lookup)
     return df
 end
 

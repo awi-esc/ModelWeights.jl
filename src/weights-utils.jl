@@ -1,7 +1,7 @@
 """
     weightedAvg(
-        data::YAXArray; 
-        weights::Union{YAXArray, Nothing} = nothing, 
+        data::YAXArray;
+        weights::Union{YAXArray, Nothing} = nothing,
         use_members_equal_weights::Bool = true
     )
 
@@ -197,7 +197,7 @@ function saveWeightsAsNCFile(weights::ClimWIP, target_path::String)
                         ds.attrib["w_"*config_key*"_"*k] = v
                     end
                 elseif config_key != "target_path"
-                    # if target path was updated, use updated version here, 
+                    # if target path was updated, use updated version here,
                     # not the one that had been saved in weights!
                     ds.attrib[config_key] = config_val
                 end
@@ -314,7 +314,7 @@ function likelihoodWeights(vec::AbstractArray{<:Number}, lh_fn::Function, args..
 end
 
 
-# TODO: add config for independence weight, maybe abstract config struct, that can 
+# TODO: add config for independence weight, maybe abstract config struct, that can
 # be more general than ConfigWeights.
 # return ClimWIP object
 function climwipWeights(wP::MMEWeights, wI::MMEWeights; suffix_combined::String = "")
@@ -325,7 +325,7 @@ function climwipWeights(wP::MMEWeights, wI::MMEWeights; suffix_combined::String 
     # end
     # if out == :only_combined
     #     return YAXArray(
-    #         (Dim{:model}(lookup(wIP, :model)), Dim{:weight}([name_combined])), 
+    #         (Dim{:model}(lookup(wIP, :model)), Dim{:weight}([name_combined])),
     #         reshape(wIP.data, :, 1)
     #     )
     # else
@@ -465,7 +465,7 @@ end
 
 """
     climwipWeights(
-        dists_indep_all::YAXArray, 
+        dists_indep_all::YAXArray,
         dists_perform_all::YAXArray,
         config::ConfigWeights;
         suffix_name::Stirng = "climwip"
@@ -567,7 +567,7 @@ function independenceWeights(Sij::YAXArray, sigmaS::Number)
     # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
     independences = sum(exp.(-(Sij ./ sigmaS) .^ 2), dims = :model2)
     independences = dropdims(independences, dims = :model2)
-    independences = DimensionalData.set(independences, :model1 => :model)
+    independences = DD.set(independences, :model1 => :model)
     independences = 1 ./ independences
     return independences ./ sum(independences)
 end
@@ -983,7 +983,7 @@ end
 
 """
     llInverseMSE(
-        data::AbstractArray, 
+        data::AbstractArray,
         obs::AbstractArray,
         model_names::AbstractArray{String}, # if summarize_members is true these refer to members
         latitudes::AbstractArray{<:Real},

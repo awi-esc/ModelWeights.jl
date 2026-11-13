@@ -12,7 +12,7 @@ using FillArrays
 using JLD2
 using NCDatasets
 using Serialization
-using Setfield
+using Setfield: @set
 using Statistics
 using Turing
 using YAXArrays

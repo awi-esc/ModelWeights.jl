@@ -1,7 +1,7 @@
-import ModelWeights as mw
 import ModelWeights.Data as mwd
 
-using DimensionalData
+using DimensionalData: Dim, dims
+using Test
 using YAXArrays
 
 
@@ -114,7 +114,7 @@ end
 #         "midHolocene";
 #         filename_format = :cmip
 #     )
-#     # since the directory contains multiple variables for the same model, it should return all data, 
+#     # since the directory contains multiple variables for the same model, it should return all data,
 #     # and model CCSM4 should be twice in the model dimension. TODO: this is not supported yet
 #     @test_broken length(dims(df["midHolocene"], :member)) == 2
 #     @warn "The directory should contain data for one variable and multiple models, or just one model and variable for multiple time periods, but not multiple variables for one model."
@@ -128,7 +128,7 @@ end
 #             "orog-historical";
 #             filename_format = fn
 #         )
-#         @test Array(df["orog-historical"].member) == ["AWI-ESM-1-REcoM#r1i1p1f1"] 
+#         @test Array(df["orog-historical"].member) == ["AWI-ESM-1-REcoM#r1i1p1f1"]
 #     end
 #     # directory contains multiple files with pr for AWI-ESM-1-REcoM, for various time periods, from 1850-2014
 #     path_cmip6 = "/albedo/work/projects/p_pool_clim_data/CMIP6/CMIP/AWI/AWI-ESM-1-REcoM/historical/r1i1p1f1/Amon/pr/gn/v20230314"
@@ -151,20 +151,20 @@ end
 
 #     paths_lgm = [data_paths["lgm-tas"], data_paths["lgm-tos"]]
 #     ids = ["lgm-tas-data", "tos_lgm"]
-#     data = mw.defineDataMap(paths_lgm, ids; dtype, filename_format)
+#     data = mwd.defineDataMap(paths_lgm, ids; dtype, filename_format)
 #     @test size(data["lgm-tas-data"]) == (72, 36, 17)
 #     @test size(data["tos_lgm"]) == (72, 36, 16)
 
 #     constraint = Dict{String, Union{Vector{String}, Symbol}}("level_shared" => :member)
-#     data = mw.defineDataMap(paths_lgm, ids; dtype, filename_format, constraint)
+#     data = mwd.defineDataMap(paths_lgm, ids; dtype, filename_format, constraint)
 #     @test data["lgm-tas-data"].member == data["tos_lgm"].member
 #     @test length(data["lgm-tas-data"].member) == 15
 
 #     constraint["models"] = ["GISS-E2-R"]
-#     data = mw.defineDataMap(paths_lgm, ids; dtype, filename_format, constraint)
+#     data = mwd.defineDataMap(paths_lgm, ids; dtype, filename_format, constraint)
 #     @test length(data["lgm-tas-data"].member) == 2
 
 #     constraint["models"] = ["GISS-E2-R#r1i1p150"]
-#     data = mw.defineDataMap(paths_lgm, ids; dtype, filename_format, constraint)
+#     data = mwd.defineDataMap(paths_lgm, ids; dtype, filename_format, constraint)
 #     @test length(data["lgm-tas-data"].member) == 1
 # end

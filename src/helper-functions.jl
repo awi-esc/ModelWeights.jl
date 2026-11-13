@@ -54,13 +54,13 @@ function throwErrorIfDimMissing(
     if include == :all && any(x -> !hasdim(data, x), dimensions)
         throw(
             ArgumentError(
-                "Data must have all of dimensions $(dimensions). Found: $(DimensionalData.name.(DimensionalData.dims(data)))",
+                "Data must have all of dimensions $(dimensions). Found: $(DD.name.(dims(data)))",
             ),
         )
     elseif all(x -> !hasdim(data, x), dimensions)
         throw(
             ArgumentError(
-                "Data must have any of dimensions $(dimensions). Found: $(DimensionalData.name.(DimensionalData.dims(data)))",
+                "Data must have any of dimensions $(dimensions). Found: $(DD.name.(dims(data)))",
             ),
         )
     end
@@ -70,7 +70,7 @@ end
 
 function throwErrorIfNotLonLat(data::YAXArray)
     try
-        dimensions = DimensionalData.name.(dims(data))
+        dimensions = DD.name.(dims(data))
         if dimensions[1:2] != (:lon, :lat)
             throw(
                 ArgumentError(
@@ -81,7 +81,7 @@ function throwErrorIfNotLonLat(data::YAXArray)
     catch _
         throw(
             ArgumentError(
-                "Input data must have :lon as first and :lat as second dimension! Found:$(DimensionalData.name.(dims(data)))",
+                "Input data must have :lon as first and :lat as second dimension! Found:$(DD.name.(dims(data)))",
             ),
         )
     end
@@ -224,7 +224,7 @@ function convertToSv!(data::YAXArray)
     temp = Array(data)
     data .= temp ./ (1.025 * 10^9)
     m = modelDim(data)
-    n = length(DimensionalData.dims(data, m))
+    n = length(dims(data, m))
     units = get(data.properties, "units", Vector(undef, n))
     units .= "Sv (m3 s-1)"
     return nothing
@@ -256,7 +256,7 @@ function m2ToKm2!(data::YAXArray; scale = 1)
     temp = Array(data)
     data .= temp ./ (10^6 * scale)
     m = modelDim(data)
-    n = length(DimensionalData.dims(data, m))
+    n = length(dims(data, m))
     units = get(() -> fill("", n), data.properties, "units")
     if any(x -> x != "m2" && x != "", units)
         @warn "When converting m2 to km2, some metadata was not 'm2'. "
@@ -318,7 +318,7 @@ Rename dimension `dim` to `dim_name` in `data`.
   - `dim_name::Symbol`: New dimension name.
 """
 function setDim(data::YAXArray, dim::Symbol, dim_name::Symbol)
-    data = DimensionalData.set(data, dim => dim_name)
+    data = DD.set(data, dim => dim_name)
     return data
 end
 
@@ -335,7 +335,7 @@ Set dimension values of dimension `dim` in `data` to `dim_vals`.
   - `dim_vals::Vector{String}`:  New dimension values.
 """
 function setDim(data::YAXArray, dim::Symbol, dim_vals::AbstractVector{T}) where {T}
-    data = DimensionalData.set(data, dim => dim_vals)
+    data = DD.set(data, dim => dim_vals)
     return data
 end
 
@@ -346,8 +346,8 @@ end
 Return the names of the dimensions of `data` as vector of symbols.
 """
 function dimNames(data::YAXArray)
-    #return collect(DimensionalData.name.(dims(data)))
-    return DimensionalData.name.(dims(data))
+    #return collect(DD.name.(dims(data)))
+    return DD.name.(dims(data))
 end
 
 
@@ -469,13 +469,13 @@ function sortLongitudesWest2East(data::YAXArray)
 
     # # necessary to specify that lookup dimension values aren't sorted anymore!
     # # otherwise Selector At won't work! does seem to work don't know TODO: CHECK THIS!!
-    # lookup_lon = Lookups.Sampled(
+    # lookup_lon = DD.Lookups.Sampled(
     #     sorted_lon;
-    #     span = Lookups.Irregular(minimum(longitudes), maximum(longitudes)),
-    #     order = Lookups.ForwardOrdered(),
+    #     span = DD.Lookups.Irregular(minimum(longitudes), maximum(longitudes)),
+    #     order = DD.Lookups.ForwardOrdered(),
     # )
     # data = data[lon = At(sorted_lon)]
-    # data = DimensionalData.Lookups.set(data, lon = lookup_lon)
+    # data = DD.Lookups.set(data, lon = lookup_lon)
     return data[lon=vcat(indices.west, indices.east)]
 end
 
@@ -518,11 +518,10 @@ end
 
 function _insertSingletonDim(A::YAXArray, idx::Int, ::Val{name}, val::String) where {name}
     A_mat = insertSingletonDim(parent(A), idx)
-    old_dims = DimensionalData.dims(A)
+    old_dims = dims(A)
     new_dim = Dim{name}([val])
 
-    new_dims =
-        DimensionalData.DimTuple((old_dims[1:(idx-1)]..., new_dim, old_dims[idx:end]...))
+    new_dims = DD.DimTuple((old_dims[1:(idx-1)]..., new_dim, old_dims[idx:end]...))
     return YAXArray(new_dims, A_mat, copy(A.properties))
 end
 
