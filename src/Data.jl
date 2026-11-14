@@ -18,8 +18,9 @@ using Missings: allowmissing
 using YAXArrays: YAXArray, open_dataset, mapCube, concatenatecubes, InDims, OutDims
 
 export DataMap, defineDataMap
+export loadDataFromESMValTool, loadDataFromYAML
 export summarizeMembers, summarizeMembers!
-export subsetModelData, sharedModels
+export subsetModelData, subsetModelData!, sharedModels
 export MODEL_MEMBER_DELIM
 
 const MODEL_MEMBER_DELIM = "#"
