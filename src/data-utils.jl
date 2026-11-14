@@ -379,9 +379,7 @@ function _filterMeta!(
             _applyConstraintTS!(meta_data_per_dataset, constraint_ts)
         end
     end
-    if !isa(level, NoLevel) # for observational data, the method does not change anything
-        _applyLevel!(meta_data_per_dataset, level)
-    end
+    _applyLevel!(meta_data_per_dataset, level)
     return nothing
 end
 # """

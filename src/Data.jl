@@ -79,20 +79,21 @@ const CMIP6_GRID_LABELS = Set([
 
 ## -------------------------------- Levels for filtering -------------------------------- #
 abstract type AbstractLevel end
-abstract type Level <: AbstractLevel end
-abstract type NoLevel <: AbstractLevel end
+struct LevMember <: AbstractLevel end
+struct LevModel <: AbstractLevel end
+struct LevNone <: AbstractLevel end
 
-struct LevMember <: Level end
-struct LevModel <: Level end
-struct LevNone <: NoLevel end
+# Internal conversion from Symbol to level type
+const LEVELS = Dict{Symbol,AbstractLevel}(
+    :member => LevMember(),
+    :model => LevModel(),
+    :none => LevNone()
+)
+toLevel(l::Symbol) = get(LEVELS, l) do
+    throw(ArgumentError("invalid level :$l, expected one of: $(collect(keys(LEVELS)))"))
+end
+toLevel(l::AbstractLevel) = l
 
-# Internal conversion
-toLevel(::Val{:member}) = LevMember()
-toLevel(::Val{:model}) = LevModel()
-toLevel(::Val{:none}) = LevNone()
-toLevel(l::Level) = l
-toLevel(::Val{l}) where {l} =
-    throw(ArgumentError("invalid level :$l, expected one of: :member, :model, :none"))
 
 ## -------------------------------------- Meta Data -------------------------------------- #
 mutable struct MetaData
@@ -180,7 +181,7 @@ end
 
 const DataMap = Dict{String,YAXArray}
 
-function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String}; sorted::Bool = true)
+function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String})
     if length(data) != length(ids)
         throw(ArgumentError("data and ids must have same size to build up DataMap"))
     end

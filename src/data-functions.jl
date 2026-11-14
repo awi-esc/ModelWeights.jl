@@ -50,7 +50,7 @@ If no models are shared across datasets, return the input `dm`.
 
 # Keywords
 
-  - `level::Symbol`: one of :none, :model, :member (default)
+  - `level::Symbol=:member`: one of :model, :member
   - `ids::Vector{String}=Vector{String}()`: only applied for given ids in `dm` if not empty
 """
 function subsetModelData(
@@ -58,7 +58,8 @@ function subsetModelData(
     level::Symbol = :member,
     ids::Vector{String} = Vector{String}(),
 )
-    shared_models = sharedModels(dm, toLevel(Val(level)))
+    level == :none && throw(ArgumentError(":none is not a valid level for subsetModelData, expects :model or :member."))
+    shared_models = sharedModels(dm, level)
     if isempty(shared_models)
         @warn "no shared models in input datamap!"
         return dm
@@ -95,7 +96,7 @@ function subsetModelData!(
     level::Symbol = :member,
     ids::Vector{String} = Vector{String}(),
 )
-    shared_models = sharedModels(dm, toLevel(Val(level)))
+    shared_models = sharedModels(dm, level)
     if isempty(shared_models)
         @warn "no shared models in input datamap!"
         return dm
@@ -109,25 +110,17 @@ function subsetModelData!(
     return nothing
 end
 
-"""
-    sharedModels(data::DataMap, level::Level)
-"""
-function sharedModels(data::DataMap, level::Level)
-    return isa(level, LevMember) ? sharedLevelMembers(data) : sharedLevelModels(data)
-end
+sharedModels(data::DataMap, ::LevMember) = sharedLevelMembers(data)
+sharedModels(data::DataMap, ::LevModel) = sharedLevelModels(data)
+sharedModels(data::DataMap, level::Symbol) = sharedModels(data, toLevel(level))
 
-"""
-    sharedModels(data::DataMap, level::Symbol)
-"""
-function sharedModels(data::DataMap, level::Symbol)
-    return sharedModels(data, toLevel(Val(level)))
-end
-
-# dispatch instead of if/isa branching
 _modelKey(meta::AbstractMeta, ::LevModel) = meta.model
 _modelKey(meta::ModelMeta, ::LevMember) = meta.member_id
 
-function sharedModelsFromMeta(meta_data::Vector{Vector{ModelMeta}}, level::Level)
+function sharedModelsFromMeta(
+    meta_data::Vector{Vector{ModelMeta}},
+    level::Union{LevMember, LevModel},
+)
     models_per_dataset = Vector{Set{String}}(undef, length(meta_data))
     @inbounds for (i, meta_data_files) in pairs(meta_data)
         models = Set{String}()
@@ -674,25 +667,16 @@ function _loadDataMapCore(
     return defineDataMap(data, ids_filtered)
 end
 
-function _applyLevel!(
-    meta_data_per_dataset::AbstractVector{<:AbstractVector{ObsMeta}},
-    level::Level,
-)
-    return nothing
-end
+_applyLevel!(m::AbstractVector{<:AbstractVector{<:AbstractMeta}}, ::AbstractLevel) = nothing
 
 function _applyLevel!(
     meta_data_per_dataset::AbstractVector{<:AbstractVector{ModelMeta}},
-    level::Level,
+    level::Union{LevMember, LevModel},
 )
     # either contains models or members, depending on level:
     shared = sharedModelsFromMeta(meta_data_per_dataset, level)
     for (i, meta_files) in enumerate(meta_data_per_dataset)
-        if isa(level, LevModel)
-            mask = [meta.model in shared for meta in meta_files]
-        else
-            mask = [meta.member_id in shared for meta in meta_files]
-        end
+        mask = [_modelKey(meta, level) in shared for meta in meta_files]
         meta_data_per_dataset[i] = meta_files[mask]
     end
     return nothing
@@ -793,7 +777,7 @@ function loadDataFromESMValToolRecipes(
         dir_per_var;
         base_subdirs = get(constraint, :base_subdirs, String[]),
     )
-    level_resolved = toLevel(Val(level))
+    level_resolved = toLevel(level)
     fn_format = toFF(Val(filename_format))
     constr_models, constr_obs = Constraint(constraint), ConstraintObs(constraint_obs)
     meta_models = _getFilteredMetaData(
@@ -906,7 +890,7 @@ function loadDataFromYAML(
         ds_level =
             level == :none ? Symbol(get(ds_constraint, "level_shared", "none")) : level
         # argument has precedence over what is in config file
-        level_resolved = toLevel(Val(ds_level))
+        level_resolved = toLevel(ds_level)
         meta_models = _getFilteredMetaData(
             paths,
             Constraint(ds_constraint),
@@ -1255,7 +1239,7 @@ function _prepareMetaData(
     if length(paths_datasets) != length(ids)
         throw(ArgumentError("'all_paths' and 'ids' must have the same length!"))
     end
-    level_resolved = toLevel(Val(level))
+    level_resolved = toLevel(level)
     fn_format = toFF(Val(filename_format))
     all_paths = Vector{Vector{String}}(undef, length(paths_datasets))
     for (i, paths) in enumerate(paths_datasets)
@@ -1289,7 +1273,7 @@ function _prepareMetaData(
     if length(paths) != length(ids)
         throw(ArgumentError("'paths' and 'ids' must have the same length!"))
     end
-    level_resolved = toLevel(Val(level))
+    level_resolved = toLevel(level)
     fn_format = toFF(Val(filename_format))
     all_paths = Vector{Vector{String}}(undef, length(paths))
     for (i, path) in enumerate(paths)
@@ -1319,7 +1303,7 @@ function _prepareMetaData(
     level::Symbol = :none,
     filename_format::Symbol = :cmip,
 )
-    level_resolved = toLevel(Val(level))
+    level_resolved = toLevel(level)
     fn_format = toFF(Val(filename_format))
     paths_to_files = vcat(_collectPaths.(paths)...)
     _getFilteredMetaData(
@@ -1358,7 +1342,7 @@ end
         paths_to_files::Vector{Vector{String}},
         constraint::AbstractConstraint,
         constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}};
-        level::AbstractLevel=NoLevel(),
+        level::AbstractLevel=LevNone(),
         fn_format::AbstractFnFormat=FF_CMIP()
     )
 
@@ -1371,14 +1355,14 @@ end
 
 # Keywords
 
-  - `level::AbstractLevel=NoLevel()`:
+  - `level::AbstractLevel=LevNone()`:
   - `fn_format::AbstractFnFormat=FF_CMIP()`:
 """
 function _getFilteredMetaData(
     paths_to_files::Vector{Vector{String}},
     constraint::AbstractConstraint,
     constraint_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}};
-    level::AbstractLevel = NoLevel(),
+    level::AbstractLevel = LevNone(),
     fn_format::AbstractFnFormat = FF_CMIP(),
 )
     # TODO: add possibility to have one constraint per dataset?!
