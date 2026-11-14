@@ -38,17 +38,15 @@ function subsetModelData(data::YAXArray, shared_models::Vector{String})
 end
 
 """
-    subsetModelData(dm::DataMap; level::Symbol=:member, ids::Vector{String}=Vector{String}())
+    subsetModelData(
+        dm::DataMap; level::Symbol=:member, ids::Vector{String}=Vector{String}()
+    )
 
 Return a new DataMap with subset of those datasets in `dm` that specify data on the level
 `level` (i.e. have dimension :member or :model) so that all datasets have the same models or
 members.
 
 If no models are shared across datasets, return the input `dm`.
-
-# Arguments
-
-  - `dm::DataMap`:
 
 # Keywords
 
@@ -75,11 +73,6 @@ function subsetModelData(
     return subset
 end
 
-# function subsetModelData(dm::DataMap, level::Symbol; ids::Vector{String}=Vector{String}())
-#     subsetModelData(dm, getLevel(level); ids)
-# end
-
-
 """
     subsetModelData!(
         dm::DataMap, level::Symbol=:member; ids::Vector{String} = Vector{String}()
@@ -98,8 +91,8 @@ Subset all entries in dm to the shared set of models on 'level' among all entrie
     considered
 """
 function subsetModelData!(
-    dm::DataMap,
-    level::Symbol = :member;
+    dm::DataMap;
+    level::Symbol = :member,
     ids::Vector{String} = Vector{String}(),
 )
     shared_models = sharedModels(dm, toLevel(Val(level)))
@@ -115,10 +108,6 @@ function subsetModelData!(
     end
     return nothing
 end
-
-# function subsetModelData!(dm::DataMap, level::Symbol; ids::Vector{String}=Vector{String}())
-#     subsetModelData!(dm, getLevel(level); ids)
-# end
 
 """
     sharedModels(data::DataMap, level::Level)
@@ -955,7 +944,8 @@ function loadDataFromYAML(
         sorted,
         model_times,
     )
-    level != :none && subsetModelData!(dm_models, level) # apply level across all datasets
+    # apply level across all datasets
+    level != :none && subsetModelData!(dm_models; level = level)
     return (models = dm_models, obs = dm_obs)
 end
 
