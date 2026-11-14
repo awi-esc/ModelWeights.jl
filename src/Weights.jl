@@ -3,6 +3,7 @@ module Weights
 using ..Data
 
 import LinearAlgebra: Diagonal
+import Statistics as stats
 import StatsBase.ecdf
 
 using Dates
@@ -13,7 +14,6 @@ using JLD2
 using NCDatasets
 using Serialization
 using Setfield: @set
-using Statistics
 using Turing
 using YAXArrays
 

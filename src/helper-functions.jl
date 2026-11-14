@@ -6,7 +6,7 @@
 Wrapper function for mean that removes 'dimension' from the returned YAXArray.
 """
 function average(data::YAXArray, dimension::Symbol)
-    avg = mean(data; dims = dimension)
+    avg = stats.mean(data; dims = dimension)
     indices = map(x -> x == dimension ? 1 : Colon(), dimNames(data))
     return avg[indices...]
 end
@@ -334,7 +334,7 @@ Set dimension values of dimension `dim` in `data` to `dim_vals`.
   - `dim::Symbol`: Name of the dimension to be changed.
   - `dim_vals::Vector{String}`:  New dimension values.
 """
-function setDim(data::YAXArray, dim::Symbol, dim_vals::AbstractVector{T}) where {T}
+function setDim(data::YAXArray, dim::Symbol, dim_vals::AbstractVector)
     data = DD.set(data, dim => dim_vals)
     return data
 end

@@ -8,7 +8,7 @@ import LinearRegression as lr
 import NetCDF # needed for the .nc reader of YAXArrays
 import Serialization
 import StatsBase
-import Statistics
+import Statistics as stats
 import YAML
 
 using DataFrames
@@ -17,13 +17,10 @@ using DimensionalData: At, Where, Dim, dims, hasdim, dimnum, otherdims, lookup
 using Missings: allowmissing
 using YAXArrays: YAXArray, open_dataset, mapCube, concatenatecubes, InDims, OutDims
 
-#using Distributed
-
 export DataMap, defineDataMap
 export summarizeMembers, summarizeMembers!
 export subsetModelData, sharedModels
 export MODEL_MEMBER_DELIM
-
 
 const MODEL_MEMBER_DELIM = "#"
 # maps from file name as retrieved from metadata to name in the filename itself
@@ -79,7 +76,7 @@ const CMIP6_GRID_LABELS = Set([
     "grz",
 ])
 
-
+## -------------------------------- Levels for filtering -------------------------------- #
 abstract type AbstractLevel end
 abstract type Level <: AbstractLevel end
 abstract type NoLevel <: AbstractLevel end
@@ -96,7 +93,7 @@ toLevel(l::Level) = l
 toLevel(::Val{l}) where {l} =
     throw(ArgumentError("invalid level :$l, expected one of: :member, :model, :none"))
 
-
+## -------------------------------------- Meta Data -------------------------------------- #
 mutable struct MetaData
     variable::String
     experiment::String
@@ -180,7 +177,6 @@ function MetaData(
     )
 end
 
-
 const DataMap = Dict{String,YAXArray}
 
 function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String}; sorted::Bool = true)
@@ -206,6 +202,7 @@ function defineDataMap(data::Vector{<:YAXArray}, ids::Vector{String}; sorted::Bo
     return dm
 end
 
+## ----------------------------------- Filename formats ---------------------------------- #
 abstract type AbstractFnFormat end
 abstract type CMIPFormat <: AbstractFnFormat end
 
@@ -271,14 +268,14 @@ formatString(
     ::FF_ESMVT_CMIP6_TR,
 ) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE"
 
-formatString(::FF_ESMVT_OBS) = "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
-formatString(::FF_ESMVT_OBS_TR) = "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE"
+formatString(::FF_ESMVT_OBS) = "PROJECT_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
+formatString(::FF_ESMVT_OBS_TR) = "PROJECT_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE"
 
 function _parseFormat(format_string::String)
     parts = split(format_string, "_")
     return Dict(Symbol(lowercase(p)) => i for (i, p) in enumerate(parts))
 end
-# # precomputed at definition time
+# precomputed at definition time
 const CMIP5_ESMVT_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP5()))
 const CMIP5_ESMVT_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_CMIP5_TR()))
 const CMIP6_ESMVT_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP6()))
@@ -289,23 +286,22 @@ const CMIP5_FIELD_INDICES_TR = _parseFormat(formatString(FF_CMIP5_TR()))
 const CMIP6_FIELD_INDICES = _parseFormat(formatString(FF_CMIP6()))
 const CMIP6_FIELD_INDICES_TR = _parseFormat(formatString(FF_CMIP6_TR()))
 
-
 const OBS_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_OBS()))
 const OBS_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_OBS_TR()))
 
-
+## ------------------------------- Model and Obs Meta Data ------------------------------- #
 abstract type AbstractMeta end
 struct ModelMeta <: AbstractMeta
     fn::String
     path::String
     variable::SubString{String}
-    tableid::SubString{String}
+    tableid::SubString{String} # e.g., Amon, Omon, etc.
     model::SubString{String}
     experiment::SubString{String}
     variant::SubString{String}
-    grid::Union{Nothing,SubString{String}} # in CMIP standard only given for CMIP6, not CMIP5
-    mip::Union{Nothing,SubString{String}} # in CMIP standard only given for CMIP5, not CMIP6
-    timerange::Union{Nothing,SubString{String}}# only given in filenames of CMIP standard
+    grid::Union{Nothing,SubString{String}} # only given for CMIP6 data, not for CMIP5
+    mip::Union{Nothing,SubString{String}} # which model intercomparison project, e.g. CMIP6
+    timerange::Union{Nothing,SubString{String}}
     member_id::String
 
     function ModelMeta(
@@ -321,8 +317,11 @@ struct ModelMeta <: AbstractMeta
         timerange::Union{Nothing,SubString{String}},
     )
         member_id = string(model, MODEL_MEMBER_DELIM, variant)
-        if !isnothing(mip) && lowercase(mip) == "cmip6"
+        if !isnothing(grid)
             member_id = string(member_id, "_", grid)
+        end
+        if !isnothing(mip) && lowercase(mip) == "cmip6"
+            isnothing(grid) && throw(ArgumentError("CMIP6 models must define a grid!"))
         end
         new(
             fn,
@@ -352,6 +351,9 @@ function ModelMeta(;
     mip::Union{Nothing,SubString{String}},
     timerange::Union{Nothing,SubString{String}},
 )
+    # if !isnothing(timerange)
+    #     # verify format for monthly data: yyyymm-yyyymm #TODO
+    # end
     ModelMeta(fn, path, variable, tableid, model, experiment, variant, grid, mip, timerange)
 end
 
@@ -361,7 +363,7 @@ struct ObsMeta <: AbstractMeta
     variable::SubString{String}
     tableid::SubString{String}
     model::SubString{String}
-    grid::SubString{String}
+    project::SubString{String}
     type::SubString{String}
     version::SubString{String}
     timerange::Union{Nothing,SubString{String}}
@@ -373,64 +375,71 @@ function ObsMeta(;
     variable::SubString{String},
     tableid::SubString{String},
     model::SubString{String},
-    grid::SubString{String},
+    project::SubString{String},
     type::SubString{String},
     version::SubString{String},
     timerange::Union{Nothing,SubString{String}},
 )
-    ObsMeta(fn, path, variable, tableid, model, grid, type, version, timerange)
+    ObsMeta(fn, path, variable, tableid, model, project, type, version, timerange)
 end
 
 const PreviewMap = Dict{String,Vector{AbstractMeta}}
 
-@kwdef struct Constraint
-    filenames::Vector{String}
-    variables::Vector{String}
-    tableids::Vector{String}
-    models::Vector{String}
-    experiments::Vector{String}
-    variants::Vector{String}
-    grids::Vector{String} # in CMIP standard only given for CMIP6, not CMIP5
-    mips::Vector{String} # in CMIP standard only given for CMIP5, not CMIP6
-    members::Vector{String} # only applicable to model data, not observations
+## ------------------------------------- Constraints ------------------------------------- #
+abstract type AbstractConstraint end
+@kwdef struct ConstraintObs <: AbstractConstraint
+    filenames::Vector{String} = String[]
+    variables::Vector{String} = String[]
+    tableids::Vector{String} = String[]
+    models::Vector{String} = String[]
+    projects::Vector{String} = String[]
+    types::Vector{String} = String[]
+    versions::Vector{String} = String[]
 end
 
-const CONSTRAINT_FIELDS = fieldnames(Constraint)
+@kwdef struct Constraint <: AbstractConstraint
+    filenames::Vector{String} = String[]
+    variables::Vector{String} = String[]
+    tableids::Vector{String} = String[]
+    models::Vector{String} = String[]
+    experiments::Vector{String} = String[]
+    variants::Vector{String} = String[]
+    grids::Vector{String} = String[] # in CMIP standard only given for CMIP6, not CMIP5
+    mips::Vector{String} = String[] # in CMIP standard only given for CMIP5, not CMIP6
+    members::Vector{String} = String[] # only applicable to model data, not observations
+end
 
-function Constraint(constraint::Dict{Symbol,Vector{String}}; warn::Bool = true)
-    all_keys = keys(constraint)
-    irrelevant_keys = filter(x -> !(x in CONSTRAINT_FIELDS), all_keys)
-    if !isempty(irrelevant_keys) && warn
-        @warn "The following entries in constraints are not valid and are not taken into account: $irrelevant_keys.\nValid keys are: $CONSTRAINT_FIELDS"
+const RECIPE_CONSTRAINT_KEYS = (:aliases, :timeranges, :base_subdirs, :level_shared)
+
+function _fromDict(
+    constraint::Dict,
+    ::Type{T};
+    warn::Bool = true,
+) where {T<:AbstractConstraint}
+    fields = Dict{Symbol,Vector{String}}()
+    valid_keys = fieldnames(T)
+    irrelevant_keys = Symbol[]
+    for (k, v) in constraint
+        key = Symbol(k)
+        if key in valid_keys
+            fields[key] = String.(v)
+        elseif warn && !(key in RECIPE_CONSTRAINT_KEYS)
+            push!(irrelevant_keys, key)
+        end
     end
-    Constraint(
-        filenames = get(constraint, :filenames, String[]),
-        variables = get(constraint, :variables, String[]),
-        tableids = get(constraint, :tableids, String[]),
-        models = get(constraint, :models, String[]),
-        experiments = get(constraint, :experiments, String[]),
-        variants = get(constraint, :variants, String[]),
-        grids = get(constraint, :grids, String[]),
-        mips = get(constraint, :mips, String[]),
-        members = get(constraint, :members, String[]),
-    )
+    if warn && !isempty(irrelevant_keys)
+        @warn "The following entries in constraints are invalid and not taken into account: $(irrelevant_keys).
+        Valid keys are: $(valid_keys)
+        additionally for esmvaltool recipes: $(RECIPE_CONSTRAINT_KEYS)."
+    end
+    T(; fields...)
 end
 
-function convertESMVTConstraint(constraint::Dict)
-    Dict(
-        :filenames => get(constraint, "filenames", String[]),
-        :variables => get(constraint, "variables", String[]),
-        :tableids => get(constraint, "tableids", String[]),
-        :models => get(constraint, "models", String[]),
-        :experiments => get(constraint, "experiments", String[]),
-        :variants => get(constraint, "variants", String[]),
-        :grids => get(constraint, "grids", String[]),
-        :mips => get(constraint, "mips", String[]),
-        :members => get(constraint, "members", String[]),
-    )
-end
+Constraint(constr::Dict; warn::Bool = true) = _fromDict(constr, Constraint; warn)
+ConstraintObs(constr::Dict; warn::Bool = true) = _fromDict(constr, ConstraintObs; warn)
 
-
+_constrToMeta(::Constraint) = ModelMeta
+_constrToMeta(::ConstraintObs) = ObsMeta
 
 const CONSTRAINTS_TO_META = Dict(
     :filenames => :fn,
@@ -441,9 +450,16 @@ const CONSTRAINTS_TO_META = Dict(
     :variants => :variant,
     :grids => :grid,
     :mips => :mip,
+    :projects => :project,
+    :types => :type,
+    :versions => :version,
+    :members => :member_id,
 )
 
-
+## ---------------------------- Extensions for Base functions ---------------------------- #
+function Base.isempty(constr::AbstractConstraint)
+    all(f -> isempty(getfield(constr, f)), fieldnames(typeof(constr)))
+end
 
 # ::MIME"text/plain" : for REPL output
 function Base.show(io::IO, ::MIME"text/plain", x::DataMap)
@@ -462,17 +478,22 @@ function Base.show(io::IO, ::MIME"text/plain", x::PreviewMap)
     end
 end
 
-function Base.show(io::IO, ::MIME"text/plain", x::Union{MetaData,AbstractMeta,Constraint})
+function Base.show(
+    io::IO,
+    ::MIME"text/plain",
+    x::Union{MetaData,AbstractMeta,AbstractConstraint},
+)
     fields = map(f -> (f, getfield(x, f)), fieldnames(typeof(x)))
     fields = filter(field -> !isnothing(field[2]), fields)
     map(f -> println(io, f), fields)
 end
 
 """
-# Usage:
+# Usage
 
-m2 = copy(m; variable = SubString("siconc")) # this will use all fields of m except for :variable which is set to "siconc", it maps
-to a SubString, since that's the type that is expected in struct MetaData.
+m2 = copy(m; variable = SubString("siconc")) # this will use all fields of m except for
+:variable which is set to "siconc", it maps to a SubString, since that's the type that is
+expected in struct MetaData.
 """
 function Base.copy(m::ModelMeta; kwargs...)
     grid = isnothing(m.grid) ? nothing : get(kwargs, :grid, m.grid)
@@ -490,12 +511,10 @@ function Base.copy(m::ModelMeta; kwargs...)
         timerange = get(kwargs, :timerange, m.timerange),
     )
 end
-
+## ---------------------------------- Other source code ---------------------------------- #
 include("data-utils.jl")
 include("data-functions.jl")
 include("helper-functions.jl")
 include("diagnostics.jl")
-
-
 
 end

@@ -34,7 +34,7 @@ lgm_tos_CLIM: (72, 36, 16)
 Subset data so that every dataset contains the same models (but not necessarily the same model members):
 
 ```julia-repl
-julia> dm_models = mwd.subsetModelData(dm, :model)
+julia> dm_models = mwd.subsetModelData(dm; level = :model)
 ::DataMap
 lgm_tas_CLIM: (72, 36, 15)
 lgm_tos_CLIM: (72, 36, 16)
@@ -43,7 +43,7 @@ lgm_tos_CLIM: (72, 36, 16)
 Subset data so that every dataset contains the exact same model simulations:
 
 ```julia-repl
-julia> dm_members = mwd.subsetModelData(dm, :member)
+julia> dm_members = mwd.subsetModelData(dm; level = :member)
 ::DataMap
 lgm_tas_CLIM: (72, 36, 15)
 lgm_tos_CLIM: (72, 36, 15)
@@ -82,7 +82,7 @@ lgm_tos_CLIM: (72, 36, 15)
 To see which models/members are shared across datasets:
 
 ```julia-repl
-mwd.sharedModels(dm, :model)
+julia> mwd.sharedModels(dm, :model)
 13-element Vector{String}:
  "AWI-ESM-1-1-LR"
  "CESM2-FV2"

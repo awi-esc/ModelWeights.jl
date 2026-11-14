@@ -257,23 +257,6 @@ function memberIDsFromPaths(all_paths::Vector{String})
     return unique(all_members)
 end
 
-
-"""
-    memberIDFromModelMeta(fn_meta::ModelMeta)
-
-Return a string of the form modelname#memberID[_grid] that identifies the corresponding model member.
-
-For CMIP6 models the abbreviation of the grid is added to the model name.
-"""
-function memberIDFromModelMeta(fn_meta::ModelMeta)
-    id = join([fn_meta.model, fn_meta.variant], MODEL_MEMBER_DELIM)
-    if lowercase(fn_meta.mip) == "cmip6"
-        id = join([id, fn_meta.grid], "_")
-    end
-    return id
-end
-
-
 """
     getCMIPModelsKey(meta::Dict)
 
@@ -298,62 +281,6 @@ function getCMIPModelsKey(meta::Dict)
         throw(ArgumentError(msg))
     end
 end
-
-
-# """
-#     filterPathsSharedModels(
-#         paths::AbstractVector{String},
-#         shared_models::AbstractVector{String},
-#         fn_format::AbstractFnFormat
-#     )
-
-# Every vector of paths in `all_paths` is filtered s.t. it only contains models or model
-# members given in `shared_models`.
-
-# # Arguments
-# - `paths`: contains paths to data files
-# """
-# function filterPathsSharedModels(
-#     paths::AbstractVector{String},
-#     shared_models::AbstractVector{String},
-#     fn_format::AbstractFnFormat
-# )
-#     if isempty(shared_models)
-#         @warn "No models shared across data!"
-#         return String[]
-#     end
-#     #constraint = Dict{String, Vector{String}}("models" => shared_models)
-#     mask = maskFileConstraints(paths, fn_format, constraint)
-
-#     return paths[mask]
-# end
-
-# """
-#     filterPathsSharedModels(
-#         all_paths::AbstractVector{<:AbstractVector{String}},
-#         level::Level,
-#         fn_format::AbstractFnFormat
-#     )
-
-# # Arguments
-# - `all_paths`: every entry refers to the paths to data files for the respective dataset
-# """
-# function filterPathsSharedModels(
-#     all_paths::AbstractVector{<:AbstractVector{String}},
-#     level::Level,
-#     fn_format::AbstractFnFormat
-# )
-#     shared = sharedModelsFromPaths(all_paths, level, fn_format)
-#     return [filterPathsSharedModels(paths, shared, fn_format) for paths in all_paths]
-# end
-
-
-# function filterPathsSharedModels(
-#     all_paths::AbstractVector{<:AbstractVector{String}}, level_shared::Symbol, fn_format::Symbol
-# )
-#     return filterPathsSharedModels(all_paths, level_shared, fn_format)
-# end
-
 
 function modelsFromMemberIDs(members::AbstractVector{<:AbstractString}; uniq::Bool = false)
     models = [String(first(split(x, MODEL_MEMBER_DELIM))) for x in members]
@@ -417,9 +344,7 @@ function areaWeightMatrix(latitudes::AbstractVector{T}, n_lon) where {T<:Number}
     return aw_mat ./ sum(aw_mat)
 end
 
-
-
-function checkDataStructure(path_data::String, dir_per_var::Bool)
+function _checkDataStructure(path_data::String, dir_per_var::Bool)
     if !dir_per_var
         subdirs = filter(x -> isdir(joinpath(path_data, x)), readdir(path_data))
         if !("preproc" in subdirs)
@@ -433,7 +358,32 @@ function checkDataStructure(path_data::String, dir_per_var::Bool)
     return nothing
 end
 
+function _ofKind(meta::AbstractVector{<:AbstractMeta}, ::Type{T}) where {T<:AbstractMeta}
+    return T[m for m in meta if m isa T]
+end
 
+function _filterMeta!(
+    meta_data_per_dataset::AbstractVector{<:AbstractVector{<:AbstractMeta}},
+    constraint::AbstractConstraint,
+    constraint_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}},
+    fn_format::AbstractFnFormat,
+    level::AbstractLevel,
+)
+    if !isempty(constraint)
+        _applyConstraint!(meta_data_per_dataset, constraint)
+    end
+    if constraint_ts.start_year != typemin(Int) || constraint_ts.end_year != typemax(Int)
+        # for not preprocessed cmip data, the timerange is part of the filename,
+        # and can thus, a timeseries constraint can already be applied here, for this data
+        if isa(fn_format, FF_CMIP)
+            _applyConstraintTS!(meta_data_per_dataset, constraint_ts)
+        end
+    end
+    if !isa(level, NoLevel) # for observational data, the method does not change anything
+        _applyLevel!(meta_data_per_dataset, level)
+    end
+    return nothing
+end
 # """
 #     checkConstraint(constraint::Union{Dict, Nothing})
 
@@ -1045,7 +995,7 @@ end
 
 
 """
-    _parseFilenameObs(filename::String, path::String, field_indices::Dict{Symbol, Int})
+    _parseFilenameObs(filename::String, path::String, field_indices::Dict{Symbol,Int})
 
 Retrieve information from `filename` and return it as an object of type ObsMeta.
 
@@ -1067,7 +1017,7 @@ function _parseFilenameObs(filename::String, path::String, field_indices::Dict{S
     return ObsMeta(
         fn = filename,
         path = path,
-        grid = field_to_val_in_fn(:grid),
+        project = field_to_val_in_fn(:project),
         model = field_to_val_in_fn(:model),
         type = field_to_val_in_fn(:type),
         version = field_to_val_in_fn(:version),
@@ -1222,18 +1172,14 @@ function parsePath(path::String, ::FF_CMIP6_TR)::ModelMeta
 end
 
 
-function isRetained(fn_meta::T, constraint::Constraint) where {T<:AbstractMeta}
-    allowed_members = getfield(constraint, :members)
-    if !isempty(allowed_members)
-        !(_model_key(fn_meta, LevMember()) in allowed_members) && return false
-    end
-
-    for field in keys(CONSTRAINTS_TO_META)
-        #TODO: handle filenames separately (see below)? to include just part of the given constraint, e.g. all filenames must contain 'xy'
+function isRetained(fn_meta::AbstractMeta, constraint::AbstractConstraint)
+    for field in fieldnames(typeof(constraint))
+        #TODO: handle filenames separately (see below)?
+        # to include just part of the given constraint, e.g. all filenames must contain 'xy'
         allowed_vals = getfield(constraint, field)
         isempty(allowed_vals) && continue # if empty, all are allowed
-        val = getfield(fn_meta, CONSTRAINTS_TO_META[field])
-        !(val in allowed_vals) && return false
+        # return false is only evaluated if argument before || evaluates to false
+        getfield(fn_meta, CONSTRAINTS_TO_META[field]) in allowed_vals || return false
     end
     # handle filename really necessary?
     # elements_in_fn = getfield(constraint, :fn)
@@ -1534,7 +1480,7 @@ function generalizedDistances(
 )
     throwErrorIfDimMissing(distances_all, :diagnostic)
     model_dims = modelDims(distances_all)
-    norm = dropdims(median(distances_all, dims = model_dims), dims = model_dims)
+    norm = dropdims(stats.median(distances_all, dims = model_dims), dims = model_dims)
 
     has_model_dim = :model in model_dims
     if !has_model_dim
@@ -1545,7 +1491,7 @@ function generalizedDistances(
     dimensions = modelDims(distances_all)
     norm =
         norm_avg_members ?
-        dropdims(median(distances_all, dims = dimensions), dims = dimensions) : norm
+        dropdims(stats.median(distances_all, dims = dimensions), dims = dimensions) : norm
     normalized_distances = distances_all ./ norm
 
     weighted_dists = YAXArrays.compute(normalized_distances .* weights) # materializes, otherwise error with new DiskArrayEngine backend
@@ -1586,7 +1532,7 @@ function generalizedDistances(
         x -> throwErrorIfDimMissing(x, [:model, :member, :member1]; include = :any),
         distances_all,
     )
-    normalizations = median.(distances_all)
+    normalizations = stats.median.(distances_all)
     # average model members
     model_dims = modelDims.(distances_all)
     has_model_dim = all(t -> :model in t, model_dims)
@@ -1596,7 +1542,7 @@ function generalizedDistances(
             summarizeMembersMatrix.(distances_all, false) :
             summarizeMembersVector.(distances_all)
     end
-    normalizations = norm_avg_members ? median.(distances_all) : normalizations
+    normalizations = norm_avg_members ? stats.median.(distances_all) : normalizations
     normalized_distances =
         map(distances_all, normalizations, diagnostics) do dists, norm, diagnostic
             d = Array(dists) ./ norm

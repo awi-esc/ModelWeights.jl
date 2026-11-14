@@ -1,4 +1,4 @@
-""" 
+"""
     function plotValsOnMap!(
         gp::GridPosition, means::AbstractArray, title::String;
         color_interval = :RdBu,
@@ -21,24 +21,25 @@
         rounded_proj::Bool = false,
         colorbar_size::Int = 15
     )
-    
+
 Plot contours of world with an overlayed heatmap of the input data.
 
 # Arguments:
-- `color_range::Union{Nothing, Tuple}`: Real values, outside this range, a single color is used.
+
+  - `color_range::Union{Nothing, Tuple}`: Real values, outside this range, a single color is used.
 """
 function plotValsOnMap!(
     gp::GridPosition,
     means::AbstractArray,
     title::String;
-    color_range::Union{Nothing, Tuple} = nothing,
+    color_range::Union{Nothing,Tuple} = nothing,
     color_map = nothing,
     legend_label::String = "",
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
-    xticks::Union{AbstractArray, Nothing} = nothing,
-    yticks::Union{AbstractArray, Nothing} = nothing,
+    xticks::Union{AbstractArray,Nothing} = nothing,
+    yticks::Union{AbstractArray,Nothing} = nothing,
     east_west_labels::Bool = false,
     alpha::Number = 0.8,
     fontsize::Number = 20,
@@ -48,13 +49,13 @@ function plotValsOnMap!(
     rounded_proj::Bool = false,
     colorbar_size::Int = 15,
     lowclip = nothing,
-    highclip = nothing
+    highclip = nothing,
 )
     means = Data.sortLongitudesWest2East(means)
     means = Data.lon360to180(means)
     dims_lat = Array(dims(means, :lat))
     dims_lon = Array(dims(means, :lon))
-    # scaling plot 
+    # scaling plot
     lon_min, lon_max = minimum(dims_lon) - 1, maximum(dims_lon) + 1
     lat_min, lat_max = minimum(dims_lat) - 1, maximum(dims_lat) + 1
     lon = range(lon_min, stop = lon_max, length = length(dims_lon))
@@ -62,11 +63,13 @@ function plotValsOnMap!(
     # axis ticks and labels
     xticks = isnothing(xticks) ? Int.(ceil.([dims_lon[1], dims_lon[end]])) : xticks
     yticks = isnothing(yticks) ? Int.(ceil.([dims_lat[1], dims_lat[end]])) : yticks
-    lon_labels = east_west_labels ? longitude2EastWest.(xticks) : map(x -> x * "°", string.(xticks))
-    lat_labels = east_west_labels ? latitude2NorthSouth.(yticks) : map(x -> x * "°", string.(yticks))
+    lon_labels =
+        east_west_labels ? longitude2EastWest.(xticks) : map(x -> x * "°", string.(xticks))
+    lat_labels =
+        east_west_labels ? latitude2NorthSouth.(yticks) : map(x -> x * "°", string.(yticks))
     x_ticks_labels = (xticks, lon_labels)
     y_ticks_labels = (yticks, lat_labels)
-    
+
     vals = coalesce.(Array(means), NaN)
     vals = filter(x -> !isnan(x), vals)
     if isnothing(color_range)
@@ -87,14 +90,17 @@ function plotValsOnMap!(
             title = title,
             titlesize = fontsize,
             titlefont = :regular,
-            dest = "+proj=robin"
+            dest = "+proj=robin",
         )
         hm = contourf!(
-            ax, dims_lon, dims_lat, coalesce.(Array(means), NaN); 
+            ax,
+            dims_lon,
+            dims_lat,
+            coalesce.(Array(means), NaN);
             colormap = color_map,
             levels = range(color_range[1], color_range[2], length = length(color_map)),
-            extendlow = color_low, 
-            extendhigh = color_high
+            extendlow = color_low,
+            extendhigh = color_high,
         )
     else
         ax = Axis(
@@ -111,29 +117,33 @@ function plotValsOnMap!(
             xticklabelsize = fontsize,
             yticklabelsize = fontsize,
             titlesize = fontsize,
-            titlefont = :regular
+            titlefont = :regular,
         )
         # heatmap with colorrange maps
-        hm = heatmap!(ax, lon, lat, coalesce.(Array(means), NaN);
-            colormap = color_map, 
-            colorrange = color_range, 
+        hm = heatmap!(
+            ax,
+            lon,
+            lat,
+            coalesce.(Array(means), NaN);
+            colormap = color_map,
+            colorrange = color_range,
             alpha = alpha,
             lowclip = color_low,
-            highclip = color_high
+            highclip = color_high,
         )
     end
-    lines!(GeoMakie.coastlines(); color = :black, linewidth=.8)
+    lines!(GeoMakie.coastlines(); color = :black, linewidth = 0.8)
     if add_colorbar
         addColorBar(
-            _colorbarPosition(gp, colorbar_pos), 
+            _colorbarPosition(gp, colorbar_pos),
             color_map,
             color_range,
             colorbar_pos;
-            legend_label, 
-            fontsize, 
+            legend_label,
+            fontsize,
             colorbar_size,
             lowclip,
-            highclip
+            highclip,
         )
     end
     if hidedecorations
@@ -142,17 +152,17 @@ function plotValsOnMap!(
     return ax, hm
 end
 
-function plotValsOnMap(    
-    means::AbstractArray, 
+function plotValsOnMap(
+    means::AbstractArray,
     title::String;
-    color_range::Union{Nothing, Tuple} = nothing,
+    color_range::Union{Nothing,Tuple} = nothing,
     color_map = nothing,
     legend_label::String = "",
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
-    xticks::Union{AbstractArray, Nothing} = nothing,
-    yticks::Union{AbstractArray, Nothing} = nothing,
+    xticks::Union{AbstractArray,Nothing} = nothing,
+    yticks::Union{AbstractArray,Nothing} = nothing,
     east_west_labels::Bool = false,
     alpha::Number = 0.8,
     fontsize::Number = 20,
@@ -160,18 +170,20 @@ function plotValsOnMap(
     add_colorbar::Bool = true,
     colorbar_pos::Symbol = :r,
     colorbar_size::Int = 15,
-    rounded_proj::Bool = false
+    rounded_proj::Bool = false,
 )
     f = Figure()
     plotValsOnMap!(
-        f[1,1], means, title; 
+        f[1, 1],
+        means,
+        title;
         color_range,
         color_map,
         legend_label,
-        xlabel, 
+        xlabel,
         ylabel,
         xlabel_rotate,
-        xticks, 
+        xticks,
         yticks,
         east_west_labels,
         alpha,
@@ -180,26 +192,23 @@ function plotValsOnMap(
         add_colorbar,
         colorbar_pos,
         colorbar_size,
-        rounded_proj
+        rounded_proj,
     )
     return f
 end
 
 
-""" plotAMOC!(gp::GridPosition, data::DimArray)
+"""
+plotAMOC!(gp::GridPosition, data::DimArray)
 
     Plot AMOC strength for variable "amoc".
 """
 function plotAMOC!(gp::GridPosition, data::YAXArray)
     t = "variable: amoc, experiment: " * data.properties["experiment_id"]
-    
+
     unit = get(data.properties, "units", "")
     xlab = isempty(unit) ? "" : "Transport in " * unit
-    ax = Axis(
-        gp,
-        title = join(["AMOC strength (at 26.5°N)", t], "\n"),
-        xlabel = xlab
-    )
+    ax = Axis(gp, title = join(["AMOC strength (at 26.5°N)", t], "\n"), xlabel = xlab)
     if length(dims(data)) == 1
         # data for full period
         hist!(ax, Array(data))
@@ -216,31 +225,35 @@ end
 
 """
     plotEnsembleSpread(
-        data::YAXArray; fn::Function=Statistics.median, title::String="", ylabel::String=""
+        data::YAXArray; fn::Function=stats.median, title::String="", ylabel::String=""
     )
 
-Plot models against values of all model members. Add summary statistics (default: median) 
-when computed across all model members and when average values across members of each model 
+Plot models against values of all model members. Add summary statistics (default: median)
+when computed across all model members and when average values across members of each model
 are computed first.
 
 # Arguments:
-- `data::YAXArray`: must have single dimension :member.
-- `fn::Function=Statistics.median`: function to summarize data.
-- `title::String`: (optional) plot title.
-- `ylabel::String`: (optional) label for y-axis.
+
+  - `data::YAXArray`: must have single dimension :member.
+  - `fn::Function=stats.median`: function to summarize data.
+  - `title::String`: (optional) plot title.
+  - `ylabel::String`: (optional) label for y-axis.
 """
 function plotEnsembleSpread(
-    data::YAXArray; fn::Function=Statistics.median, title::String="", ylabel::String=""
+    data::YAXArray;
+    fn::Function = stats.median,
+    title::String = "",
+    ylabel::String = "",
 )
     if !hasdim(data, :member) || length(otherdims(data, :member)) >= 1
         msg = "To plot ensemble spread input data must have a single dimension :member"
         throw(ArgumentError(msg))
     end
     members = collect(lookup(data, :member))
-    df = Data.setLookupsFromMemberToModel(data, [:member]) 
+    df = Data.setLookupsFromMemberToModel(data, [:member])
     models = collect(lookup(df, :model))
     model_labels = unique(models)
-    model_ints  = collect(1:length(members))
+    model_ints = collect(1:length(members))
     for (i, m) in enumerate(model_labels)
         indices = findall(models .== m)
         model_ints[indices] .= i
@@ -263,16 +276,17 @@ function plotEnsembleSpread(
         ylabel = ylabel,
         title = title,
         xticks = (1:length(model_labels), model_labels),
-        xticklabelrotation = pi / 2
+        xticklabelrotation = pi / 2,
     )
     scatter!(ax, model_ints, collect(df.data))
 
     summarized_members = fn(df)
     summarized_avg_models = fn(Data.summarizeMembers(data))
-    fn_name = string(nameof(fn)) 
-    l1, l2 =  fn_name * " across all members", fn_name * " members first summarized within model"
-    hlines!(ax, summarized_members; linestyle = :dash, color=:magenta, label=l1)
-    hlines!(ax, summarized_avg_models; linestyle = :dash, color=:green, label=l2)
+    fn_name = string(nameof(fn))
+    l1, l2 =
+        fn_name * " across all members", fn_name * " members first summarized within model"
+    hlines!(ax, summarized_members; linestyle = :dash, color = :magenta, label = l1)
+    hlines!(ax, summarized_avg_models; linestyle = :dash, color = :green, label = l2)
     axislegend(fontsize = 10)
     return fig
 end
@@ -280,44 +294,53 @@ end
 """
     plotTimeseries!(ax::Axis, data::AbstractArray;)
 
-Add timeseries of `data` to `ax`; one line for every entry of the dimension other than 
-`dim_name`. Return vector of the line plots (followed by the band plot if `uncertainties` 
+Add timeseries of `data` to `ax`; one line for every entry of the dimension other than
+`dim_name`. Return vector of the line plots (followed by the band plot if `uncertainties`
 are given).
 
 # Arguments:
-- `data::AbstractArray`: must have dimension `dim_name` (default: :time) and possibly one 
-other dimension.
-- `uncertainties`: only for data with a single dimension; must have dimension :confidence 
-with lookup values "lower" and "upper".
-- `use_index::Bool`: if true, data is plotted against 1:n instead of against the values of 
-dimension `dim_name`.
-- `colors`: single color used for all lines or vector with one color for every line; if 
-nothing, default Makie colors are used.
-- `color_unc`: color of uncertainty band; if nothing, color of the line is used if it was 
-given, otherwise :darkgrey.
-- `labels`: single label or vector with one label for every line; if nothing, lines of data 
-with two dimensions are labeled with the values of the dimension other than `dim_name`.
+
+  - `data::AbstractArray`: must have dimension `dim_name` (default: :time) and possibly one
+    other dimension.
+  - `uncertainties`: only for data with a single dimension; must have dimension :confidence
+    with lookup values "lower" and "upper".
+  - `use_index::Bool`: if true, data is plotted against 1:n instead of against the values of
+    dimension `dim_name`.
+  - `colors`: single color used for all lines or vector with one color for every line; if
+    nothing, default Makie colors are used.
+  - `color_unc`: color of uncertainty band; if nothing, color of the line is used if it was
+    given, otherwise :darkgrey.
+  - `labels`: single label or vector with one label for every line; if nothing, lines of data
+    with two dimensions are labeled with the values of the dimension other than `dim_name`.
 """
 function plotTimeseries!(
     ax::Axis,
     data::AbstractArray;
-    uncertainties::Union{AbstractArray, Nothing} = nothing,
+    uncertainties::Union{AbstractArray,Nothing} = nothing,
     dim_name::Symbol = :time,
     use_index::Bool = false,
     colors = nothing,
     color_unc = nothing,
-    labels::Union{AbstractVector, AbstractString, Nothing} = nothing,
+    labels::Union{AbstractVector,AbstractString,Nothing} = nothing,
     label_unc::String = "",
     linestyle::Symbol = :solid,
     linewidth = 3,
-    alpha = 0.5 # just for the uncertainy band
+    alpha = 0.5, # just for the uncertainy band
 )
     nb_dims = ndims(data)
     if nb_dims > 2
-        throw(ArgumentError("Timeseries can only be plotted for data with dimension $dim_name and just one other dimension."))
+        throw(
+            ArgumentError(
+                "Timeseries can only be plotted for data with dimension $dim_name and just one other dimension.",
+            ),
+        )
     end
     if nb_dims == 2 && !isnothing(uncertainties)
-        throw(ArgumentError("Uncertainties can only be plotted for data with a single dimension."))
+        throw(
+            ArgumentError(
+                "Uncertainties can only be plotted for data with a single dimension.",
+            ),
+        )
     end
     timesteps = Array(dims(data, dim_name))
     if use_index
@@ -339,9 +362,9 @@ function plotTimeseries!(
     end
 
     plots = []
-    for idx in 1:n
+    for idx = 1:n
         vals = nb_dims == 1 ? data : selectdim(data, idx_other_dim, idx)
-        kwargs = Dict{Symbol, Any}(:linestyle => linestyle, :linewidth => linewidth)
+        kwargs = Dict{Symbol,Any}(:linestyle => linestyle, :linewidth => linewidth)
         if !isnothing(colors)
             kwargs[:color] = colors isa AbstractVector ? colors[idx] : colors
         end
@@ -352,7 +375,9 @@ function plotTimeseries!(
     end
     if !isnothing(uncertainties)
         if isnothing(color_unc)
-            color_unc = isnothing(colors) ? :darkgrey : (colors isa AbstractVector ? colors[1] : colors)
+            color_unc =
+                isnothing(colors) ? :darkgrey :
+                (colors isa AbstractVector ? colors[1] : colors)
         end
         bandplot = band!(
             ax,
@@ -360,7 +385,7 @@ function plotTimeseries!(
             Array(vec(coalesce.(uncertainties[confidence=At("lower")], NaN))),
             Array(vec(coalesce.(uncertainties[confidence=At("upper")], NaN))),
             color = (color_unc, alpha),
-            label = label_unc
+            label = label_unc,
         )
         push!(plots, bandplot)
     end
@@ -371,15 +396,16 @@ end
 """
     plotTimeseries(data::YAXArray;)
 
-Plot timeseries of `data` against the indices of dimension `dim_name` in a new figure. 
+Plot timeseries of `data` against the indices of dimension `dim_name` in a new figure.
 
 For data with two dimensions, a legend with one entry for every line is added below the plot.
 Further data can be added with `plotTimeseries!(content(f[1,1]), data; use_index=true)`.
 
 # Arguments:
-- `data::YAXArray`: must have dimension `dim_name` (default: :time) and possibly one other dimension
-- `n_step::Int`: distance between xticks.
-- `kwargs...`: passed on to `plotTimeseries!`.
+
+  - `data::YAXArray`: must have dimension `dim_name` (default: :time) and possibly one other dimension
+  - `n_step::Int`: distance between xticks.
+  - `kwargs...`: passed on to `plotTimeseries!`.
 """
 function plotTimeseries(
     data::YAXArray;
@@ -389,25 +415,35 @@ function plotTimeseries(
     ylabel = "",
     title = "",
     legend_title = "",
-    legend_nb_rows::Union{Int, Nothing} = nothing,
-    fig_size::Union{Tuple, Nothing} = nothing,
-    kwargs...
+    legend_nb_rows::Union{Int,Nothing} = nothing,
+    fig_size::Union{Tuple,Nothing} = nothing,
+    kwargs...,
 )
     nt = length(dims(data, dim_name))
-    xticks = nt < n_step ? (1:nt) : [1, (n_step : n_step : nt)...]
+    xticks = nt < n_step ? (1:nt) : [1, (n_step:n_step:nt)...]
 
-    f = isnothing(fig_size) ? Figure() : Figure(size = fig_size); 
-    ax = Axis(f[1,1], xlabel=xlabel, ylabel=ylabel, title=title, xticks=(xticks, string.(xticks)));
+    f = isnothing(fig_size) ? Figure() : Figure(size = fig_size)
+    ax = Axis(
+        f[1, 1],
+        xlabel = xlabel,
+        ylabel = ylabel,
+        title = title,
+        xticks = (xticks, string.(xticks)),
+    )
     plots = plotTimeseries!(ax, data; dim_name, use_index = true, kwargs...)
 
     if ndims(data) == 2
         n = length(plots)
         n_rows = isnothing(legend_nb_rows) ? div(n, 4) + 1 : legend_nb_rows
         Legend(
-            f[2,1], plots, map(p -> p.label[], plots), legend_title; 
-            framevisible=false, 
-            orientation=:horizontal, nbanks = n_rows, 
-            labelsize=10
+            f[2, 1],
+            plots,
+            map(p -> p.label[], plots),
+            legend_title;
+            framevisible = false,
+            orientation = :horizontal,
+            nbanks = n_rows,
+            labelsize = 10,
         )
     end
     return f
@@ -417,7 +453,7 @@ end
 """
     plotTempGraph
 
-    # TODO: change quantileLabels and uncertainty_ranges, the latter should contain 
+    # TODO: change quantileLabels and uncertainty_ranges, the latter should contain
     # the quantile labels
 """
 function plotTempGraph(
@@ -437,7 +473,8 @@ function plotTempGraph(
         @warn "plotTempGraph: no units given in metadata!"
     end
     unit = !isempty(units) ? units[1] : ""
-    ylab = isempty(ylabel) ? (isempty(unit) ? "Temperature" : "Temperature in $unit") : ylabel
+    ylab =
+        isempty(ylabel) ? (isempty(unit) ? "Temperature" : "Temperature in $unit") : ylabel
     ax = Axis(
         f[1, 1],
         xticks = (xticks, string.(xticks)),
@@ -470,7 +507,14 @@ function plotTempGraph(
     # add results for each model model seperately
     for m in dims(data, :member)
         y = data[member=At(m)]
-        lines!(ax, years, Array(y), color = :gray80, linewidth=1, label = "Ensemble members")
+        lines!(
+            ax,
+            years,
+            Array(y),
+            color = :gray80,
+            linewidth = 1,
+            label = "Ensemble members",
+        )
     end
     lines!(ax, years, vec(averages.unweighted), color = :red, label = "Non-weighted mean")
     lines!(ax, years, vec(averages.weighted), color = :green, label = "Weighted mean")
@@ -535,41 +579,54 @@ function makeScatterPlot(
 end
 
 
-function plotECDF(vals::Vector{<:Number}; variable::String="", title::String="Empirical CDF")
+function plotECDF(
+    vals::Vector{<:Number};
+    variable::String = "",
+    title::String = "Empirical CDF",
+)
     fn = ecdf(vals)
     indices = sortperm(vals)
-    sorted = unique(vals[indices]) 
+    sorted = unique(vals[indices])
     f = Figure()
-    ax = Axis(f[1,1], xticks=vals, title = title, ylabel = "Cumulative Probability", xlabel=variable)
-    ylims!(0,1)
-    for (i, v) in enumerate(sorted[1:end-1])
+    ax = Axis(
+        f[1, 1],
+        xticks = vals,
+        title = title,
+        ylabel = "Cumulative Probability",
+        xlabel = variable,
+    )
+    ylims!(0, 1)
+    for (i, v) in enumerate(sorted[1:(end-1)])
         p = fn(v)
-        next_v = sorted[i + 1]
-        scatter!(v, p, color=:grey)
-        lines!([v, sorted[i+1]], [p, p], color=:grey)
-        lines!([next_v, next_v], [p, fn(next_v)], color=:grey)
+        next_v = sorted[i+1]
+        scatter!(v, p, color = :grey)
+        lines!([v, sorted[i+1]], [p, p], color = :grey)
+        lines!([next_v, next_v], [p, fn(next_v)], color = :grey)
     end
     return f
 end
 
 
-function plotPDF(xs, ys, xlabel::String;
+function plotPDF(
+    xs,
+    ys,
+    xlabel::String;
     samples::Vector{<:Number},
     selected_samples::Vector{<:Number},
     selected_names::Vector{String},
-    label::String="",
-    label_samples::String="",
-    markersize::Number=20,
-    ncols_leg::Number=2,
-    label_size::Number=12,
-    colors
+    label::String = "",
+    label_samples::String = "",
+    markersize::Number = 20,
+    ncols_leg::Number = 2,
+    label_size::Number = 12,
+    colors,
 )
     f_pdf = Figure()
-    ax = Axis(f_pdf[1,1], xlabel = xlabel, ylabel = "Density")
+    ax = Axis(f_pdf[1, 1], xlabel = xlabel, ylabel = "Density")
     if isempty(label)
         scatter!(ax, xs, ys)
     else
-        scatter!(ax, xs, ys, label=label)
+        scatter!(ax, xs, ys, label = label)
     end
 
     # also plot samples if given
@@ -577,118 +634,192 @@ function plotPDF(xs, ys, xlabel::String;
     if isempty(label_samples)
         scatter!(ax, samples, scatter_y)
     else
-        scatter!(ax, samples, scatter_y, label=label_samples)
+        scatter!(ax, samples, scatter_y, label = label_samples)
     end
     # label and color models where the ecs based performance weight deviates much from the historical based
-    for (i, s) in enumerate(selected_samples)   
-        scatter!(ax, s, scatter_y[i], label="$(selected_names[i])", color=colors[i], markersize=markersize)
+    for (i, s) in enumerate(selected_samples)
+        scatter!(
+            ax,
+            s,
+            scatter_y[i],
+            label = "$(selected_names[i])",
+            color = colors[i],
+            markersize = markersize,
+        )
     end
-    axislegend(labelsize=label_size, nbanks=ncols_leg)
+    axislegend(labelsize = label_size, nbanks = ncols_leg)
     return f_pdf
 end
 
 
 function plotExpectedECS(
-   ecs_data::AbstractArray, ws_prior::AbstractArray, ws_posterior::AbstractArray;
-   ws_prior2::AbstractArray = [], ws_posterior2::AbstractArray = [],
-   target_distr_x::Union{Nothing, AbstractArray} = nothing, 
-   target_distr_y::Union{Nothing, AbstractArray} = nothing,
-   plot_as_row::Bool = true,
-   chain = 1, 
-   titles::AbstractArray{String} = [], 
-   fig_size::Union{Tuple, Nothing} = nothing,
-   pos_legend::Symbol = :rt, 
-   y_individual_vals::Number = 0,
-   marker_size_models::Number = 30, 
-   add_legend::Bool = true,
-   frame_visible::Bool = true,
-   xlims::Union{Tuple, Nothing} = nothing,
-   ylims::Union{Tuple, Nothing} = nothing,
-   ps_legend::Tuple = (20,20),
-   color_prior::Union{Symbol, RGB{Float32}, Nothing} = :darkblue,
-   color_posterior::Union{Symbol, RGB{Float32}, Nothing} = :darkgreen,
-   color_mmm::Union{Symbol, RGB{Float32}, Nothing} = :red,
-   color_target_distr::Union{Symbol, RGB{Float32}, Nothing} = :black,
-   alpha_densities::Number = 0.5
+    ecs_data::AbstractArray,
+    ws_prior::AbstractArray,
+    ws_posterior::AbstractArray;
+    ws_prior2::AbstractArray = [],
+    ws_posterior2::AbstractArray = [],
+    target_distr_x::Union{Nothing,AbstractArray} = nothing,
+    target_distr_y::Union{Nothing,AbstractArray} = nothing,
+    plot_as_row::Bool = true,
+    chain = 1,
+    titles::AbstractArray{String} = [],
+    fig_size::Union{Tuple,Nothing} = nothing,
+    pos_legend::Symbol = :rt,
+    y_individual_vals::Number = 0,
+    marker_size_models::Number = 30,
+    add_legend::Bool = true,
+    frame_visible::Bool = true,
+    xlims::Union{Tuple,Nothing} = nothing,
+    ylims::Union{Tuple,Nothing} = nothing,
+    ps_legend::Tuple = (20, 20),
+    color_prior::Union{Symbol,RGB{Float32},Nothing} = :darkblue,
+    color_posterior::Union{Symbol,RGB{Float32},Nothing} = :darkgreen,
+    color_mmm::Union{Symbol,RGB{Float32},Nothing} = :red,
+    color_target_distr::Union{Symbol,RGB{Float32},Nothing} = :black,
+    alpha_densities::Number = 0.5,
 )
-   # Plot expected ECS for m*-models using prior weights
+    # Plot expected ECS for m*-models using prior weights
     second_distr = !isempty(ws_prior2) || !isempty(ws_posterior2)
-    plots = Vector(undef, 5); labels = Vector(undef, 5);
-    f = isnothing(fig_size) ? Figure() : Figure(size = fig_size);
-    rows = plot_as_row ? [1,1] : [1,2]
-    cols = plot_as_row ? [1,2] : [1,1]
+    plots = Vector(undef, 5)
+    labels = Vector(undef, 5)
+    f = isnothing(fig_size) ? Figure() : Figure(size = fig_size)
+    rows = plot_as_row ? [1, 1] : [1, 2]
+    cols = plot_as_row ? [1, 2] : [1, 1]
     y_label = "Density"
-    ax = Axis(f[rows[1], cols[1]], xlabel = "ECS", ylabel = y_label, title=titles[1], xticks=1:0.5:6, titlefont=:regular);
-    Label(f[rows[1], cols[1], TopLeft()], "a"; fontsize = 12, font=:bold, padding = (10,0,10,0))
+    ax = Axis(
+        f[rows[1], cols[1]],
+        xlabel = "ECS",
+        ylabel = y_label,
+        title = titles[1],
+        xticks = 1:0.5:6,
+        titlefont = :regular,
+    )
+    Label(
+        f[rows[1], cols[1], TopLeft()],
+        "a";
+        fontsize = 12,
+        font = :bold,
+        padding = (10, 0, 10, 0),
+    )
     # Plot prior 1
     if !isempty(ws_prior)
-        mstar_ecs_prior = chain == 0 ? ws_prior * ecs_data : ws_prior[:,:,chain] * ecs_data
-        m1 = Makie.density!(ax, mstar_ecs_prior, color = (color_prior, alpha_densities), label = L"$M_*$ with Prior Weights")
-        m11 = Makie.scatter!(ax, mean(mstar_ecs_prior), y_individual_vals, 
-            marker = '*', 
-            markersize = 1.5 * marker_size_models, 
-            color = color_prior, 
-            label = L"$M_*$ with Prior Weights"
+        mstar_ecs_prior =
+            chain == 0 ? ws_prior * ecs_data : ws_prior[:, :, chain] * ecs_data
+        m1 = Makie.density!(
+            ax,
+            mstar_ecs_prior,
+            color = (color_prior, alpha_densities),
+            label = L"$M_*$ with Prior Weights",
+        )
+        m11 = Makie.scatter!(
+            ax,
+            stats.mean(mstar_ecs_prior),
+            y_individual_vals,
+            marker = '*',
+            markersize = 1.5 * marker_size_models,
+            color = color_prior,
+            label = L"$M_*$ with Prior Weights",
         )
         plots[1] = [m1, m11]
         labels[1] = L"$M_*$ with Prior Weights"
     end
     # Plot Posterior distribution 1
     if !isempty(ws_posterior)
-        mstar_ecs_posterior = chain == 0 ? ws_posterior * ecs_data : ws_posterior[:,:,chain] * ecs_data
-        m5 = Makie.density!(ax, mstar_ecs_posterior, color=(color_posterior, alpha_densities), label=L"$M_*$ with Posterior Weights")
-        m51 = Makie.scatter!(ax, mean(mstar_ecs_posterior), y_individual_vals,
-            marker = '*', 
-            markersize = 1.5 * marker_size_models, 
-            color = color_posterior, 
-            label = L"$M_*$ with Posterior Weights"
+        mstar_ecs_posterior =
+            chain == 0 ? ws_posterior * ecs_data : ws_posterior[:, :, chain] * ecs_data
+        m5 = Makie.density!(
+            ax,
+            mstar_ecs_posterior,
+            color = (color_posterior, alpha_densities),
+            label = L"$M_*$ with Posterior Weights",
+        )
+        m51 = Makie.scatter!(
+            ax,
+            stats.mean(mstar_ecs_posterior),
+            y_individual_vals,
+            marker = '*',
+            markersize = 1.5 * marker_size_models,
+            color = color_posterior,
+            label = L"$M_*$ with Posterior Weights",
         )
         plots[2] = [m5, m51]
         labels[2] = L"$M_*$ with Posterior Weights"
     end
     n = length(ecs_data)
     # Plot individual models 1
-    for (i,val) in enumerate(ecs_data)
-        m2 = Makie.scatter!(ax, val, y_individual_vals, 
+    for (i, val) in enumerate(ecs_data)
+        m2 = Makie.scatter!(
+            ax,
+            val,
+            y_individual_vals,
             color = :darkgrey,
-            marker = '*', 
-            markersize = marker_size_models, 
-            label = "Individual models"    
+            marker = '*',
+            markersize = marker_size_models,
+            label = "Individual models",
         )
-        if i == n 
+        if i == n
             plots[4] = m2
             labels[4] = "Individual models"
-        end  
+        end
     end
-    m3 = Makie.scatter!(ax, mean(ecs_data), y_individual_vals, 
-        marker = '*', 
-        markersize = marker_size_models, 
-        label = "MMM", 
-        color = color_mmm
+    m3 = Makie.scatter!(
+        ax,
+        stats.mean(ecs_data),
+        y_individual_vals,
+        marker = '*',
+        markersize = marker_size_models,
+        label = "MMM",
+        color = color_mmm,
     )
     plots[3] = m3
     labels[3] = "MMM"
 
     # Plot target distribution 1
     if !isnothing(target_distr_x) && !isnothing(target_distr_y)
-        m4 = Makie.lines!(ax, target_distr_x, target_distr_y, 
-            label = "Target distribution", color = color_target_distr
+        m4 = Makie.lines!(
+            ax,
+            target_distr_x,
+            target_distr_y,
+            label = "Target distribution",
+            color = color_target_distr,
         )
         plots[5] = m4
         labels[5] = "Target distribution"
     end
     if second_distr
         t = length(titles) == 1 ? "" : titles[2]
-        ax1 = Axis(f[rows[2], cols[2]], xlabel="ECS", ylabel = y_label, title=t, xticks=1:0.5:6, titlefont=:regular);
-        Label(f[rows[2], cols[2], TopLeft()], "b"; fontsize = 12, font=:bold, padding = (10,0,10,0))
+        ax1 = Axis(
+            f[rows[2], cols[2]],
+            xlabel = "ECS",
+            ylabel = y_label,
+            title = t,
+            xticks = 1:0.5:6,
+            titlefont = :regular,
+        )
+        Label(
+            f[rows[2], cols[2], TopLeft()],
+            "b";
+            fontsize = 12,
+            font = :bold,
+            padding = (10, 0, 10, 0),
+        )
         if !isempty(ws_prior2) # Prior distribution 2
-            mstar_ecs_prior = chain == 0 ? ws_prior2 * ecs_data : ws_prior2[:,:,chain] * ecs_data
-            Makie.density!(ax1, mstar_ecs_prior, color = (color_prior, alpha_densities), label = L"$M_*$ with Prior Weights")
-            Makie.scatter!(ax1, mean(mstar_ecs_prior), y_individual_vals, 
-                marker = '*', 
-                markersize = 1.5 * marker_size_models, 
-                color = color_prior, 
-                label = L"$M_*$ with Prior Weights"
+            mstar_ecs_prior =
+                chain == 0 ? ws_prior2 * ecs_data : ws_prior2[:, :, chain] * ecs_data
+            Makie.density!(
+                ax1,
+                mstar_ecs_prior,
+                color = (color_prior, alpha_densities),
+                label = L"$M_*$ with Prior Weights",
+            )
+            Makie.scatter!(
+                ax1,
+                stats.mean(mstar_ecs_prior),
+                y_individual_vals,
+                marker = '*',
+                markersize = 1.5 * marker_size_models,
+                color = color_prior,
+                label = L"$M_*$ with Prior Weights",
             )
         end
         if !isnothing(xlims)
@@ -698,58 +829,84 @@ function plotExpectedECS(
             Makie.ylims!(ax1, ylims...)
         end
         if !isempty(ws_posterior2) # Posterior distribution 2
-            mstar_ecs_posterior2 = chain == 0 ? ws_posterior2 * ecs_data : ws_posterior2[:,:,chain] * ecs_data
-            Makie.density!(ax1, mstar_ecs_posterior2, color = (color_posterior, alpha_densities), label = L"$M_*$ with Posterior Weights")
-            Makie.scatter!(ax1, mean(mstar_ecs_posterior2), y_individual_vals,
-                marker = '*', 
-                markersize = 1.5 * marker_size_models, 
-                color = color_posterior,  
-                label = L"$M_*$ with Posterior Weights"
+            mstar_ecs_posterior2 =
+                chain == 0 ? ws_posterior2 * ecs_data :
+                ws_posterior2[:, :, chain] * ecs_data
+            Makie.density!(
+                ax1,
+                mstar_ecs_posterior2,
+                color = (color_posterior, alpha_densities),
+                label = L"$M_*$ with Posterior Weights",
+            )
+            Makie.scatter!(
+                ax1,
+                stats.mean(mstar_ecs_posterior2),
+                y_individual_vals,
+                marker = '*',
+                markersize = 1.5 * marker_size_models,
+                color = color_posterior,
+                label = L"$M_*$ with Posterior Weights",
             )
         end
         # Individual Models 2
-        Makie.scatter!(ax1, mean(ecs_data), y_individual_vals, 
-            marker = '*', 
-            markersize = markersize = marker_size_models, 
-            label = "MMM", 
-            color = color_mmm
+        Makie.scatter!(
+            ax1,
+            stats.mean(ecs_data),
+            y_individual_vals,
+            marker = '*',
+            markersize =  markersize = marker_size_models ,
+            label = "MMM",
+            color = color_mmm,
         )
         for val in ecs_data
-            Makie.scatter!(ax1, val, y_individual_vals,
-                color = :darkgrey, 
-                marker = '*', 
-                markersize = marker_size_models, 
-                label = "Individual models"
+            Makie.scatter!(
+                ax1,
+                val,
+                y_individual_vals,
+                color = :darkgrey,
+                marker = '*',
+                markersize = marker_size_models,
+                label = "Individual models",
             )
         end
         # Target distribution 2
         if !isnothing(target_distr_x) && !isnothing(target_distr_y)
-            Makie.lines!(ax1, target_distr_x, target_distr_y, 
-                label = "Target distribution", color = color_target_distr
+            Makie.lines!(
+                ax1,
+                target_distr_x,
+                target_distr_y,
+                label = "Target distribution",
+                color = color_target_distr,
             )
         end
     end
-    if  add_legend && second_distr
+    if add_legend && second_distr
         if plot_as_row
-            Legend(f[2, :], plots, labels, 
-                framevisible = frame_visible, 
-                orientation = :horizontal, 
-                nbanks = 2, 
+            Legend(
+                f[2, :],
+                plots,
+                labels,
+                framevisible = frame_visible,
+                orientation = :horizontal,
+                nbanks = 2,
                 merge = true,
-                patchsize = ps_legend
+                patchsize = ps_legend,
             )
             rowsize!(f.layout, 2, Relative(0.1))
         else
-            Legend(f[:, 2], plots, labels, 
-                framevisible = frame_visible, 
-                orientation = :vertical, 
+            Legend(
+                f[:, 2],
+                plots,
+                labels,
+                framevisible = frame_visible,
+                orientation = :vertical,
                 merge = true,
-                patchsize = ps_legend
+                patchsize = ps_legend,
             )
             colsize!(f.layout, 2, Relative(0.1))
         end
     elseif add_legend
-        axislegend(ax, merge=true, position=pos_legend, framevisible = frame_visible) 
+        axislegend(ax, merge = true, position = pos_legend, framevisible = frame_visible)
     end
     if !isnothing(xlims)
         Makie.xlims!(ax, xlims...)
@@ -769,29 +926,30 @@ Plot a grid of maps using `mwp.plotValsOnMap!`. Data is filled rowwise.
 By default a single colorbar is added across all rows to the right of the plot.
 
 # Arguments
-- fig:Figure:
-- data_arrays::Vector{<:AbstractArray}:
-- titles::Vector{String}:
-- nrows::Int:
-- ncols::Int:
-- add_sep_colorbars::Bool: (default: false) if true, seperate colorbar per row (default) or column (set `sep_colorbar=:col`)
-- sep_colorbar::Symbol: one of :row (default), :col
-- fontsize::Int = 14
-- legend_labels::AbstractArray{String} = [""],
-- colormap = nothing
-- colorrange = nothing
-- color_maps::Union{AbstractVector, Nothing} = nothing
-- color_ranges::Union{AbstractVector{<:Tuple}, Nothing} = nothing
-- xlabel::String = "Longitude"
-- ylabel::String = "Latitude"
-- xlabel_rotate::Number = 0
-- xticks::Union{AbstractArray, Nothing} = nothing
-- yticks::Union{AbstractArray, Nothing} = nothing
-- main_title::String = ""
-- east_west_labels::Bool = false
-- alpha::Number = 0.8
-- hidedecorations::Bool = false
-- colorbar_size::Int = 15
+
+  - fig:Figure:
+  - data_arrays::Vector{<:AbstractArray}:
+  - titles::Vector{String}:
+  - nrows::Int:
+  - ncols::Int:
+  - add_sep_colorbars::Bool: (default: false) if true, seperate colorbar per row (default) or column (set `sep_colorbar=:col`)
+  - sep_colorbar::Symbol: one of :row (default), :col
+  - fontsize::Int = 14
+  - legend_labels::AbstractArray{String} = [""],
+  - colormap = nothing
+  - colorrange = nothing
+  - color_maps::Union{AbstractVector, Nothing} = nothing
+  - color_ranges::Union{AbstractVector{<:Tuple}, Nothing} = nothing
+  - xlabel::String = "Longitude"
+  - ylabel::String = "Latitude"
+  - xlabel_rotate::Number = 0
+  - xticks::Union{AbstractArray, Nothing} = nothing
+  - yticks::Union{AbstractArray, Nothing} = nothing
+  - main_title::String = ""
+  - east_west_labels::Bool = false
+  - alpha::Number = 0.8
+  - hidedecorations::Bool = false
+  - colorbar_size::Int = 15
 """
 function plotMapGrid!(
     fig::Figure,
@@ -805,23 +963,25 @@ function plotMapGrid!(
     legend_labels::AbstractArray{String} = [""],
     colormap = nothing,
     colorrange = nothing,
-    color_maps::Union{AbstractVector, Nothing} = nothing,
-    color_ranges::Union{AbstractVector{<:Tuple}, Nothing} = nothing,
+    color_maps::Union{AbstractVector,Nothing} = nothing,
+    color_ranges::Union{AbstractVector{<:Tuple},Nothing} = nothing,
     xlabel::String = "Longitude",
     ylabel::String = "Latitude",
     xlabel_rotate::Number = 0,
-    xticks::Union{AbstractArray, Nothing} = nothing,
-    yticks::Union{AbstractArray, Nothing} = nothing,
+    xticks::Union{AbstractArray,Nothing} = nothing,
+    yticks::Union{AbstractArray,Nothing} = nothing,
     main_title::String = "",
     east_west_labels::Bool = false,
     alpha::Number = 0.8,
     hidedecorations::Bool = false,
-    colorbar_size::Int = 15
+    colorbar_size::Int = 15,
 )
     @assert length(data_arrays) == length(titles) "data_arrays and titles must have the same length"
     @assert length(data_arrays) <= nrows * ncols "more arrays than subplot positions"
     if length(data_arrays) > nrows * ncols
-        error("The given number of rows ($nrows) and columns ($ncols) is not sufficient for given data ($(length(data_arrays)) subplots)")
+        error(
+            "The given number of rows ($nrows) and columns ($ncols) is not sufficient for given data ($(length(data_arrays)) subplots)",
+        )
     end
     # Compute shared color range across all panels if requested
     # data is filled row-wise
@@ -834,17 +994,21 @@ function plotMapGrid!(
         clip_vals_colorbar = !isnothing(color_ranges) || !isnothing(colorrange)
         n = sep_colorbar == :col ? ncols : nrows
         entries = sep_colorbar == :col ? cols : rows
-        if !isnothing(color_ranges) &&  length(color_ranges) != n
-                error("length of colorranges must be equal to number of nb. of columns (sep_colorbar == :col) or rows (sep_colorbar == :row)")
+        if !isnothing(color_ranges) && length(color_ranges) != n
+            error(
+                "length of colorranges must be equal to number of nb. of columns (sep_colorbar == :col) or rows (sep_colorbar == :row)",
+            )
         elseif !isnothing(colorrange)
             color_ranges = fill(colorrange, n)
         end
-        if !isnothing(color_maps) &&  length(color_maps) != n
-                error("length of colormaps must be equal to number of nb. of columns (sep_colorbar == :col) or rows (sep_colorbar == :row)")
+        if !isnothing(color_maps) && length(color_maps) != n
+            error(
+                "length of colormaps must be equal to number of nb. of columns (sep_colorbar == :col) or rows (sep_colorbar == :row)",
+            )
         elseif !isnothing(colormap)
             color_maps = fill(colormap, n)
         end
-        
+
         fill_colorranges = isnothing(color_ranges)
         fill_colormaps = isnothing(color_maps)
         if fill_colorranges
@@ -854,9 +1018,12 @@ function plotMapGrid!(
             color_maps = Vector(undef, n)
         end
         if fill_colorranges || fill_colormaps
-            for idx in 1:n
+            for idx = 1:n
                 indices = findall(entries .== idx)
-                vals = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays[indices]))))
+                vals = Iterators.filter(
+                    x -> !ismissing(x) && !isnan(x),
+                    Iterators.flatten(vec.(parent.(data_arrays[indices]))),
+                )
                 if fill_colorranges
                     color_ranges[idx] = extrema(vals)
                 end
@@ -868,7 +1035,10 @@ function plotMapGrid!(
     else
         # single colorbar across all subplots
         clip_vals_colorbar = !isnothing(colorrange)
-        vals = Iterators.filter(x -> !ismissing(x) && !isnan(x), Iterators.flatten(vec.(parent.(data_arrays))))
+        vals = Iterators.filter(
+            x -> !ismissing(x) && !isnan(x),
+            Iterators.flatten(vec.(parent.(data_arrays))),
+        )
         if isnothing(colorrange)
             colorrange = extrema(vals)
         end
@@ -892,7 +1062,9 @@ function plotMapGrid!(
             cm = colormap
         end
         ax, plt = plotValsOnMap!(
-            fig[row, col], data, title;
+            fig[row, col],
+            data,
+            title;
             color_range = cr,
             color_map = cm,
             add_colorbar = false,
@@ -905,7 +1077,7 @@ function plotMapGrid!(
             east_west_labels,
             alpha,
             hidedecorations,
-            colorbar_size
+            colorbar_size,
         )
         axes[i] = ax
         plots[i] = plt
@@ -917,24 +1089,49 @@ function plotMapGrid!(
     # Add Colorbar(s):
     if add_sep_colorbars
         n = sep_colorbar == :col ? ncols : nrows
-        for idx in 1:n
-            legend_label = length(legend_labels) == 1 ? legend_labels[1] : legend_labels[idx]
+        for idx = 1:n
+            legend_label =
+                length(legend_labels) == 1 ? legend_labels[1] : legend_labels[idx]
             if sep_colorbar == :col
-                addColorBar(fig[nrows+1,idx], color_maps[idx], color_ranges[idx], :b; fontsize, legend_label, clip_vals_colorbar)
+                addColorBar(
+                    fig[nrows+1, idx],
+                    color_maps[idx],
+                    color_ranges[idx],
+                    :b;
+                    fontsize,
+                    legend_label,
+                    clip_vals_colorbar,
+                )
             else
-                addColorBar(fig[idx,ncols+1], color_maps[idx], color_ranges[idx], :r; fontsize, legend_label, clip_vals_colorbar)
+                addColorBar(
+                    fig[idx, ncols+1],
+                    color_maps[idx],
+                    color_ranges[idx],
+                    :r;
+                    fontsize,
+                    legend_label,
+                    clip_vals_colorbar,
+                )
             end
         end
     else
-        addColorBar(fig[1:nrows,ncols+1], colormap, colorrange, :r; fontsize, legend_label = legend_labels[1], clip_vals_colorbar)
+        addColorBar(
+            fig[1:nrows, ncols+1],
+            colormap,
+            colorrange,
+            :r;
+            fontsize,
+            legend_label = legend_labels[1],
+            clip_vals_colorbar,
+        )
     end
-    
+
     # make all plot columns equal width
-    for c in 1:ncols
+    for c = 1:ncols
         colsize!(fig.layout, c, Relative(0.9 / ncols))
-    end 
+    end
     # make all rows equal height
-    for r in 1:nrows
+    for r = 1:nrows
         rowsize!(fig.layout, r, Aspect(1, 0.7))  # width:height ratio per cell
     end
     # and colorbar column/row narrower
@@ -951,48 +1148,50 @@ end
 function plotZonalMean!(
     ax::Axis,
     data::YAXArray;
-    color::Union{Symbol, Number} = :blue,
+    color::Union{Symbol,Number} = :blue,
     colormap = :viridis,
-    colorrange::Union{Nothing, Tuple} = nothing,
-    label::Union{Nothing, String} = nothing,
+    colorrange::Union{Nothing,Tuple} = nothing,
+    label::Union{Nothing,String} = nothing,
     lw::Number = 1.5,
-    ls::Symbol = :solid
+    ls::Symbol = :solid,
 )
     latitudes = Array(data.lat)
-    zonal_mean = Array(dropdims(Statistics.mean(data, dims=:lon), dims=:lon))
+    zonal_mean = Array(dropdims(stats.mean(data, dims = :lon), dims = :lon))
     p = Makie.lines!(
-        ax, zonal_mean, latitudes;
+        ax,
+        zonal_mean,
+        latitudes;
         color = color,
         colormap = colormap,
         colorrange = isnothing(colorrange) ? automatic : colorrange,
-        label = label, 
+        label = label,
         linewidth = lw,
-        linestyle = ls
+        linestyle = ls,
     )
     return p
 end
 
 
 function plotZonalMean(
-    data::YAXArray, 
+    data::YAXArray,
     xlabel::String;
-    color::Union{Symbol, Number} = :blue,
+    color::Union{Symbol,Number} = :blue,
     colormap = :viridis,
-    colorrange::Union{Nothing, Tuple} = nothing,
+    colorrange::Union{Nothing,Tuple} = nothing,
     ylabel::String = "Latitude",
     title::String = "",
     ticks_latitudes = -90:15:90,
     lw::Number = 1.5,
-    ls::Symbol = :solid
+    ls::Symbol = :solid,
 )
     latitudes_labels = latitude2NorthSouth.(ticks_latitudes)
     f = Figure()
     ax = Axis(
-        f[1,1], 
-        xlabel = xlabel, 
-        ylabel = ylabel, 
+        f[1, 1],
+        xlabel = xlabel,
+        ylabel = ylabel,
         yticks = (ticks_latitudes, latitudes_labels),
-        title = title
+        title = title,
     )
     p = plotZonalMean!(ax, data; color, colormap, colorrange, lw, ls)
     return p

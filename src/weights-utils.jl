@@ -248,7 +248,7 @@ function applyWeights(model_data::YAXArray, weights::YAXArray)
     end
     if hasdim(model_data, :member)
         # take average over model predictions of members of same model
-        model_data = Data.summarizeMembersVector(model_data; fn = Statistics.mean)
+        model_data = Data.summarizeMembersVector(model_data; fn = stats.mean)
     end
     models_weights = dims(weights, :model)
     models = dims(model_data, :model)
@@ -636,9 +636,9 @@ Use closed Form definition of CRPS.
 """
 function crps(samples::AbstractVector{<:Union{Missing,Number}}, obs::Number)
     # expected absolute error between forecast points and observation
-    ev_obs = mean(abs.(samples .- obs))
+    ev_obs = stats.mean(abs.(samples .- obs))
     # expected absolute difference between two random forecast points (each sample pair)
-    ev_pairs = mean(abs.(samples .- samples'))
+    ev_pairs = stats.mean(abs.(samples .- samples'))
     return ev_obs - 0.5 * ev_pairs
 end
 
@@ -743,8 +743,9 @@ function crpss(
         end
     end
     # take mean over last dimension time
-    crps_fc = dropdims(mean(crps_forecast, dims = n_dims + 1), dims = n_dims + 1)
-    crps_baseline = dropdims(mean(crps_baseline, dims = n_dims + 1), dims = n_dims + 1)
+    crps_fc = dropdims(stats.mean(crps_forecast, dims = n_dims + 1), dims = n_dims + 1)
+    crps_baseline =
+        dropdims(stats.mean(crps_baseline, dims = n_dims + 1), dims = n_dims + 1)
     result = crpss(crps_fc, crps_baseline)
     return n_dims > 0 ? YAXArray(dims_fc, result) : result
 end
@@ -813,8 +814,9 @@ function crpss_weighted(
         end
     end
     # take mean over last dimension time
-    crps_fc = dropdims(mean(crps_weighted, dims = n_dims + 1), dims = n_dims + 1)
-    crps_baseline = dropdims(mean(crps_unweighted, dims = n_dims + 1), dims = n_dims + 1)
+    crps_fc = dropdims(stats.mean(crps_weighted, dims = n_dims + 1), dims = n_dims + 1)
+    crps_baseline =
+        dropdims(stats.mean(crps_unweighted, dims = n_dims + 1), dims = n_dims + 1)
     if n_dims > 0
         result = YAXArray(dimensions, crpss(crps_fc, crps_baseline))
     else

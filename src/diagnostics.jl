@@ -136,14 +136,14 @@ end
 
 function standardDev(data::YAXArray, dimension::Symbol)
     throwErrorIfDimMissing(data, dimension)
-    standard_devs = dropdims(Statistics.std(data, dims = dimension), dims = dimension)
+    standard_devs = dropdims(stats.std(data, dims = dimension), dims = dimension)
     return YAXArray(otherdims(data, dimension), standard_devs, deepcopy(data.properties))
 end
 
 
 function climatology(data::YAXArray)
     throwErrorIfDimMissing(data, :time)
-    return dropdims(mean(data; dims = :time); dims = :time)
+    return dropdims(stats.mean(data; dims = :time); dims = :time)
 end
 
 

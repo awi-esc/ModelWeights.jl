@@ -1,9 +1,9 @@
 """
     plotWeights(
-        weights::YAXArray; 
+        weights::YAXArray;
         fs::Number = 15,
         sort_by::String = "",
-        weights_labels::Union{Dict{String, String}, Nothing} = nothing, 
+        weights_labels::Union{Dict{String, String}, Nothing} = nothing,
         fig_size::Tuple = (600,450)
         sort_by::String=""
     )
@@ -13,41 +13,42 @@ Plot `weights` sorted by weight dimension `sort_by` of `weights` if given, other
 Equal weights line is added to the plot.
 
 # Arguments:
-- `weights::YAXArray`: with dimensions :weight and :model
-- `fs::Number`: fontsize
-- `sort_by::String`: value of weight dimension according to which data is sorted
-- `weights_labels::Union{Dict{String, String}, Nothing} = nothing`: titles of subplots. Default is dimension names for dimension :weight
-- `fig_size::Tuple`:
+
+  - `weights::YAXArray`: with dimensions :weight and :model
+  - `fs::Number`: fontsize
+  - `sort_by::String`: value of weight dimension according to which data is sorted
+  - `weights_labels::Union{Dict{String, String}, Nothing} = nothing`: titles of subplots. Default is dimension names for dimension :weight
+  - `fig_size::Tuple`:
 """
 function plotWeights(
-    weights::YAXArray; 
+    weights::YAXArray;
     fs::Number = 15,
     sort_by::String = "",
-    labels::Union{AbstractArray{String}, Nothing} = nothing, 
-    fig_size::Tuple = (600,450), 
-    one_plot::Bool = false, 
+    labels::Union{AbstractArray{String},Nothing} = nothing,
+    fig_size::Tuple = (600, 450),
+    one_plot::Bool = false,
     title::String = "",
     nbanks::Int = 1,
     ls::Int = 12,
-    colors::Union{Nothing, AbstractArray} = nothing
+    colors::Union{Nothing,AbstractArray} = nothing,
 )
     if !hasdim(weights, :weight)
         indices = 1:length(weights)
         weights = YAXArray(
             (dims(weights)..., Dim{:weight}([""])),
-            Data.insertSingletonDim(weights, 2)
+            Data.insertSingletonDim(weights, 2),
         )
     else
         sort_by = isempty(sort_by) ? weights.weight[1] : sort_by
-        indices = Array(sortperm(weights[weight = At(sort_by)], rev=true))
+        indices = Array(sortperm(weights[weight=At(sort_by)], rev = true))
     end
 
     n_models = length(weights.model)
     xs = 1:n_models
-    fig = Figure(size=fig_size)
+    fig = Figure(size = fig_size)
     ys_equal = [1 / n_models for _ in range(1, n_models)]
 
-    weights_labels = lookup(weights, :weight) 
+    weights_labels = lookup(weights, :weight)
     if isnothing(labels)
         labels = weights_labels
     end
@@ -55,7 +56,7 @@ function plotWeights(
     # axis for last row has model names in xaxis labels
     n_weights = length(weights_labels)
     ax = Axis(
-        one_plot ? fig[1,1] : fig[n_weights, 1],
+        one_plot ? fig[1, 1] : fig[n_weights, 1],
         xticks = (xs, Array(weights.model)[indices]),
         xticklabelrotation = pi/2,
         xlabel = "Model",
@@ -65,24 +66,39 @@ function plotWeights(
         xticklabelsize = fs-2,
         yticklabelsize = fs-2,
         xlabelsize = fs,
-        ylabelsize = fs
+        ylabelsize = fs,
     )
     plots = Vector(undef, length(weights_labels))
     for (i, label) in enumerate(weights_labels)
-        ax_i = i==n_weights || one_plot ? ax : Axis(fig[i, 1], title=labels[i])
-        ys = Array(weights[weight = At(label)])
+        ax_i = i==n_weights || one_plot ? ax : Axis(fig[i, 1], title = labels[i])
+        ys = Array(weights[weight=At(label)])
         sorted_ys = ys[indices]
         if isnothing(colors)
-            plots[i] = scatterlines!(ax_i, xs, sorted_ys, alpha = 0.5, label=label)
-               else
-            plots[i] = scatterlines!(ax_i, xs, sorted_ys, alpha = 0.5, color=colors[i])
+            plots[i] = scatterlines!(ax_i, xs, sorted_ys, alpha = 0.5, label = label)
+        else
+            plots[i] = scatterlines!(ax_i, xs, sorted_ys, alpha = 0.5, color = colors[i])
         end
-        lines!(ax_i, xs, ys_equal, color = :gray, label = "equal weighting", linestyle=:dash)
+        lines!(
+            ax_i,
+            xs,
+            ys_equal,
+            color = :gray,
+            label = "equal weighting",
+            linestyle = :dash,
+        )
     end
     if one_plot
-        Legend(fig[2,1], plots, weights_labels, orientation=:horizontal, framevisible=false, nbanks=nbanks, labelsize=ls)
+        Legend(
+            fig[2, 1],
+            plots,
+            weights_labels,
+            orientation = :horizontal,
+            framevisible = false,
+            nbanks = nbanks,
+            labelsize = ls,
+        )
     else
-        Label(fig[:,0], "Weight", rotation=pi/2)
+        Label(fig[:, 0], "Weight", rotation = pi/2)
     end
     return fig
 end
@@ -94,9 +110,10 @@ end
 Plot figure of distances.
 
 # Arguments:
-- `dists::AbstractArray`:
-- `title::String`:
-- `is_bar_plot::Bool = true`:
+
+  - `dists::AbstractArray`:
+  - `title::String`:
+  - `is_bar_plot::Bool = true`:
 """
 function plotDistances(dists::AbstractArray, title::String; is_bar_plot::Bool = true)
     model_dim = Data.modelDim(dists)
@@ -108,7 +125,7 @@ function plotDistances(dists::AbstractArray, title::String; is_bar_plot::Bool = 
         xticks = (xs, collect(models)),
         xticklabelrotation = pi / 4,
         xlabel = String(model_dim),
-        title = title
+        title = title,
     )
     ys = collect(dists.data)
     if is_bar_plot
@@ -127,12 +144,15 @@ end
     )
 
 # Arguments:
-- `distances::AbstractArray`:
-- `dimname::String`:
-- `title::String`:
+
+  - `distances::AbstractArray`:
+  - `dimname::String`:
+  - `title::String`:
 """
 function plotDistancesIndependence(
-    distances::AbstractArray, dimname::String; title::String="Generalized distances Sij"
+    distances::AbstractArray,
+    dimname::String;
+    title::String = "Generalized distances Sij",
 )
     figures = []
     ensembles = collect(dims(distances, Symbol(dimname)))
@@ -149,12 +169,7 @@ function plotDistancesIndependence(
             end
         end
     else
-        fig = plotDistMatrices(
-            Array(distances),
-            title,
-            ensembles,
-            ensembles,
-        )
+        fig = plotDistMatrices(Array(distances), title, ensembles, ensembles)
         push!(figures, fig)
     end
     return figures
@@ -162,11 +177,13 @@ end
 
 
 function plotCRPSSPseudoObs(
-    crpss_all::Vector{T}, labels::Vector{String}, colors::Vector{Symbol};
+    crpss_all::Vector{T},
+    labels::Vector{String},
+    colors::Vector{Symbol};
     ylabel::String = "CRPSS weighted vs. unweighted",
     leg_pos::Symbol = :rb,
-    fs::Number = 12
-) where {T <: Any}
+    fs::Number = 12,
+) where {T<:Any}
     figs = []
     models = sort(lookup(crpss_all[1], :pseudo_obs))
     n = length(models)
@@ -183,31 +200,39 @@ function plotCRPSSPseudoObs(
                 xticks = (xs, models),
                 xticklabelrotation = pi / 2,
                 ylabel = ylabel,
-                title = title
+                title = title,
             )
             n_groups = length(crpss_all)
             crpss_vals_all = map(
                 i -> map(
-                        m -> only(crpss_all[i][scenario=At(scenario), target_period=At(tp), pseudo_obs=At(m)]),
-                        models
+                    m -> only(
+                        crpss_all[i][
+                            scenario=At(scenario),
+                            target_period=At(tp),
+                            pseudo_obs=At(m),
+                        ],
                     ),
-                1:n_groups
+                    models,
+                ),
+                1:n_groups,
             )
             groups = vcat(map(i -> repeat([i], length(xs)), 1:n_groups)...)
             xs_flat = vcat(repeat(xs, n_groups)...)
             barplot!(
-                ax, xs_flat, vcat(crpss_vals_all...); 
+                ax,
+                xs_flat,
+                vcat(crpss_vals_all...);
                 dodge = groups,
-                color = repeat(colors, inner=n),
-                label = repeat(labels, inner=n)
+                color = repeat(colors, inner = n),
+                label = repeat(labels, inner = n),
             )
             if length(labels) > 1
                 axislegend(
-                    ax, 
-                    [PolyElement(color=c) for c in colors], 
-                    labels, 
-                    position=leg_pos, 
-                    merge=true
+                    ax,
+                    [PolyElement(color = c) for c in colors],
+                    labels,
+                    position = leg_pos,
+                    merge = true,
                 )
             end
             push!(figs, fig)
@@ -218,10 +243,13 @@ end
 
 
 function crpssBoxPlot(
-    crpss_wIP::YAXArray,  colors::Vector{Symbol}; 
-    title::String="", leg_pos::Symbol=:rb, ylabel::String="CRPSS", 
+    crpss_wIP::YAXArray,
+    colors::Vector{Symbol};
+    title::String = "",
+    leg_pos::Symbol = :rb,
+    ylabel::String = "CRPSS",
     yticks::AbstractArray{<:Number},
-    ymax::Number=1
+    ymax::Number = 1,
 )
     tps = lookup(crpss_wIP, :target_period)
     scenarios = lookup(crpss_wIP, :scenario)
@@ -231,37 +259,40 @@ function crpssBoxPlot(
         xticks = (1:length(tps), tps),
         yticks = (yticks, string.(yticks)),
         ylabel = ylabel,
-        title = title
+        title = title,
     )
     ylims!(ax, nothing, ymax)
-    hlines!(ax, 0; color=:black)
+    hlines!(ax, 0; color = :black)
     # dodged barplot
     ys_all = []
     grps_all = []
     xs_all = []
     for (i, tp) in enumerate(tps)
-        ys = collect.(map(sc -> crpss_wIP[target_period = At(tp), scenario=At(sc)], scenarios))
+        ys =
+            collect.(map(sc -> crpss_wIP[target_period=At(tp), scenario=At(sc)], scenarios))
         push!(ys_all, vcat(ys...))
         grps = vcat(map(x -> repeat([x], length(ys[x])), 1:length(scenarios))...)
         push!(grps_all, grps)
         xs = repeat([i], length(vcat(ys...)))
         push!(xs_all, xs)
-        
+
         boxplot!(
-            ax, xs, vcat(ys...); 
+            ax,
+            xs,
+            vcat(ys...);
             dodge = grps,
-            color = repeat(colors, inner=length(ys[1])),
-            label = repeat(scenarios, inner=length(ys[1]))
+            color = repeat(colors, inner = length(ys[1])),
+            label = repeat(scenarios, inner = length(ys[1])),
         )
     end
     axislegend(
-        ax, 
-        [PolyElement(color=c) for c in colors], 
-        scenarios, 
-        position=leg_pos,
+        ax,
+        [PolyElement(color = c) for c in colors],
+        scenarios,
+        position = leg_pos,
         orientation = :horizontal,
-        merge=true,
-        framevisible=false
+        merge = true,
+        framevisible = false,
     )
     return f
 end
@@ -270,7 +301,7 @@ end
 """
     boxplotMCMCWeights(
         gp,
-        chains, 
+        chains,
         models;
         chain = 1,
         xticks::AbstractArray=0.1:0.1:1,
@@ -280,31 +311,38 @@ end
     )
 
 # Arguments:
-- `gp::GridPosition`: grid position within the figure
-- `chains:AbstractArray`: a vector where each element corresponds to one MCMC chain, which contain 
-matrices of size N_iter x N_models
-- `models::AbstractArray{String}`: model names
+
+  - `gp::GridPosition`: grid position within the figure
+  - `chains:AbstractArray`: a vector where each element corresponds to one MCMC chain, which contain
+    matrices of size N_iter x N_models
+  - `models::AbstractArray{String}`: model names
 """
 function boxplotMCMCWeights(
     gp::GridPosition,
-    chains::AbstractArray, 
+    chains::AbstractArray,
     models::AbstractArray{String};
     chain::Int = 1,
     chains_prior::AbstractArray = [],
     xticks::AbstractArray = 0:0.1:1,
-    xlims::Union{Tuple, Nothing} = nothing,
+    xlims::Union{Tuple,Nothing} = nothing,
     show_outliers::Bool = true,
     show_median::Bool = true,
     title::String = "",
-    marker_size::Int = 30
+    marker_size::Int = 30,
 )
     N_models = length(models)
     samples = chains[chain]
     prior = !isempty(chains_prior)
     N_iter = size(samples, 1)
     offset = prior ? 2 : 1
-    ys = [(x-1) * offset for x in 1:N_models]
-    ax = Axis(gp, xticks = (xticks, string.(xticks)), yticks = (ys, models), title=title, xlabel="Weight")
+    ys = [(x-1) * offset for x = 1:N_models]
+    ax = Axis(
+        gp,
+        xticks = (xticks, string.(xticks)),
+        yticks = (ys, models),
+        title = title,
+        xlabel = "Weight",
+    )
     if prior
         Makie.ylims!(ax, -offset, maximum(ys) + offset/2)
     else
@@ -313,76 +351,73 @@ function boxplotMCMCWeights(
     if !isnothing(xlims)
         Makie.xlims!(ax, xlims...)
     end
-    for m in 1:length(models)
+    for m = 1:length(models)
         Makie.boxplot!(
-            ax, 
-            fill(ys[m], N_iter), samples[:, m], 
+            ax,
+            fill(ys[m], N_iter),
+            samples[:, m],
             orientation = :horizontal,
-            color=:grey, 
+            color = :grey,
             show_outliers = show_outliers,
-            show_median = show_median
+            show_median = show_median,
         )
         Makie.scatter!(
-            ax, 
-            mean(samples[:, m]),
+            ax,
+            stats.mean(samples[:, m]),
             ys[m],
-            color=RGBf(206/255, 250/255, 220/255),
+            color = RGBf(206/255, 250/255, 220/255),
             marker = '*',
             markersize = marker_size,
-            label = "BMA-mean"
+            label = "BMA-mean",
         )
         if prior
             y = ys[m] - offset / 3
             Makie.boxplot!(
-                ax, 
-                fill(y, N_iter), chains_prior[chain][:, m], 
+                ax,
+                fill(y, N_iter),
+                chains_prior[chain][:, m],
                 orientation = :horizontal,
-                color=:grey, 
-                alpha = 0.5
+                color = :grey,
+                alpha = 0.5,
             )
             Makie.scatter!(
-                ax, 
-                mean(chains_prior[chain][:, m]),
+                ax,
+                stats.mean(chains_prior[chain][:, m]),
                 y,
-                color=RGBf(250/255, 206/255, 236/255),
+                color = RGBf(250/255, 206/255, 236/255),
                 marker = '*',
                 markersize = marker_size,
-                label = "Mean prior"
+                label = "Mean prior",
             )
         end
     end
-    Makie.vlines!(ax, 1/N_models, color=:grey, linestyle=:dash)
+    Makie.vlines!(ax, 1/N_models, color = :grey, linestyle = :dash)
     return ax
 end
 
 function densityMCMCWeights(
-    chains, models;
+    chains,
+    models;
     chain::Int = 1,
-    xticks::AbstractArray=0.1:0.1:1,
-    xlims::Union{Tuple, Nothing}=nothing,
-    title::String="",
-    fig_size=(600,400)
-
+    xticks::AbstractArray = 0.1:0.1:1,
+    xlims::Union{Tuple,Nothing} = nothing,
+    title::String = "",
+    fig_size = (600, 400),
 )
     samples = chains[chain]
     N_models = length(models)
-    f = Figure(size=fig_size)
+    f = Figure(size = fig_size)
     offset = 100
-    ys = [(x-1) * offset for x in 1:N_models]
-    ax = Axis(f[1,1], yticks = (ys, models), title=title, xlabel="Weight")
+    ys = [(x-1) * offset for x = 1:N_models]
+    ax = Axis(f[1, 1], yticks = (ys, models), title = title, xlabel = "Weight")
     if !isnothing(xlims)
         Makie.xlims!(ax, xlims...)
     end
     Makie.ylims!(ax, -offset/2, maximum(ys) + offset)
-    for m in 1:length(models)
-        Makie.density!(
-            ax,
-            samples[:, m], 
-            offset = (m-1) * offset, 
-            color=:x
-        )
+    for m = 1:length(models)
+        Makie.density!(ax, samples[:, m], offset = (m-1) * offset, color = :x)
     end
-    Makie.vlines!(ax, 1/N_models, color=:grey, linestyle=:dash)
+    Makie.vlines!(ax, 1/N_models, color = :grey, linestyle = :dash)
     return f
 end
 
@@ -391,39 +426,51 @@ end
     plotCorrWeights(gp, models_labels, weights)
 
 # Arguments:
-- `gp::GridPosition`: 
-- `models_labels::AbstractVector`: names of models
-- `weights::AbstractArray`: samples (iterations) x models
-- `pairs::AbstractVector`: tuples for models to be compared against one another as indices
+
+  - `gp::GridPosition`:
+  - `models_labels::AbstractVector`: names of models
+  - `weights::AbstractArray`: samples (iterations) x models
+  - `pairs::AbstractVector`: tuples for models to be compared against one another as indices
 """
 function plotCorrWeights(
     gp::GridPosition,
     models_labels::AbstractVector,
-    weights::AbstractArray, 
+    weights::AbstractArray,
     pairs::AbstractVector;
     color::Symbol = :grey,
-    color_means::Union{Symbol, ColorTypes.RGB, Nothing} = CairoMakie.RGBf(206/255, 250/255, 220/255),
-    xlims::Union{Nothing, Tuple} = nothing,
-    ylims::Union{Nothing, Tuple} = nothing, 
+    color_means::Union{Symbol,ColorTypes.RGB,Nothing} = CairoMakie.RGBf(
+        206/255,
+        250/255,
+        220/255,
+    ),
+    xlims::Union{Nothing,Tuple} = nothing,
+    ylims::Union{Nothing,Tuple} = nothing,
     fs::Int = 11,
     marker_size::Int = 30,
     xticks::AbstractArray = 0:0.1:1,
-    yticks::AbstractArray = 0:0.1:1
+    yticks::AbstractArray = 0:0.1:1,
 )
-    axes = [];
+    axes = []
     for (i, (m1, m2)) in enumerate(pairs)
         ax = Axis(
-            gp[1, i], 
-            xlabel = models_labels[m1], ylabel = models_labels[m2],
-            xticklabelsize = fs, yticklabelsize = fs,
+            gp[1, i],
+            xlabel = models_labels[m1],
+            ylabel = models_labels[m2],
+            xticklabelsize = fs,
+            yticklabelsize = fs,
             xticks = (xticks, string.(xticks)),
-            yticks = (yticks, string.(yticks))
-        );
+            yticks = (yticks, string.(yticks)),
+        )
         axes.push!(ax)
-        Makie.scatter!(ax, weights[:, m1], weights[:, m2], color=color)
+        Makie.scatter!(ax, weights[:, m1], weights[:, m2], color = color)
         if !isnothing(color_means)
-            Makie.scatter!(ax, mean(weights[:, m1]), mean(weights[:, m2]),
-                 color = color_means, marker = '*', markersize = marker_size
+            Makie.scatter!(
+                ax,
+                stats.mean(weights[:, m1]),
+                stats.mean(weights[:, m2]),
+                color = color_means,
+                marker = '*',
+                markersize = marker_size,
             )
         end
         if !isnothing(xlims)

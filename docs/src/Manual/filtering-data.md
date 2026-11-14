@@ -19,6 +19,8 @@ When loading data, the data can be filtered in several ways, explained below. No
 -  `grids`: load only data with given grids, e.g. `["gn"]`
 - `mips`: load only data from given projects, e.g. to load only CMIP5 data, set to ["CMIP5"]
 - `members`: load only specific model runs; requires full model name including run (`MODELNAME#VARIANT`), e.g. `["MPI-ESM-P#r1i1p1"]`
+### [Using kwarg `constraint_obs`](@id constraint-obs-options)
+
 
 ### [Using kwarg `constraint_ts` for timeseries constraints](@id constraint-ts-options)
 
