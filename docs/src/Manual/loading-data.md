@@ -26,79 +26,85 @@ The main entry point to load data, is the function `defineDataMap`, which loads 
 They all share the following **optional keyword arguments**:
 
 - `constraint`: a `Dict{Symbol, <:AbstractArray{String}}` with certain options to filter the data to be loaded; see [here](filtering-data.md#filtering-data) for the available options.
+- `constraint_obs`: a `Dict{Symbol, <:AbstractArray{String}}` with options to filter observational data; see [here](filtering-data.md#filtering-data) for the available options.
 - `constraint_ts`: a `NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}` specifying a start and end year for time series data. By default, there are no restrictions, i.e. all time points are included.
 - `level`: a `Symbol` out of: `:member, :model, :none`. Specifies on which level the data of the different experiments or variables should agree. If set to `:member`, only the subset of exact model runs that are available for every experiment/variable are loaded. If set to `:model`, the exact runs do not matter, but each loaded model is loaded for every experiment/variable. If set to `:none`, for every experiment/variable all available data is loaded, without any restrictions.
-- `is_cmip`: a Boolean that, if `true` (default) assumes certain meta data to be present in the data.
-- `filename_format`: a Symbol (default: `:esmvaltool`).
 - `sorted`: a Boolean that, if `true` (default) the returned data is sorted alphabetically with respect to the model names.
 - `model_times`: a Boolean that, if set to `true` (default: `false`) assumes that the time dimension refers to model times, i.e., not to actual dates. <!--This has an influence on assumptions for loading time series data-->
 - `filename_format`: a Symbol that specifies the structure of the filenames of the data (default: `:esmvaltool`). This argument is important since the data is loaded based on the information retrieved from the filenames of the data. The predefined filename formats are explained in the next paragraph.
 
+```@raw html
+<!-- - `is_cmip`: a Boolean that, if `true` (default) assumes certain meta data to be present in the data.
+ -->
+```
+
 ## Filename formats
   - `filename_format = :esmvaltool` (default)
-    Only esmvaltool format is assumed, for every file it is automatically derived which exact format it corresponds to.
+    The data is assumed to be stored according to how ESMValTool stores it; for every file it is automatically derived which exact ESMValTool format it corresponds to.
 
-  - `filename_format = :esmvaltool_cmip5`
+  - `filename_format = :cmip`
+    The data is assumed to be stored as it is when downloaded from ESGF. For every file it is automatically derived which exact cmip format it corresponds to (CMIP5/CMIP6).
+
+  These are the detectable formats with what their filenames represent:
+  - CMIP 5 (:esmvaltool)
     ```julia
     "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
     # Example: CMIP5_ACCESS1-0_Amon_piControl_r1i1p1_tas.nc
     ```
-
-
-  - `filename_format = :esmvaltool_cmip6`
+  - CMIP 6 (:esmvaltool)
     ```julia
     "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
     # Example: CMIP6_ACCESS-CM2_Amon_piControl_r1i1p1f1_tas_gn.nc
     ```
-
-  - `filename_format = :esmvaltool_obs`
+  - OBS (:esmvaltool)
     ```julia
-    "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
+    "PROJECT_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
     # Example: 
     ```
-    When the data was filtered for a specific time period within ESMValTool, the filename of the stored data ends with the timerange. Such data is loaded with the following filename formats:
+
+    When the data was filtered for a specific time period within ESMValTool, the filename of
+    the stored data ends with the timerange. Such data is loaded with the following filename
+    formats:
   
-  - `filename_format = :esmvaltool_cmip5_tr`
+  - CMIP 5 Timerange (:esmvaltool)
     ```julia
     "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE"
     # Example: CMIP5_ACCESS1-0_Amon_historical-rcp85_r1i1p1_tas_1960-2100.nc
     ```
 
-  - `filename_format = :esmvaltool_cmip6_tr`
+  - CMIP 6 Timerange (:esmvaltool)
     ```julia
     "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE"
     # Example: CMIP6_ACCESS-CM2_Amon_historical_r1i1p1f1_tas_gn_1850-1900.nc
     ```
 
-  - `filename_format = :esmvaltool_obs_tr`
+  - OBS Timerange (:esmvaltool)
     ```julia
-    "GRID_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE"
+    "PROJECT_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE"
     # Example:
     ```
-
-
-  - `filename_format = :cmip` This is the format of CMIP data as downloaded from ESGF. For every file it is automatically derived which exact cmip format it corresponds to (CMIP5/CMIP6) and whether it is a timeseries or a climatology.
-
-  - `filename_format = :cmip6`
+  
+  For raw CMIP-data, the different filename formats are:
+  - CMIP6 (:cmip)
     ```julia
     "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID"
     # Example: orog_fx_AWI-ESM-1-REcoM_historical_r1i1p1f1_gn.nc
     ```
-  - `filename_format = :cmip5`
+  - CMIP5 (:cmip)
     ```julia
-      "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT"
-        # Example:
+    "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT"
+    # Example:
     ```
   
-  - `filename_format = :cmip6_tr`
+  - CMIP6 Timeranges (:cmip)
     ```julia
     "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
     # Example: pr_Amon_AWI-ESM-1-1-LR_lgm_r1i1p1f1_gn_396101-396512.nc
     ```
-  - `filename_format = :cmip5_tr`
+  - CMIP5 Timeranges (:cmip)
     ```julia
-      "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_TIMERANGE"
-        # Example: pr_Amon_CCSM4_midHolocene_r1i1p1_100001-130012.nc
+    "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_TIMERANGE"
+    # Example: pr_Amon_CCSM4_midHolocene_r1i1p1_100001-130012.nc
     ```
 
 ```@raw html

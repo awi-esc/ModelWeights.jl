@@ -131,7 +131,7 @@ lgm_tos_CLIM: (15,)
 Tpply a function just on a subset of the datasets in our `DataMap`:
 
 ```julia-repl
-mwd.apply(
+julia> mwd.apply(
     dm_members,
     mwd.globalMeans;
     ids = ["lgm_tas_CLIM"]

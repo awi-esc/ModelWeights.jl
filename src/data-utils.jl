@@ -375,9 +375,7 @@ function _filterMeta!(
     if constraint_ts.start_year != typemin(Int) || constraint_ts.end_year != typemax(Int)
         # for not preprocessed cmip data, the timerange is part of the filename,
         # and can thus, a timeseries constraint can already be applied here, for this data
-        if isa(fn_format, FF_CMIP)
-            _applyConstraintTS!(meta_data_per_dataset, constraint_ts)
-        end
+        _applyConstraintTS!(meta_data_per_dataset, constraint_ts, fn_format)
     end
     _applyLevel!(meta_data_per_dataset, level)
     return nothing
@@ -1025,8 +1023,6 @@ function _parseFilenameObs(filename::String, path::String, field_indices::Dict{S
     )
 end
 
-
-
 """
     _parseFilenameModel(filename::String, path::String, field_indices::Dict{Symbol, Int})
 
@@ -1066,65 +1062,32 @@ function _parseFilenameModel(
 end
 
 # ESMValTool formats
-function parsePath(path::String, ::FF_ESMVT)
+function parsePath(path::String, ::ESMVTFormat)
     filename = first(splitext(basename(path)))
     parts = split(filename, "_")
     proj = parts[1]
     if proj == "native6"
         format_dict = length(parts) == 6 ? OBS_FIELD_INDICES : OBS_FIELD_INDICES_TR
         return _parseFilenameObs(filename, path, format_dict)
-    elseif proj in ["CMIP5", "CMIP6"]
-        if proj == "CMIP6"
-            format_dict =
-                length(parts) == 7 ? CMIP6_ESMVT_FIELD_INDICES :
-                CMIP6_ESMVT_FIELD_INDICES_TR
-        else
-            format_dict =
-                length(parts) == 6 ? CMIP5_ESMVT_FIELD_INDICES :
-                CMIP5_ESMVT_FIELD_INDICES_TR
-        end
+    elseif proj == "CMIP6"
+        format_dict =
+        length(parts) == 7 ? CMIP6_ESMVT_FIELD_INDICES : CMIP6_ESMVT_FIELD_INDICES_TR
+        return _parseFilenameModel(filename, path, format_dict)
+    elseif proj == "CMIP5"
+        format_dict =
+        length(parts) == 6 ? CMIP5_ESMVT_FIELD_INDICES : CMIP5_ESMVT_FIELD_INDICES_TR
         return _parseFilenameModel(filename, path, format_dict)
     else
         throw(
             ErrorException(
-                "Not implemented: only CMIP5 + CMIP6 for models implemented and only native6 for observations. Found: $(proj).",
+                "$(filename) cannot be parsed assuming ESMValTool preprocessing; only CMIP5 + CMIP6 for models and only native6 for observations is supported.",
             ),
         )
     end
 end
 
-function parsePath(path::String, ::FF_ESMVT_OBS)::ObsMeta
-    filename = first(splitext(basename(path)))
-    _parseFilenameObs(filename, path, OBS_FIELD_INDICES)
-end
-
-function parsePath(path::String, ::FF_ESMVT_OBS_TR)::ObsMeta
-    filename = first(splitext(basename(path)))
-    _parseFilenameObs(filename, path, OBS_FIELD_INDICES_TR)
-end
-
-function parsePath(path::String, ::FF_ESMVT_CMIP6)::ModelMeta
-    filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP6_ESMVT_FIELD_INDICES)
-end
-
-function parsePath(path::String, ::FF_ESMVT_CMIP6_TR)::ModelMeta
-    filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP6_ESMVT_FIELD_INDICES_TR)
-end
-
-function parsePath(path::String, ::FF_ESMVT_CMIP5)::ModelMeta
-    filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP5_ESMVT_FIELD_INDICES)
-end
-
-function parsePath(path::String, ::FF_ESMVT_CMIP5_TR)::ModelMeta
-    filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP5_ESMVT_FIELD_INDICES_TR)
-end
-
 # CMIP formats
-function parsePath(path::String, ::FF_CMIP)::ModelMeta
+function parsePath(path::String, ::CMIPFormat)::ModelMeta
     filename = first(splitext(basename(path)))
     parts = split(filename, "_")
     # CMIP6 ends with GRID (+ TIMERANGE), CMIP5 does not have GRID in the end
@@ -1143,32 +1106,11 @@ function parsePath(path::String, ::FF_CMIP)::ModelMeta
     else
         throw(
             ErrorException(
-                "Not implemented: only CMIP5 + CMIP6 for models implemented. Found: $(proj).",
+                "$(filename) cannot be parsed; only CMIP5 + CMIP6 for models is supported.",
             ),
         )
     end
 end
-
-function parsePath(path::String, ::FF_CMIP5)::ModelMeta
-    filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP5_FIELD_INDICES)
-end
-
-function parsePath(path::String, ::FF_CMIP5_TR)::ModelMeta
-    filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP5_FIELD_INDICES_TR)
-end
-
-function parsePath(path::String, ::FF_CMIP6)::ModelMeta
-    filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP6_FIELD_INDICES)
-end
-
-function parsePath(path::String, ::FF_CMIP6_TR)::ModelMeta
-    filename = first(splitext(basename(path)))
-    _parseFilenameModel(filename, path, CMIP6_FIELD_INDICES_TR)
-end
-
 
 function isRetained(fn_meta::AbstractMeta, constraint::AbstractConstraint)
     for field in fieldnames(typeof(constraint))

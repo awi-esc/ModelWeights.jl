@@ -667,8 +667,8 @@ function _loadDataMapCore(
     return defineDataMap(data, ids_filtered)
 end
 
-_applyLevel!(m::AbstractVector{<:AbstractVector{<:AbstractMeta}}, ::AbstractLevel) = nothing
-
+# applyLevel is only applicable to model data, not observatoinal data and whenever the
+# level is set to :none, nothing should happen, neither for model data
 function _applyLevel!(
     meta_data_per_dataset::AbstractVector{<:AbstractVector{ModelMeta}},
     level::Union{LevMember, LevModel},
@@ -682,6 +682,9 @@ function _applyLevel!(
     return nothing
 end
 
+_applyLevel!(m::AbstractVector{<:AbstractVector{<:AbstractMeta}}, ::AbstractLevel) = nothing
+
+
 function _applyConstraint!(
     meta_data_per_dataset::AbstractVector{<:AbstractVector{<:AbstractMeta}},
     constraint::AbstractConstraint,
@@ -693,36 +696,48 @@ function _applyConstraint!(
     return nothing
 end
 
+
+function _overlapsTS(
+    meta::ModelMeta,
+    constr_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}}
+)
+    # timerange given as string, e.g. 185001-185012
+    isnothing(meta.timerange) && return true # keep if no timerange given
+    start_file = parse(Int, meta.timerange[1:4])
+    end_file = parse(Int, split(meta.timerange, "-")[2][1:4])
+    s, e = constr_ts.start_year, constr_ts.end_year
+    # file start must be before or at end date and file end must be after or at start date
+    return start_file <= e && end_file >= s
+end
+
 """
     _applyConstraintTS!(
-        meta_data_per_dataset::AbstractVector{<:AbstractVector{ModelMeta}};
-        constraint_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}},
+        meta_data_per_dataset::AbstractVector{<:AbstractVector{ModelMeta}},
+        constr_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}},
+        ::CMIPFormat,
     )
 
-Filter metadata to fall into time period between start and end year in `constraint_ts`.
+Keep metadata that falls into time period between start and end year in `constr_ts`.
+
+If metadata does not specify a timerange, it is kept, too.
 """
 function _applyConstraintTS!(
     meta_data_per_dataset::AbstractVector{<:AbstractVector{ModelMeta}},
-    constraint_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}},
+    constr_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}},
+    ::CMIPFormat,
 )
-    start_cs = constraint_ts.start_year
-    end_cs = constraint_ts.end_year
-    end_cs < start_cs && throw(ArgumentError("End of timeseries must be after start!"))
-
-    for (i, meta_files) in enumerate(meta_data_per_dataset)
-        mask = Vector{Bool}(undef, length(meta_files))
-        for (j, meta) in enumerate(meta_files)
-            # timerange given as string, e.g. 185001-185012
-            start_file = parse(Int, meta.timerange[1:4])
-            end_file = parse(Int, split(meta.timerange, "-")[2][1:4])
-            mask[j] =
-                (start_file >= start_cs && start_file <= end_cs) ||
-                (end_file >= start_cs && end_file <= end_cs)
-        end
-        meta_data_per_dataset[i] = meta_files[mask]
+    # check if valid constraint
+    constr_ts.end_year < constr_ts.start_year &&
+        throw(ArgumentError("End of timeseries constraint must be after start!"))
+    for meta_files in meta_data_per_dataset
+        filter!(m -> _overlapsTS(m, constr_ts), meta_files)
     end
     return nothing
 end
+
+# timeseries constraint should just be applied to CMIP timeseries data
+_applyConstraintTS!(meta, constr_ts, ::AbstractFnFormat) = nothing
+
 
 
 """
@@ -778,21 +793,21 @@ function loadDataFromESMValToolRecipes(
         base_subdirs = get(constraint, :base_subdirs, String[]),
     )
     level_resolved = toLevel(level)
-    fn_format = toFF(Val(filename_format))
+    fn_format = toFF(filename_format)
     constr_models, constr_obs = Constraint(constraint), ConstraintObs(constraint_obs)
     meta_models = _getFilteredMetaData(
         paths_to_files,
-        constr_models,
-        constraint_ts;
-        level = level_resolved,
         fn_format,
+        constr_models,
+        constraint_ts,
+        level_resolved,
     )
     meta_obs = _getFilteredMetaData(
         paths_to_files,
-        constr_obs,
-        constraint_ts;
-        level = level_resolved,
         fn_format,
+        constr_obs,
+        constraint_ts,
+        level_resolved,
     )
     ids = getfield.(esmvt_meta_data, :id)
     dm_models = _loadDataMapCore(
@@ -860,7 +875,7 @@ function loadDataFromYAML(
     sorted::Bool = true,
     model_times::Bool = false,
 )
-    fn_format = toFF(Val(filename_format))
+    fn_format = toFF(filename_format)
     fn_err(x) = throw(ArgumentError("$(x) must be provided in config yaml file!"))
     datasets = get(() -> fn_err("datasets"), yaml_content, "datasets")
     base_path = get(() -> fn_err("base_path_data"), yaml_content, "base_path_data")
@@ -893,18 +908,18 @@ function loadDataFromYAML(
         level_resolved = toLevel(ds_level)
         meta_models = _getFilteredMetaData(
             paths,
-            Constraint(ds_constraint),
-            constraint_ts;
-            level = level_resolved,
             fn_format,
+            Constraint(ds_constraint),
+            constraint_ts,
+            level_resolved,
         )
         # TODO: also allow a per-dataset subset as done for model data above
         meta_obs = _getFilteredMetaData(
             paths,
-            ConstraintObs(constraint_obs),
-            constraint_ts;
-            level = level_resolved,
             fn_format,
+            ConstraintObs(constraint_obs),
+            constraint_ts,
+            level_resolved,
         )
         push!(all_meta_models, meta_models)
         push!(all_meta_obs, meta_obs)
@@ -1240,17 +1255,17 @@ function _prepareMetaData(
         throw(ArgumentError("'all_paths' and 'ids' must have the same length!"))
     end
     level_resolved = toLevel(level)
-    fn_format = toFF(Val(filename_format))
+    fn_format = toFF(filename_format)
     all_paths = Vector{Vector{String}}(undef, length(paths_datasets))
     for (i, paths) in enumerate(paths_datasets)
         all_paths[i] = vcat(_collectPaths.(paths)...)
     end
     _getFilteredMetaData(
         all_paths,
-        constraint,
-        constraint_ts;
-        level = level_resolved,
         fn_format,
+        constraint,
+        constraint_ts,
+        level_resolved,
     )
 end
 
@@ -1274,17 +1289,17 @@ function _prepareMetaData(
         throw(ArgumentError("'paths' and 'ids' must have the same length!"))
     end
     level_resolved = toLevel(level)
-    fn_format = toFF(Val(filename_format))
+    fn_format = toFF(filename_format)
     all_paths = Vector{Vector{String}}(undef, length(paths))
     for (i, path) in enumerate(paths)
         all_paths[i] = _collectPaths(path)
     end
     _getFilteredMetaData(
         all_paths,
-        constraint,
-        constraint_ts;
-        level = level_resolved,
         fn_format,
+        constraint,
+        constraint_ts,
+        level_resolved,
     )
 end
 
@@ -1304,14 +1319,14 @@ function _prepareMetaData(
     filename_format::Symbol = :cmip,
 )
     level_resolved = toLevel(level)
-    fn_format = toFF(Val(filename_format))
+    fn_format = toFF(filename_format)
     paths_to_files = vcat(_collectPaths.(paths)...)
     _getFilteredMetaData(
         [paths_to_files],
-        constraint,
-        constraint_ts;
-        level = level_resolved,
         fn_format,
+        constraint,
+        constraint_ts,
+        level_resolved,
     )
 end
 
@@ -1340,34 +1355,32 @@ end
 """
     _getFilteredMetaData(
         paths_to_files::Vector{Vector{String}},
+        fn_format::AbstractFnFormat,
         constraint::AbstractConstraint,
-        constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}};
-        level::AbstractLevel=LevNone(),
-        fn_format::AbstractFnFormat=FF_CMIP()
+        constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}},
+        level::AbstractLevel,
     )
 
 # Arguments
 
   - `paths_to_files::Vector{Vector{String}}`: each entry refers to different dataset and
     contains paths to all files for the respective dataset
+  - `fn_format::AbstractFnFormat`:
   - `constraint::AbstractConstraint`:
   - `constraint_ts::NamedTuple{(:start_year, :end_year), <:Tuple{Integer, Integer}}`:
-
-# Keywords
-
-  - `level::AbstractLevel=LevNone()`:
-  - `fn_format::AbstractFnFormat=FF_CMIP()`:
+  - `level::AbstractLevel`:
 """
 function _getFilteredMetaData(
     paths_to_files::Vector{Vector{String}},
+    fn_format::AbstractFnFormat,
     constraint::AbstractConstraint,
-    constraint_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}};
-    level::AbstractLevel = LevNone(),
-    fn_format::AbstractFnFormat = FF_CMIP(),
+    constraint_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}},
+    level::AbstractLevel,
 )
     # TODO: add possibility to have one constraint per dataset?!
     # depending on constraint, consider ObsMeta or ModelMeta data
     T = _constrToMeta(constraint)
+    # Ref makes broadcasting work (since fn_format is not a collection, Ref repeats it)
     meta_data = [_ofKind(parsePath.(paths, Ref(fn_format)), T) for paths in paths_to_files]
     _filterMeta!(meta_data, constraint, constraint_ts, fn_format, level)
     return meta_data

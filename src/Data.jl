@@ -206,90 +206,37 @@ end
 
 ## ----------------------------------- Filename formats ---------------------------------- #
 abstract type AbstractFnFormat end
-abstract type CMIPFormat <: AbstractFnFormat end
+struct ESMVTFormat <: AbstractFnFormat end
+struct CMIPFormat <: AbstractFnFormat end
 
-abstract type ESMVTFormat <: AbstractFnFormat end
-abstract type ESMVTModelFormat <: ESMVTFormat end
-abstract type ESMVTObsFormat <: ESMVTFormat end
-
-struct FF_ESMVT <: ESMVTFormat end
-struct FF_CMIP <: CMIPFormat end
-
-struct FF_CMIP5 <: CMIPFormat end
-struct FF_CMIP5_TR <: CMIPFormat end
-struct FF_CMIP6 <: CMIPFormat end
-struct FF_CMIP6_TR <: CMIPFormat end
-
-# These are just for the formatString functions
-struct FF_ESMVT_CMIP5 <: ESMVTModelFormat end
-struct FF_ESMVT_CMIP5_TR <: ESMVTModelFormat end
-struct FF_ESMVT_CMIP6 <: ESMVTModelFormat end
-struct FF_ESMVT_CMIP6_TR <: ESMVTModelFormat end
-
-struct FF_ESMVT_OBS <: ESMVTObsFormat end
-struct FF_ESMVT_OBS_TR <: ESMVTObsFormat end
-
-
-# Internal conversion
-toFF(::Val{:cmip}) = FF_CMIP()
-toFF(::Val{:cmip5}) = FF_CMIP5()
-toFF(::Val{:cmip5_tr}) = FF_CMIP5_TR()
-toFF(::Val{:cmip6}) = FF_CMIP6()
-toFF(::Val{:cmip6_tr}) = FF_CMIP6_TR()
-
-toFF(::Val{:esmvaltool}) = FF_ESMVT()
-toFF(::Val{:esmvaltool_cmip5}) = FF_ESMVT_CMIP5()
-toFF(::Val{:esmvaltool_cmip5_tr}) = FF_ESMVT_CMIP5_TR()
-
-toFF(::Val{:esmvaltool_cmip6}) = FF_ESMVT_CMIP6()
-toFF(::Val{:esmvaltool_cmip6_tr}) = FF_ESMVT_CMIP6_TR()
-
-toFF(::Val{:esmvaltool_obs}) = FF_ESMVT_OBS()
-toFF(::Val{:esmvaltool_obs_tr}) = FF_ESMVT_OBS_TR()
-
-toFF(f::AbstractFnFormat) = f
-toFF(::Val{f}) where {f} = throw(
-    ArgumentError(
-        "invalid filename format :$f, expected one of: :cmip, :esmvaltool, :esmvaltool_cmip5, :esmvaltool_cmip5_tr, :esmvaltool_cmip6, :esmvaltool_cmip6_tr, :esmvaltool_obs, :esmvaltool_obs_tr",
-    ),
+# Internal conversions
+const FILE_FORMATS = Dict(
+    :cmip => CMIPFormat(),
+    :esmvaltool => ESMVTFormat(),
 )
 
-formatString(::FF_CMIP5) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT"
-formatString(::FF_CMIP5_TR) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_TIMERANGE"
-
-formatString(::FF_CMIP6) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID"
-formatString(::FF_CMIP6_TR) = "VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE"
-
-formatString(::FF_ESMVT_CMIP5) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE"
-formatString(
-    ::FF_ESMVT_CMIP5_TR,
-) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE"
-
-formatString(::FF_ESMVT_CMIP6) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID"
-formatString(
-    ::FF_ESMVT_CMIP6_TR,
-) = "MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE"
-
-formatString(::FF_ESMVT_OBS) = "PROJECT_MODEL_TYPE_VERSION_TABLEID_VARIABLE"
-formatString(::FF_ESMVT_OBS_TR) = "PROJECT_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE"
+toFF(f::Symbol) = get(FILE_FORMATS, f) do
+    throw(ArgumentError("invalid filename format :$f, expected one of: $(collect(keys(FILE_FORMATS)))"))
+end
 
 function _parseFormat(format_string::String)
     parts = split(format_string, "_")
     return Dict(Symbol(lowercase(p)) => i for (i, p) in enumerate(parts))
 end
+
 # precomputed at definition time
-const CMIP5_ESMVT_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP5()))
-const CMIP5_ESMVT_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_CMIP5_TR()))
-const CMIP6_ESMVT_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_CMIP6()))
-const CMIP6_ESMVT_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_CMIP6_TR()))
+const CMIP5_ESMVT_FIELD_INDICES = _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE")
+const CMIP5_ESMVT_FIELD_INDICES_TR = _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE")
+const CMIP6_ESMVT_FIELD_INDICES = _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID")
+const CMIP6_ESMVT_FIELD_INDICES_TR = _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE")
 
-const CMIP5_FIELD_INDICES = _parseFormat(formatString(FF_CMIP5()))
-const CMIP5_FIELD_INDICES_TR = _parseFormat(formatString(FF_CMIP5_TR()))
-const CMIP6_FIELD_INDICES = _parseFormat(formatString(FF_CMIP6()))
-const CMIP6_FIELD_INDICES_TR = _parseFormat(formatString(FF_CMIP6_TR()))
+const CMIP5_FIELD_INDICES = _parseFormat("VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT")
+const CMIP5_FIELD_INDICES_TR = _parseFormat("VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_TIMERANGE")
+const CMIP6_FIELD_INDICES = _parseFormat("VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID")
+const CMIP6_FIELD_INDICES_TR = _parseFormat("VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE")
 
-const OBS_FIELD_INDICES = _parseFormat(formatString(FF_ESMVT_OBS()))
-const OBS_FIELD_INDICES_TR = _parseFormat(formatString(FF_ESMVT_OBS_TR()))
+const OBS_FIELD_INDICES = _parseFormat("PROJECT_MODEL_TYPE_VERSION_TABLEID_VARIABLE")
+const OBS_FIELD_INDICES_TR = _parseFormat("PROJECT_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE")
 
 ## ------------------------------- Model and Obs Meta Data ------------------------------- #
 abstract type AbstractMeta end

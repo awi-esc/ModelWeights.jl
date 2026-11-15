@@ -1,21 +1,19 @@
 import ModelWeights.Data as mwd
 import ModelWeights.Weights as mww
-import ModelWeights.Plots as mwp
+# import ModelWeights.Plots as mwp
 
-using CairoMakie, GeoMakie
-using DimensionalData
-using NCDatasets
-using NetCDF
-using Statistics: median
-using YAXArrays
+# using CairoMakie, GeoMakie
+# using DimensionalData
+# using NCDatasets
+# using NetCDF
+# using Statistics: median
+# using YAXArrays
 
 # Load data for computing weights (output from ESMValTool recipe)
 path_data = joinpath(@__DIR__, "../test/data/climwip-simplified");
 path_recipes = joinpath(@__DIR__, "../configs/climwip_config");
-
 plot_dir = "reproduce-climwip-figs"
 
-# TODO: go through use of is_cmip instead of dtype
 data = mwd.loadDataFromESMValToolRecipes(
     path_data,
     path_recipes;
