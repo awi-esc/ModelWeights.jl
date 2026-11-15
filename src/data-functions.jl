@@ -58,7 +58,11 @@ function subsetModelData(
     level::Symbol = :member,
     ids::Vector{String} = Vector{String}(),
 )
-    level == :none && throw(ArgumentError(":none is not a valid level for subsetModelData, expects :model or :member."))
+    level == :none && throw(
+        ArgumentError(
+            ":none is not a valid level for subsetModelData, expects :model or :member.",
+        ),
+    )
     shared_models = sharedModels(dm, level)
     if isempty(shared_models)
         @warn "no shared models in input datamap!"
@@ -119,7 +123,7 @@ _modelKey(meta::ModelMeta, ::LevMember) = meta.member_id
 
 function sharedModelsFromMeta(
     meta_data::Vector{Vector{ModelMeta}},
-    level::Union{LevMember, LevModel},
+    level::Union{LevMember,LevModel},
 )
     models_per_dataset = Vector{Set{String}}(undef, length(meta_data))
     @inbounds for (i, meta_data_files) in pairs(meta_data)
@@ -671,7 +675,7 @@ end
 # level is set to :none, nothing should happen, neither for model data
 function _applyLevel!(
     meta_data_per_dataset::AbstractVector{<:AbstractVector{ModelMeta}},
-    level::Union{LevMember, LevModel},
+    level::Union{LevMember,LevModel},
 )
     # either contains models or members, depending on level:
     shared = sharedModelsFromMeta(meta_data_per_dataset, level)
@@ -699,7 +703,7 @@ end
 
 function _overlapsTS(
     meta::ModelMeta,
-    constr_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}}
+    constr_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}},
 )
     # timerange given as string, e.g. 185001-185012
     isnothing(meta.timerange) && return true # keep if no timerange given
@@ -1260,13 +1264,7 @@ function _prepareMetaData(
     for (i, paths) in enumerate(paths_datasets)
         all_paths[i] = vcat(_collectPaths.(paths)...)
     end
-    _getFilteredMetaData(
-        all_paths,
-        fn_format,
-        constraint,
-        constraint_ts,
-        level_resolved,
-    )
+    _getFilteredMetaData(all_paths, fn_format, constraint, constraint_ts, level_resolved)
 end
 
 """
@@ -1294,13 +1292,7 @@ function _prepareMetaData(
     for (i, path) in enumerate(paths)
         all_paths[i] = _collectPaths(path)
     end
-    _getFilteredMetaData(
-        all_paths,
-        fn_format,
-        constraint,
-        constraint_ts,
-        level_resolved,
-    )
+    _getFilteredMetaData(all_paths, fn_format, constraint, constraint_ts, level_resolved)
 end
 
 """

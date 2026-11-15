@@ -1071,11 +1071,11 @@ function parsePath(path::String, ::ESMVTFormat)
         return _parseFilenameObs(filename, path, format_dict)
     elseif proj == "CMIP6"
         format_dict =
-        length(parts) == 7 ? CMIP6_ESMVT_FIELD_INDICES : CMIP6_ESMVT_FIELD_INDICES_TR
+            length(parts) == 7 ? CMIP6_ESMVT_FIELD_INDICES : CMIP6_ESMVT_FIELD_INDICES_TR
         return _parseFilenameModel(filename, path, format_dict)
     elseif proj == "CMIP5"
         format_dict =
-        length(parts) == 6 ? CMIP5_ESMVT_FIELD_INDICES : CMIP5_ESMVT_FIELD_INDICES_TR
+            length(parts) == 6 ? CMIP5_ESMVT_FIELD_INDICES : CMIP5_ESMVT_FIELD_INDICES_TR
         return _parseFilenameModel(filename, path, format_dict)
     else
         throw(

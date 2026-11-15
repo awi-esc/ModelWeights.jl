@@ -87,7 +87,7 @@ struct LevNone <: AbstractLevel end
 const LEVELS = Dict{Symbol,AbstractLevel}(
     :member => LevMember(),
     :model => LevModel(),
-    :none => LevNone()
+    :none => LevNone(),
 )
 toLevel(l::Symbol) = get(LEVELS, l) do
     throw(ArgumentError("invalid level :$l, expected one of: $(collect(keys(LEVELS)))"))
@@ -210,13 +210,14 @@ struct ESMVTFormat <: AbstractFnFormat end
 struct CMIPFormat <: AbstractFnFormat end
 
 # Internal conversions
-const FILE_FORMATS = Dict(
-    :cmip => CMIPFormat(),
-    :esmvaltool => ESMVTFormat(),
-)
+const FILE_FORMATS = Dict(:cmip => CMIPFormat(), :esmvaltool => ESMVTFormat())
 
 toFF(f::Symbol) = get(FILE_FORMATS, f) do
-    throw(ArgumentError("invalid filename format :$f, expected one of: $(collect(keys(FILE_FORMATS)))"))
+    throw(
+        ArgumentError(
+            "invalid filename format :$f, expected one of: $(collect(keys(FILE_FORMATS)))",
+        ),
+    )
 end
 
 function _parseFormat(format_string::String)
@@ -225,18 +226,25 @@ function _parseFormat(format_string::String)
 end
 
 # precomputed at definition time
-const CMIP5_ESMVT_FIELD_INDICES = _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE")
-const CMIP5_ESMVT_FIELD_INDICES_TR = _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE")
-const CMIP6_ESMVT_FIELD_INDICES = _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID")
-const CMIP6_ESMVT_FIELD_INDICES_TR = _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE")
+const CMIP5_ESMVT_FIELD_INDICES =
+    _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE")
+const CMIP5_ESMVT_FIELD_INDICES_TR =
+    _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_TIMERANGE")
+const CMIP6_ESMVT_FIELD_INDICES =
+    _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID")
+const CMIP6_ESMVT_FIELD_INDICES_TR =
+    _parseFormat("MIP_MODEL_TABLEID_EXPERIMENT_VARIANT_VARIABLE_GRID_TIMERANGE")
 
 const CMIP5_FIELD_INDICES = _parseFormat("VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT")
-const CMIP5_FIELD_INDICES_TR = _parseFormat("VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_TIMERANGE")
+const CMIP5_FIELD_INDICES_TR =
+    _parseFormat("VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_TIMERANGE")
 const CMIP6_FIELD_INDICES = _parseFormat("VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID")
-const CMIP6_FIELD_INDICES_TR = _parseFormat("VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE")
+const CMIP6_FIELD_INDICES_TR =
+    _parseFormat("VARIABLE_TABLEID_MODEL_EXPERIMENT_VARIANT_GRID_TIMERANGE")
 
 const OBS_FIELD_INDICES = _parseFormat("PROJECT_MODEL_TYPE_VERSION_TABLEID_VARIABLE")
-const OBS_FIELD_INDICES_TR = _parseFormat("PROJECT_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE")
+const OBS_FIELD_INDICES_TR =
+    _parseFormat("PROJECT_MODEL_TYPE_VERSION_TABLEID_VARIABLE_TIMERANGE")
 
 ## ------------------------------- Model and Obs Meta Data ------------------------------- #
 abstract type AbstractMeta end
