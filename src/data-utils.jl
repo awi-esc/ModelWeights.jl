@@ -431,7 +431,7 @@ function physicsFromMember(member::String)
 end
 
 
-function joinDataMaps(v::Union{Dict{String,MetaData},DataMap}...; warn_msg::String = "")
+function joinDataMaps(v::Union{Dict,DataMap}...; warn_msg::String = "")
     return joinDicts(v...; warn_msg)
 end
 
@@ -684,11 +684,9 @@ function metaDataFromESMValToolRecipes(
     return meta_attribs
 end
 
-
 function isEqual(m1::MetaData, m2::MetaData)
     return all(x -> getfield(m1, x) == getfield(m2, x), fieldnames(MetaData))
 end
-
 
 function metadataToDict(meta::MetaData; exclude::Vector{Symbol} = Vector{Symbol}())
     d = Dict{String,Any}()
