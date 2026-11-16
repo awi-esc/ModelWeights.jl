@@ -381,7 +381,8 @@ end
         suffix_name::String = "historical"
     )
 
-Compute ClimwipWeights based on RMSE distances between observational data and model-model pairs.
+Compute ClimwipWeights based on RMSE distances between observational data and model-model
+pairs.
 """
 function climwipWeights(
     model_data::DataMap,
@@ -537,7 +538,7 @@ w^{P}_i = a_0 \\cdot \\frac{e^{-(\\frac{D_i}{\\sigma_D})^2}}{N}
   - `sigmaD::Number`: free shape parameter for impact of performance weights
 """
 function performanceWeights(Di::YAXArray, sigmaD::Number)
-    performances = exp.(-(Di ./ sigmaD) .^ 2)
+    performances = exp.(.-abs2.(Di ./ sigmaD))
     return performances ./ sum(performances)
 end
 
@@ -565,7 +566,7 @@ w^{I}_i = a_0 \\cdot \\frac{1}{1 + \\sum_{j \\ne i} e^{-\\left( \\frac{S_{ij}}{\
 """
 function independenceWeights(Sij::YAXArray, sigmaS::Number)
     # note: (+1 in eq. in paper is from when model is compared to itself since exp(0)=1)
-    independences = sum(exp.(-(Sij ./ sigmaS) .^ 2), dims = :model2)
+    independences = sum(exp.(.-abs2.(Sij ./ sigmaS)), dims = :model2)
     independences = dropdims(independences, dims = :model2)
     independences = DD.set(independences, :model1 => :model)
     independences = 1 ./ independences

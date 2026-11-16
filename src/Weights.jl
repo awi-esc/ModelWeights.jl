@@ -2,12 +2,13 @@ module Weights
 
 using ..Data
 
+import DimensionalData as DD
 import LinearAlgebra: Diagonal
 import Statistics as stats
 import StatsBase.ecdf
 
 using Dates
-using DimensionalData
+using DimensionalData: Dim
 using Distributions
 using FillArrays
 using JLD2
