@@ -1,5 +1,5 @@
 """
-    subsetModelData(data::YAXArray, shared_models::Vector{String})
+    subsetModelData(data::YAXArray, shared_models::AbstractVector{<:AbstractString})
 
 Return subset of `data` containing only data from models in `shared_models`.
 
@@ -7,11 +7,11 @@ Takes care of metadata.
 
 # Arguments
 
-  - `data`: must have a dimension that contains 'member' or 'model'
-  - `shared_models`: models, which can either be on level of models or members of models
-    ('modelname#memberID[_grid]').
+  - `data::YAXArray`: must have a dimension that contains 'member' or 'model'
+  - `shared_models::AbstractVector{<:AbstractString}`: models, which can either be on level
+    of models or members of models ('modelname#memberID[_grid]').
 """
-function subsetModelData(data::YAXArray, shared_models::Vector{String})
+function subsetModelData(data::YAXArray, shared_models::AbstractVector{<:AbstractString})
     if isempty(shared_models)
         @warn "Vector of models to subset data to is empty! Data is not filtered."
         return data
@@ -85,13 +85,9 @@ end
 
 Subset all entries in dm to the shared set of models on 'level' among all entries.
 
-# Arguments
-
-  - `dm::DataMap`:
-  - `level::Symbol=:member`
-
 # Keywords
 
+  - `level::Symbol=:member`:
   - `ids::Vector{String}=Vector{String}()`: just data for these entries `ids` in `dm` are
     considered
 """
@@ -653,6 +649,7 @@ function _loadDataMapCore(
     ),
     sorted::Bool = true,
     model_times::Bool = false,
+    warn_if_empty::Bool = true,
     #meta_info::Vector{Dict{String, String}} = Dict{String, String}[]
 ) where {T<:AbstractMeta}
     # TODO: handle meta info
@@ -667,7 +664,7 @@ function _loadDataMapCore(
     end
     data = data[indices_found]
     ids_filtered = ids[indices_found]
-    isempty(data) && @warn "No Data found for given constraints!"
+    isempty(data) && warn_if_empty && @warn "No Data found!"
     return defineDataMap(data, ids_filtered)
 end
 
@@ -759,8 +756,10 @@ Return a NamedTuple where .models contains the model data, and .obs the observat
 
 # Keywords
 
-  - `dir_per_var::Bool=true`: true if there is a subdirectory in `path_data` for every
-    climate variable to be loaded.
+  - `recipe_per_var::Bool=true`: if true, there is a subdirectory in `path_data` for every
+    climate variable to be loaded that contains the variables name in its name, e.g.
+    'recipe_cmip5_historical_tas'. Otherwise, `path_data` must contain a subdirectory named
+    `preproc`.
   - `constraint::Dict{Symbol, <:AbstractArray{String}}`: dictionary with data constraints;
     for options see [the documentation](@ref constraint-options)
   - `constraint_obs::Dict{Symbol,<:AbstractArray{String}} = Dict{Symbol,Vector{String}}()`:
@@ -776,7 +775,7 @@ Return a NamedTuple where .models contains the model data, and .obs the observat
 function loadDataFromESMValToolRecipes(
     path_data::String,
     path_recipes::String;
-    dir_per_var::Bool = true,
+    recipe_per_var::Bool = true,
     constraint::Dict{Symbol,<:AbstractArray{String}} = Dict{Symbol,Vector{String}}(),
     constraint_obs::Dict{Symbol,<:AbstractArray{String}} = Dict{Symbol,Vector{String}}(),
     constraint_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}} = (
@@ -788,12 +787,12 @@ function loadDataFromESMValToolRecipes(
     sorted::Bool = true,
     model_times::Bool = false,
 )
-    _checkDataStructure(path_data, dir_per_var)
+    _checkDataStructure(path_data, recipe_per_var)
     esmvt_meta_data = metaDataFromESMValToolRecipes(path_recipes; constraint)
     paths_to_files = resolvePathsFromMetaData.(
         esmvt_meta_data,
         path_data,
-        dir_per_var;
+        recipe_per_var;
         base_subdirs = get(constraint, :base_subdirs, String[]),
     )
     level_resolved = toLevel(level)
@@ -821,6 +820,7 @@ function loadDataFromESMValToolRecipes(
         constraint_ts,
         sorted,
         model_times,
+        warn_if_empty = false,
         #meta_info = metadataToDict.(esmvt_meta_data)
     )
     dm_obs = _loadDataMapCore(
@@ -830,9 +830,48 @@ function loadDataFromESMValToolRecipes(
         constraint_ts,
         sorted,
         model_times,
+        warn_if_empty = false,
         #meta_info = metadataToDict.(esmvt_meta_data)
     )
+    isempty(dm_models) && isempty(dm_obs) && @warn "No Data found!"
     return (models = dm_models, obs = dm_obs)
+end
+
+"""
+    loadDataFromESMValToolRecipes(path_output_dir; kwargs...)
+
+Load data from ESMValTool recipe to whose output dir `path_output_dir` points at.
+
+See [`loadDataFromESMValToolRecipes`](@ref)
+"""
+function loadDataFromESMValToolRecipes(
+    path_output_dir::String;
+    constraint::Dict{Symbol,<:AbstractArray{String}} = Dict{Symbol,Vector{String}}(),
+    constraint_obs::Dict{Symbol,<:AbstractArray{String}} = Dict{Symbol,Vector{String}}(),
+    constraint_ts::NamedTuple{(:start_year, :end_year),<:Tuple{Integer,Integer}} = (
+        start_year = typemin(Int),
+        end_year = typemax(Int),
+    ),
+    level::Symbol = :none,
+    filename_format::Symbol = :esmvaltool,
+    sorted::Bool = true,
+    model_times::Bool = false,
+)
+    path_run_dir = joinpath(path_output_dir, "run")
+    path_recipe =
+        filter(f -> endswith(f, "_filled.yml"), readdir(path_run_dir; join = true))[1]
+    return loadDataFromESMValToolRecipes(
+        path_output_dir,
+        path_recipe;
+        recipe_per_var = false,
+        constraint,
+        constraint_obs,
+        constraint_ts,
+        level,
+        filename_format,
+        sorted,
+        model_times,
+    )
 end
 
 function loadDataFromYAML(

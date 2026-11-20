@@ -8,7 +8,7 @@ import Statistics as stats
 import StatsBase.ecdf
 
 using Dates
-using DimensionalData: Dim
+using DimensionalData: Dim, @d
 using Distributions
 using FillArrays
 using JLD2

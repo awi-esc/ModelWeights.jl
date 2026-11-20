@@ -121,7 +121,7 @@ mutable struct MetaData
         if any(map(isempty, [variable, experiment, alias]))
             throw(
                 ArgumentError(
-                    "alias (name of diagnostic in ESMValTool), variable and experiment must be provided!",
+                    "alias (name of diagnostic in ESMValTool), variable and experiment must be provided!Found: variable: $variable, experiment: $experiment, alias: $alias",
                 ),
             )
         end

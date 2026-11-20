@@ -344,13 +344,13 @@ function areaWeightMatrix(latitudes::AbstractVector{T}, n_lon) where {T<:Number}
     return aw_mat ./ sum(aw_mat)
 end
 
-function _checkDataStructure(path_data::String, dir_per_var::Bool)
-    if !dir_per_var
+function _checkDataStructure(path_data::String, recipe_per_var::Bool)
+    if !recipe_per_var
         subdirs = filter(x -> isdir(joinpath(path_data, x)), readdir(path_data))
         if !("preproc" in subdirs)
             throw(
                 ArgumentError(
-                    "If dir_per_var is false, path_data must contain a directory named 'preproc'",
+                    "If recipe_per_var is false, path_data must contain a directory named 'preproc'",
                 ),
             )
         end
@@ -627,15 +627,21 @@ end
 Read variable, statistic, experiment and timerange/alias values from ESMValTool recipes
 stored at `base_path_configs` into a vector of Dictionaries storing the respective readoff
 values.
+
+All .yml files inside `base_path_configs` are read if `base_path_configs` is a directory.
+It can also be a path to a single recipe file.
 """
 function metaDataFromESMValToolRecipes(
     base_path_configs::String;
     constraint::Dict{Symbol,<:AbstractArray{String}} = Dict{Symbol,Vector{String}}(),
 )
-    paths_configs = filter(
-        x -> isfile(x) && endswith(x, ".yml"),
-        readdir(base_path_configs, join = true),
-    )
+
+    paths_configs =
+        isdir(base_path_configs) ?
+        filter(
+            x -> isfile(x) && endswith(x, ".yml"),
+            readdir(base_path_configs, join = true),
+        ) : [base_path_configs]
     meta_attribs = Vector{MetaData}()
     for path_config in paths_configs
         config = YAML.load_file(path_config)
@@ -645,7 +651,7 @@ function metaDataFromESMValToolRecipes(
         for alias in aliases
             data = data_all[alias]["variables"]
             for (k, v) in data
-                variable = get(v, "short_name", "")
+                variable = get(v, "short_name", k)
                 var_long = get(v, "variable_long_name", "")
                 preprocessor = get(v, "preprocessor", "")
 
