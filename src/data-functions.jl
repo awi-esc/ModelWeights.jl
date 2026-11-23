@@ -3,7 +3,8 @@
 
 Return subset of `data` containing only data from models in `shared_models`.
 
-Takes care of metadata.
+Takes care of metadata. If shared_models contains a specific run of a model as well as that
+model without any specific run, all runs of that model will be kept.
 
 # Arguments
 
@@ -17,101 +18,82 @@ function subsetModelData(data::YAXArray, shared_models::AbstractVector{<:Abstrac
         return data
     end
     model_dims = modelDims(data)
-    dimensions = Array(dims(data, model_dims[1]))
-    if occursin("member", string(model_dims[1]))
-        models = map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), shared_models)
-        # if shared_models is on the level of models, the following should be empty
-        # otherwise, nothing is filtered out, and members is the same as shared_models
-        members = filter(x -> !(x in models), shared_models)
-        if !isempty(members) # shared models on level of members
-            indices = findall(m -> m in members, dimensions)
-        else
-            # important not to use dimensions here, since e.g. model=AWI would be found in dim_names where model is actually AWI-X for instance
-            models_data = modelsFromMemberIDs(dimensions)
-            indices = findall(m -> m in models, models_data)
-        end
-    else
-        indices = findall(m -> m in shared_models, dimensions)
-    end
-    data = indexModel(data, model_dims, indices)
-    return data
+    names = Array(dims(data, model_dims[1]))
+
+    data_is_member = occursin("member", string(model_dims[1]))
+    models = data_is_member ? modelsFromMemberIDs(names) : names
+
+    indices_models = findall(m -> m in shared_models, models)
+    indices_members = data_is_member ? findall(m -> m in shared_models, names) : Int[]
+    indices = unique(sort(vcat(indices_models, indices_members)))
+
+    isempty(indices) &&
+        @warn "No shared models! Empty YAXArray without model/member dimension returned!"
+
+    return !isempty(indices) ? indexModel(data, model_dims, indices) :
+           initYAX(otherdims(data, model_dims...))
 end
 
 """
-    subsetModelData(
-        dm::DataMap; level::Symbol=:member, ids::Vector{String}=Vector{String}()
-    )
+    subsetModelData!(dm::DataMap; level::Symbol=:member)
 
-Return a new DataMap with subset of those datasets in `dm` that specify data on the level
-`level` (i.e. have dimension :member or :model) so that all datasets have the same models or
-members.
+Subset all entries of `dm` in place to the models (level=:model) or members (level=:member)
+shared across all entries.
 
-If no models are shared across datasets, return the input `dm`.
+If no models/members are shared across entries, `dm` is unchanged.
 
 # Keywords
 
   - `level::Symbol=:member`: one of :model, :member
-  - `ids::Vector{String}=Vector{String}()`: only applied for given ids in `dm` if not empty
 """
-function subsetModelData(
-    dm::DataMap;
-    level::Symbol = :member,
-    ids::Vector{String} = Vector{String}(),
-)
-    level == :none && throw(
-        ArgumentError(
-            ":none is not a valid level for subsetModelData, expects :model or :member.",
-        ),
-    )
+function subsetModelData!(dm::DataMap; level::Symbol = :member)
     shared_models = sharedModels(dm, level)
     if isempty(shared_models)
         @warn "no shared models in input datamap!"
         return dm
     end
-    subset = DataMap()
-    if isempty(ids)
-        ids = collect(keys(dm))
+    for (id, data) in dm
+        dm[id] = subsetModelData(data, shared_models)
     end
-    for id in ids
-        subset[id] = subsetModelData(deepcopy(dm[id]), shared_models)
-    end
-    return subset
+    return dm
 end
 
 """
-    subsetModelData!(
-        dm::DataMap, level::Symbol=:member; ids::Vector{String} = Vector{String}()
-    )
+    subsetModelData(dm::DataMap; kwargs...)
 
-Subset all entries in dm to the shared set of models on 'level' among all entries.
+Return a new DataMap with entries in dm at keys `ids` subset to level `level`.
+
+See also [`subsetModelData!`](@ref) and  [`subsetModelData`](@ref).
 
 # Keywords
 
   - `level::Symbol=:member`:
-  - `ids::Vector{String}=Vector{String}()`: just data for these entries `ids` in `dm` are
-    considered
+  - `ids::AbstractVector{<:AbstractString}=collect(keys(dm))`:
 """
-function subsetModelData!(
+function subsetModelData(
     dm::DataMap;
     level::Symbol = :member,
-    ids::Vector{String} = Vector{String}(),
+    ids::AbstractVector{<:AbstractString} = collect(keys(dm)),
 )
-    shared_models = sharedModels(dm, level)
-    if isempty(shared_models)
-        @warn "no shared models in input datamap!"
-        return dm
-    end
-    if isempty(ids)
-        ids = collect(keys(dm))
-    end
-    for id in ids
-        dm[id] = subsetModelData(dm[id], shared_models)
-    end
-    return nothing
+    data_ids = collect(keys(dm))
+    valid_ids = filter(x -> x in ids, data_ids)
+    isempty(valid_ids) && throw(
+        ArgumentError(
+            "None of the given ids ($ids) is a key in given DataMap ($(collect(keys(dm)))!",
+        ),
+    )
+
+    invalid_ids = filter(x -> !(x in data_ids), ids)
+    !isempty(invalid_ids) &&
+        @warn "These given ids were ignored, since they are no keys in `dm`: $(invalid_ids)"
+    return subsetModelData!(DataMap(id => dm[id] for id in valid_ids); level)
 end
+
 
 sharedModels(data::DataMap, ::LevMember) = sharedLevelMembers(data)
 sharedModels(data::DataMap, ::LevModel) = sharedLevelModels(data)
+sharedModels(::DataMap, ::LevNone) =
+    throw(ArgumentError(":none is not a valid level, expects :model or :member."))
 sharedModels(data::DataMap, level::Symbol) = sharedModels(data, toLevel(level))
 
 _modelKey(meta::AbstractMeta, ::LevModel) = meta.model

@@ -59,14 +59,18 @@ end
 
 # TODO: recheck this function
 """
-    indexModel(data::YAXArray, model_dims::Tuple{Symbol}, indices::Vector{Int})
+    indexModel(
+        data::YAXArray, model_dims::NTuple{N,Symbol}, indices::AbstractVector{<:Integer}
+    ) where {N}
 
 Return `data` at model dimensions `model_dims` at `indices`.
+
+Takes care of metadata.
 """
 function indexModel(
     data::YAXArray,
     model_dims::NTuple{N,Symbol},
-    indices::Vector{Int},
+    indices::AbstractVector{<:Integer},
 ) where {N}
     data = YAXArray(data.axes, data.data, deepcopy(data.properties))
     dim_names = dimNames(data)
@@ -658,7 +662,7 @@ function metaDataFromESMValToolRecipes(
                 var_stat = String.(split(k, "_"))
                 statistic =
                     length(var_stat) == 2 && var_stat[1] == variable ? var_stat[2] : nothing
-                if typeof(v["exp"]) <: String
+                if typeof(v["exp"]) <: AbstractString
                     experiment = v["exp"]
                 else
                     # TODO: when would this happen??
@@ -1547,7 +1551,7 @@ function sharedLevelMembers(data::DataMap)
     if !(all(((id, dat),) -> hasdim(dat, :member), data))
         throw(ArgumentError("All datasets must have dimension :member!"))
     end
-    members = map(x -> dims(x, :member), collect(values(data)))
+    members = map(x -> collect(lookup(x, :member)), collect(values(data)))
     return reduce(intersect, members)
 end
 
@@ -1562,10 +1566,12 @@ function sharedLevelModels(data::DataMap)
     for (i, id) in enumerate(keys(data))
         ds = data[id]
         if hasdim(ds, :model)
-            all_models[i] = dims(ds, :model)
+            all_models[i] = collect(lookup(ds, :model))
         elseif hasdim(ds, :member)
-            all_models[i] =
-                map(x -> String(split(x, MODEL_MEMBER_DELIM)[1]), dims(ds, :member))
+            all_models[i] = map(
+                x -> String(split(x, MODEL_MEMBER_DELIM)[1]),
+                collect(lookup(ds, :member)),
+            )
         else
             throw(ArgumentError("Data for $id must have dimension :member or :model!"))
         end

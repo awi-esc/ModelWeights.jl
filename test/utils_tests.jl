@@ -5,6 +5,17 @@ using DimensionalData: Dim, dims, lookup
 using Test
 using YAXArrays
 
+const CLIMWIP_DATA = mwd.loadDataFromESMValToolRecipes(
+    joinpath(@__DIR__, "data/climwip-simplified"),
+    joinpath(@__DIR__, "../configs/climwip_config");
+    recipe_per_var = false,
+    filename_format = :esmvaltool,
+    constraint = Dict(
+        :aliases => ["calculate_weights_climwip"],
+        :mips => ["CMIP5", "CMIP6"],
+    ),
+)
+
 @testset "Test combineAll" begin
     # unequal number of entries (first more)
     v1 = ["tos", "tas"]
@@ -180,4 +191,73 @@ end
     @test lookup(df, :model) == ["ESM1", "ESM2", "ESM5", "ESM3", "ESM4"]
 
     # TODO: test if UnOrdered
+end
+
+@testset "Test subsetModelData(::YAXArray)" begin
+    df_models =
+        mwd.summarizeMembers(CLIMWIP_DATA.models["pr_CLIM_calculate_weights_climwip"])
+    df_members = CLIMWIP_DATA.models["pr_CLIM_calculate_weights_climwip"]
+    n_models = length(dims(df_models, :model))
+
+    df_sub = mwd.subsetModelData(df_models, ["CCSM4", "ACCESS1-0#r1i1p1"])
+    @test length(dims(df_sub, :model)) == 1
+
+    # data on level of models, filter on member level
+    df_sub = mwd.subsetModelData(df_models, ["ACCESS1-0#r1i1p1"])
+    @test ndims(df_sub) == 2
+
+    df_sub = mwd.subsetModelData(df_members, ["CCSM4"])
+    @test length(dims(df_sub, :member)) == 4
+
+    df_sub = mwd.subsetModelData(df_members, ["CCSM4#r3i1p1"])
+    @test length(dims(df_sub, :member)) == 1
+
+    # subset specific run of a model and that model generally -> all runs should be kept
+    df_sub = mwd.subsetModelData(df_members, ["CCSM4#r3i1p1", "CCSM4"])
+    @test length(dims(df_sub, :member)) == 4
+
+    df_sub = mwd.subsetModelData(df_models, ["AWI-ESM"])
+    @test ndims(df_sub) == 2
+end
+
+
+@testset "Test subsetModelData(::DataMap)" begin
+    dm = CLIMWIP_DATA.models
+    df = dm["pr_CLIM_calculate_weights_climwip"]
+    models = collect(lookup(df, :member))[1:(end-2)]
+
+    dm["pr_CLIM_calculate_weights_climwip"] = mwd.subsetModelData(df, models)
+
+    # nothing should change
+    ids = collect(keys(dm))
+    ids_subset = ["tas_CLIM_calculate_weights_climwip", "pr_CLIM_calculate_weights_climwip"]
+    dm_sub = mwd.subsetModelData(dm; level = :model, ids = ids_subset)
+    @test length(collect(keys(dm_sub))) == 2
+    for id in ids_subset
+        @test lookup(dm_sub[id], :member) == lookup(dm[id], :member)
+    end
+    # use a non-existent id
+    @test_throws ArgumentError mwd.subsetModelData(dm; level = :model, ids = ["pr"])
+
+    # check that nothing changes when using a single id
+    dm_sub = mwd.subsetModelData(
+        dm;
+        level = :member,
+        ids = ["pr_CLIM_calculate_weights_climwip"],
+    )
+    @test lookup(dm_sub["pr_CLIM_calculate_weights_climwip"], :member) ==
+          lookup(dm["pr_CLIM_calculate_weights_climwip"], :member)
+
+    # when subsetting on level :member, from the CCSM4 models, only two should remain everywhere
+    dm_sub = mwd.subsetModelData(dm; level = :member, ids = ids_subset)
+    @test length(collect(keys(dm_sub))) == 2
+    for id in ids_subset
+        @test size(dm_sub[id], :member) == 5
+    end
+    # and without using ids
+    dm_sub = mwd.subsetModelData(dm; level = :member)
+    @test length(collect(keys(dm_sub))) == 3
+    for id in ids
+        @test size(dm_sub[id], :member) == 5
+    end
 end
